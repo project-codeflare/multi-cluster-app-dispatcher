@@ -1,0 +1,13 @@
+From ubuntu:18.04
+
+ADD kar-controllers /usr/local/bin
+ADD xqueuejob_controller_deployment_cluster_resource_update.sh /usr/local/bin
+
+RUN apt-get update
+RUN apt-get -y upgrade
+
+RUN apt-get install -y curl
+
+RUN cd /usr/local/bin && curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl
+
+WORKDIR /usr/local/bin
