@@ -3,5 +3,5 @@ Holistic job manager on Kubernetes capable of (i) provides an abstraction for wr
 
 ## Multi-Cluster-App-Dispatcher Build Information
 
-Follow the build instructions [here](./docs/build/build.md) to build the Multi-Cluster-App-Dispatcher controller.
+Follow the build instructions [here](./doc/build/build.md) to build the Multi-Cluster-App-Dispatcher controller.
 
