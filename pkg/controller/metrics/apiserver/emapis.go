@@ -25,9 +25,9 @@ import (
 	"k8s.io/apiserver/pkg/endpoints/discovery"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 
-	specificapi "github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/apiserver/installer"
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/provider"
-	metricstorage "github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/registry/external_metrics"
+	specificapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/apiserver/installer"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
+	metricstorage "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/registry/external_metrics"
 	"k8s.io/metrics/pkg/apis/external_metrics"
 )
 

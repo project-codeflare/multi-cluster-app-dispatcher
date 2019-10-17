@@ -17,8 +17,8 @@ limitations under the License.
 package v1
 
 import (
-	v1 "github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/v1alpha1"
-	"github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/controller-versioned/scheme"
+	v1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/scheme"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"

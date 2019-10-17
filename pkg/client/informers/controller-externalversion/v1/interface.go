@@ -17,7 +17,7 @@ limitations under the License.
 package v1
 
 import (
-	"github.com/kubernetes-sigs/kube-batch/pkg/client/informers/controller-externalversion/internalinterfaces"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.

@@ -17,7 +17,7 @@ limitations under the License.
 package cache
 
 import (
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/clusterstate/api"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 )
 
 // Cache collects pods/nodes/queues information

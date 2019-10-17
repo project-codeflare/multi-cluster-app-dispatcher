@@ -19,7 +19,7 @@ package controller_externalversion
 import (
 	"fmt"
 
-	arbv1 "github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/v1alpha1"
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"

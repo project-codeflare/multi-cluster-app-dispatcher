@@ -20,8 +20,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/kubernetes-sigs/kube-batch/cmd/kar-controllers/app/options"
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/queuejob"
+	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejob"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )

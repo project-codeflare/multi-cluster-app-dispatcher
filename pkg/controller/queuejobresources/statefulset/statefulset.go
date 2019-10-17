@@ -16,10 +16,10 @@ package statefulset
 import (
 	"fmt"
 	"github.com/golang/glog"
-	arbv1 "github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/v1alpha1"
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/queuejobresources"
-	//schedulerapi "github.com/kubernetes-sigs/kube-batch/pkg/scheduler/api"
-	clusterstateapi "github.com/kubernetes-sigs/kube-batch/pkg/controller/clusterstate/api"
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
+	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
+	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	apps "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -36,7 +36,7 @@ import (
 	ssinformer "k8s.io/client-go/informers/apps/v1"
 	sslister "k8s.io/client-go/listers/apps/v1"
 
-	clientset "github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/controller-versioned"
+	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )

@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubernetes-sigs/kube-batch/pkg/client/informers/controller-externalversion/internalinterfaces"
-	arbclient "github.com/kubernetes-sigs/kube-batch/pkg/client/informers/controller-externalversion/v1"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/internalinterfaces"
+	arbclient "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"

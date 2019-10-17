@@ -17,7 +17,7 @@ limitations under the License.
 package scheme
 
 import (
-	arbv1 "github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/v1alpha1"
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"

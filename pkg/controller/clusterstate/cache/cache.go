@@ -31,10 +31,10 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 
-	client "github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/controller-versioned/clients"
-	informerfactory "github.com/kubernetes-sigs/kube-batch/pkg/client/informers/controller-externalversion"
-	arbclient "github.com/kubernetes-sigs/kube-batch/pkg/client/informers/controller-externalversion/v1"
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/clusterstate/api"
+	client "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
+	informerfactory "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion"
+	arbclient "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/v1"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 )
 
 // New returns a Cache implementation.

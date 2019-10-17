@@ -19,7 +19,7 @@ package queuejob
 import (
 	"fmt"
 	"github.com/golang/glog"
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/adapter"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter"
 	"math/rand"
 	"strings"
 
@@ -39,30 +39,30 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/queuejobresources"
-	resconfigmap "github.com/kubernetes-sigs/kube-batch/pkg/controller/queuejobresources/configmap" // ConfigMap
-	resdeployment "github.com/kubernetes-sigs/kube-batch/pkg/controller/queuejobresources/deployment"
-	resnamespace "github.com/kubernetes-sigs/kube-batch/pkg/controller/queuejobresources/namespace"                         // NP
-	resnetworkpolicy "github.com/kubernetes-sigs/kube-batch/pkg/controller/queuejobresources/networkpolicy"                 // NetworkPolicy
-	respersistentvolume "github.com/kubernetes-sigs/kube-batch/pkg/controller/queuejobresources/persistentvolume"           // PV
-	respersistentvolumeclaim "github.com/kubernetes-sigs/kube-batch/pkg/controller/queuejobresources/persistentvolumeclaim" // PVC
-	respod "github.com/kubernetes-sigs/kube-batch/pkg/controller/queuejobresources/pod"
-	ressecret "github.com/kubernetes-sigs/kube-batch/pkg/controller/queuejobresources/secret" // Secret
-	resservice "github.com/kubernetes-sigs/kube-batch/pkg/controller/queuejobresources/service"
-	resstatefulset "github.com/kubernetes-sigs/kube-batch/pkg/controller/queuejobresources/statefulset"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
+	resconfigmap "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/configmap" // ConfigMap
+	resdeployment "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/deployment"
+	resnamespace "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/namespace"                         // NP
+	resnetworkpolicy "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/networkpolicy"                 // NetworkPolicy
+	respersistentvolume "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/persistentvolume"           // PV
+	respersistentvolumeclaim "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/persistentvolumeclaim" // PVC
+	respod "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/pod"
+	ressecret "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/secret" // Secret
+	resservice "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/service"
+	resstatefulset "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/statefulset"
 	"k8s.io/apimachinery/pkg/labels"
 
-	arbv1 "github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/v1alpha1"
-	clientset "github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/controller-versioned"
-	"github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/controller-versioned/clients"
-	arbinformers "github.com/kubernetes-sigs/kube-batch/pkg/client/informers/controller-externalversion"
-	informersv1 "github.com/kubernetes-sigs/kube-batch/pkg/client/informers/controller-externalversion/v1"
-	listersv1 "github.com/kubernetes-sigs/kube-batch/pkg/client/listers/controller/v1"
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
+	arbinformers "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion"
+	informersv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/v1"
+	listersv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
 
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/queuejobdispatch"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobdispatch"
 
-	clusterstatecache "github.com/kubernetes-sigs/kube-batch/pkg/controller/clusterstate/cache"
-	clusterstateapi "github.com/kubernetes-sigs/kube-batch/pkg/controller/clusterstate/api"
+	clusterstatecache "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
+	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 )
 
 const (

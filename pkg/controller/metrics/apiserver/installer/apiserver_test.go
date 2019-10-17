@@ -41,9 +41,9 @@ import (
 	installem "k8s.io/metrics/pkg/apis/external_metrics/install"
 	emv1beta1 "k8s.io/metrics/pkg/apis/external_metrics/v1beta1"
 
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/provider"
-	custommetricstorage "github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/registry/custom_metrics"
-	externalmetricstorage "github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/registry/external_metrics"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
+	custommetricstorage "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/registry/custom_metrics"
+	externalmetricstorage "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/registry/external_metrics"
 	"k8s.io/metrics/pkg/apis/external_metrics"
 )
 

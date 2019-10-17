@@ -26,11 +26,11 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	adapterprov "github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/adapter/provider"
-	basecmd "github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/cmd"
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/provider"
+	adapterprov "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter/provider"
+	basecmd "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/cmd"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
 
-	clusterstatecache "github.com/kubernetes-sigs/kube-batch/pkg/controller/clusterstate/cache"
+	clusterstatecache "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
 )
 
 // New returns a Cache implementation.

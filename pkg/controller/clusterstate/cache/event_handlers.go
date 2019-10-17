@@ -28,9 +28,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 
-	"github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/utils"
-	arbv1 "github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/v1alpha1"
-	arbapi "github.com/kubernetes-sigs/kube-batch/pkg/controller/clusterstate/api"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/utils"
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	arbapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 )
 
 func isTerminated(status arbapi.TaskStatus) bool {

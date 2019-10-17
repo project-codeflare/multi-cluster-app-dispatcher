@@ -36,9 +36,9 @@ import (
 	"k8s.io/metrics/pkg/apis/custom_metrics"
 	"k8s.io/metrics/pkg/apis/external_metrics"
 
-	clusterstatecache "github.com/kubernetes-sigs/kube-batch/pkg/controller/clusterstate/cache"
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/provider"
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/provider/helpers"
+	clusterstatecache "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider/helpers"
 )
 
 // CustomMetricResource wraps provider.CustomMetricInfo in a struct which stores the Name and Namespace of the resource

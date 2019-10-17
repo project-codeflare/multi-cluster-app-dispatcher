@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"github.com/golang/glog"
 
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/provider"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"

@@ -36,13 +36,13 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/utils"
-	arbv1 "github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/v1alpha1"
-	clientset "github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/controller-versioned"
-	"github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/controller-versioned/clients"
-	arbinformers "github.com/kubernetes-sigs/kube-batch/pkg/client/informers/controller-externalversion"
-	informersv1 "github.com/kubernetes-sigs/kube-batch/pkg/client/informers/controller-externalversion/v1"
-	listersv1 "github.com/kubernetes-sigs/kube-batch/pkg/client/listers/controller/v1"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/utils"
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
+	arbinformers "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion"
+	informersv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/v1"
+	listersv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
 )
 
 const (

@@ -22,8 +22,8 @@ import (
 	policyv1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/utils"
-	arbv1 "github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/v1alpha1"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/utils"
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 )
 
 type TaskID types.UID
