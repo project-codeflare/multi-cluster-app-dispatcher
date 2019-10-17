@@ -1,6 +1,6 @@
 # Multi-Cluster-App-Deployer Controller Build Instructions
 
-This document will show how to build the `Multi-Cluster-App-Deployer` Kubernetes Controller that operates on on an AppWrapper kubernetes custom resource definition. It is for [master](https://github.com/IBM/multi-cluster-app-dispatcher/tree/master) branch.
+This document will show how to build the `Multi-Cluster-App-Deployer` Kubernetes Controller that operates on an AppWrapper kubernetes custom resource definition. It is for [master](https://github.com/IBM/multi-cluster-app-dispatcher/tree/master) branch.
 
 ## 1. Pre-condition
 

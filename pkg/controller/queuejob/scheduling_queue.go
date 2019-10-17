@@ -31,7 +31,7 @@ import (
 	"sync"
 
 	"k8s.io/client-go/tools/cache"
-	qjobv1 "github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/v1alpha1"
+	qjobv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	"github.com/golang/glog"
 	"reflect"
 )

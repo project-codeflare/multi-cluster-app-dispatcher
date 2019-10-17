@@ -19,9 +19,9 @@ package queuejobdispatch
 import (
 	"encoding/json"
 	"github.com/golang/glog"
-	arbv1 "github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/v1alpha1"
-	clientset "github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/controller-versioned"
-	clusterstateapi "github.com/kubernetes-sigs/kube-batch/pkg/controller/clusterstate/api"
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
+	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
@@ -32,12 +32,12 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	arbinformers "github.com/kubernetes-sigs/kube-batch/pkg/client/informers/controller-externalversion"
-	informersv1 "github.com/kubernetes-sigs/kube-batch/pkg/client/informers/controller-externalversion/v1"
-	listersv1 "github.com/kubernetes-sigs/kube-batch/pkg/client/listers/controller/v1"
+	arbinformers "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion"
+	informersv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/v1"
+	listersv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/kubernetes-sigs/kube-batch/pkg/client/clientset/controller-versioned/clients"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 

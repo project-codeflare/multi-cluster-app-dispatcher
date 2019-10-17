@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/apiserver"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/apiserver"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 )

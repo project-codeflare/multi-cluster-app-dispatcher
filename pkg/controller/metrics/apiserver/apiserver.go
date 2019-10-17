@@ -25,7 +25,7 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/client-go/informers"
 
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/provider"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
 	cminstall "k8s.io/metrics/pkg/apis/custom_metrics/install"
 	eminstall "k8s.io/metrics/pkg/apis/external_metrics/install"
 )

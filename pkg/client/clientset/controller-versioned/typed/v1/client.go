@@ -17,7 +17,7 @@ limitations under the License.
 package v1
 
 import (
-	v1 "github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/v1alpha1"
+	v1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"

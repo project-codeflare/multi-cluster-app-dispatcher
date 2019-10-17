@@ -20,7 +20,7 @@ import (
 	"sync"
 
 	"github.com/golang/glog"
-	qjobv1 "github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/v1alpha1"
+	qjobv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	"k8s.io/client-go/rest"
 )
 

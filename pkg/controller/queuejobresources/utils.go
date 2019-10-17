@@ -1,8 +1,8 @@
 package queuejobresources
 
 import(
-    //schedulerapi "github.com/kubernetes-sigs/kube-batch/pkg/scheduler/api"
-    clusterstateapi "github.com/kubernetes-sigs/kube-batch/pkg/controller/clusterstate/api"
+    //schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
+    clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	"k8s.io/api/core/v1"
 )
 

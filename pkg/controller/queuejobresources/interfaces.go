@@ -17,9 +17,9 @@ limitations under the License.
 package queuejobresources
 
 import (
-	qjobv1 "github.com/kubernetes-sigs/kube-batch/pkg/apis/controller/v1alpha1"
-	// "github.com/kubernetes-sigs/kube-batch/pkg/scheduler/api"
-	clusterstateapi "github.com/kubernetes-sigs/kube-batch/pkg/controller/clusterstate/api"
+	qjobv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	// "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
+	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 
 
 )

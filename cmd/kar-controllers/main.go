@@ -17,8 +17,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/kubernetes-sigs/kube-batch/cmd/kar-controllers/app"
-	"github.com/kubernetes-sigs/kube-batch/cmd/kar-controllers/app/options"
+	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app"
+	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	"github.com/spf13/pflag"
 	"k8s.io/apiserver/pkg/util/flag"
 	"os"

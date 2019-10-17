@@ -31,10 +31,10 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/apiserver"
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/cmd/server"
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/dynamicmapper"
-	"github.com/kubernetes-sigs/kube-batch/pkg/controller/metrics/provider"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/apiserver"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/cmd/server"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/dynamicmapper"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
 )
 
 // AdapterBase provides a base set of functionality for any custom metrics adapter.
