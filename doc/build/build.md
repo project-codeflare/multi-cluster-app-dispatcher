@@ -27,7 +27,8 @@ $
 Run the build script `build.sh`:
 ```
 $ cd multi-cluster-app-dispatcher/deployment/
-dianaarroyosmbp:deployment darroyo$ ./build.sh 
+
+$ ./build.sh 
 ...
 + cd ..
 + make generate-code
