@@ -1,6 +1,0 @@
-FROM golang:alpine 
-
-RUN apk add make
-RUN apk add git
-
-CMD cd /go/src/github.com/kubernetes-sigs/kube-batch && make generate-code && make kar-controller
