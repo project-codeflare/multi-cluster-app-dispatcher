@@ -1,5 +1,5 @@
 BIN_DIR=_output/bin
-RELEASE_VER=v0.2
+RELEASE_VER=v1.14
 CURRENT_DIR=$(shell pwd)
 
 mcad-controller: init generate-code
@@ -20,10 +20,11 @@ generate-code:
 	$(info Generating deepcopy)
 	${BIN_DIR}/deepcopy-gen -i ./pkg/apis/controller/v1alpha1/ -O zz_generated.deepcopy 
 
-images: mcad-controller
-	cp ./_output/bin/mcad-controller ./deployment/images/
-	docker build ./deployment/images -t kubesigs/kube-batch:${RELEASE_VER}
-	rm -f ./deployment/images/kube-batch
+images:
+	$(info Changed to executable directory)
+	cd ./_output/bin
+	$(info Build the docker image)
+	docker build --no-cache --tag mcad-controller:deleteme -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
 
 run-test:
 #	hack/make-rules/test.sh $(WHAT) $(TESTS)
