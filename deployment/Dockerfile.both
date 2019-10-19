@@ -1,7 +1,6 @@
 From ubuntu:18.04
 
-ADD kar-controllers /usr/local/bin
-ADD xqueuejob_controller_deployment_cluster_resource_update.sh /usr/local/bin
+ADD mcad-controller /usr/local/bin
 
 RUN apt-get update
 RUN apt-get -y upgrade

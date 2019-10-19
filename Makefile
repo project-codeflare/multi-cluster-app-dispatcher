@@ -1,9 +1,10 @@
 BIN_DIR=_output/bin
-RELEASE_VER=v0.2
+RELEASE_VER=v1.14
 CURRENT_DIR=$(shell pwd)
 
-kar-controller: init
-	CGO_ENABLED=0 GOARCH=amd64 go build -o ${BIN_DIR}/kar-controllers ./cmd/kar-controllers/
+mcad-controller: init generate-code
+	$(info Compiling controller)
+	CGO_ENABLED=0 GOARCH=amd64 go build -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
 
 verify: generate-code
 #	hack/verify-gofmt.sh
@@ -19,10 +20,11 @@ generate-code:
 	$(info Generating deepcopy)
 	${BIN_DIR}/deepcopy-gen -i ./pkg/apis/controller/v1alpha1/ -O zz_generated.deepcopy 
 
-images: kube-batch
-	cp ./_output/bin/kube-batch ./deployment/images/
-	GOPATH=${ORIG_GOPATH} docker build ./deployment/images -t kubesigs/kube-batch:${RELEASE_VER}
-	rm -f ./deployment/images/kube-batch
+images:
+	$(info Changed to executable directory)
+	cd ./_output/bin
+	$(info Build the docker image)
+	docker build --no-cache --tag mcad-controller:deleteme -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
 
 run-test:
 #	hack/make-rules/test.sh $(WHAT) $(TESTS)
@@ -36,4 +38,4 @@ coverage:
 
 clean:
 	rm -rf _output/
-	rm -f kar-controllers 
+	rm -f mcad-controllers 
