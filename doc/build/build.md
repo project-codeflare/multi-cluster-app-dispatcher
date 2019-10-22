@@ -48,3 +48,35 @@ $ ls ../_output/bin/
 deepcopy-gen	kar-controllers
 $
 ```
+
+### Build the Multi-Cluster-App-Dispatcher
+
+Run the image build scfript `image.sh`:
+
+```
+$ ./image.sh
+...
++ make images
+Changed to executable directory
+Build the docker image
+cd ./_output/bin
+docker build --no-cache --tag mcad-controller:v1.14 ...
+Sending build context to Docker daemon  122.7MB
+Step 1/7 : From ubuntu:18.04
+ ---> ea4c82dcd15a
+Step 2/7 : ADD mcad-controller /usr/local/bin
+ ---> 674cefbce55a
+...
+ ---> 911c7c82b5ee
+Step 7/7 : WORKDIR /usr/local/bin
+ ---> Running in f2db4649e7a6
+Removing intermediate container f2db4649e7a6
+ ---> 1dbf126976cf
+Successfully built 1dbf126976cf
+Successfully tagged mcad-controller:v1.14
+$
+$ docker images mcad-controller
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+mcad-controller     deleteme            1dbf126976cf        11 minutes ago      272MB
+$
+```
