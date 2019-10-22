@@ -305,7 +305,7 @@ spec:
       - name: {{ .Chart.Name }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-        command: ["kar-controllers"]
+        command: ["mcad-controller"]
         args: ["--v", "4", "--logtostderr"]
 #        args: ["--v", "10", "--logtostderr", "--secure-port=6443"]
         ports:
