@@ -24,7 +24,7 @@ images:
 	$(info Changed to executable directory)
 	cd ./_output/bin
 	$(info Build the docker image)
-	docker build --no-cache --tag mcad-controller:deleteme -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
+	docker build --no-cache --tag mcad-controller:${RELEASE_VER} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
 
 run-test:
 #	hack/make-rules/test.sh $(WHAT) $(TESTS)
