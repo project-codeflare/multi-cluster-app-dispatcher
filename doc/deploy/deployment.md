@@ -1,5 +1,5 @@
-# Deploying Extended QueueJob
-Follow the instructions below to deploy the kube-batch extended queuejob in an existing Kubernetes cluster:
+# Deploying Multi-Cluster-App-Wrapper Controller
+Follow the instructions below to deploy the Multi-Cluster-App-Wrapper controller in an existing Kubernetes cluster:
 
 ## Pre-Reqs
 ### - Cluster running Kubernetes v1.10 or higher.
@@ -17,54 +17,9 @@ Install the Helm Client on your local machine and the Helm Cerver on your kubern
 helm list
 ```
 
-### - Access to IBM US South *Stage1* Docker Registry
-#### a) Login to the US South *Stage1* API endpoint
-```
-bx login --sso -a https://api.stage1.ng.bluemix.net
-```
-#### b) Login to the Cloud Container Registry
-```
-bx cr login
-```
-#### c) List the Stage1 Cloud Container Registry to ensure registry access to the Extended QueueJob Controller (kube-arbitrator image)
-```
-bx cr images --include-ibm | grep 'kube-arbitrator'
-```
+### Determine if the cluster has enough resources for installing the Helm chart for the Multi-Cluster-App-Dispatcher.
 
->   Example results of the command above:
->
->     $ bx cr images --include-ibm | grep 'kube-arbitrator'
->
->     registry.stage1.ng.bluemix.net/ibm/kube-arbitrator                  latest                                     ea57c2f09419   ibm         2 days ago      99 MB    No Issues       
-
-#### d) Create a Bluemix API key that you can use to access the Stage1 Docker Registry
-NOTE:  Earlier verisions of this documentation used Bluemix tokens to access the Stage1 Docker Registry.  The creation of Bluemix registry tokens is discontinued.  If you have been using generated tokens to access Stage1 Registry images the previously generated tokens should continue to work by setting the _imagePullSecret.username_=_token_ in the Helm installation.
-```
-bx iam api-key-create MyKey -d "this is my API key" --file key_file
-```
-
->   Example results of the command above:
->
->     $ bx iam api-key-create my-stage1-apikey -d "API Key to access Extended Queuejob image" --file ./my-stage1-apikey
->     Creating API key my-stage1-apikey as <short-id-name>@us.ibm.com...
->     OK
->     API key my-stage1-apikey was created
->     Successfully save API key information to ./my-stage1-apikey
->     
->     
->     $ cat ./my-stage1-apikey
->     {
->      	"name": "my-stage1-apikey",
->      	"description": "API Key to access Extended Queuejob image",
->      	"apikey": "eyJhbGc...y8gJNcpnipUu0",
->      	"createdAt": "2019-07-25T15:06+0000",
->      	"locked": false,
->      	"uuid": "ApiKey-bae824q9-5b83-a412-9fa4-0795ea8b9dad"
->     }
->     OK
-### Determine if the cluster has enough resources for installing the Helm chart for the Enhanced QueueJob.
-
-The default memory resource demand for the extended queuejob controller is `2G`.  If your cluster is a small installation such as MiniKube you will want to adjust the Helm installation resource requests accordingly.  
+The default memory resource demand for the multi-cluster-app-dispatcher controller is `2G`.  If your cluster is a small installation such as MiniKube you will want to adjust the Helm installation resource requests accordingly.  
 
 
 To list available compute nodes on your cluster enter the following command:
@@ -127,19 +82,23 @@ cd extended-queuejob/contrib/DLaaS/deployment
 ```
 
 ### 3. Run the installation using Helm.
-Install the Extended QueueJob Controller using the commands below.  The `--wait` parameter in the Helm command below is  used to ensure all pods of the helm chart are running and will not return unless the default timeout expires (*typically 300 seconds*) or all the pods are in `Running` state.
+Install the Multi-Cluster-App-Dispatcher Controller using the commands below.  The `--wait` parameter in the Helm command below is  used to ensure all pods of the helm chart are running and will not return unless the default timeout expires (*typically 300 seconds*) or all the pods are in `Running` state.
 
 
 Before submitting the command below you should ensure you have enough resources in your cluster to deploy the helm chart (*see Pre-Reqs section above*).  If you do not have enough compute resources in your cluster you can adjust the resource request via the command line.  See an example in the `Note` below.  
 
 All Helm parameters and described in the table below.
-#### 3.a  Start the Enhanced QueueJob Controller on All Target Deployment Clusters (*Agent Mode*).
-__Agent Mode__: Install and set up the Extended QueueJob Controler (XQJ) in *Agent Mode* for each clusters that will orchestrate the resources defined within an XQJ using Helm.  *Agent Mode* is the default mode when deploying the XQJ controller.
+#### 3.a  Start the Multi-Cluster-App-Dispatcher Controller on All Target Deployment Clusters (*Agent Mode*).
+__Agent Mode__: Install and set up the Multi-Cluster-App-Dispatcher Controler (XQJ) in *Agent Mode* for each clusters that will orchestrate the resources defined within an XQJ using Helm.  *Agent Mode* is the default mode when deploying the XQJ controller.
 ```
 helm install kube-arbitrator --namespace kube-system --wait --set image.repository=<image repository and name> --set image.tag=<image tag> --set imagePullSecret.name=<Name of image pull kubernetes secret> --set imagePullSecret.password=<REPLACE_WITH_REGISTRY_TOKEN_GENERATED_IN_PREREQs_STAGE1_REGISTRY.d)>  --set localConfigName=<Local Kubernetes Config File for Current Cluster>  --set volumes.hostPath=<Host_Path_location_of_local_Kubernetes_config_file>
 ```
 
 For example (*Assuming the default for `image.repository`, `image.tag`*):
+```
+helm install kube-arbitrator --namespace kube-system
+```
+or
 ```
 helm install kube-arbitrator --namespace kube-system --wait --set imagePullSecret.name=extended-queuejob-controller-registry-secret --set imagePullSecret.password=eyJhbGc...y8gJNcpnipUu0 --set image.pullPolicy=Always --set localConfigName=config_110 --set volumes.hostPath=/etc/kubernetes
 ```
@@ -148,11 +107,11 @@ NOTE: You can adjust the cpu and memory demands of the deployment with command l
 ```
 helm install kube-arbitrator --namespace kube-system --wait -set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=k8s-spark-mcm-dispatcher-master-1:8443/xqueuejob-controller --set image.tag=v1.11 --set image.pullPolicy=Always
 ```
-#### 3.b  Start the Enhanced QueueJob Controller on the Controller Cluster (*Dispatcher Mode*).
-_Dispatcher Mode__: Install and set up the Extended QueueJob Controler (XQJ) in *Dispatcher Mode* for the control cluster that will dispatch the XQJ to an *Agent* cluster using Helm.
+#### 3.b  Start the Multi-Cluster-App-Dispatcher Controller on the Controller Cluster (*Dispatcher Mode*).
+_Dispatcher Mode__: Install and set up the Multi-Cluster-App-Dispatcher Controler (XQJ) in *Dispatcher Mode* for the control cluster that will dispatch the XQJ to an *Agent* cluster using Helm.
 
 
-__Dispatcher Mode__: Installing the Extended QueueJob Controler in *Dispatcher Mode*.
+__Dispatcher Mode__: Installing the Multi-Cluster-App-Dispatcher Controler in *Dispatcher Mode*.
 ```
 helm install kube-arbitrator --namespace kube-system --wait --set image.repository=<image repository and name> --set image.tag=<image tag> --set configMap.name=<Config> --set configMap.dispatcherMode='"true"' --set configMap.agentConfigs=agent101config:uncordon --set volumes.hostPath=<Host_Path_location_of_all_agent_Kubernetes_config_files>
 ```
@@ -193,7 +152,7 @@ List the Helm installation.  The `STATUS` should be `DEPLOYED`.
 
 NOTE: The `--wait` parameter in the helm installation command from *step #3* above ensures all resources are deployed and running if the `STATUS` indicates `DEPLOYED`.  Installing the Helm Chart without the `--wait` parameter does not ensure all resources are successfully running but may still show a `Status` of `Deployed`.  
 
-The `STATUS` value of `FAILED` indicates all resources were not created and running before the timeout occurred.  Usually this indicates a pod creation failure is due to insufficient resources to create the Enhanced QueueJob Controller pod.  Example instructions on how to adjust the resources requested for the Helm chart are described in the `NOTE` comment of *step #4* above.
+The `STATUS` value of `FAILED` indicates all resources were not created and running before the timeout occurred.  Usually this indicates a pod creation failure is due to insufficient resources to create the Multi-Cluster-App-Dispatcher Controller pod.  Example instructions on how to adjust the resources requested for the Helm chart are described in the `NOTE` comment of *step #4* above.
 ```
 $ helm list
 NAME                	REVISION	UPDATED                 	STATUS  	CHART                	NAMESPACE  
@@ -208,9 +167,9 @@ kubectl get xqueuejobs
 
 Since no `xqueuejobs` have been deploy yet to your cluster you should receive a message indicating `No resources found.` for `xqueuejobs` but your cluster now has `xqueuejobs` enabled.  Use the [tutorial](../doc/usage/tutorial.md) to deploy an example `xqueuejob`.
 
-### 6.  Remove the Extended QueueJob Controller from your cluster.
+### 6.  Remove the Multi-Cluster-App-Dispatcher Controller from your cluster.
 
-List the deployed Helm charts and identify the name of the Extended QueueJob Controller installation.
+List the deployed Helm charts and identify the name of the Multi-Cluster-App-Dispatcher Controller installation.
 ```bash
 helm list
 ```
