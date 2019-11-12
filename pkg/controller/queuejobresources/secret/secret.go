@@ -39,12 +39,12 @@ import (
 	"time"
 )
 
-var queueJobKind = arbv1.SchemeGroupVersion.WithKind("XQueueJob")
-var queueJobName = "xqueuejob.arbitrator.k8s.io"
+var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
+var queueJobName = "appwrapper.arbitrator.k8s.io"
 
 const (
 	// QueueJobNameLabel label string for queuejob name
-	QueueJobNameLabel string = "xqueuejob-name"
+	QueueJobNameLabel string = "appwrapper-name"
 
 	// ControllerUIDLabel label string for queuejob controller uid
 	ControllerUIDLabel string = "controller-uid"
@@ -52,15 +52,15 @@ const (
 
 //QueueJobResService contains service info
 type QueueJobResSecret struct {
-	clients    *kubernetes.Clientset
-	arbclients *clientset.Clientset
+	clients    		*kubernetes.Clientset
+	arbclients 		*clientset.Clientset
 	// A store of services, populated by the serviceController
-	secretStore    corelisters.SecretLister
-	secretInformer corev1informer.SecretInformer
+	secretStore    	corelisters.SecretLister
+	secretInformer 	corev1informer.SecretInformer
 	rtScheme        *runtime.Scheme
 	jsonSerializer  *json.Serializer
 	// Reference manager to manage membership of queuejob resource and its members
-	refManager queuejobresources.RefManager
+	refManager 		queuejobresources.RefManager
 }
 
 //Register registers a queue job resource type
@@ -111,7 +111,7 @@ func (qjrSecret *QueueJobResSecret) Run(stopCh <-chan struct{}) {
 	qjrSecret.secretInformer.Informer().Run(stopCh)
 }
 
-func (qjrSecret *QueueJobResSecret) GetAggregatedResources(job *arbv1.XQueueJob) *clusterstateapi.Resource {
+func (qjrSecret *QueueJobResSecret) GetAggregatedResources(job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	return clusterstateapi.EmptyResource()
 }
 
@@ -131,14 +131,14 @@ func (qjrSecret *QueueJobResSecret) deleteSecret(obj interface{}) {
 }
 
 
-func (qjrSecret *QueueJobResSecret) GetAggregatedResourcesByPriority(priority int, job *arbv1.XQueueJob) *clusterstateapi.Resource {
+func (qjrSecret *QueueJobResSecret) GetAggregatedResourcesByPriority(priority int, job *arbv1.AppWrapper) *clusterstateapi.Resource {
         total := clusterstateapi.EmptyResource()
         return total
 }
 
 
 // Parse queue job api object to get Service template
-func (qjrSecret *QueueJobResSecret) getSecretTemplate(qjobRes *arbv1.XQueueJobResource) (*v1.Secret, error) {
+func (qjrSecret *QueueJobResSecret) getSecretTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.Secret, error) {
 
 	secretGVK := schema.GroupVersion{Group: v1.GroupName, Version: "v1"}.WithKind("Secret")
 
@@ -179,11 +179,11 @@ func (qjrSecret *QueueJobResSecret) delSecret(namespace string, name string) err
 	return nil
 }
 
-func (qjrSecret *QueueJobResSecret) UpdateQueueJobStatus(queuejob *arbv1.XQueueJob) error {
+func (qjrSecret *QueueJobResSecret) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) error {
 	return nil
 }
 
-func (qjrSecret *QueueJobResSecret) SyncQueueJob(queuejob *arbv1.XQueueJob, qjobRes *arbv1.XQueueJobResource) error {
+func (qjrSecret *QueueJobResSecret) SyncQueueJob(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 
 	startTime := time.Now()
 
@@ -244,9 +244,9 @@ func (qjrSecret *QueueJobResSecret) SyncQueueJob(queuejob *arbv1.XQueueJob, qjob
 }
 
 
-func (qjrSecret *QueueJobResSecret) getSecretForQueueJobRes(qjobRes *arbv1.XQueueJobResource, queuejob *arbv1.XQueueJob) (*string, *v1.Secret, []*v1.Secret, error) {
+func (qjrSecret *QueueJobResSecret) getSecretForQueueJobRes(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) (*string, *v1.Secret, []*v1.Secret, error) {
 
-	// Get "a" Secret from XQJ Resource
+	// Get "a" Secret from AppWrapper Resource
 	secretInQjr, err := qjrSecret.getSecretTemplate(qjobRes)
 	if err != nil {
 		glog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
@@ -292,7 +292,7 @@ func (qjrSecret *QueueJobResSecret) getSecretForQueueJobRes(qjobRes *arbv1.XQueu
 }
 
 
-func (qjrSecret *QueueJobResSecret) deleteQueueJobResSecrets(qjobRes *arbv1.XQueueJobResource, queuejob *arbv1.XQueueJob) error {
+func (qjrSecret *QueueJobResSecret) deleteQueueJobResSecrets(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) error {
 
 	job := *queuejob
 
@@ -320,149 +320,6 @@ func (qjrSecret *QueueJobResSecret) deleteQueueJobResSecrets(qjobRes *arbv1.XQue
 }
 
 //Cleanup deletes all services
-func (qjrSecret *QueueJobResSecret) Cleanup(queuejob *arbv1.XQueueJob, qjobRes *arbv1.XQueueJobResource) error {
+func (qjrSecret *QueueJobResSecret) Cleanup(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 	return qjrSecret.deleteQueueJobResSecrets(qjobRes, queuejob)
 }
-
-
-
-// //SyncQueueJob syncs the services
-// func (qjrSecret *QueueJobResSecret) SyncQueueJob(queuejob *arbv1.XQueueJob, qjobRes *arbv1.XQueueJobResource) error {
-//
-// 	startTime := time.Now()
-// 	defer func() {
-// 		glog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
-// 		// glog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
-// 	}()
-//
-// 	secrets, err := qjrSecret.getSecretForQueueJobRes(qjobRes, queuejob)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	secretLen := len(secrets)
-// 	replicas := qjobRes.Replicas
-//
-// 	diff := int(replicas) - int(secretLen)
-//
-// 	glog.V(4).Infof("QJob: %s had %d secrets and %d desired secrets", queuejob.Name, replicas, secretLen)
-//
-// 	if diff > 0 {
-// 		template, err := qjrSecret.getSecretTemplate(qjobRes)
-// 		if err != nil {
-// 			glog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
-// 			return err
-// 		}
-// 		//TODO: need set reference after Service has been really added
-// 		tmpSecret := v1.Secret{}
-// 		err = qjrSecret.refManager.AddReference(qjobRes, &tmpSecret)
-// 		if err != nil {
-// 			glog.Errorf("Cannot add reference to secret resource %+v", err)
-// 			return err
-// 		}
-//
-// 		if template.Labels == nil {
-// 			template.Labels = map[string]string{}
-// 		}
-// 		for k, v := range tmpSecret.Labels {
-// 			template.Labels[k] = v
-// 		}
-// 		wait := sync.WaitGroup{}
-// 		wait.Add(int(diff))
-// 		for i := 0; i < diff; i++ {
-// 			go func() {
-// 				defer wait.Done()
-// 				_namespace:=""
-// 				if template.Namespace!=""{
-// 					_namespace=template.Namespace
-// 				} else {
-// 					_namespace=queuejob.Namespace
-// 				}
-// 				err := qjrSecret.createSecretWithControllerRef(_namespace, template, metav1.NewControllerRef(queuejob, queueJobKind))
-// 				if err != nil && errors.IsTimeout(err) {
-// 					return
-// 				}
-// 				if err != nil {
-// 					defer utilruntime.HandleError(err)
-// 				}
-// 			}()
-// 		}
-// 		wait.Wait()
-// 	}
-//
-// 	return nil
-// }
-//
-// func (qjrSecret *QueueJobResSecret) getSecretForQueueJob(j *arbv1.XQueueJob) ([]*v1.Secret, error) {
-// 	secretlist, err := qjrSecret.clients.CoreV1().Secrets(j.Namespace).List(metav1.ListOptions{})
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	secrets := []*v1.Secret{}
-// 	for i, secret := range secretlist.Items {
-// 		metaSecret, err := meta.Accessor(&secret)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-//
-// 		controllerRef := metav1.GetControllerOf(metaSecret)
-// 		if controllerRef != nil {
-// 			if controllerRef.UID == j.UID {
-// 				secrets = append(secrets, &secretlist.Items[i])
-// 			}
-// 		}
-// 	}
-// 	return secrets, nil
-//
-// }
-//
-// func (qjrSecret *QueueJobResSecret) getSecretForQueueJobRes(qjobRes *arbv1.XQueueJobResource, j *arbv1.XQueueJob) ([]*v1.Secret, error) {
-//
-// 	secrets, err := qjrSecret.getSecretForQueueJob(j)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	mySecrets := []*v1.Secret{}
-// 	for i, secret := range secrets {
-// 		if qjrSecret.refManager.BelongTo(qjobRes, secret) {
-// 			mySecrets = append(mySecrets, secrets[i])
-// 		}
-// 	}
-//
-// 	return mySecrets, nil
-//
-// }
-//
-// func (qjrSecret *QueueJobResSecret) deleteQueueJobResSecrets(qjobRes *arbv1.XQueueJobResource, queuejob *arbv1.XQueueJob) error {
-//
-// 	job := *queuejob
-//
-// 	activeSecrets, err := qjrSecret.getSecretForQueueJobRes(qjobRes, queuejob)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	active := int32(len(activeSecrets))
-//
-// 	wait := sync.WaitGroup{}
-// 	wait.Add(int(active))
-// 	for i := int32(0); i < active; i++ {
-// 		go func(ix int32) {
-// 			defer wait.Done()
-// 			if err := qjrSecret.delSecret(queuejob.Namespace, activeSecrets[ix].Name); err != nil {
-// 				defer utilruntime.HandleError(err)
-// 				glog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeSecrets[ix].Name, job.Namespace, job.Name)
-// 			}
-// 		}(i)
-// 	}
-// 	wait.Wait()
-//
-// 	return nil
-// }
-//
-// //Cleanup deletes all services
-// func (qjrSecret *QueueJobResSecret) Cleanup(queuejob *arbv1.XQueueJob, qjobRes *arbv1.XQueueJobResource) error {
-// 	return qjrSecret.deleteQueueJobResSecrets(qjobRes, queuejob)
-// }

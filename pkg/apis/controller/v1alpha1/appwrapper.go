@@ -22,30 +22,30 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-const XQueueJobPlural string = "xqueuejobs"
+const AppWrapperPlural string = "appwrappers"
 
-// Definition of QueueJob class
+// Definition of AppWrapper class
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type XQueueJob struct {
+type AppWrapper struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              XQueueJobSpec   `json:"spec"`
-	Status            XQueueJobStatus `json:"status,omitempty"`
+	Spec              AppWrapperSpec   `json:"spec"`
+	Status            AppWrapperStatus `json:"status,omitempty"`
 }
 
-// QueueJobList is a collection of queuejobs.
+// AppWrapperList is a collection of AppWrappers.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type XQueueJobList struct {
+type AppWrapperList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []XQueueJob `json:"items"`
+	Items           []AppWrapper `json:"items"`
 }
 
-// JobSpec describes how the queue job will look like.
-type XQueueJobSpec struct {
-	Priority      int                   `json:"priority,omitempty"`
-	Service       XQueueJobService      `json:"service"`
-	AggrResources XQueueJobResourceList `json:"resources"`
+// AppWrapperSpec describes how the App Wrapper will look like.
+type AppWrapperSpec struct {
+	Priority      int                    `json:"priority,omitempty"`
+	Service       AppWrapperService      `json:"service"`
+	AggrResources AppWrapperResourceList `json:"resources"`
 
 	Selector *metav1.LabelSelector `json:"selector,omitempty" protobuf:"bytes,1,opt,name=selector"`
 
@@ -53,24 +53,19 @@ type XQueueJobSpec struct {
 	SchedSpec SchedulingSpecTemplate `json:"schedulingSpec,omitempty" protobuf:"bytes,2,opt,name=schedulingSpec"`
 }
 
-// QueueJobService is queue job service definition
-type XQueueJobService struct {
+// AppWrapperService is App Wrapper service definition
+type AppWrapperService struct {
 	Spec v1.ServiceSpec `json:"spec"`
 }
 
-// QueueJobSecret is queue job service definition
-//type QueueJobSecret struct {
-//	Spec v1.SecretSpec `json:"spec"`
-//}
-
-// QueueJobResource is queue job aggregation resource
-type XQueueJobResource struct {
+// AppWrapperResource is App Wrapper aggregation resource
+type AppWrapperResource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 	// Replicas is the number of desired replicas
 	Replicas int32 `json:"replicas,omitempty" protobuf:"bytes,2,opt,name=replicas"`
 
-	// The minimal available pods to run for this QueueJob; the default value is nil
+	// The minimal available pods to run for this AppWrapper; the default value is nil
 	MinAvailable *int32 `json:"minavailable,omitempty" protobuf:"bytes,3,opt,name=minavailable"`
 
 	// The number of allocated replicas from this resource type
@@ -87,32 +82,32 @@ type XQueueJobResource struct {
 	Template runtime.RawExtension `json:"template"`
 }
 
-// a collection of QueueJobResource
-type XQueueJobResourceList struct {
+// a collection of AppWrapperResource
+type AppWrapperResourceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []XQueueJobResource
+	Items           []AppWrapperResource
 }
 
-// queue job resources type
+// App Wrapper resources type
 type ResourceType string
 
 const (
-	ResourceTypePod         ResourceType = "Pod"
-	ResourceTypeService     ResourceType = "Service"
-	ResourceTypeSecret      ResourceType = "Secret"
-	ResourceTypeStatefulSet ResourceType = "StatefulSet"
-	ResourceTypeDeployment  ResourceType = "Deployment"
-	ResourceTypeReplicaSet  ResourceType = "ReplicaSet"
-	ResourceTypePersistentVolume	ResourceType = "PersistentVolume"
+	ResourceTypePod         			ResourceType = "Pod"
+	ResourceTypeService     			ResourceType = "Service"
+	ResourceTypeSecret      			ResourceType = "Secret"
+	ResourceTypeStatefulSet 			ResourceType = "StatefulSet"
+	ResourceTypeDeployment  			ResourceType = "Deployment"
+	ResourceTypeReplicaSet  			ResourceType = "ReplicaSet"
+	ResourceTypePersistentVolume		ResourceType = "PersistentVolume"
 	ResourceTypePersistentVolumeClaim	ResourceType = "PersistentVolumeClaim"
-	ResourceTypeNamespace	ResourceType = "Namespace"
-	ResourceTypeConfigMap	ResourceType = "ConfigMap"
-	ResourceTypeNetworkPolicy	ResourceType = "NetworkPolicy"
+	ResourceTypeNamespace				ResourceType = "Namespace"
+	ResourceTypeConfigMap				ResourceType = "ConfigMap"
+	ResourceTypeNetworkPolicy			ResourceType = "NetworkPolicy"
 )
 
-// QueueJobStatus represents the current state of a QueueJob
-type XQueueJobStatus struct {
+// AppWrapperStatus represents the current state of a AppWrapper
+type AppWrapperStatus struct {
 	// The number of pending pods.
 	// +optional
 	Pending int32 `json:"pending,omitempty" protobuf:"bytes,1,opt,name=pending"`
@@ -128,7 +123,7 @@ type XQueueJobStatus struct {
 	// +optional
 	Failed int32 `json:"failed,omitempty" protobuf:"bytes,3,opt,name=failed"`
 
-	// The minimal available resources to run for this QueueJob (is this different from the MinAvailable from JobStatus)
+	// The minimal available resources to run for this AppWrapper (is this different from the MinAvailable from JobStatus)
 	// +optional
 	MinAvailable int32 `json:"template,omitempty" protobuf:"bytes,4,opt,name=template"`
 	
@@ -139,17 +134,17 @@ type XQueueJobStatus struct {
 	IsDispatched bool `json:"isdispatched,omitempty" protobuf:"bytes,1,opt,name=isdispatched"`
 
 	//State - Running, Queued, Deleted ?
-	State             XQueueJobState `json:"state,omitempty"`
+	State AppWrapperState `json:"state,omitempty"`
 
 	Message string `json:"message,omitempty"`
 }
 
-type XQueueJobState string
+type AppWrapperState string
 
 //enqueued, active, deleting, succeeded, failed
 const (
-	QueueJobStateEnqueued XQueueJobState = "Pending"
-	QueueJobStateActive   XQueueJobState = "Running"
-	QueueJobStateDeleted  XQueueJobState = "Deleted"
-	QueueJobStateFailed   XQueueJobState = "Failed"
+	AppWrapperStateEnqueued AppWrapperState = "Pending"
+	AppWrapperStateActive   AppWrapperState = "Running"
+	AppWrapperStateDeleted  AppWrapperState = "Deleted"
+	AppWrapperStateFailed   AppWrapperState = "Failed"
 )

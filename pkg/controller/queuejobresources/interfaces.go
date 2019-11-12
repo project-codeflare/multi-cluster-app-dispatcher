@@ -18,7 +18,6 @@ package queuejobresources
 
 import (
 	qjobv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
-	// "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 
 
@@ -26,10 +25,10 @@ import (
 
 // Interface is an abstract interface for queue job resource management.
 type Interface interface {
-	SyncQueueJob(queuejob *qjobv1.XQueueJob, qjobRes *qjobv1.XQueueJobResource) error
-	UpdateQueueJobStatus(queuejob *qjobv1.XQueueJob) error
-	GetAggregatedResources(queuejob *qjobv1.XQueueJob) *clusterstateapi.Resource
-	GetAggregatedResourcesByPriority(priority int, queuejob *qjobv1.XQueueJob) *clusterstateapi.Resource
-	Cleanup(queuejob *qjobv1.XQueueJob, qjobRes *qjobv1.XQueueJobResource) error
+	SyncQueueJob(queuejob *qjobv1.AppWrapper, qjobRes *qjobv1.AppWrapperResource) error
+	UpdateQueueJobStatus(queuejob *qjobv1.AppWrapper) error
+	GetAggregatedResources(queuejob *qjobv1.AppWrapper) *clusterstateapi.Resource
+	GetAggregatedResourcesByPriority(priority int, queuejob *qjobv1.AppWrapper) *clusterstateapi.Resource
+	Cleanup(queuejob *qjobv1.AppWrapper, qjobRes *qjobv1.AppWrapperResource) error
 	Run(stopCh <-chan struct{})
 }

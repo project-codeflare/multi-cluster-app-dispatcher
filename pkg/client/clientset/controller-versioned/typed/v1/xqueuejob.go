@@ -29,12 +29,12 @@ type XQueueJobGetter interface {
 }
 
 type XQueueJobInterface interface {
-	Create(*v1.XQueueJob) (*v1.XQueueJob, error)
-	Update(*v1.XQueueJob) (*v1.XQueueJob, error)
-	UpdateStatus(*v1.XQueueJob) (*v1.XQueueJob, error)
+	Create(*v1.AppWrapper) (*v1.AppWrapper, error)
+	Update(*v1.AppWrapper) (*v1.AppWrapper, error)
+	UpdateStatus(*v1.AppWrapper) (*v1.AppWrapper, error)
 	Delete(name string, options *meta_v1.DeleteOptions) error
-	Get(name string, options meta_v1.GetOptions) (*v1.XQueueJob, error)
-	List(opts meta_v1.ListOptions) (*v1.XQueueJobList, error)
+	Get(name string, options meta_v1.GetOptions) (*v1.AppWrapper, error)
+	List(opts meta_v1.ListOptions) (*v1.AppWrapperList, error)
 }
 
 // queuejobs implements QueueJobInterface
@@ -52,11 +52,11 @@ func newXQueueJobs(c *ArbV1Client, namespace string) *xqueuejobs {
 }
 
 // Create takes the representation of a queuejob and creates it.  Returns the server's representation of the queuejob, and an error, if there is any.
-func (c *xqueuejobs) Create(queuejob *v1.XQueueJob) (result *v1.XQueueJob, err error) {
-	result = &v1.XQueueJob{}
+func (c *xqueuejobs) Create(queuejob *v1.AppWrapper) (result *v1.AppWrapper, err error) {
+	result = &v1.AppWrapper{}
 	err = c.client.Post().
 		Namespace(c.ns).
-		Resource(v1.XQueueJobPlural).
+		Resource(v1.AppWrapperPlural).
 		Body(queuejob).
 		Do().
 		Into(result)
@@ -64,11 +64,11 @@ func (c *xqueuejobs) Create(queuejob *v1.XQueueJob) (result *v1.XQueueJob, err e
 }
 
 // Update takes the representation of a queuejob and updates it. Returns the server's representation of the queuejob, and an error, if there is any.
-func (c *xqueuejobs) Update(queuejob *v1.XQueueJob) (result *v1.XQueueJob, err error) {
-	result = &v1.XQueueJob{}
+func (c *xqueuejobs) Update(queuejob *v1.AppWrapper) (result *v1.AppWrapper, err error) {
+	result = &v1.AppWrapper{}
 	err = c.client.Put().
 		Namespace(c.ns).
-		Resource(v1.XQueueJobPlural).
+		Resource(v1.AppWrapperPlural).
 		Name(queuejob.Name).
 		Body(queuejob).
 		Do().
@@ -79,11 +79,11 @@ func (c *xqueuejobs) Update(queuejob *v1.XQueueJob) (result *v1.XQueueJob, err e
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 
-func (c *xqueuejobs) UpdateStatus(queuejob *v1.XQueueJob) (result *v1.XQueueJob, err error) {
-	result = &v1.XQueueJob{}
+func (c *xqueuejobs) UpdateStatus(queuejob *v1.AppWrapper) (result *v1.AppWrapper, err error) {
+	result = &v1.AppWrapper{}
 	err = c.client.Put().
 		Namespace(c.ns).
-		Resource(v1.XQueueJobPlural).
+		Resource(v1.AppWrapperPlural).
 		Name(queuejob.Name).
 		SubResource("status").
 		Body(queuejob).
@@ -96,7 +96,7 @@ func (c *xqueuejobs) UpdateStatus(queuejob *v1.XQueueJob) (result *v1.XQueueJob,
 func (c *xqueuejobs) Delete(name string, options *meta_v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
-		Resource(v1.XQueueJobPlural).
+		Resource(v1.AppWrapperPlural).
 		Name(name).
 		Body(options).
 		Do().
@@ -104,11 +104,11 @@ func (c *xqueuejobs) Delete(name string, options *meta_v1.DeleteOptions) error {
 }
 
 // Get takes name of the queuejob, and returns the corresponding queuejob object, and an error if there is any.
-func (c *xqueuejobs) Get(name string, options meta_v1.GetOptions) (result *v1.XQueueJob, err error) {
-	result = &v1.XQueueJob{}
+func (c *xqueuejobs) Get(name string, options meta_v1.GetOptions) (result *v1.AppWrapper, err error) {
+	result = &v1.AppWrapper{}
 	err = c.client.Get().
 		Namespace(c.ns).
-		Resource(v1.XQueueJobPlural).
+		Resource(v1.AppWrapperPlural).
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
 		Do().
@@ -117,11 +117,11 @@ func (c *xqueuejobs) Get(name string, options meta_v1.GetOptions) (result *v1.XQ
 }
 
 // List takes label and field selectors, and returns the list of QueueJobs that match those selectors.
-func (c *xqueuejobs) List(opts meta_v1.ListOptions) (result *v1.XQueueJobList, err error) {
-	result = &v1.XQueueJobList{}
+func (c *xqueuejobs) List(opts meta_v1.ListOptions) (result *v1.AppWrapperList, err error) {
+	result = &v1.AppWrapperList{}
 	err = c.client.Get().
 		Namespace(c.ns).
-		Resource(v1.XQueueJobPlural).
+		Resource(v1.AppWrapperPlural).
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Do().
 		Into(result)

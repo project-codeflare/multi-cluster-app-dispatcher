@@ -39,12 +39,12 @@ import (
 	"time"
 )
 
-var queueJobKind = arbv1.SchemeGroupVersion.WithKind("XQueueJob")
-var queueJobName = "xqueuejob.arbitrator.k8s.io"
+var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
+var queueJobName = "appwrapper.arbitrator.k8s.io"
 
 const (
 	// QueueJobNameLabel label string for queuejob name
-	QueueJobNameLabel string = "xqueuejob-name"
+	QueueJobNameLabel string = "appwrapper-name"
 
 	// ControllerUIDLabel label string for queuejob controller uid
 	ControllerUIDLabel string = "controller-uid"
@@ -52,15 +52,15 @@ const (
 
 //QueueJobResService contains service info
 type QueueJobResNamespace struct {
-	clients    *kubernetes.Clientset
-	arbclients *clientset.Clientset
+	clients    			*kubernetes.Clientset
+	arbclients 			*clientset.Clientset
 	// A store of services, populated by the serviceController
-	namespaceStore    corelisters.NamespaceLister
-	namespaceInformer corev1informer.NamespaceInformer
-	rtScheme        *runtime.Scheme
-	jsonSerializer  *json.Serializer
+	namespaceStore    	corelisters.NamespaceLister
+	namespaceInformer 	corev1informer.NamespaceInformer
+	rtScheme        	*runtime.Scheme
+	jsonSerializer  	*json.Serializer
 	// Reference manager to manage membership of queuejob resource and its members
-	refManager queuejobresources.RefManager
+	refManager 			queuejobresources.RefManager
 }
 
 //Register registers a queue job resource type
@@ -111,7 +111,7 @@ func (qjrNamespace *QueueJobResNamespace) Run(stopCh <-chan struct{}) {
 	qjrNamespace.namespaceInformer.Informer().Run(stopCh)
 }
 
-func (qjrNamespace *QueueJobResNamespace) GetAggregatedResources(job *arbv1.XQueueJob) *clusterstateapi.Resource {
+func (qjrNamespace *QueueJobResNamespace) GetAggregatedResources(job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	return clusterstateapi.EmptyResource()
 }
 
@@ -131,14 +131,14 @@ func (qjrNamespace *QueueJobResNamespace) deleteNamespace(obj interface{}) {
 }
 
 
-func (qjrNamespace *QueueJobResNamespace) GetAggregatedResourcesByPriority(priority int, job *arbv1.XQueueJob) *clusterstateapi.Resource {
+func (qjrNamespace *QueueJobResNamespace) GetAggregatedResourcesByPriority(priority int, job *arbv1.AppWrapper) *clusterstateapi.Resource {
         total := clusterstateapi.EmptyResource()
         return total
 }
 
 
 // Parse queue job api object to get Service template
-func (qjrNamespace *QueueJobResNamespace) getNamespaceTemplate(qjobRes *arbv1.XQueueJobResource) (*v1.Namespace, error) {
+func (qjrNamespace *QueueJobResNamespace) getNamespaceTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.Namespace, error) {
 
 	namespaceGVK := schema.GroupVersion{Group: v1.GroupName, Version: "v1"}.WithKind("Namespace")
 
@@ -180,12 +180,12 @@ func (qjrNamespace *QueueJobResNamespace) delNamespace(name string) error {
 	return nil
 }
 
-func (qjrNamespace *QueueJobResNamespace) UpdateQueueJobStatus(queuejob *arbv1.XQueueJob) error {
+func (qjrNamespace *QueueJobResNamespace) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) error {
 	return nil
 }
 
 //SyncQueueJob syncs the services
-func (qjrNamespace *QueueJobResNamespace) SyncQueueJob(queuejob *arbv1.XQueueJob, qjobRes *arbv1.XQueueJobResource) error {
+func (qjrNamespace *QueueJobResNamespace) SyncQueueJob(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 
 	startTime := time.Now()
 	defer func() {
@@ -247,7 +247,7 @@ func (qjrNamespace *QueueJobResNamespace) SyncQueueJob(queuejob *arbv1.XQueueJob
 	return nil
 }
 
-func (qjrNamespace *QueueJobResNamespace) getNamespaceForQueueJob(j *arbv1.XQueueJob) ([]*v1.Namespace, error) {
+func (qjrNamespace *QueueJobResNamespace) getNamespaceForQueueJob(j *arbv1.AppWrapper) ([]*v1.Namespace, error) {
 	// namespacelist, err := qjrNamespace.clients.CoreV1().Namespaces().List(metav1.ListOptions{})
 	namespacelist, err := qjrNamespace.clients.CoreV1().Namespaces().List(metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, j.Name),})
 	if err != nil {
@@ -263,7 +263,7 @@ func (qjrNamespace *QueueJobResNamespace) getNamespaceForQueueJob(j *arbv1.XQueu
 
 }
 
-func (qjrNamespace *QueueJobResNamespace) getNamespaceForQueueJobRes(qjobRes *arbv1.XQueueJobResource, j *arbv1.XQueueJob) ([]*v1.Namespace, error) {
+func (qjrNamespace *QueueJobResNamespace) getNamespaceForQueueJobRes(qjobRes *arbv1.AppWrapperResource, j *arbv1.AppWrapper) ([]*v1.Namespace, error) {
 
 	namespaces, err := qjrNamespace.getNamespaceForQueueJob(j)
 	if err != nil {
@@ -281,7 +281,7 @@ func (qjrNamespace *QueueJobResNamespace) getNamespaceForQueueJobRes(qjobRes *ar
 
 }
 
-func (qjrNamespace *QueueJobResNamespace) deleteQueueJobResNamespaces(qjobRes *arbv1.XQueueJobResource, queuejob *arbv1.XQueueJob) error {
+func (qjrNamespace *QueueJobResNamespace) deleteQueueJobResNamespaces(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) error {
 
 	job := *queuejob
 
@@ -309,6 +309,6 @@ func (qjrNamespace *QueueJobResNamespace) deleteQueueJobResNamespaces(qjobRes *a
 }
 
 //Cleanup deletes all services
-func (qjrNamespace *QueueJobResNamespace) Cleanup(queuejob *arbv1.XQueueJob, qjobRes *arbv1.XQueueJobResource) error {
+func (qjrNamespace *QueueJobResNamespace) Cleanup(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 	return qjrNamespace.deleteQueueJobResNamespaces(qjobRes, queuejob)
 }

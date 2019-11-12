@@ -38,12 +38,12 @@ import (
 	"time"
 )
 
-var queueJobKind = arbv1.SchemeGroupVersion.WithKind("XQueueJob")
-var queueJobName = "xqueuejob.arbitrator.k8s.io"
+var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
+var queueJobName = "appwrapper.arbitrator.k8s.io"
 
 const (
 	// QueueJobNameLabel label string for queuejob name
-	QueueJobNameLabel string = "xqueuejob-name"
+	QueueJobNameLabel string = "appwrapper-name"
 
 	// ControllerUIDLabel label string for queuejob controller uid
 	ControllerUIDLabel string = "controller-uid"
@@ -51,15 +51,15 @@ const (
 
 //QueueJobResService contains service info
 type QueueJobResPersistentVolumeClaim struct {
-	clients    *kubernetes.Clientset
-	arbclients *clientset.Clientset
+	clients    						*kubernetes.Clientset
+	arbclients 						*clientset.Clientset
 	// A store of services, populated by the serviceController
-	persistentvolumeclaimStore    corelisters.PersistentVolumeClaimLister
-	persistentvolumeclaimInformer corev1informer.PersistentVolumeClaimInformer
-	rtScheme        *runtime.Scheme
-	jsonSerializer  *json.Serializer
+	persistentvolumeclaimStore    	corelisters.PersistentVolumeClaimLister
+	persistentvolumeclaimInformer 	corev1informer.PersistentVolumeClaimInformer
+	rtScheme        				*runtime.Scheme
+	jsonSerializer  				*json.Serializer
 	// Reference manager to manage membership of queuejob resource and its members
-	refManager queuejobresources.RefManager
+	refManager 						queuejobresources.RefManager
 }
 
 //Register registers a queue job resource type
@@ -110,7 +110,7 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) Run(stopCh <-c
 	qjrPersistentVolumeClaim.persistentvolumeclaimInformer.Informer().Run(stopCh)
 }
 
-func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) GetAggregatedResources(job *arbv1.XQueueJob) *clusterstateapi.Resource {
+func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) GetAggregatedResources(job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	return clusterstateapi.EmptyResource()
 }
 
@@ -130,14 +130,14 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) deletePersiste
 }
 
 
-func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) GetAggregatedResourcesByPriority(priority int, job *arbv1.XQueueJob) *clusterstateapi.Resource {
+func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) GetAggregatedResourcesByPriority(priority int, job *arbv1.AppWrapper) *clusterstateapi.Resource {
         total := clusterstateapi.EmptyResource()
         return total
 }
 
 
 // Parse queue job api object to get Service template
-func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) getPersistentVolumeClaimTemplate(qjobRes *arbv1.XQueueJobResource) (*v1.PersistentVolumeClaim, error) {
+func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) getPersistentVolumeClaimTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.PersistentVolumeClaim, error) {
 
 	persistentvolumeclaimGVK := schema.GroupVersion{Group: v1.GroupName, Version: "v1"}.WithKind("PersistentVolumeClaim")
 
@@ -179,11 +179,11 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) delPersistentV
 	return nil
 }
 
-func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) UpdateQueueJobStatus(queuejob *arbv1.XQueueJob) error {
+func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) error {
 	return nil
 }
 
-func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) SyncQueueJob(queuejob *arbv1.XQueueJob, qjobRes *arbv1.XQueueJobResource) error {
+func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) SyncQueueJob(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 
 	startTime := time.Now()
 
@@ -244,9 +244,9 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) SyncQueueJob(q
 }
 
 
-func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) getPersistentVolumeClaimForQueueJobRes(qjobRes *arbv1.XQueueJobResource, queuejob *arbv1.XQueueJob) (*string, *v1.PersistentVolumeClaim, []*v1.PersistentVolumeClaim, error) {
+func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) getPersistentVolumeClaimForQueueJobRes(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) (*string, *v1.PersistentVolumeClaim, []*v1.PersistentVolumeClaim, error) {
 
-	// Get "a" PersistentVolumeClaim from XQJ Resource
+	// Get "a" PersistentVolumeClaim from AppWrapper Resource
 	persistentVolumeClaimInQjr, err := qjrPersistentVolumeClaim.getPersistentVolumeClaimTemplate(qjobRes)
 	if err != nil {
 		glog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
@@ -269,18 +269,6 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) getPersistentV
 				persistentVolumeClaimsInEtcd = append(persistentVolumeClaimsInEtcd, &persistentVolumeClaimList.Items[i])
 	}
 
-	// for i, persistentVolumeClaim := range persistentVolumeClaimList.Items {
-	// 	metaPersistentVolumeClaim, err := meta.Accessor(&persistentVolumeClaim)
-	// 	if err != nil {
-	// 		return nil, nil, nil, err
-	// 	}
-	// 	controllerRef := metav1.GetControllerOf(metaPersistentVolumeClaim)
-	// 	if controllerRef != nil {
-	// 		if controllerRef.UID == queuejob.UID {
-	// 			persistentVolumeClaimsInEtcd = append(persistentVolumeClaimsInEtcd, &persistentVolumeClaimList.Items[i])
-	// 		}
-	// 	}
-	// }
 	myPersistentVolumeClaimsInEtcd := []*v1.PersistentVolumeClaim{}
 	for i, persistentVolumeClaim := range persistentVolumeClaimsInEtcd {
 		if qjrPersistentVolumeClaim.refManager.BelongTo(qjobRes, persistentVolumeClaim) {
@@ -292,7 +280,7 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) getPersistentV
 }
 
 
-func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) deleteQueueJobResPersistentVolumeClaims(qjobRes *arbv1.XQueueJobResource, queuejob *arbv1.XQueueJob) error {
+func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) deleteQueueJobResPersistentVolumeClaims(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) error {
 
 	job := *queuejob
 
@@ -320,162 +308,7 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) deleteQueueJob
 }
 
 //Cleanup deletes all services
-func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) Cleanup(queuejob *arbv1.XQueueJob, qjobRes *arbv1.XQueueJobResource) error {
+func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) Cleanup(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 	return qjrPersistentVolumeClaim.deleteQueueJobResPersistentVolumeClaims(qjobRes, queuejob)
 }
 
-
-
-// func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) SyncQueueJob(queuejob *arbv1.XQueueJob, qjobRes *arbv1.XQueueJobResource) error {
-//
-// 	startTime := time.Now()
-// 	defer func() {
-// 		glog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
-// 		// glog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
-// 	}()
-//
-// 	persistentvolumeclaims, err := qjrPersistentVolumeClaim.getPersistentVolumeClaimForQueueJobRes(qjobRes, queuejob)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	persistentvolumeclaimLen := len(persistentvolumeclaims)
-// 	replicas := qjobRes.Replicas
-//
-// 	diff := int(replicas) - int(persistentvolumeclaimLen)
-//
-// 	glog.V(4).Infof("QJob: %s had %d persistentvolumeclaims and %d desired persistentvolumeclaims", queuejob.Name, replicas, persistentvolumeclaimLen)
-//
-// 	if diff > 0 {
-// 		template, err := qjrPersistentVolumeClaim.getPersistentVolumeClaimTemplate(qjobRes)
-// 		if err != nil {
-// 			glog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
-// 			return err
-// 		}
-// 		//TODO: need set reference after Service has been really added
-// 		tmpPersistentVolumeClaim := v1.PersistentVolumeClaim{}
-// 		err = qjrPersistentVolumeClaim.refManager.AddReference(qjobRes, &tmpPersistentVolumeClaim)
-// 		if err != nil {
-// 			glog.Errorf("Cannot add reference to persistentvolumeclaim resource %+v", err)
-// 			return err
-// 		}
-//
-// 		if template.Labels == nil {
-// 			template.Labels = map[string]string{}
-// 		}
-// 		for k, v := range tmpPersistentVolumeClaim.Labels {
-// 			template.Labels[k] = v
-// 		}
-// 		wait := sync.WaitGroup{}
-// 		wait.Add(int(diff))
-// 		for i := 0; i < diff; i++ {
-// 			go func() {
-// 				defer wait.Done()
-// 				_namespace:=""
-// 				if template.Namespace!=""{
-// 					_namespace=template.Namespace
-// 				} else {
-// 					_namespace=queuejob.Namespace
-// 				}
-// 				err := qjrPersistentVolumeClaim.createPersistentVolumeClaimWithControllerRef(_namespace, template, metav1.NewControllerRef(queuejob, queueJobKind))
-// 				if err != nil && errors.IsTimeout(err) {
-// 					return
-// 				}
-// 				if err != nil {
-// 					defer utilruntime.HandleError(err)
-// 				}
-// 			}()
-// 		}
-// 		wait.Wait()
-// 	}
-//
-// 	return nil
-// }
-//
-// func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) getPersistentVolumeClaimForQueueJob(qjobRes *arbv1.XQueueJobResource, queuejob *arbv1.XQueueJob) ([]*v1.PersistentVolumeClaim, error) {
-//
-// 	template, err := qjrPersistentVolumeClaim.getPersistentVolumeClaimTemplate(qjobRes)
-// 	if err != nil {
-// 		glog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
-// 		return nil, err
-// 	}
-//
-// 	_namespace:=""
-// 	if template.Namespace!=""{
-// 		_namespace=template.Namespace
-// 	} else {
-// 		_namespace=queuejob.Namespace
-// 	}
-//
-// 	persistentvolumeclaimlist, err := qjrPersistentVolumeClaim.clients.CoreV1().PersistentVolumeClaims(_namespace).List(metav1.ListOptions{})
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	persistentvolumeclaims := []*v1.PersistentVolumeClaim{}
-// 	for i, persistentvolumeclaim := range persistentvolumeclaimlist.Items {
-// 		metaPersistentVolumeClaim, err := meta.Accessor(&persistentvolumeclaim)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-//
-// 		controllerRef := metav1.GetControllerOf(metaPersistentVolumeClaim)
-// 		if controllerRef != nil {
-// 			if controllerRef.UID == queuejob.UID {
-// 				persistentvolumeclaims = append(persistentvolumeclaims, &persistentvolumeclaimlist.Items[i])
-// 			}
-// 		}
-// 	}
-// 	return persistentvolumeclaims, nil
-//
-// }
-//
-// func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) getPersistentVolumeClaimForQueueJobRes(qjobRes *arbv1.XQueueJobResource, j *arbv1.XQueueJob) ([]*v1.PersistentVolumeClaim, error) {
-//
-// 	persistentvolumeclaims, err := qjrPersistentVolumeClaim.getPersistentVolumeClaimForQueueJob(qjobRes, j)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	myPersistentVolumeClaims := []*v1.PersistentVolumeClaim{}
-// 	for i, persistentvolumeclaim := range persistentvolumeclaims {
-// 		if qjrPersistentVolumeClaim.refManager.BelongTo(qjobRes, persistentvolumeclaim) {
-// 			myPersistentVolumeClaims = append(myPersistentVolumeClaims, persistentvolumeclaims[i])
-// 		}
-// 	}
-//
-// 	return myPersistentVolumeClaims, nil
-//
-// }
-//
-// func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) deleteQueueJobResPersistentVolumeClaims(qjobRes *arbv1.XQueueJobResource, queuejob *arbv1.XQueueJob) error {
-//
-// 	job := *queuejob
-//
-// 	activePersistentVolumeClaims, err := qjrPersistentVolumeClaim.getPersistentVolumeClaimForQueueJobRes(qjobRes, queuejob)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	active := int32(len(activePersistentVolumeClaims))
-//
-// 	wait := sync.WaitGroup{}
-// 	wait.Add(int(active))
-// 	for i := int32(0); i < active; i++ {
-// 		go func(ix int32) {
-// 			defer wait.Done()
-// 			if err := qjrPersistentVolumeClaim.delPersistentVolumeClaim(queuejob.Namespace, activePersistentVolumeClaims[ix].Name); err != nil {
-// 				defer utilruntime.HandleError(err)
-// 				glog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activePersistentVolumeClaims[ix].Name, job.Namespace, job.Name)
-// 			}
-// 		}(i)
-// 	}
-// 	wait.Wait()
-//
-// 	return nil
-// }
-//
-// //Cleanup deletes all services
-// func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) Cleanup(queuejob *arbv1.XQueueJob, qjobRes *arbv1.XQueueJobResource) error {
-// 	return qjrPersistentVolumeClaim.deleteQueueJobResPersistentVolumeClaims(qjobRes, queuejob)
-// }

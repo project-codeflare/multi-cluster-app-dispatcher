@@ -45,8 +45,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&SchedulingSpecList{},
 		&QueueJob{},
 		&QueueJobList{},
-		&XQueueJob{},
-		&XQueueJobList{},
+		&AppWrapper{},
+		&AppWrapperList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)

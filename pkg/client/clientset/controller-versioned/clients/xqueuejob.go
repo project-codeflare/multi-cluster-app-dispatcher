@@ -31,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-const xqueueJobKindName = arbv1.XQueueJobPlural + "." + arbv1.GroupName
+const xqueueJobKindName = arbv1.AppWrapperPlural + "." + arbv1.GroupName
 
 func CreateXQueueJobKind(clientset apiextensionsclient.Interface) (*apiextensionsv1beta1.CustomResourceDefinition, error) {
 	crd := &apiextensionsv1beta1.CustomResourceDefinition{
@@ -43,8 +43,8 @@ func CreateXQueueJobKind(clientset apiextensionsclient.Interface) (*apiextension
 			Version: arbv1.SchemeGroupVersion.Version,
 			Scope:   apiextensionsv1beta1.NamespaceScoped,
 			Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
-				Plural: arbv1.XQueueJobPlural,
-				Kind:   reflect.TypeOf(arbv1.XQueueJob{}).Name(),
+				Plural: arbv1.AppWrapperPlural,
+				Kind:   reflect.TypeOf(arbv1.AppWrapper{}).Name(),
 			},
 		},
 	}

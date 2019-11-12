@@ -40,12 +40,12 @@ import (
 	"time"
 )
 
-var queueJobKind = arbv1.SchemeGroupVersion.WithKind("XQueueJob")
-var queueJobName = "xqueuejob.arbitrator.k8s.io"
+var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
+var queueJobName = "appwrapper.arbitrator.k8s.io"
 
 const (
 	// QueueJobNameLabel label string for queuejob name
-	QueueJobNameLabel string = "xqueuejob-name"
+	QueueJobNameLabel string = "appwrapper-name"
 
 	// ControllerUIDLabel label string for queuejob controller uid
 	ControllerUIDLabel string = "controller-uid"
@@ -53,15 +53,15 @@ const (
 
 //QueueJobResService contains service info
 type QueueJobResConfigMap struct {
-	clients    *kubernetes.Clientset
-	arbclients *clientset.Clientset
+	clients    			*kubernetes.Clientset
+	arbclients 			*clientset.Clientset
 	// A store of services, populated by the serviceController
-	configmapStore    corelisters.ConfigMapLister
-	configmapInformer corev1informer.ConfigMapInformer
-	rtScheme        *runtime.Scheme
-	jsonSerializer  *json.Serializer
+	configmapStore    	corelisters.ConfigMapLister
+	configmapInformer 	corev1informer.ConfigMapInformer
+	rtScheme        	*runtime.Scheme
+	jsonSerializer  	*json.Serializer
 	// Reference manager to manage membership of queuejob resource and its members
-	refManager queuejobresources.RefManager
+	refManager 			queuejobresources.RefManager
 }
 
 //Register registers a queue job resource type
@@ -112,7 +112,7 @@ func (qjrConfigMap *QueueJobResConfigMap) Run(stopCh <-chan struct{}) {
 	qjrConfigMap.configmapInformer.Informer().Run(stopCh)
 }
 
-func (qjrConfigMap *QueueJobResConfigMap) GetAggregatedResources(job *arbv1.XQueueJob) *clusterstateapi.Resource {
+func (qjrConfigMap *QueueJobResConfigMap) GetAggregatedResources(job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	return clusterstateapi.EmptyResource()
 }
 
@@ -132,14 +132,14 @@ func (qjrConfigMap *QueueJobResConfigMap) deleteConfigMap(obj interface{}) {
 }
 
 
-func (qjrConfigMap *QueueJobResConfigMap) GetAggregatedResourcesByPriority(priority int, job *arbv1.XQueueJob) *clusterstateapi.Resource {
+func (qjrConfigMap *QueueJobResConfigMap) GetAggregatedResourcesByPriority(priority int, job *arbv1.AppWrapper) *clusterstateapi.Resource {
         total := clusterstateapi.EmptyResource()
         return total
 }
 
 
 // Parse queue job api object to get Service template
-func (qjrConfigMap *QueueJobResConfigMap) getConfigMapTemplate(qjobRes *arbv1.XQueueJobResource) (*v1.ConfigMap, error) {
+func (qjrConfigMap *QueueJobResConfigMap) getConfigMapTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.ConfigMap, error) {
 
 	configmapGVK := schema.GroupVersion{Group: v1.GroupName, Version: "v1"}.WithKind("ConfigMap")
 
@@ -177,11 +177,11 @@ func (qjrConfigMap *QueueJobResConfigMap) delConfigMap(namespace string, name st
 	return nil
 }
 
-func (qjrConfigMap *QueueJobResConfigMap) UpdateQueueJobStatus(queuejob *arbv1.XQueueJob) error {
+func (qjrConfigMap *QueueJobResConfigMap) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) error {
 	return nil
 }
 
-func (qjrConfigMap *QueueJobResConfigMap) SyncQueueJob(queuejob *arbv1.XQueueJob, qjobRes *arbv1.XQueueJobResource) error {
+func (qjrConfigMap *QueueJobResConfigMap) SyncQueueJob(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 
 	startTime := time.Now()
 
@@ -241,9 +241,9 @@ func (qjrConfigMap *QueueJobResConfigMap) SyncQueueJob(queuejob *arbv1.XQueueJob
 }
 
 
-func (qjrConfigMap *QueueJobResConfigMap) getConfigMapForQueueJobRes(qjobRes *arbv1.XQueueJobResource, queuejob *arbv1.XQueueJob) (*string, *v1.ConfigMap, []*v1.ConfigMap, error) {
+func (qjrConfigMap *QueueJobResConfigMap) getConfigMapForQueueJobRes(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) (*string, *v1.ConfigMap, []*v1.ConfigMap, error) {
 
-	// Get "a" ConfigMap from XQJ Resource
+	// Get "a" ConfigMap from AppWrapper Resource
 	configMapInQjr, err := qjrConfigMap.getConfigMapTemplate(qjobRes)
 	if err != nil {
 		glog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
@@ -267,20 +267,7 @@ func (qjrConfigMap *QueueJobResConfigMap) getConfigMapForQueueJobRes(qjobRes *ar
 	for i, _ := range configMapList.Items {
 				configMapsInEtcd = append(configMapsInEtcd, &configMapList.Items[i])
 	}
-	//
-	//
-	// for i, configMap := range configMapList.Items {
-	// 	metaConfigMap, err := meta.Accessor(&configMap)
-	// 	if err != nil {
-	// 		return nil, nil, nil, err
-	// 	}
-	// 	controllerRef := metav1.GetControllerOf(metaConfigMap)
-	// 	if controllerRef != nil {
-	// 		if controllerRef.UID == queuejob.UID {
-	// 			configMapsInEtcd = append(configMapsInEtcd, &configMapList.Items[i])
-	// 		}
-	// 	}
-	// }
+
 	myConfigMapsInEtcd := []*v1.ConfigMap{}
 	for i, configMap := range configMapsInEtcd {
 		if qjrConfigMap.refManager.BelongTo(qjobRes, configMap) {
@@ -292,7 +279,7 @@ func (qjrConfigMap *QueueJobResConfigMap) getConfigMapForQueueJobRes(qjobRes *ar
 }
 
 
-func (qjrConfigMap *QueueJobResConfigMap) deleteQueueJobResConfigMaps(qjobRes *arbv1.XQueueJobResource, queuejob *arbv1.XQueueJob) error {
+func (qjrConfigMap *QueueJobResConfigMap) deleteQueueJobResConfigMaps(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) error {
 
 	job := *queuejob
 
@@ -310,7 +297,7 @@ func (qjrConfigMap *QueueJobResConfigMap) deleteQueueJobResConfigMaps(qjobRes *a
 			defer wait.Done()
 			if err := qjrConfigMap.delConfigMap(*_namespace, activeConfigMaps[ix].Name); err != nil {
 				defer utilruntime.HandleError(err)
-				glog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeConfigMaps[ix].Name, *_namespace, job.Name)
+				glog.V(2).Infof("Failed to delete %v, application wrapper %q/%q deadline exceeded", activeConfigMaps[ix].Name, *_namespace, job.Name)
 			}
 		}(i)
 	}
@@ -320,6 +307,6 @@ func (qjrConfigMap *QueueJobResConfigMap) deleteQueueJobResConfigMaps(qjobRes *a
 }
 
 //Cleanup deletes all services
-func (qjrConfigMap *QueueJobResConfigMap) Cleanup(queuejob *arbv1.XQueueJob, qjobRes *arbv1.XQueueJobResource) error {
+func (qjrConfigMap *QueueJobResConfigMap) Cleanup(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 	return qjrConfigMap.deleteQueueJobResConfigMaps(qjobRes, queuejob)
 }
