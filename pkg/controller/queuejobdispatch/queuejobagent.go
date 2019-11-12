@@ -97,8 +97,8 @@ func NewXQueueJobAgent(config string, agentEventQueue *cache.FIFO) *XQueueJobAge
 		cache.FilteringResourceEventHandler{
 			FilterFunc: func(obj interface{}) bool {
 				switch t := obj.(type) {
-				case *arbv1.XQueueJob:
-					glog.V(4).Infof("Filter XQueueJob name(%s) namespace(%s)\n", t.Name, t.Namespace)
+				case *arbv1.AppWrapper:
+					glog.V(4).Infof("Filter AppWrapper name(%s) namespace(%s)\n", t.Name, t.Namespace)
 					return true
 				default:
 					return false
@@ -122,27 +122,27 @@ func NewXQueueJobAgent(config string, agentEventQueue *cache.FIFO) *XQueueJobAge
 
 
 func (cc *XQueueJobAgent) addQueueJob(obj interface{}) {
-	qj, ok := obj.(*arbv1.XQueueJob)
+	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("obj is not XQueueJob")
+		glog.Errorf("obj is not AppWrapper")
 		return
 	}
 	cc.agentEventQueue.Add(qj)
 }
 
 func (cc *XQueueJobAgent) updateQueueJob(oldObj, newObj interface{}) {
-	newQJ, ok := newObj.(*arbv1.XQueueJob)
+	newQJ, ok := newObj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("newObj is not XQueueJob")
+		glog.Errorf("newObj is not AppWrapper")
 		return
 	}
 	cc.agentEventQueue.Add(newQJ)
 }
 
 func (cc *XQueueJobAgent) deleteQueueJob(obj interface{}) {
-	qj, ok := obj.(*arbv1.XQueueJob)
+	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("obj is not XQueueJob")
+		glog.Errorf("obj is not AppWrapper")
 		return
 	}
 	cc.agentEventQueue.Add(qj)
@@ -156,16 +156,16 @@ func (qa *XQueueJobAgent) Run(stopCh chan struct{}) {
 	// go wait.Until(qa.UpdateAgent, 2*time.Second, stopCh)
 }
 
-func (qa *XQueueJobAgent) DeleteXQueueJob(cqj *arbv1.XQueueJob) {
+func (qa *XQueueJobAgent) DeleteXQueueJob(cqj *arbv1.AppWrapper) {
 	qj_temp:=cqj.DeepCopy()
 	glog.V(2).Infof("[Dispatcher: Agent] Request deletion of XQJ %s to Agent %s\n", qj_temp.Name, qa.AgentId)
 	qa.queuejobclients.ArbV1().XQueueJobs(qj_temp.Namespace).Delete(qj_temp.Name,  &metav1.DeleteOptions{})
 	return
 }
 
-func (qa *XQueueJobAgent) CreateXQueueJob(cqj *arbv1.XQueueJob) {
+func (qa *XQueueJobAgent) CreateXQueueJob(cqj *arbv1.AppWrapper) {
 	qj_temp:=cqj.DeepCopy()
-	agent_qj:=&arbv1.XQueueJob{
+	agent_qj:=&arbv1.AppWrapper{
 		TypeMeta: qj_temp.TypeMeta,
 		ObjectMeta: metav1.ObjectMeta{Name: qj_temp.Name, Namespace: qj_temp.Namespace,},
 		Spec: qj_temp.Spec,

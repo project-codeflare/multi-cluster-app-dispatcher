@@ -52,24 +52,24 @@ func NewFilteredXQueueJobInformer(client *rest.RESTClient, namespace string, res
 	if(tweakListOptions==nil) {
 		source := cache.NewListWatchFromClient(
 			client,
-			arbv1.XQueueJobPlural,
+			arbv1.AppWrapperPlural,
 			namespace,
 			fields.Everything())
 		return cache.NewSharedIndexInformer(
 			source,
-			&arbv1.XQueueJob{},
+			&arbv1.AppWrapper{},
 			resyncPeriod,
 			indexers,
 		)
   } else {
 		source := cache.NewFilteredListWatchFromClient(
 			client,
-			arbv1.XQueueJobPlural,
+			arbv1.AppWrapperPlural,
 			namespace,
 			tweakListOptions)
 		return cache.NewSharedIndexInformer(
 			source,
-			&arbv1.XQueueJob{},
+			&arbv1.AppWrapper{},
 			resyncPeriod,
 			indexers,
 		)
@@ -81,7 +81,7 @@ func (f *xqueueJobInformer) defaultXQueueJobInformer(client *rest.RESTClient, re
 }
 
 func (f *xqueueJobInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&arbv1.XQueueJob{}, f.defaultXQueueJobInformer)
+	return f.factory.InformerFor(&arbv1.AppWrapper{}, f.defaultXQueueJobInformer)
 }
 
 func (f *xqueueJobInformer) Lister() v1.XQueueJobLister {

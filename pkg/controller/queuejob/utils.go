@@ -16,7 +16,7 @@ import (
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("QueueJob")
 
-var xqueueJobKind = arbv1.SchemeGroupVersion.WithKind("XQueueJob")
+var xqueueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
 
 // GetPodFullName returns a name that uniquely identifies a qj.
 func GetQJFullName(qj *arbv1.QueueJob) string {
@@ -25,14 +25,14 @@ func GetQJFullName(qj *arbv1.QueueJob) string {
 	return qj.Name + "_" + qj.Namespace
 }
 
-func GetXQJFullName(qj *arbv1.XQueueJob) string {
+func GetXQJFullName(qj *arbv1.AppWrapper) string {
         // Use underscore as the delimiter because it is not allowed in qj name
         // (DNS subdomain format).
         return qj.Name + "_" + qj.Namespace
 }
 
 func HigherPriorityQJ(qj1, qj2 interface{} ) bool {
-	return (qj1.(*arbv1.XQueueJob).Spec.Priority > qj2.(*arbv1.XQueueJob).Spec.Priority)
+	return (qj1.(*arbv1.AppWrapper).Spec.Priority > qj2.(*arbv1.AppWrapper).Spec.Priority)
 }
 
 func generateUUID() string {
@@ -81,7 +81,7 @@ func createQueueJobSchedulingSpec(qj *arbv1.QueueJob) *arbv1.SchedulingSpec {
 	}
 }
 
-func createXQueueJobSchedulingSpec(qj *arbv1.XQueueJob) *arbv1.SchedulingSpec {
+func createXQueueJobSchedulingSpec(qj *arbv1.AppWrapper) *arbv1.SchedulingSpec {
         return &arbv1.SchedulingSpec{
                 ObjectMeta: metav1.ObjectMeta{
                         Name:      qj.Name,

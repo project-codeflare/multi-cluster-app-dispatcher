@@ -27,7 +27,7 @@ import (
 //XQueueJobLister helps list QueueJobs.
 type XQueueJobLister interface {
 	// List lists all QueueJobs in the indexer.
-	List(selector labels.Selector) (ret []*arbv1.XQueueJob, err error)
+	List(selector labels.Selector) (ret []*arbv1.AppWrapper, err error)
 	// QueueJobs returns an object that can list and get QueueJobs.
 	XQueueJobs(namespace string) XQueueJobNamespaceLister
 }
@@ -43,9 +43,9 @@ func NewXQueueJobLister(indexer cache.Indexer) XQueueJobLister {
 }
 
 //List lists all QueueJobs in the indexer.
-func (s *xqueueJobLister) List(selector labels.Selector) (ret []*arbv1.XQueueJob, err error) {
+func (s *xqueueJobLister) List(selector labels.Selector) (ret []*arbv1.AppWrapper, err error) {
 	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*arbv1.XQueueJob))
+		ret = append(ret, m.(*arbv1.AppWrapper))
 	})
 	return ret, err
 }
@@ -58,9 +58,9 @@ func (s *xqueueJobLister) XQueueJobs(namespace string) XQueueJobNamespaceLister 
 //XQueueJobNamespaceLister helps list and get QueueJobs.
 type XQueueJobNamespaceLister interface {
 	// List lists all QueueJobs in the indexer for a given namespace.
-	List(selector labels.Selector) (ret []*arbv1.XQueueJob, err error)
+	List(selector labels.Selector) (ret []*arbv1.AppWrapper, err error)
 	// Get retrieves the QueueJob from the indexer for a given namespace and name.
-	Get(name string) (*arbv1.XQueueJob, error)
+	Get(name string) (*arbv1.AppWrapper, error)
 }
 
 // queueJobNamespaceLister implements the QueueJobNamespaceLister
@@ -71,15 +71,15 @@ type xqueueJobNamespaceLister struct {
 }
 
 // List lists all QueueJobs in the indexer for a given namespace.
-func (s xqueueJobNamespaceLister) List(selector labels.Selector) (ret []*arbv1.XQueueJob, err error) {
+func (s xqueueJobNamespaceLister) List(selector labels.Selector) (ret []*arbv1.AppWrapper, err error) {
 	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*arbv1.XQueueJob))
+		ret = append(ret, m.(*arbv1.AppWrapper))
 	})
 	return ret, err
 }
 
 // Get retrieves the QueueJob from the indexer for a given namespace and name.
-func (s xqueueJobNamespaceLister) Get(name string) (*arbv1.XQueueJob, error) {
+func (s xqueueJobNamespaceLister) Get(name string) (*arbv1.AppWrapper, error) {
 	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
 	if err != nil {
 		return nil, err
@@ -87,5 +87,5 @@ func (s xqueueJobNamespaceLister) Get(name string) (*arbv1.XQueueJob, error) {
 	if !exists {
 		return nil, errors.NewNotFound(arbv1.Resource("xqueuejobs"), name)
 	}
-	return obj.(*arbv1.XQueueJob), nil
+	return obj.(*arbv1.AppWrapper), nil
 }

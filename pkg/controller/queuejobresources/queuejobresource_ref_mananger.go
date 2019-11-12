@@ -28,13 +28,13 @@ import (
 type RefManager interface {
 
 	//Tag the owner
-	AddTag(owner *qjobv1.XQueueJobResource, getTag func() string) error
+	AddTag(owner *qjobv1.AppWrapperResource, getTag func() string) error
 
 	//check whether ownee is a member of owner
-	BelongTo(owner *qjobv1.XQueueJobResource, ownee runtime.Object) bool
+	BelongTo(owner *qjobv1.AppWrapperResource, ownee runtime.Object) bool
 
 	//mark the ownee to be a member of owner
-	AddReference(owner *qjobv1.XQueueJobResource, ownee runtime.Object) error
+	AddReference(owner *qjobv1.AppWrapperResource, ownee runtime.Object) error
 }
 
 //RefByLabel : A reference manager by resource vector index
@@ -48,7 +48,7 @@ func NewLabelRefManager() RefManager {
 }
 
 //AddTag : add tag
-func (rm *RefByLabel) AddTag(owner *qjobv1.XQueueJobResource, getTag func() string) error {
+func (rm *RefByLabel) AddTag(owner *qjobv1.AppWrapperResource, getTag func() string) error {
 
 	accessor, err := meta.Accessor(owner)
 	if err != nil {
@@ -67,7 +67,7 @@ func (rm *RefByLabel) AddTag(owner *qjobv1.XQueueJobResource, getTag func() stri
 }
 
 //BelongTo : belong to QJ
-func (rm *RefByLabel) BelongTo(owner *qjobv1.XQueueJobResource, ownee runtime.Object) bool {
+func (rm *RefByLabel) BelongTo(owner *qjobv1.AppWrapperResource, ownee runtime.Object) bool {
 
 	accessor, err := meta.Accessor(ownee)
 	if err != nil {
@@ -88,7 +88,7 @@ func (rm *RefByLabel) BelongTo(owner *qjobv1.XQueueJobResource, ownee runtime.Ob
 }
 
 //AddReference : add ref
-func (rm *RefByLabel) AddReference(owner *qjobv1.XQueueJobResource, ownee runtime.Object) error {
+func (rm *RefByLabel) AddReference(owner *qjobv1.AppWrapperResource, ownee runtime.Object) error {
 
 	accessor, err := meta.Accessor(ownee)
 	if err != nil {

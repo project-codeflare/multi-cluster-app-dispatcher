@@ -39,12 +39,12 @@ import (
 	"time"
 )
 
-var queueJobKind = arbv1.SchemeGroupVersion.WithKind("XQueueJob")
-var queueJobName = "xqueuejob.arbitrator.k8s.io"
+var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
+var queueJobName = "appwrapper.arbitrator.k8s.io"
 
 const (
 	// QueueJobNameLabel label string for queuejob name
-	QueueJobNameLabel string = "xqueuejob-name"
+	QueueJobNameLabel string = "appwrapper-name"
 
 	// ControllerUIDLabel label string for queuejob controller uid
 	ControllerUIDLabel string = "controller-uid"
@@ -52,15 +52,15 @@ const (
 
 //QueueJobResService contains service info
 type QueueJobResPersistentvolume struct {
-	clients    *kubernetes.Clientset
-	arbclients *clientset.Clientset
+	clients    				*kubernetes.Clientset
+	arbclients 				*clientset.Clientset
 	// A store of services, populated by the serviceController
 	persistentvolumeStore    corelisters.PersistentVolumeLister
 	persistentvolumeInformer corev1informer.PersistentVolumeInformer
-	rtScheme        *runtime.Scheme
-	jsonSerializer  *json.Serializer
+	rtScheme        		*runtime.Scheme
+	jsonSerializer  		*json.Serializer
 	// Reference manager to manage membership of queuejob resource and its members
-	refManager queuejobresources.RefManager
+	refManager 				queuejobresources.RefManager
 }
 
 //Register registers a queue job resource type
@@ -111,7 +111,7 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) Run(stopCh <-chan struct
 	qjrPersistentvolume.persistentvolumeInformer.Informer().Run(stopCh)
 }
 
-func (qjrPersistentvolume *QueueJobResPersistentvolume) GetAggregatedResources(job *arbv1.XQueueJob) *clusterstateapi.Resource {
+func (qjrPersistentvolume *QueueJobResPersistentvolume) GetAggregatedResources(job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	return clusterstateapi.EmptyResource()
 }
 
@@ -131,14 +131,14 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) deletePersistentVolume(o
 }
 
 
-func (qjrPersistentvolume *QueueJobResPersistentvolume) GetAggregatedResourcesByPriority(priority int, job *arbv1.XQueueJob) *clusterstateapi.Resource {
+func (qjrPersistentvolume *QueueJobResPersistentvolume) GetAggregatedResourcesByPriority(priority int, job *arbv1.AppWrapper) *clusterstateapi.Resource {
         total := clusterstateapi.EmptyResource()
         return total
 }
 
 
 // Parse queue job api object to get Service template
-func (qjrPersistentvolume *QueueJobResPersistentvolume) getPersistentVolumeTemplate(qjobRes *arbv1.XQueueJobResource) (*v1.PersistentVolume, error) {
+func (qjrPersistentvolume *QueueJobResPersistentvolume) getPersistentVolumeTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.PersistentVolume, error) {
 
 	persistentvolumeGVK := schema.GroupVersion{Group: v1.GroupName, Version: "v1"}.WithKind("PersistentVolume")
 
@@ -180,12 +180,12 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) delPersistentVolume(name
 	return nil
 }
 
-func (qjrPersistentvolume *QueueJobResPersistentvolume) UpdateQueueJobStatus(queuejob *arbv1.XQueueJob) error {
+func (qjrPersistentvolume *QueueJobResPersistentvolume) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) error {
 	return nil
 }
 
 //SyncQueueJob syncs the services
-func (qjrPersistentvolume *QueueJobResPersistentvolume) SyncQueueJob(queuejob *arbv1.XQueueJob, qjobRes *arbv1.XQueueJobResource) error {
+func (qjrPersistentvolume *QueueJobResPersistentvolume) SyncQueueJob(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 
 	startTime := time.Now()
 	defer func() {
@@ -247,7 +247,7 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) SyncQueueJob(queuejob *a
 	return nil
 }
 
-func (qjrPersistentvolume *QueueJobResPersistentvolume) getPersistentVolumeForQueueJob(j *arbv1.XQueueJob) ([]*v1.PersistentVolume, error) {
+func (qjrPersistentvolume *QueueJobResPersistentvolume) getPersistentVolumeForQueueJob(j *arbv1.AppWrapper) ([]*v1.PersistentVolume, error) {
 	persistentvolumelist, err := qjrPersistentvolume.clients.CoreV1().PersistentVolumes().List(metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, j.Name),})
 	if err != nil {
 		return nil, err
@@ -275,7 +275,7 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) getPersistentVolumeForQu
 
 }
 
-func (qjrPersistentvolume *QueueJobResPersistentvolume) getPersistentVolumeForQueueJobRes(qjobRes *arbv1.XQueueJobResource, j *arbv1.XQueueJob) ([]*v1.PersistentVolume, error) {
+func (qjrPersistentvolume *QueueJobResPersistentvolume) getPersistentVolumeForQueueJobRes(qjobRes *arbv1.AppWrapperResource, j *arbv1.AppWrapper) ([]*v1.PersistentVolume, error) {
 
 	persistentvolumes, err := qjrPersistentvolume.getPersistentVolumeForQueueJob(j)
 	if err != nil {
@@ -293,7 +293,7 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) getPersistentVolumeForQu
 
 }
 
-func (qjrPersistentvolume *QueueJobResPersistentvolume) deleteQueueJobResPersistentVolumes(qjobRes *arbv1.XQueueJobResource, queuejob *arbv1.XQueueJob) error {
+func (qjrPersistentvolume *QueueJobResPersistentvolume) deleteQueueJobResPersistentVolumes(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) error {
 
 	job := *queuejob
 
@@ -321,6 +321,6 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) deleteQueueJobResPersist
 }
 
 //Cleanup deletes all services
-func (qjrPersistentvolume *QueueJobResPersistentvolume) Cleanup(queuejob *arbv1.XQueueJob, qjobRes *arbv1.XQueueJobResource) error {
+func (qjrPersistentvolume *QueueJobResPersistentvolume) Cleanup(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 	return qjrPersistentvolume.deleteQueueJobResPersistentVolumes(qjobRes, queuejob)
 }

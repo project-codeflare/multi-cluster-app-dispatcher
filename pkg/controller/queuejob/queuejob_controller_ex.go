@@ -67,7 +67,7 @@ import (
 
 const (
 	// QueueJobNameLabel label string for queuejob name
-	QueueJobNameLabel string = "xqueuejob-name"
+	QueueJobNameLabel string = "appwrapper-name"
 
 	// ControllerUIDLabel label string for queuejob controller uid
 	ControllerUIDLabel string = "controller-uid"
@@ -77,13 +77,13 @@ const (
 )
 
 // controllerKind contains the schema.GroupVersionKind for this controller type.
-var controllerKind = arbv1.SchemeGroupVersion.WithKind("XQueueJob")
+var controllerKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
 
-//XController the XQueueJob Controller type
+//XController the AppWrapper Controller type
 type XController struct {
 	config           *rest.Config
 	queueJobInformer informersv1.XQueueJobInformer
-	// resources registered for the XQueueJob
+	// resources registered for the AppWrapper
 	qjobRegisteredResources queuejobresources.RegisteredResources
 	// controllers for these resources
 	qjobResControls map[arbv1.ResourceType]queuejobresources.Interface
@@ -96,7 +96,7 @@ type XController struct {
 	queueJobSynced func() bool
 
 	// QueueJobs that need to be initialized
-	// Add labels and selectors to XQueueJob
+	// Add labels and selectors to AppWrapper
 	initQueue *cache.FIFO
 
 	// QueueJobs that need to sync up after initialization
@@ -121,7 +121,7 @@ type XController struct {
 	agentMap map[string]*queuejobdispatch.XQueueJobAgent
 	agentList []string
 
-	// Map for XQueueJob -> XQueueJobAgent
+	// Map for AppWrapper -> XQueueJobAgent
 	dispatchMap map[string]string
 
 	// Metrics API Server
@@ -143,13 +143,6 @@ func NewXQueueJobAndAgent(qjKey string, qaKey string) *XQueueJobAndAgent {
 	}
 }
 
-// func getQueueJobAndAgentKey(obj interface{}) (string, error) {
-// 	qja, ok := obj.(*XQueueJobAndAgent)
-// 	if !ok {
-// 		return "", fmt.Errorf("not a XQueueJobAndAgent")
-// 	}
-// 	return fmt.Sprintf("%s", qja.queueJobKey), nil
-// }
 
 //RegisterAllQueueJobResourceTypes - gegisters all resources
 func RegisterAllQueueJobResourceTypes(regs *queuejobresources.RegisteredResources) {
@@ -168,22 +161,22 @@ func RegisterAllQueueJobResourceTypes(regs *queuejobresources.RegisteredResource
 func GetQueueJobAgentKey(obj interface{}) (string, error) {
 	qa, ok := obj.(*queuejobdispatch.XQueueJobAgent)
 	if !ok {
-		return "", fmt.Errorf("not a XQueueAgent")
+		return "", fmt.Errorf("not a AppWrapperAgent")
 	}
 	return fmt.Sprintf("%s;%s", qa.AgentId, qa.DeploymentName), nil
 }
 
 
 func GetQueueJobKey(obj interface{}) (string, error) {
-	qj, ok := obj.(*arbv1.XQueueJob)
+	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
-		return "", fmt.Errorf("not a XQueueJob")
+		return "", fmt.Errorf("not a AppWrapper")
 	}
 
 	return fmt.Sprintf("%s/%s", qj.Namespace, qj.Name), nil
 }
 
-//NewXQueueJobController create new XQueueJob Controller
+//NewXQueueJobController create new AppWrapper Controller
 func NewXQueueJobController(config *rest.Config, schedulerName string, isDispatcher bool, agentconfigs string) *XController {
 	cc := &XController{
 		config:				config,
@@ -327,8 +320,8 @@ func NewXQueueJobController(config *rest.Config, schedulerName string, isDispatc
 		cache.FilteringResourceEventHandler{
 			FilterFunc: func(obj interface{}) bool {
 				switch t := obj.(type) {
-				case *arbv1.XQueueJob:
-					glog.V(4).Infof("Filter XQueueJob name(%s) namespace(%s) State:%+v\n", t.Name, t.Namespace,t.Status)
+				case *arbv1.AppWrapper:
+					glog.V(4).Infof("Filter AppWrapper name(%s) namespace(%s) State:%+v\n", t.Name, t.Namespace,t.Status)
 					return true
 				default:
 					return false
@@ -384,14 +377,14 @@ func (qjm *XController) PreemptQueueJobs() {
 		}
 		newjob.Status.CanRun = false
 		if _, err := qjm.arbclients.ArbV1().XQueueJobs(q.Namespace).Update(newjob); err != nil {
-			glog.Errorf("Failed to update status of XQueueJob %v/%v: %v",
+			glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
 				q.Namespace, q.Name, err)
 		}
 	}
 }
 
-func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.XQueueJob {
-	qjobs := make([]*arbv1.XQueueJob, 0)
+func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper {
+	qjobs := make([]*arbv1.AppWrapper, 0)
 
 	queueJobs, err := qjm.queueJobLister.XQueueJobs("").List(labels.Everything())
 	if err != nil {
@@ -409,7 +402,7 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.XQueueJob {
 					continue
 				}
 			}
-			if value.Status.State == arbv1.QueueJobStateEnqueued {
+			if value.Status.State == arbv1.AppWrapperStateEnqueued {
 				continue
 			}
 
@@ -424,7 +417,7 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.XQueueJob {
 	return qjobs
 }
 
-func GetPodTemplate(qjobRes *arbv1.XQueueJobResource) (*v1.PodTemplateSpec, error) {
+func GetPodTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.PodTemplateSpec, error) {
 	rtScheme := runtime.NewScheme()
 	v1.AddToScheme(rtScheme)
 
@@ -446,7 +439,7 @@ func GetPodTemplate(qjobRes *arbv1.XQueueJobResource) (*v1.PodTemplateSpec, erro
 
 }
 
-func (qjm *XController) GetAggregatedResources(cqj *arbv1.XQueueJob) *clusterstateapi.Resource {
+func (qjm *XController) GetAggregatedResources(cqj *arbv1.AppWrapper) *clusterstateapi.Resource {
 	allocated := clusterstateapi.EmptyResource()
         for _, resctrl := range qjm.qjobResControls {
                 qjv     := resctrl.GetAggregatedResources(cqj)
@@ -491,7 +484,7 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 	return r
 }
 
-func (qjm *XController) chooseAgent(qj *arbv1.XQueueJob) string{
+func (qjm *XController) chooseAgent(qj *arbv1.AppWrapper) string{
 
 	qjAggrResources := qjm.GetAggregatedResources(qj)
 
@@ -546,7 +539,7 @@ func (qjm *XController) ScheduleNext() {
 			// qj.Status.CanRun = true
 			glog.V(10).Infof("[TTime] %s, %s: ScheduleNextBeforeEtcd", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 			if _, err := qjm.arbclients.ArbV1().XQueueJobs(qj.Namespace).Update(apiQueueJob); err != nil {
-				glog.Errorf("Failed to update status of XQueueJob %v/%v: %v",
+				glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
 																	qj.Namespace, qj.Name, err)
 			}
 			queueJobKey,_:=GetQueueJobKey(qj)
@@ -578,7 +571,7 @@ func (qjm *XController) ScheduleNext() {
 			apiQueueJob.Status.CanRun = true
 			qj.Status.CanRun = true
 			if _, err := qjm.arbclients.ArbV1().XQueueJobs(qj.Namespace).Update(apiQueueJob); err != nil {
-													glog.Errorf("Failed to update status of XQueueJob %v/%v: %v",
+													glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
 																	qj.Namespace, qj.Name, err)
 			}
 			glog.V(10).Infof("[TTime] %s, %s: ScheduleNextAfterEtcd", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
@@ -590,13 +583,13 @@ func (qjm *XController) ScheduleNext() {
 }
 
 
-func (qjm *XController) backoff(q *arbv1.XQueueJob) {
+func (qjm *XController) backoff(q *arbv1.AppWrapper) {
 	qjm.qjqueue.AddUnschedulableIfNotPresent(q)
 	time.Sleep(initialGetBackoff)
 	qjm.qjqueue.MoveToActiveQueueIfExists(q)
 }
 
-// Run start XQueueJob Controller
+// Run start AppWrapper Controller
 func (cc *XController) Run(stopCh chan struct{}) {
 	// initialized
 	createXQueueJobKind(cc.config)
@@ -662,9 +655,9 @@ func (qjm *XController) UpdateQueueJobs() {
 }
 
 func (cc *XController) addQueueJob(obj interface{}) {
-	qj, ok := obj.(*arbv1.XQueueJob)
+	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("obj is not XQueueJob")
+		glog.Errorf("obj is not AppWrapper")
 		return
 	}
 	glog.V(10).Infof("[TTime] %s, %s: AddedQueueJob", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
@@ -673,9 +666,9 @@ func (cc *XController) addQueueJob(obj interface{}) {
 }
 
 func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
-	newQJ, ok := newObj.(*arbv1.XQueueJob)
+	newQJ, ok := newObj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("newObj is not XQueueJob")
+		glog.Errorf("newObj is not AppWrapper")
 		return
 	}
 
@@ -683,25 +676,25 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 }
 
 func (cc *XController) deleteQueueJob(obj interface{}) {
-	qj, ok := obj.(*arbv1.XQueueJob)
+	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("obj is not XQueueJob")
+		glog.Errorf("obj is not AppWrapper")
 		return
 	}
 	cc.enqueue(qj)
 }
 
 func (cc *XController) enqueue(obj interface{}) {
-	_, ok := obj.(*arbv1.XQueueJob)
+	_, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("obj is not XQueueJob")
+		glog.Errorf("obj is not AppWrapper")
 		return
 	}
 
 
 	err := cc.eventQueue.Add(obj)
 	if err != nil {
-		glog.Errorf("Fail to enqueue XQueueJob to updateQueue, err %#v", err)
+		glog.Errorf("Fail to enqueue AppWrapper to updateQueue, err %#v", err)
 	}
 }
 
@@ -710,9 +703,9 @@ func (cc *XController) enqueue(obj interface{}) {
 
 func (cc *XController) agentEventQueueWorker() {
 	if _, err := cc.agentEventQueue.Pop(func(obj interface{}) error {
-		var queuejob *arbv1.XQueueJob
+		var queuejob *arbv1.AppWrapper
 		switch v := obj.(type) {
-		case *arbv1.XQueueJob:
+		case *arbv1.AppWrapper:
 			queuejob = v
 		default:
 			glog.Errorf("Un-supported type of %v", obj)
@@ -721,7 +714,7 @@ func (cc *XController) agentEventQueueWorker() {
 
 		if queuejob == nil {
 			if acc, err := meta.Accessor(obj); err != nil {
-				glog.Warningf("Failed to get XQueueJob for %v/%v", acc.GetNamespace(), acc.GetName())
+				glog.Warningf("Failed to get AppWrapper for %v/%v", acc.GetNamespace(), acc.GetName())
 			}
 
 			return nil
@@ -729,9 +722,9 @@ func (cc *XController) agentEventQueueWorker() {
 		glog.V(4).Infof("[Controller: Dispatcher Mode] XQJ Status Update from AGENT: Name:%s, Status: %+v\n", queuejob.Name, queuejob.Status)
 
 
-		// sync XQueueJob
+		// sync AppWrapper
 		if err := cc.updateQueueJobStatus(queuejob); err != nil {
-			glog.Errorf("Failed to sync XQueueJob %s, err %#v", queuejob.Name, err)
+			glog.Errorf("Failed to sync AppWrapper %s, err %#v", queuejob.Name, err)
 			// If any error, requeue it.
 			return err
 		}
@@ -743,7 +736,7 @@ func (cc *XController) agentEventQueueWorker() {
 	}
 }
 
-func (cc *XController) updateQueueJobStatus(queueJobFromAgent *arbv1.XQueueJob) error {
+func (cc *XController) updateQueueJobStatus(queueJobFromAgent *arbv1.AppWrapper) error {
 	queueJobInEtcd, err := cc.queueJobLister.XQueueJobs(queueJobFromAgent.Namespace).Get(queueJobFromAgent.Name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -772,9 +765,9 @@ func (cc *XController) updateQueueJobStatus(queueJobFromAgent *arbv1.XQueueJob) 
 
 func (cc *XController) worker() {
 	if _, err := cc.eventQueue.Pop(func(obj interface{}) error {
-		var queuejob *arbv1.XQueueJob
+		var queuejob *arbv1.AppWrapper
 		switch v := obj.(type) {
-		case *arbv1.XQueueJob:
+		case *arbv1.AppWrapper:
 			queuejob = v
 		default:
 			glog.Errorf("Un-supported type of %v", obj)
@@ -784,14 +777,14 @@ func (cc *XController) worker() {
 
 		if queuejob == nil {
 			if acc, err := meta.Accessor(obj); err != nil {
-				glog.Warningf("Failed to get XQueueJob for %v/%v", acc.GetNamespace(), acc.GetName())
+				glog.Warningf("Failed to get AppWrapper for %v/%v", acc.GetNamespace(), acc.GetName())
 			}
 
 			return nil
 		}
-		// sync XQueueJob
+		// sync AppWrapper
 		if err := cc.syncQueueJob(queuejob); err != nil {
-			glog.Errorf("Failed to sync XQueueJob %s, err %#v", queuejob.Name, err)
+			glog.Errorf("Failed to sync AppWrapper %s, err %#v", queuejob.Name, err)
 			// If any error, requeue it.
 			return err
 		}
@@ -803,7 +796,7 @@ func (cc *XController) worker() {
 	}
 }
 
-func (cc *XController) syncQueueJob(qj *arbv1.XQueueJob) error {
+func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 	queueJob, err := cc.queueJobLister.XQueueJobs(qj.Namespace).Get(qj.Name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -829,7 +822,7 @@ func (cc *XController) syncQueueJob(qj *arbv1.XQueueJob) error {
 // manageQueueJob is the core method responsible for managing the number of running
 // pods according to what is specified in the job.Spec.
 // Does NOT modify <activePods>.
-func (cc *XController) manageQueueJob(qj *arbv1.XQueueJob) error {
+func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 	var err error
 	startTime := time.Now()
 	defer func() {
@@ -857,7 +850,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.XQueueJob) error {
 			cc.qjqueue.Delete(qj)
 
 			return nil
-			//var result arbv1.XQueueJob
+			//var result arbv1.AppWrapper
 			//return cc.arbclients.Put().
 			//	Namespace(qj.Namespace).Resource(arbv1.QueueJobPlural).
 			//	Name(qj.Name).Body(qj).Do().Into(&result)
@@ -865,7 +858,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.XQueueJob) error {
 
 		// glog.Infof("I have job with name %s status %+v ", qj.Name, qj.Status)
 
-		if !qj.Status.CanRun && (qj.Status.State != arbv1.QueueJobStateEnqueued && qj.Status.State != arbv1.QueueJobStateDeleted) {
+		if !qj.Status.CanRun && (qj.Status.State != arbv1.AppWrapperStateEnqueued && qj.Status.State != arbv1.AppWrapperStateDeleted) {
 			// if there are running resources for this job then delete them because the job was put in
 			// pending state...
 			glog.V(2).Infof("[Agent Mode] Deleting resources for XQJ %s because it will be preempted (newjob)\n", qj.Name)
@@ -874,7 +867,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.XQueueJob) error {
 				return err
 			}
 
-			qj.Status.State = arbv1.QueueJobStateEnqueued
+			qj.Status.State = arbv1.AppWrapperStateEnqueued
 			glog.V(10).Infof("[TTime] %s, %s: WorkerBeforeEtcd",  qj.Name, time.Now().Sub(qj.CreationTimestamp.Time) )
 			_, err = cc.arbclients.ArbV1().XQueueJobs(qj.Namespace).Update(qj)
 			if err != nil {
@@ -884,15 +877,15 @@ func (cc *XController) manageQueueJob(qj *arbv1.XQueueJob) error {
 		}
 
 
-		if !qj.Status.CanRun && qj.Status.State == arbv1.QueueJobStateEnqueued {
+		if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued {
 			cc.qjqueue.AddIfNotPresent(qj)
 			return nil
 		}
 
 		is_first_deployment:=false
-		if qj.Status.CanRun && qj.Status.State != arbv1.QueueJobStateActive {
+		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive {
 			is_first_deployment=true
-			qj.Status.State =  arbv1.QueueJobStateActive
+			qj.Status.State =  arbv1.AppWrapperStateActive
 		}
 
 		if qj.Spec.AggrResources.Items != nil {
@@ -928,7 +921,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.XQueueJob) error {
 
 		// TODO(k82cn): replaced it with `UpdateStatus`
 		if _, err := cc.arbclients.ArbV1().XQueueJobs(qj.Namespace).Update(qj); err != nil {
-			glog.Errorf("Failed to update status of XQueueJob %v/%v: %v",
+			glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
 				qj.Namespace, qj.Name, err)
 			return err
 		}
@@ -953,7 +946,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.XQueueJob) error {
 			return nil
 		}
 
-		if !qj.Status.CanRun && (qj.Status.State != arbv1.QueueJobStateEnqueued && qj.Status.State != arbv1.QueueJobStateDeleted) {
+		if !qj.Status.CanRun && (qj.Status.State != arbv1.AppWrapperStateEnqueued && qj.Status.State != arbv1.AppWrapperStateDeleted) {
 			// if there are running resources for this job then delete them because the job was put in
 			// pending state...
 			glog.V(4).Infof("Deleting queuejob resources because it will be preempted! %s", qj.Name)
@@ -962,7 +955,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.XQueueJob) error {
 				return err
 			}
 
-			qj.Status.State = arbv1.QueueJobStateEnqueued
+			qj.Status.State = arbv1.AppWrapperStateEnqueued
 			_, err = cc.arbclients.ArbV1().XQueueJobs(qj.Namespace).Update(qj)
 			if err != nil {
 				return err
@@ -971,7 +964,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.XQueueJob) error {
 		}
 
 		// if !qj.Status.CanRun && qj.Status.State == arbv1.QueueJobStateEnqueued {
-		if !qj.Status.CanRun && qj.Status.State == arbv1.QueueJobStateEnqueued {
+		if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued {
 			cc.qjqueue.AddIfNotPresent(qj)
 			return nil
 		}
@@ -997,7 +990,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.XQueueJob) error {
 			glog.V(10).Infof("[TTime] %s, %s: WorkerAfterDispatch", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 			}
 			if _, err := cc.arbclients.ArbV1().XQueueJobs(qj.Namespace).Update(qj); err != nil {
-				glog.Errorf("Failed to update status of XQueueJob %v/%v: %v",
+				glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
 					qj.Namespace, qj.Name, err)
 				return err
 			}
@@ -1008,8 +1001,8 @@ func (cc *XController) manageQueueJob(qj *arbv1.XQueueJob) error {
 }
 
 //Cleanup function
-func (cc *XController) Cleanup(queuejob *arbv1.XQueueJob) error {
-	glog.V(4).Infof("Calling cleanup for XQueueJob %s \n", queuejob.Name)
+func (cc *XController) Cleanup(queuejob *arbv1.AppWrapper) error {
+	glog.V(4).Infof("Calling cleanup for AppWrapper %s \n", queuejob.Name)
 
 	if !cc.isDispatcher {
 		if queuejob.Spec.AggrResources.Items != nil {
@@ -1029,7 +1022,7 @@ func (cc *XController) Cleanup(queuejob *arbv1.XQueueJob) error {
 	}
 
 	old_flag := queuejob.Status.CanRun
-	queuejob.Status = arbv1.XQueueJobStatus{
+	queuejob.Status = arbv1.AppWrapperStatus{
                 Pending:      0,
                 Running:      0,
                 Succeeded:    0,
