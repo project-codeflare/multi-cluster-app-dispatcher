@@ -12,11 +12,11 @@ Follow the build instructions [here](./doc/build/build.md) to build the Multi-Cl
 
 ## Multi-Cluster-App-Dispatcher Deployment Information
 
-Refer to [deployment](.doc/deploy/deployment.md) on how to deploy the `multi-cluster-app-dispatcher` as a controller in Kubernetes.
+Refer to [deployment](./doc/deploy/deployment.md) on how to deploy the `multi-cluster-app-dispatcher` as a controller in Kubernetes.
 
 ## Multi-Cluster-App-Dispatcher Tutoria
 
-Refer to the [tutorial](doc/usage/tutorial.md) on how to use `multi-cluster-app-dispatcher` to run batch job in Kubernetes
+Refer to the [tutorial](./doc/usage/tutorial.md) on how to use `multi-cluster-app-dispatcher` to run batch job in Kubernetes
 
 ## Overall Architecture
 
