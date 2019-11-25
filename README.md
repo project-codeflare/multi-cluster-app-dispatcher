@@ -1,7 +1,7 @@
 Multi-Cluster Application Dispatcher
 ==
 
-The multi cluster app wrapper `multi-cluster-app-dispatcher` is a Kubernetes controller providing mechanisms for applications to manage batch jobs. 
+The `multi-cluster-app-dispatcher` is a Kubernetes controller providing mechanisms for applications to manage batch jobs. 
 
 `multi-cluster-app-dispatcher` is capable of (i) providing an abstraction for wrapping all resources of the job/application and treating them holistically, (ii) queuing job/application creation requests and applying different queuing policies, e.g., FIFO, Priority, (iii) dispatching the job to one of multiple clusters, where a queuing agent runs, using configurable dispatch policies, and (iv) auto-scaling pod sets, balancing job demands and cluster availability (future work).
 
