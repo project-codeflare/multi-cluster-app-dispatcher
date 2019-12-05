@@ -19,7 +19,7 @@ Follow the build instructions [here](./doc/build/build.md) to build the Multi-Cl
 
 ## Overall Architecture
 
-![xqueuejob-controler](doc/images/xqueuejob-controller.png)
+![multi-cluster-app-dispatcher-controller](doc/images/multi-cluster-app-dispatcher-controller.png)
 
 
 ### Code of conduct
