@@ -1,10 +1,12 @@
 # Deploying Multi-Cluster-App-Wrapper Controller
-Follow the instructions below to deploy the Multi-Cluster-App-Wrapper controller in an existing Kubernetes cluster:
+Follow the instructions below to deploy the __Multi-Cluster Application Wrapper__ (_MCAD_) controller in an existing Kubernetes cluster:
 
 ## Pre-Reqs
 ### - Cluster running Kubernetes v1.10 or higher.
 ```
-kubectl version
+# kubectl version --short=true
+Client Version: v1.11.9
+Server Version: v1.11.9
 ```
 ### - Access to the `kube-system` namespace.
 ```
