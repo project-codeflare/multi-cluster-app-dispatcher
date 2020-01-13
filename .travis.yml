@@ -11,16 +11,15 @@ services:
 go:
   - "1.11"
 
-go_import_path:github.com/IBM/multi-cluster-app-dispatcher
+go_import_path: github.com/IBM/multi-cluster-app-dispatcher
 
 install:
   - go get -u golang.org/x/lint/golint
 
 before_script:
   - export TEST_LOG_LEVEL=4
-  - cd contrib/DLaaS
 
 script:
-  - make
-  - make generate-code
+#  - make
+#  - make generate-code
   - make mcad-controller
