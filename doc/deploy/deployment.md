@@ -20,7 +20,7 @@ helm list
 ```
 
 ### Access to a Docker Registry with the Multi-Cluster-App-Wrapper docker image.
-Follow the build instructions [here](../build/build.md) to build the `multi-cluster-app-dispatcher` controller docker image.
+Follow the build instructions [here](../build/build.md) to build the `multi-cluster-app-dispatcher` controller docker image and push the image to a docker registry.
 
 
 ### Determine if the cluster has enough resources for installing the Helm chart for the Multi-Cluster-App-Dispatcher.
@@ -95,12 +95,12 @@ cd multi-cluster-app-wrapper/deployment
 ```
 
 ### 3. Run the installation using Helm.
-Install the Multi-Cluster-App-Dispatcher Controller using the commands below.  The `--wait` parameter in the Helm command below is  used to ensure all pods of the helm chart are running and will not return unless the default timeout expires (*typically 300 seconds*) or all the pods are in `Running` state.
+Install the __Multi-Cluster-App-Dispatcher Controller__ using the commands below.  The `--wait` parameter in the Helm command below is  used to ensure all pods of the helm chart are running and will not return unless the default timeout expires (*typically 300 seconds*) or all the pods are in `Running` state.
 
 
-Before submitting the command below you should ensure you have enough resources in your cluster to deploy the helm chart (*see Pre-Reqs section above*).  If you do not have enough compute resources in your cluster you can adjust the resource request via the command line.  See an example in the `Note` below.  
+Before submitting the command below you should ensure you have enough resources in your cluster to deploy the helm chart (*see Pre-Reqs section above*).  If you do not have enough compute resources in your cluster you can adjust the resource request via the command line.  See an example below.
 
-All Helm parameters and described in the table below.
+All Helm parameters are described in the table at the bottom of this section.
 #### 3.a)  Start the Multi-Cluster-App-Dispatcher Controller on All Target Deployment Clusters (*Agent Mode*).
 __Agent Mode__: Install and set up the `multi-cluster-app-dispatcher` controller (_MCAD_) in *Agent Mode* for each clusters that will orchestrate the resources defined within an _AppWrapper_ using Helm.  *Agent Mode* is the default mode when deploying the _MCAD_ controller.
 ```
