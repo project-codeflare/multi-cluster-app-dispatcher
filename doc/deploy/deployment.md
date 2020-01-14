@@ -1,10 +1,12 @@
 # Deploying Multi-Cluster-App-Wrapper Controller
-Follow the instructions below to deploy the Multi-Cluster-App-Wrapper controller in an existing Kubernetes cluster:
+Follow the instructions below to deploy the __Multi-Cluster Application Wrapper__ (_MCAD_) controller in an existing Kubernetes cluster:
 
 ## Pre-Reqs
 ### - Cluster running Kubernetes v1.10 or higher.
 ```
-kubectl version
+# kubectl version --short=true
+Client Version: v1.11.9
+Server Version: v1.11.9
 ```
 ### - Access to the `kube-system` namespace.
 ```
@@ -17,9 +19,13 @@ Install the Helm Client on your local machine and the Helm Cerver on your kubern
 helm list
 ```
 
+### Access to a Docker Registry with the Multi-Cluster-App-Wrapper docker image.
+Follow the build instructions [here](../build/build.md) to build the `multi-cluster-app-dispatcher` controller docker image and push the image to a docker registry.
+
+
 ### Determine if the cluster has enough resources for installing the Helm chart for the Multi-Cluster-App-Dispatcher.
 
-The default memory resource demand for the multi-cluster-app-dispatcher controller is `2G`.  If your cluster is a small installation such as MiniKube you will want to adjust the Helm installation resource requests accordingly.  
+The default memory resource demand for the `multi-cluster-app-dispatcher` controller is `2G`.  If your cluster is a small installation such as MiniKube you will want to adjust the Helm installation resource requests accordingly.  
 
 
 To list available compute nodes on your cluster enter the following command:
@@ -68,28 +74,35 @@ Allocated resources:
 Events:     <none>
 
 ```
-In the example above, there is only one node (`minikube`) in the cluster with the majority of the cluster memory used (`1,254Mi` used out of `1,936Mi` allocatable capacity) leaving less than `700Mi` available capacity for new pod deployments in the cluster.  Since the default memory demand for the Enhanced QueueuJob Controller pod is `2G` the cluster has insufficient memory to deploy the controller.  Instruction notes provided below show how to override the defaults according to the available capacity in your cluster.
+In the example above, there is only one node (`minikube`) in the cluster with the majority of the cluster memory used (`1,254Mi` used out of `1,936Mi` allocatable capacity) leaving less than `700Mi` available capacity for new pod deployments in the cluster.  Since the default memory demand for the <em>Multi-Cluster Application Dispatcher</em> controller pod is `2G` the cluster has insufficient memory to deploy the controller.  Instruction notes provided below show how to override the defaults according to the available capacity in your cluster.
 
 ## Installation Instructions
 ### 1. Download the github project.
-Download this github project to your local machine.  
+
+
+#### 1.a)  Option 1: Download this github project to your local machine via HTTPS
+```bash
+git clone https://github.com/IBM/multi-cluster-app-dispatcher.git
 ```
-git clone -b queuejob-dispatcher --single-branch git@github.ibm.com:ARMS/extended-queuejob.git
+or
+#### 1.b) Option 2: Download this github project to your local machine via SSH
+```
+git clone git@github.com:IBM/multi-cluster-app-dispatcher.git
 ```
 ### 2. Navigate to the Helm deployment directory.
 ```
-cd extended-queuejob/contrib/DLaaS/deployment
+cd multi-cluster-app-wrapper/deployment
 ```
 
 ### 3. Run the installation using Helm.
-Install the Multi-Cluster-App-Dispatcher Controller using the commands below.  The `--wait` parameter in the Helm command below is  used to ensure all pods of the helm chart are running and will not return unless the default timeout expires (*typically 300 seconds*) or all the pods are in `Running` state.
+Install the __Multi-Cluster-App-Dispatcher Controller__ using the commands below.  The `--wait` parameter in the Helm command below is  used to ensure all pods of the helm chart are running and will not return unless the default timeout expires (*typically 300 seconds*) or all the pods are in `Running` state.
 
 
-Before submitting the command below you should ensure you have enough resources in your cluster to deploy the helm chart (*see Pre-Reqs section above*).  If you do not have enough compute resources in your cluster you can adjust the resource request via the command line.  See an example in the `Note` below.  
+Before submitting the command below you should ensure you have enough resources in your cluster to deploy the helm chart (*see Pre-Reqs section above*).  If you do not have enough compute resources in your cluster you can adjust the resource request via the command line.  See an example below.
 
-All Helm parameters and described in the table below.
-#### 3.a  Start the Multi-Cluster-App-Dispatcher Controller on All Target Deployment Clusters (*Agent Mode*).
-__Agent Mode__: Install and set up the Multi-Cluster-App-Dispatcher Controler (XQJ) in *Agent Mode* for each clusters that will orchestrate the resources defined within an XQJ using Helm.  *Agent Mode* is the default mode when deploying the XQJ controller.
+All Helm parameters are described in the table at the bottom of this section.
+#### 3.a)  Start the Multi-Cluster-App-Dispatcher Controller on All Target Deployment Clusters (*Agent Mode*).
+__Agent Mode__: Install and set up the `multi-cluster-app-dispatcher` controller (_MCAD_) in *Agent Mode* for each clusters that will orchestrate the resources defined within an _AppWrapper_ using Helm.  *Agent Mode* is the default mode when deploying the _MCAD_ controller.
 ```
 helm install kube-arbitrator --namespace kube-system --wait --set image.repository=<image repository and name> --set image.tag=<image tag> --set imagePullSecret.name=<Name of image pull kubernetes secret> --set imagePullSecret.password=<REPLACE_WITH_REGISTRY_TOKEN_GENERATED_IN_PREREQs_STAGE1_REGISTRY.d)>  --set localConfigName=<Local Kubernetes Config File for Current Cluster>  --set volumes.hostPath=<Host_Path_location_of_local_Kubernetes_config_file>
 ```
@@ -100,15 +113,15 @@ helm install kube-arbitrator --namespace kube-system
 ```
 or
 ```
-helm install kube-arbitrator --namespace kube-system --wait --set imagePullSecret.name=extended-queuejob-controller-registry-secret --set imagePullSecret.password=eyJhbGc...y8gJNcpnipUu0 --set image.pullPolicy=Always --set localConfigName=config_110 --set volumes.hostPath=/etc/kubernetes
+helm install kube-arbitrator --namespace kube-system --wait --set imagePullSecret.name=mcad-controller-registry-secret --set imagePullSecret.password=eyJhbGc...y8gJNcpnipUu0 --set image.pullPolicy=Always --set localConfigName=config_110 --set volumes.hostPath=/etc/kubernetes
 ```
 NOTE: You can adjust the cpu and memory demands of the deployment with command line overrides.  For example:
 
 ```
-helm install kube-arbitrator --namespace kube-system --wait -set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=k8s-spark-mcm-dispatcher-master-1:8443/xqueuejob-controller --set image.tag=v1.11 --set image.pullPolicy=Always
+helm install kube-arbitrator --namespace kube-system --wait -set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=myDockerReegistry/mcad-controller --set image.tag=v1.11 --set image.pullPolicy=Always
 ```
-#### 3.b  Start the Multi-Cluster-App-Dispatcher Controller on the Controller Cluster (*Dispatcher Mode*).
-_Dispatcher Mode__: Install and set up the Multi-Cluster-App-Dispatcher Controler (XQJ) in *Dispatcher Mode* for the control cluster that will dispatch the XQJ to an *Agent* cluster using Helm.
+#### 3.b)  Start the Multi-Cluster-App-Dispatcher Controller on the Controller Cluster (*Dispatcher Mode*).
+_Dispatcher Mode__: Install and set up the Multi-Cluster-App-Dispatcher Controler (_MCAD_) in *Dispatcher Mode* for the control cluster that will dispatch the _MCAD_ controller to an *Agent* cluster using Helm.
 
 
 __Dispatcher Mode__: Installing the Multi-Cluster-App-Dispatcher Controler in *Dispatcher Mode*.
@@ -118,7 +131,7 @@ helm install kube-arbitrator --namespace kube-system --wait --set image.reposito
 
 For example:
 ```
-helm install kube-arbitrator --namespace kube-system --wait --set image.repository=tonghoon --set image.tag=both --set configMap.name=xqj-deployer --set configMap.dispatcherMode='"true"' --set configMap.agentConfigs=agent101config:uncordon --set volumes.hostPath=/etc/kubernetes
+helm install kube-arbitrator --namespace kube-system --wait --set image.repository=tonghoon --set image.tag=both --set configMap.name=mcad-deployer --set configMap.dispatcherMode='"true"' --set configMap.agentConfigs=agent101config:uncordon --set volumes.hostPath=/etc/kubernetes
 ```
 ### Chart configuration
 
@@ -126,24 +139,24 @@ The following table lists the configurable parameters of the helm chart and thei
 
 | Parameter               | Description                          | Default       | Sample values                                    |
 | ----------------------- | ------------------------------------ | ------------- | ------------------------------------------------ |
-| `configMap.agentConfigs`    | *For Every Agent Cluster separated by commas(,):* Name of *agent* config file _:_  Set the dispatching mode for the _*Agent Cluster*_.  Note:For the dispatching mode `uncordon`, indicating XQJ controller is allowed to dispatched jobs to the _*Agent Cluster*_, is only supported.  | &lt;_No default for agent config file_&gt;:`uncordon` | `agent101config:uncordon,agent110config:uncordon`      |
-| `configMap.dispatcherMode`    | Whether the XQJ Controller should be launched in Dispatcher mode or not  | `false`  | `true`      |
-| `configMap.name`    | Name of the Kubernetes *ConfigMap* resource to configure the Enhance QueueJob Controller   |   | `xqj-deployer`      |
-| `deploymentName`      | Name of XQJ Controller Deployment Object | `xqueuejob-controller` | `my-xqj-controller` |
+| `configMap.agentConfigs`    | *For Every Agent Cluster separated by commas(,):* Name of *agent* config file _:_  Set the dispatching mode for the _*Agent Cluster*_.  Note:For the dispatching mode `uncordon`, indicating _MCAD_ controller is allowed to dispatched jobs to the _*Agent Cluster*_, is only supported.  | &lt;_No default for agent config file_&gt;:`uncordon` | `agent101config:uncordon,agent110config:uncordon`      |
+| `configMap.dispatcherMode`    | Whether the _MCAD_ Controller should be launched in Dispatcher mode or not  | `false`  | `true`      |
+| `configMap.name`    | Name of the Kubernetes *ConfigMap* resource to configure the _MCAD_ Controller   |   | `mcad-deployer`      |
+| `deploymentName`      | Name of _MCAD_ Controller Deployment Object | `mcad-controller` | `my-mcad-controller` |
 | `image.pullPolicy`     | Policy that dictates when the specified image is pulled    | `Always`  | `Never`      |
-| `imagePullSecret.name`            | Kubernetes secret name to store password for image registry          |  | `extended-queuejob-controller-registry-secret`      |
+| `imagePullSecret.name`            | Kubernetes secret name to store password for image registry          |  | `mcad-controller-registry-secret`      |
 | `imagePullSecret.password`            | Image registry pull secret password           |  | `eyJhbGc...y8gJNcpnipUu0`      |
 | `imagePullSecret.username`            | Image registry pull user name           | `iamapikey` | `token`      |
-| `image.repository`     | Name of repository containing XQueueJob Controller image    | `registry.stage1.ng.bluemix.net/ibm/kube-arbitrator`  | `my-repository`      |
+| `image.repository`     | Name of repository containing _MCAD_ Controller image    | `registry.stage1.ng.bluemix.net/ibm/kube-arbitrator`  | `my-repository`      |
 | `image.tag`     | Tag of desired image within repository    | `latest`  | `my-image`      |
-| `namespace`      | Namespace in which XQJ Controller Deployment is created | `kube-system` | `my-namespace` |
-| `nodeSelector.hostname`    | Host Name field for XQJ Controller Pod Node Selector   |   | `example-host`      |
-| `replicaCount`      | Number of replicas of XQJ Controller Deployment | 1 | 2 |
-| `resources.limits.cpu`     | CPU Limit for XQJ Controller Deployment    | `2000m`  | `1000m`      |
-| `resources.limits.memory`     | Memory Limit for XQJ Controller Deployment    | `2048Mi`  | `1024Mi`      |
-| `resources.requests.cpu`     | CPU Request for XQJ Controller Deployment (must be less than CPU Limit)    | `2000m`  | `1000m`      |
-| `resources.requests.memory`     | Memory Request for XQJ Controller Deployment (must be less than Memory Limit)   | `2048Mi`  | `1024Mi`      |
-| `serviceAccount`    | Name of service account of XQJ Controller   | `xqueuejob-controller`  | `my-service-account`      |
+| `namespace`      | Namespace in which _MCAD_ Controller Deployment is created | `kube-system` | `my-namespace` |
+| `nodeSelector.hostname`    | Host Name field for _MCAD_ Controller Pod Node Selector   |   | `example-host`      |
+| `replicaCount`      | Number of replicas of _MCAD_ Controller Deployment | 1 | 2 |
+| `resources.limits.cpu`     | CPU Limit for _MCAD_ Controller Deployment    | `2000m`  | `1000m`      |
+| `resources.limits.memory`     | Memory Limit for _MCAD_ Controller Deployment    | `2048Mi`  | `1024Mi`      |
+| `resources.requests.cpu`     | CPU Request for _MCAD_ Controller Deployment (must be less than CPU Limit)    | `2000m`  | `1000m`      |
+| `resources.requests.memory`     | Memory Request for _MCAD_ Controller Deployment (must be less than Memory Limit)   | `2048Mi`  | `1024Mi`      |
+| `serviceAccount`    | Name of service account of _MCAD_ Controller   | `mcad-controller`  | `my-service-account`      |
 | `volumes.hostPath`    | Full path on the host location where the `localConfigName` file is stored  |   | `/etc/kubernetes`      |
 
 
@@ -160,12 +173,12 @@ opinionated-antelope	1       	Mon Jan 21 00:52:39 2019	DEPLOYED	kube-arbitrator-
 
 ```
 
-Ensure the new resource but listing the Extended QueueJobs.
+Ensure the new custom resource is enabled by listing the `appwrappeer` jobs.
 ```bash
-kubectl get xqueuejobs
+kubectl get appwrappers
 ```
 
-Since no `xqueuejobs` have been deploy yet to your cluster you should receive a message indicating `No resources found.` for `xqueuejobs` but your cluster now has `xqueuejobs` enabled.  Use the [tutorial](../doc/usage/tutorial.md) to deploy an example `xqueuejob`.
+Since no `appwrapper` jobs have yet to be deployed into the current cluster you should receive a message indicating `No resources found` for `appwrappers` but your cluster now has _MCAD_ controller enabled.  Use the [tutorial](../doc/usage/tutorial.md) to deploy an example `appwrapper` job.
 
 ### 6.  Remove the Multi-Cluster-App-Dispatcher Controller from your cluster.
 
