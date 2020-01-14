@@ -47,9 +47,18 @@ kube::test::find_dirs() {
     find -L . -not \( \
         \( \
           -path './_artifacts/*' \
+          -o -path './bazel-*/*' \
           -o -path './_output/*' \
+          -o -path './_gopath/*' \
+          -o -path './cmd/kubeadm/test/*' \
+          -o -path './contrib/podex/*' \
+          -o -path './output/*' \
+          -o -path './release/*' \
+          -o -path './target/*' \
           -o -path './test/*' \
           -o -path './third_party/*' \
+          -o -path './staging/*' \
+          -o -path './vendor/*' \
         \) -prune \
       \) -name '*_test.go' -print0 | xargs -0n1 dirname | sed "s|^\./|${KUBE_GO_PACKAGE}/|" | LC_ALL=C sort -u
   )
@@ -193,7 +202,6 @@ produceJUnitXMLReport() {
 runTests() {
   local junit_filename_prefix
   junit_filename_prefix=$(junitFilenamePrefix)
-
   # If we're not collecting coverage, run all requested tests with one 'go test'
   # command, which is much faster.
   if [[ ! ${KUBE_COVER} =~ ^[yY]$ ]]; then
