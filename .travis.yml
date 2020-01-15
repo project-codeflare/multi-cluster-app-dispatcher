@@ -22,4 +22,5 @@ before_script:
 script:
 #  - make
 #  - make generate-code
+  - make run-test
   - make mcad-controller

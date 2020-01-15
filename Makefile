@@ -15,9 +15,9 @@ init:
 	mkdir -p ${BIN_DIR}
 
 generate-code:
-	$(info Compiling deepcopy-gen)
+	$(info Compiling deepcopy-gen...)
 	go build -o ${BIN_DIR}/deepcopy-gen ./cmd/deepcopy-gen/
-	$(info Generating deepcopy)
+	$(info Generating deepcopy...)
 	${BIN_DIR}/deepcopy-gen -i ./pkg/apis/controller/v1alpha1/ -O zz_generated.deepcopy 
 
 images:
@@ -27,9 +27,10 @@ images:
 	docker build --no-cache --tag mcad-controller:${RELEASE_VER} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
 
 run-test:
-#	hack/make-rules/test.sh $(WHAT) $(TESTS)
+	$(info Running unit tests...)
+	hack/make-rules/test.sh $(WHAT) $(TESTS)
 
-e2e: 
+e2e:
 #	kube-controller
 #	hack/run-e2e.sh
 

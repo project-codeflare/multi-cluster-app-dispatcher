@@ -44,6 +44,7 @@ import (
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
 	custommetricstorage "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/registry/custom_metrics"
 	externalmetricstorage "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/registry/external_metrics"
+	sampleprovider "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/test-adapter/provider"
 	"k8s.io/metrics/pkg/apis/external_metrics"
 )
 
@@ -340,7 +341,7 @@ func TestExternalMetricsAPI(t *testing.T) {
 
 	// "real" fake provider implementation can be used in test, because it doesn't have any dependencies.
 	// Note: this provider has a hardcoded list of external metrics.
-	prov, _ := provider.NewFakeProvider(nil, nil)
+	prov, _ := sampleprovider.NewFakeProvider(nil, nil)
 
 	server := httptest.NewServer(handleExternalMetrics(prov))
 	defer server.Close()
