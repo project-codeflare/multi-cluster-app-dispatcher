@@ -4,7 +4,7 @@ CURRENT_DIR=$(shell pwd)
 
 mcad-controller: init generate-code
 	$(info Compiling controller)
-	CGO_ENABLED=0 GOARCH=amd64 go build -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
+	CGO_ENABLED=0 GOARCH=amd64 go build -x -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
 
 verify: generate-code
 #	hack/verify-gofmt.sh
@@ -16,7 +16,7 @@ init:
 
 generate-code:
 	$(info Compiling deepcopy-gen...)
-	go build -o ${BIN_DIR}/deepcopy-gen ./cmd/deepcopy-gen/
+	go build -x -o ${BIN_DIR}/deepcopy-gen ./cmd/deepcopy-gen/
 	$(info Generating deepcopy...)
 	${BIN_DIR}/deepcopy-gen -i ./pkg/apis/controller/v1alpha1/ -O zz_generated.deepcopy 
 
@@ -30,9 +30,8 @@ run-test:
 	$(info Running unit tests...)
 	hack/make-rules/test.sh $(WHAT) $(TESTS)
 
-e2e:
-#	kube-controller
-#	hack/run-e2e.sh
+run-e2e: mcad-controller
+	hack/run-e2e-kind.sh
 
 coverage:
 #	KUBE_COVER=y hack/make-rules/test.sh $(WHAT) $(TESTS)
