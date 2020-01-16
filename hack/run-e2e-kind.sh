@@ -70,6 +70,21 @@ function kube-batch-up {
     export KUBECONFIG="$(kind get kubeconfig-path ${CLUSTER_CONTEXT})"
     kubectl version
 
+    # Install Helm Client
+    curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get > install-helm.sh
+    chmod u+x install-helm.sh
+    cat install-helm.sh
+    ./install-helm.sh
+
+    # Install Helm Server 
+    kubectl -n kube-system create serviceaccount tiller
+    kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
+    helm init --service-account tiller
+    kubectl get pods --namespace kube-system | grep tiller
+
+    helm version
+
+
     kubectl create -f deployment/kube-batch/templates/scheduling_v1alpha1_queue.yaml
     kubectl create -f deployment/kube-batch/templates/scheduling_v1alpha1_podgroup.yaml
     kubectl create -f deployment/kube-batch/templates/scheduling_v1alpha2_podgroup.yaml
