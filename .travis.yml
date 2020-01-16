@@ -21,6 +21,6 @@ before_script:
 
 script:
 #  - make
-  - make mcad-controller
+#  - make mcad-controller
 #  - make run-test
   - make run-e2e

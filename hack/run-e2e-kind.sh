@@ -84,12 +84,10 @@ function kube-batch-up {
     helm version 
     helm list
 
+    cd deployment
 
-    kubectl create -f deployment/kube-batch/templates/scheduling_v1alpha1_queue.yaml
-    kubectl create -f deployment/kube-batch/templates/scheduling_v1alpha1_podgroup.yaml
-    kubectl create -f deployment/kube-batch/templates/scheduling_v1alpha2_podgroup.yaml
-    kubectl create -f deployment/kube-batch/templates/scheduling_v1alpha2_queue.yaml
-    kubectl create -f deployment/kube-batch/templates/default.yaml
+    helm install kube-arbitrator --namespace kube-system --wait -set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=myDockerReegistry/mcad-controller --set image.tag=v1.11 --set image.pullPolicy=Always
+
 
     # start kube-batch
     nohup ${KA_BIN}/kube-batch --kubeconfig ${KUBECONFIG} --scheduler-conf=config/kube-batch-conf.yaml --logtostderr --v ${LOG_LEVEL} > scheduler.log 2>&1 &
