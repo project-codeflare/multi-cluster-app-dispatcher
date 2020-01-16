@@ -10,8 +10,6 @@ export KIND_OPT=${KIND_OPT:=" --config ${ROOT_DIR}/hack/e2e-kind-config.yaml"}
 export KA_BIN=_output/bin
 export WAIT_TIME="20s"
 
-
-sudo ls -l
 sudo apt-get update && sudo apt-get install -y apt-transport-https
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
@@ -80,9 +78,11 @@ function kube-batch-up {
     kubectl -n kube-system create serviceaccount tiller
     kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
     helm init --service-account tiller
+    sleep 15
     kubectl get pods --namespace kube-system | grep tiller
 
-    helm version
+    helm version 
+    helm list
 
 
     kubectl create -f deployment/kube-batch/templates/scheduling_v1alpha1_queue.yaml
