@@ -51,7 +51,7 @@ function check-prerequisites {
     echo "No MCAD image tag was provided for: ${IMAGE_REPOSITORY_MCAD}."
     exit 1
   else
-    echo -n "end to end test with ${IMAGE_MCAD}"
+    echo -n "end to end test with ${IMAGE_MCAD}."
   fi
 }
 
@@ -103,7 +103,7 @@ function kube-batch-up {
 
     cd deployment
 
-    helm install kube-arbitrator --namespace kube-system --wait -set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_REPOSITORY_MCAD --set image.pullPolicy=Always
+    helm install kube-arbitrator --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=Always
 
     sleep 10
     kubectl get pods -n kube-system
