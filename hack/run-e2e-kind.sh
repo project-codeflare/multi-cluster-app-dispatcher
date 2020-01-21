@@ -95,19 +95,19 @@ function kube-batch-up {
     kubectl -n kube-system create serviceaccount tiller
     kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
     helm init --service-account tiller
-    sleep 15
+    sleep 25
     tiller_pod=$(kubectl get pods --namespace kube-system | grep tiller | awk '{print $1}')
 
     kubectl describe pod ${tiller_pod} -n kube-system
 
     helm version 
-    helm list
 
     cd deployment
 
-    helm install kube-arbitrator --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=Always
+    helm install kube-arbitrator --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=Always --debug
 
     sleep 10
+    helm list
     kubectl get pods -n kube-system
 
     # start kube-batch
