@@ -9,6 +9,9 @@ export IMAGE_BUSYBOX="busybox:latest"
 export KIND_OPT=${KIND_OPT:=" --config ${ROOT_DIR}/hack/e2e-kind-config.yaml"}
 export KA_BIN=_output/bin
 export WAIT_TIME="20s"
+export IMAGE_REPOSITORY_MCAD="${1}"
+export IMAGE_TAG_MCAD="${2}"
+export IMAGE_MCAD="${IMAGE_REPOSITORY_MCAD}:${IMAGE_TAG_MCAD}"
 
 sudo apt-get update && sudo apt-get install -y apt-transport-https
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
@@ -38,6 +41,17 @@ function check-prerequisites {
   else
     echo -n "found kubectl, " && kubectl version --short --client
   fi
+  
+  if [[ $IMAGE_REPOSITORY_MCAD == "" ]]
+  then
+    echo "No MCAD image was provided."
+    exit 1
+  elif [[ $IMAGE_TAG_MCAD == "" ]]
+    echo "No MCAD image tag was provided for: ${IMAGE_REPOSITORY_MCAD}."
+    exit 1
+  else
+    echo -n "end to end test with ${IMAGE_MCAD}"
+  fi
 }
 
 function kind-up-cluster {
@@ -46,8 +60,10 @@ function kind-up-cluster {
   kind create cluster ${CLUSTER_CONTEXT} ${KIND_OPT} --wait ${WAIT_TIME}
   docker pull ${IMAGE_BUSYBOX}
   docker pull ${IMAGE_NGINX}
+  docker pull ${IMAGE_MCAD}
   kind load docker-image ${IMAGE_NGINX} ${CLUSTER_CONTEXT}
   kind load docker-image ${IMAGE_BUSYBOX} ${CLUSTER_CONTEXT}
+  kind load docker-image ${IMAGE_MCAD} ${CLUSTER_CONTEXT}
 }
 
 # clean up
@@ -86,8 +102,10 @@ function kube-batch-up {
 
     cd deployment
 
-    helm install kube-arbitrator --namespace kube-system --wait -set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=myDockerReegistry/mcad-controller --set image.tag=v1.11 --set image.pullPolicy=Always
+    helm install kube-arbitrator --namespace kube-system --wait -set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_REPOSITORY_MCAD --set image.pullPolicy=Always
 
+    sleep 10
+    kubectl get pods -n kube-system
 
     # start kube-batch
     nohup ${KA_BIN}/kube-batch --kubeconfig ${KUBECONFIG} --scheduler-conf=config/kube-batch-conf.yaml --logtostderr --v ${LOG_LEVEL} > scheduler.log 2>&1 &

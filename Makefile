@@ -39,7 +39,7 @@ run-test:
 	hack/make-rules/test.sh $(WHAT) $(TESTS)
 
 run-e2e: mcad-controller
-	hack/run-e2e-kind.sh
+	hack/run-e2e-kind.sh ${dockerhub_repository}/mcad-controller} ${RELEASE_VER}
 
 coverage:
 #	KUBE_COVER=y hack/make-rules/test.sh $(WHAT) $(TESTS)
