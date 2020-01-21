@@ -26,6 +26,10 @@ images:
 	$(info Build the docker image)
 	docker build --no-cache --tag mcad-controller:${RELEASE_VER} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
 
+push_images:
+	$(info Push the docker image to registry)
+	docker push mcad-controller:${RELEASE_VER}
+
 run-test:
 	$(info Running unit tests...)
 	hack/make-rules/test.sh $(WHAT) $(TESTS)
