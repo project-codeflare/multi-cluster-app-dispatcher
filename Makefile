@@ -27,8 +27,12 @@ images:
 	docker build --no-cache --tag mcad-controller:${RELEASE_VER} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
 
 push_images:
+	$(info Log into dockerhub)
+	echo ${dockerhub_token} | docker login -u ${dockerhub_id} --password-stdin
+	$(info Tag the latest image)
+	docker tag mcad-controller:${RELEASE_VER}  ${dockerhub_repository}/mcad-controller:${RELEASE_VER}
 	$(info Push the docker image to registry)
-	docker push mcad-controller:${RELEASE_VER}
+	docker push ${dockerhub_repository}/mcad-controller:${RELEASE_VER}
 
 run-test:
 	$(info Running unit tests...)
