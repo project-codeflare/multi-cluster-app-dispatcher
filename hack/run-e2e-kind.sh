@@ -47,6 +47,7 @@ function check-prerequisites {
     echo "No MCAD image was provided."
     exit 1
   elif [[ $IMAGE_TAG_MCAD == "" ]]
+  then
     echo "No MCAD image tag was provided for: ${IMAGE_REPOSITORY_MCAD}."
     exit 1
   else
