@@ -96,7 +96,7 @@ function kube-batch-up {
     kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
     helm init --service-account tiller
     sleep 15
-    tiller_pod=$(kubectl get pods --namespace kube-system | grep tiller | awk '{print $1})
+    tiller_pod=$(kubectl get pods --namespace kube-system | grep tiller | awk '{print $1}')
 
     kubectl describe pod ${tiller_pod} -n kube-system
 
