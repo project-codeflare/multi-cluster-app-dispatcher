@@ -69,14 +69,12 @@ function kind-up-cluster {
 
 # clean up
 function cleanup {
-    killall -9 kube-batch
+    echo "===================================================================================="
+    echo "==========================>>>>> MCAD Controller Logs <<<<<=========================="
+    echo "===================================================================================="
+    kubectl logs mcad_pod -n kube-system
+
     kind delete cluster ${CLUSTER_CONTEXT}
-
-    echo "===================================================================================="
-    echo "=============================>>>>> Scheduler Logs <<<<<============================="
-    echo "===================================================================================="
-
-    cat scheduler.log
 }
 
 function kube-batch-up {
@@ -104,14 +102,12 @@ function kube-batch-up {
 
     cd deployment
 
+    # start mcad controller
     helm install kube-arbitrator --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=Always --debug
 
     sleep 10
     helm list
-    kubectl get pods -n kube-system
-
-    # start kube-batch
-    nohup ${KA_BIN}/kube-batch --kubeconfig ${KUBECONFIG} --scheduler-conf=config/kube-batch-conf.yaml --logtostderr --v ${LOG_LEVEL} > scheduler.log 2>&1 &
+    mcad_pod=$(kubectl get pods -n kube-system | grep xqueuejob | awk '{print $1}')
 }
 
 
