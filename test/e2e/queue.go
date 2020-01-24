@@ -44,8 +44,8 @@ var _ = Describe("Predicates E2E Test", func() {
 
 		job.name = "q1-qj-1"
 		job.queue = "q1"
-		_, pg1 := createJobEx(context, job)
-		err := waitPodGroupReady(context, pg1)
+		_, aw1 := createJobEx(context, job)
+		err := waitAWReady(context, aw1)
 		Expect(err).NotTo(HaveOccurred())
 
 		expected := int(rep) / 2
@@ -59,11 +59,11 @@ var _ = Describe("Predicates E2E Test", func() {
 
 		job.name = "q2-qj-2"
 		job.queue = "q2"
-		_, pg2 := createJobEx(context, job)
-		err = waitTasksReadyEx(context, pg2, expected)
+		_, aw2 := createJobEx(context, job)
+		err = waitAWReadyEx(context, aw2, expected)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = waitTasksReadyEx(context, pg1, expected)
+		err = waitAWReadyEx(context, aw1, expected)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
