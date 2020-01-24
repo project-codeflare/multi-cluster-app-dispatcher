@@ -27,6 +27,7 @@ type Interface interface {
 	// QueueJobs returns a QueueJobInformer.
 	QueueJobs() QueueJobInformer
 	XQueueJobs() XQueueJobInformer
+	AppWrapper() AppWrapperInformer
 }
 
 
@@ -52,4 +53,8 @@ func (v *version) QueueJobs() QueueJobInformer {
 
 func (v *version) XQueueJobs() XQueueJobInformer {
 	return &xqueueJobInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+func (v *version) AppWrappers() AppWrapperInformer {
+	return &appWrapperInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

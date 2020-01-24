@@ -72,7 +72,7 @@ function cleanup {
     echo "===================================================================================="
     echo "==========================>>>>> MCAD Controller Logs <<<<<=========================="
     echo "===================================================================================="
-    kubectl logs mcad_pod -n kube-system
+    kubectl logs ${mcad_pod} -n kube-system
 
     kind delete cluster ${CLUSTER_CONTEXT}
 }

@@ -22,10 +22,11 @@ import (
 
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/pkg/scheduler/algorithm"
+//	"k8s.io/kubernetes/pkg/scheduler/algorithm"
 )
 
 var _ = Describe("Predicates E2E Test", func() {
+/*
 	It("NodeAffinity", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
@@ -102,7 +103,7 @@ var _ = Describe("Predicates E2E Test", func() {
 		err = waitTasksPendingEx(context, pg, nn)
 		Expect(err).NotTo(HaveOccurred())
 	})
-
+*/
 	It("Pod Affinity", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
@@ -140,11 +141,11 @@ var _ = Describe("Predicates E2E Test", func() {
 			},
 		}
 
-		_, pg := createJobEx(context, job)
-		err := waitPodGroupReady(context, pg)
+		_, aw := createJobEx(context, job)
+		err := waitAWReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
-		pods := getPodOfPodGroup(context, pg)
+		pods := getPodOfAppWrapper(context, aw)
 		// All pods should be scheduled to the same node.
 		nodeName := pods[0].Spec.NodeName
 		for _, pod := range pods {
@@ -179,14 +180,14 @@ var _ = Describe("Predicates E2E Test", func() {
 			},
 		}
 
-		_, pg := createJobEx(context, job)
-		err = waitPodGroupPending(context, pg)
+		_, aw := createJobEx(context, job)
+		err = waitAWPending(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 		err = removeTaintsFromAllNodes(context, taints)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = waitPodGroupReady(context, pg)
+		err = waitAWReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
