@@ -55,6 +55,6 @@ func (v *version) XQueueJobs() XQueueJobInformer {
 	return &xqueueJobInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
-func (v *version) AppWrappers() AppWrapperInformer {
+func (v *version) AppWrapper() AppWrapperInformer {
 	return &appWrapperInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
