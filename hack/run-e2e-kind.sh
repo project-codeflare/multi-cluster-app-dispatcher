@@ -81,7 +81,16 @@ function kube-batch-up {
     cd ${ROOT_DIR}
 
     export KUBECONFIG="$(kind get kubeconfig-path ${CLUSTER_CONTEXT})"
+    echo "KUBECONFIG file: ${KUBECONFIG}"
     kubectl version
+    kubectl config current-context
+
+    # Hack to setup for 'go test' call which expects this path.
+    if [ ! -z $HOME/.kube/config ]
+    then
+      cp $KUBECONFIG $HOME/.kube/config
+      cat $HOME/.kube/config
+    fi
 
     # Install Helm Client
     curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get > install-helm.sh
