@@ -41,7 +41,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
-	//arbv1 "github.com/kubernetes-sigs/kube-batch/pkg/apis/scheduling/v1alpha1"
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	versioned "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	csapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
@@ -132,6 +131,11 @@ func namespaceNotExist(ctx *context) wait.ConditionFunc {
 
 
 func cleanupTestContext(cxt *context) {
+	//DO NOTHING
+}
+
+func cleanupTestContext2(cxt *context) {
+
 	foreground := metav1.DeletePropagationForeground
 
 	err := cxt.kubeclient.CoreV1().Namespaces().Delete(cxt.namespace, &metav1.DeleteOptions{
@@ -258,6 +262,8 @@ func createJobEx(context *context, job *jobSpec) ([]*batchv1.Job, *arbv1.AppWrap
 
 	return jobs, appwrapper
 }
+
+
 /*
 func taskPhase(ctx *context, pg *arbv1.PodGroup, phase []v1.PodPhase, taskNum int) wait.ConditionFunc {
 	return func() (bool, error) {
@@ -431,6 +437,79 @@ func createReplicaSet(context *context, name string, rep int32, img string, req 
 	Expect(err).NotTo(HaveOccurred())
 
 	return deployment
+}
+
+func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
+	//rb := []byte(`{"kind": "Pod", "apiVersion": "v1", "metadata": { "name": "foo"}}`)
+	rb := []byte(`{"apiVersion": "apps/v1beta1", 
+    "kind": "Deployment", 
+	"metadata": {
+		"name": "nginx - deployment",
+		"namespace": "test",
+		"labels": {
+			"app": "nginx"
+		}
+	}
+	"spec": {
+		"replicas": "3",
+		"selector": {
+			"matchLabels": {
+				"app": "nginx"
+			}
+		}
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "nginx"
+				},
+				Annotations: {
+					"appwrapper.k8s.io/appwrapper-name": "nginx - deployment"
+				}
+			}
+			"spec": {
+				"containers": {
+					"name": "nginx",
+					"image": "nginx",
+					"ports": {
+						"containerPort": "80"
+					}
+				}
+			}
+		}
+	}} `)
+	var schedSpecMin int = 3
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				Items: []arbv1.AppWrapperResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item1"),
+							Namespace: context.namespace,
+						},
+						Replicas: 1,
+						Type: arbv1.ResourceTypeDeployment,
+						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrapper("default").Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
 }
 
 func deleteReplicaSet(ctx *context, name string) error {

@@ -24,6 +24,53 @@ import (
 )
 
 var _ = Describe("Predicates E2E Test", func() {
+
+	It("Create AppWrapper - Deployment Only", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createDeploymentAW(context,"aw-deployment-1")
+
+		err := waitAWReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("Gang scheduling", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+		rep := clusterSize(context, oneCPU)/2 + 1
+
+		replicaset := createReplicaSet(context, "rs-1", rep, "nginx", oneCPU)
+		err := waitReplicaSetReady(context, replicaset.Name)
+		Expect(err).NotTo(HaveOccurred())
+
+		job := &jobSpec{
+			name:      "gang-qj",
+			namespace: "test",
+			tasks: []taskSpec{
+				{
+					img: "busybox",
+					req: oneCPU,
+					min: rep,
+					rep: rep,
+				},
+			},
+		}
+
+		_, pg := createJobEx(context, job)
+		err = waitPodGroupPending(context, pg)
+		Expect(err).NotTo(HaveOccurred())
+
+		waitPodGroupUnschedulable(context, pg)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = deleteReplicaSet(context, replicaset.Name)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = waitPodGroupReady(context, pg)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	It("Reclaim", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)

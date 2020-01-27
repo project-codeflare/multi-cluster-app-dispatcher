@@ -69,6 +69,9 @@ function kind-up-cluster {
 
 # clean up
 function cleanup {
+
+    kubectl get appwrappers -A -o yaml
+    kubectl describe appwrappers -A
     echo "===================================================================================="
     echo "==========================>>>>> MCAD Controller Logs <<<<<=========================="
     echo "===================================================================================="
@@ -93,16 +96,23 @@ function kube-batch-up {
     fi
 
     # Install Helm Client
+    echo "Installing Helm Client..."
     curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get > install-helm.sh
     chmod u+x install-helm.sh
     cat install-helm.sh
     ./install-helm.sh
 
-    # Install Helm Server 
+    # Start Helm Server
+    echo "Installing Helm Server..."
     kubectl -n kube-system create serviceaccount tiller
     kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
+
+    echo "Initialize Helm Server..."
     helm init --service-account tiller
+    echo "Wait for Helm Server to complete startup..."
     sleep 25
+
+    echo "Getting Helm Server info..."
     tiller_pod=$(kubectl get pods --namespace kube-system | grep tiller | awk '{print $1}')
 
     kubectl describe pod ${tiller_pod} -n kube-system
@@ -112,6 +122,7 @@ function kube-batch-up {
     cd deployment
 
     # start mcad controller
+    echo "Starting MCAD Controller..."
     helm install kube-arbitrator --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=Always --debug
 
     sleep 10
@@ -127,4 +138,6 @@ kind-up-cluster
 kube-batch-up
 
 cd ${ROOT_DIR}
+
+echo "Running E2E tests..."
 go test ./test/e2e -v -timeout 30m
