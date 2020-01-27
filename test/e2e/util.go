@@ -441,8 +441,11 @@ func createReplicaSet(context *context, name string, rep int32, img string, req 
 
 func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 	//rb := []byte(`{"kind": "Pod", "apiVersion": "v1", "metadata": { "name": "foo"}}`)
-	rb := []byte(`{"apiVersion": "apps/v1beta1", 
-    "kind": "Deployment", 
+//	rb := []byte(`{"apiVersion": "apps/v1beta1",
+//	"appwrapper.k8s.io/appwrapper-name": "nginx - deployment"
+
+	rb := []byte(`{"apiVersion": "v1beta1",
+		"kind": "Deployment", 
 	"metadata": {
 		"name": "nginx - deployment",
 		"namespace": "test",
@@ -463,7 +466,7 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 					"app": "nginx"
 				},
 				Annotations: {
-					"appwrapper.k8s.io/appwrapper-name": "nginx - deployment"
+					"appwrapper.k8s.io.appwrapper-name": "nginx - deployment"
 				}
 			}
 			"spec": {
