@@ -17,8 +17,6 @@ limitations under the License.
 package e2e
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -34,7 +32,7 @@ var _ = Describe("Predicates E2E Test", func() {
 		err := waitAWReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 	})
-
+/*
 	It("Gang scheduling", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
@@ -113,5 +111,5 @@ var _ = Describe("Predicates E2E Test", func() {
 		err = waitAWReadyEx(context, aw1, expected)
 		Expect(err).NotTo(HaveOccurred())
 	})
-
+*/
 })
