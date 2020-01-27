@@ -18,10 +18,10 @@ package e2e
 
 import (
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("AppWrapper E2E Test", func() {
+/*
 	It("Create AppWrapper - Pod Only", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
@@ -42,7 +42,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		err := waitAWReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 	})
-/*
+
 	It("Schedule Multiple Jobs", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)

@@ -18,11 +18,7 @@ package e2e
 
 import (
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-//	"k8s.io/kubernetes/pkg/scheduler/algorithm"
+	//	"k8s.io/kubernetes/pkg/scheduler/algorithm"
 )
 
 var _ = Describe("Predicates E2E Test", func() {
@@ -103,7 +99,7 @@ var _ = Describe("Predicates E2E Test", func() {
 		err = waitTasksPendingEx(context, pg, nn)
 		Expect(err).NotTo(HaveOccurred())
 	})
-*/
+
 	It("Pod Affinity", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
@@ -190,5 +186,5 @@ var _ = Describe("Predicates E2E Test", func() {
 		err = waitAWReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 	})
-
+*/
 })

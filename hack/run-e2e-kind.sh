@@ -69,11 +69,14 @@ function kind-up-cluster {
 
 # clean up
 function cleanup {
-    echo "Cleanning up..."
+    echo "Cleaning up..."
     kubectl get appwrappers -A -o yaml
     kubectl describe appwrappers -A
+    echo "'test' Pod list..."
     kubectl get pods -n test
+    echo "'test' Pod yaml..."
     kubectl get pods -n test -o yaml
+    echo "'test' Pod descriptions..."
     kubectl describe pods -n test
     echo "===================================================================================="
     echo "==========================>>>>> MCAD Controller Logs <<<<<=========================="
