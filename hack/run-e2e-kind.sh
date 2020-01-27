@@ -72,6 +72,7 @@ function cleanup {
     echo "Cleanning up..."
     kubectl get appwrappers -A -o yaml
     kubectl describe appwrappers -A
+    kubectl get pods -A
     echo "===================================================================================="
     echo "==========================>>>>> MCAD Controller Logs <<<<<=========================="
     echo "===================================================================================="
