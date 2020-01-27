@@ -447,6 +447,9 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 	"metadata": {
 		"name": "nginx - deployment",
 		"namespace": "test",
+		"annotations": {
+			"appwrapper.k8s.io/appwrapper-name": "nginx - deployment"
+		},
 		"labels": {
 			"app": "nginx"
 		}
@@ -462,9 +465,6 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 			"metadata": {
 				"labels": {
 					"app": "nginx"
-				},
-				annotations: {
-					"appwrapper.k8s.io/appwrapper-name": "nginx - deployment"
 				}
 			},
 			"spec": {
