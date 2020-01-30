@@ -773,7 +773,7 @@ func (cc *XController) worker() {
 			glog.Errorf("Un-supported type of %v", obj)
 			return nil
 		}
-		glog.V(10).Infof("[TTime] %s, %s: WorkerFromEventQueue", queuejob.Name, time.Now().Sub(queuejob.CreationTimestamp.Time))
+		glog.V(10).Infof("[TTime] %s: %s, WorkerFromEventQueue delay: %s - Pop Begin ", time.Now().String(), queuejob.Name, time.Now().Sub(queuejob.CreationTimestamp.Time))
 
 		if queuejob == nil {
 			if acc, err := meta.Accessor(obj); err != nil {
@@ -789,6 +789,7 @@ func (cc *XController) worker() {
 			return err
 		}
 
+		glog.V(10).Infof("[TTime] %s: %s, WorkerFromEventQueue delay: %s - Pop End ", time.Now().String(), queuejob.Name, time.Now().Sub(queuejob.CreationTimestamp.Time))
 		return nil
 	}); err != nil {
 		glog.Errorf("Fail to pop item from updateQueue, err %#v", err)
