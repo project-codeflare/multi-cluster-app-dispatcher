@@ -138,7 +138,7 @@ func (cc *XQueueJobAgent) updateQueueJob(oldObj, newObj interface{}) {
 		glog.Errorf("newObj is not AppWrapper")
 		return
 	}
-	glog.V(10).Infof("[TTime]: %s Adding Update Job: %s to EventQ\n", time.Now().String(), qj.Name)
+	glog.V(10).Infof("[TTime]: %s Adding Update Job: %s to EventQ\n", time.Now().String(), newQJ.Name)
 	cc.agentEventQueue.Add(newQJ)
 }
 
