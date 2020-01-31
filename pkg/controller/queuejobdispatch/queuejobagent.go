@@ -29,6 +29,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -127,6 +128,7 @@ func (cc *XQueueJobAgent) addQueueJob(obj interface{}) {
 		glog.Errorf("obj is not AppWrapper")
 		return
 	}
+	glog.V(10).Infof("[TTime]: %s Adding New Job: %s to EventQ\n", time.Now().String(), qj.Name)
 	cc.agentEventQueue.Add(qj)
 }
 
@@ -136,6 +138,7 @@ func (cc *XQueueJobAgent) updateQueueJob(oldObj, newObj interface{}) {
 		glog.Errorf("newObj is not AppWrapper")
 		return
 	}
+	glog.V(10).Infof("[TTime]: %s Adding Update Job: %s to EventQ\n", time.Now().String(), qj.Name)
 	cc.agentEventQueue.Add(newQJ)
 }
 
@@ -145,6 +148,7 @@ func (cc *XQueueJobAgent) deleteQueueJob(obj interface{}) {
 		glog.Errorf("obj is not AppWrapper")
 		return
 	}
+	glog.V(10).Infof("[TTime]: %s Adding Delete Job: %s to EventQ\n", time.Now().String(), qj.Name)
 	cc.agentEventQueue.Add(qj)
 }
 

@@ -640,7 +640,6 @@ func (qjm *XController) UpdateAgent() {
 	}
 }
 
-
 func (qjm *XController) UpdateQueueJobs() {
 	queueJobs, err := qjm.queueJobLister.XQueueJobs("").List(labels.Everything())
 	if err != nil {
@@ -649,7 +648,8 @@ func (qjm *XController) UpdateQueueJobs() {
 	}
 	for _, newjob := range queueJobs {
 		if !qjm.qjqueue.IfExist(newjob) {
-				qjm.enqueue(newjob)
+			glog.V(10).Infof("[TTime] %s, %s: UpdateQueueJobs delay: %s", time.Now().String(), newjob.Name, time.Now().Sub(newjob.CreationTimestamp.Time))
+			qjm.enqueue(newjob)
 			}
   }
 }
@@ -660,7 +660,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 		glog.Errorf("obj is not AppWrapper")
 		return
 	}
-	glog.V(10).Infof("[TTime] %s, %s: AddedQueueJob", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
+	glog.V(10).Infof("[TTime] %s, %s: AddedQueueJob delay: %s", time.Now().String(), qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 	glog.V(4).Infof("QueueJob added - info -  %+v")
 	cc.enqueue(qj)
 }
@@ -671,7 +671,7 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 		glog.Errorf("newObj is not AppWrapper")
 		return
 	}
-
+	glog.V(10).Infof("[TTime] %s, %s: updateQueueJob delay: %s", time.Now().String(), newQJ.Name, time.Now().Sub(newQJ.CreationTimestamp.Time))
 	cc.enqueue(newQJ)
 }
 
@@ -681,18 +681,21 @@ func (cc *XController) deleteQueueJob(obj interface{}) {
 		glog.Errorf("obj is not AppWrapper")
 		return
 	}
+	glog.V(10).Infof("[TTime] %s, %s: deleteQueueJob delay: %s", time.Now().String(), qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 	cc.enqueue(qj)
 }
 
 func (cc *XController) enqueue(obj interface{}) {
-	_, ok := obj.(*arbv1.AppWrapper)
+	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
 		glog.Errorf("obj is not AppWrapper")
 		return
 	}
 
+	glog.V(10).Infof("[TTime]: %s Enqueuing Job: %s to EventQ\n", time.Now().String(), qj.Name)
 
 	err := cc.eventQueue.Add(obj)
+
 	if err != nil {
 		glog.Errorf("Fail to enqueue AppWrapper to updateQueue, err %#v", err)
 	}
