@@ -834,7 +834,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 		glog.V(10).Infof("[TTime] %s, %s: WorkerEnds", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 	}()
 
-	if(!cc.isDispatcher) {					// Agent Mode
+	if(!cc.isDispatcher) { // Agent Mode
 
 		if qj.DeletionTimestamp != nil {
 
@@ -872,7 +872,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			}
 
 			qj.Status.State = arbv1.AppWrapperStateEnqueued
-			glog.V(10).Infof("[TTime] %s, %s: WorkerBeforeEtcd",  qj.Name, time.Now().Sub(qj.CreationTimestamp.Time) )
+			glog.V(10).Infof("[TTime] %s, %s: WorkerBeforeEtcd", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 			_, err = cc.arbclients.ArbV1().XQueueJobs(qj.Namespace).Update(qj)
 			if err != nil {
 				return err
@@ -880,55 +880,55 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			return nil
 		}
 
-
 		if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued {
 			cc.qjqueue.AddIfNotPresent(qj)
 			return nil
 		}
 
-		is_first_deployment:=false
+		is_first_deployment := false
 		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive {
-			is_first_deployment=true
-			qj.Status.State =  arbv1.AppWrapperStateActive
-		}
+			is_first_deployment = true
+			qj.Status.State = arbv1.AppWrapperStateActive
+		// Bugfix to eliminate performance problem of overloading the event queue.}
 
-		if qj.Spec.AggrResources.Items != nil {
-			for i := range qj.Spec.AggrResources.Items {
-				err := cc.refManager.AddTag(&qj.Spec.AggrResources.Items[i], func() string {
-					return strconv.Itoa(i)
-				})
-				if err != nil {
-					return err
+			if qj.Spec.AggrResources.Items != nil {
+				for i := range qj.Spec.AggrResources.Items {
+					err := cc.refManager.AddTag(&qj.Spec.AggrResources.Items[i], func() string {
+						return strconv.Itoa(i)
+					})
+					if err != nil {
+						return err
+					}
 				}
 			}
-		}
-		if glog.V(10) {
-			if(is_first_deployment) {
-					current_time:=time.Now()
+			if glog.V(10) {
+				if (is_first_deployment) {
+					current_time := time.Now()
 					glog.V(10).Infof("[TTime] %s, %s: WorkerBeforeCreatingResouces", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
-					glog.V(10).Infof("[Agent Controller] XQJ %s has Overhead Before Creating Resouces: %s", qj.Name,current_time.Sub(qj.CreationTimestamp.Time))
+					glog.V(10).Infof("[Agent Controller] XQJ %s has Overhead Before Creating Resouces: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
+				}
 			}
-		}
-		for _, ar := range qj.Spec.AggrResources.Items {
-			err00 := cc.qjobResControls[ar.Type].SyncQueueJob(qj, &ar)
-			if err00 != nil {
-				glog.V(4).Infof("I have error from sync job: %v", err00)
+			for _, ar := range qj.Spec.AggrResources.Items {
+				err00 := cc.qjobResControls[ar.Type].SyncQueueJob(qj, &ar)
+				if err00 != nil {
+					glog.V(4).Infof("I have error from sync job: %v", err00)
+				}
 			}
-		}
-		if glog.V(10) {
-			if(is_first_deployment) {
-				current_time:=time.Now()
-				glog.V(10).Infof("[TTime] %s, %s: WorkerAfterCreatingResouces", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
-				glog.V(10).Infof("[Agent Controller] XQJ %s has Overhead After Creating Resouces: %s", qj.Name,current_time.Sub(qj.CreationTimestamp.Time))
+			if glog.V(10) {
+				if (is_first_deployment) {
+					current_time := time.Now()
+					glog.V(10).Infof("[TTime] %s, %s: WorkerAfterCreatingResouces", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
+					glog.V(10).Infof("[Agent Controller] XQJ %s has Overhead After Creating Resouces: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
+				}
 			}
-		}
 
-		// TODO(k82cn): replaced it with `UpdateStatus`
-		if _, err := cc.arbclients.ArbV1().XQueueJobs(qj.Namespace).Update(qj); err != nil {
-			glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
-				qj.Namespace, qj.Name, err)
-			return err
-		}
+			// TODO(k82cn): replaced it with `UpdateStatus`
+			if _, err := cc.arbclients.ArbV1().XQueueJobs(qj.Namespace).Update(qj); err != nil {
+				glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
+					qj.Namespace, qj.Name, err)
+				return err
+			}
+		} // Bugfix to eliminate performance problem of overloading the event queue.
 
 	}	else { 				// Dispatcher Mode
 
