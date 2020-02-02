@@ -453,6 +453,8 @@ func (qjm *XController) GetAggregatedResources(cqj *arbv1.AppWrapper) *clusterst
 func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cqj string) *clusterstateapi.Resource {
 	r := qjm.cache.GetUnallocatedResources()
 	preemptable := clusterstateapi.EmptyResource()
+	// Resources that can fit but have not dispatched.
+	pending := clusterstateapi.EmptyResource()
 
 	glog.V(4).Infof("Idle cluster resources %+v", r)
 
@@ -469,17 +471,28 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 		if !value.Status.CanRun {
 			continue
 		}
+
 		if value.Spec.Priority < targetpr {
 			for _, resctrl := range qjm.qjobResControls {
 				qjv := resctrl.GetAggregatedResources(value)
 				preemptable = preemptable.Add(qjv)
 			}
+		} else { // Don't count the resources that can run but not yet realized (job still pendind).
+			if value.Status.State == arbv1.AppWrapperStateEnqueued {
+				glog.V(10).Infof("%Skipping resources for pending job :%s", value.Name)
+				for _, resctrl := range qjm.qjobResControls {
+					qjv := resctrl.GetAggregatedResources(value)
+					pending = pending.Add(qjv)
+				}
+				continue
+			}
 		}
 	}
 
-	glog.V(6).Infof("Schedulable idle cluster resources: %+v and preemptable cluster resources: %+v", r, preemptable)
+	glog.V(6).Infof("Schedulable idle cluster resources: %+v, subtracting dispatched resources: %+v, and adding preemptable cluster resources: %+v", r, pending preemptable)
 
 	r = r.Add(preemptable)
+	r = r.Sub(pending)
 	glog.V(4).Infof("%+v available resources to schedule", r)
 	return r
 }
