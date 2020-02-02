@@ -276,7 +276,7 @@ func (sc *ClusterStateCache) updateCache() {
 			glog.Errorf("Failed update state: %v", err)
 		}
 
-		time.Sleep(3 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
 
