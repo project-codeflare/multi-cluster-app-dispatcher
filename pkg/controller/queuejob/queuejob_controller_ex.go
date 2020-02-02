@@ -477,9 +477,9 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 				qjv := resctrl.GetAggregatedResources(value)
 				preemptable = preemptable.Add(qjv)
 			}
-		} else { // Don't count the resources that can run but not yet realized (job still pendind).
+		} else { // Don't count the resources that can run but not yet realized (job orchestration pending).
 			if value.Status.State == arbv1.AppWrapperStateEnqueued {
-				glog.V(10).Infof("%Skipping resources for pending job :%s", value.Name)
+				glog.V(10).Infof("Skipping resources for pending job %s which can run is set to: %v", value.Name, value.Status.CanRun)
 				for _, resctrl := range qjm.qjobResControls {
 					qjv := resctrl.GetAggregatedResources(value)
 					pending = pending.Add(qjv)
