@@ -489,7 +489,7 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 		}
 	}
 
-	glog.V(6).Infof("Schedulable idle cluster resources: %+v, subtracting dispatched resources: %+v, and adding preemptable cluster resources: %+v", r, pending preemptable)
+	glog.V(6).Infof("Schedulable idle cluster resources: %+v, subtracting dispatched resources: %+v and adding preemptable cluster resources: %+v", r, pending, preemptable)
 
 	r = r.Add(preemptable)
 	r = r.Sub(pending)
