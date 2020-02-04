@@ -466,9 +466,11 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 
 	for _, value := range queueJobs {
 		if value.Name == cqj {
+			glog.V(10).Infof("[getAggregatedAvailableResourcesPriority] %s: Skipping adjustments for %s since it is the job we are working.", time.Now().String(), value.Name)
 			continue
 		}
 		if !value.Status.CanRun {
+			glog.V(10).Infof("[getAggregatedAvailableResourcesPriority] %s: Skipping adjustments for %s since it can not run.", time.Now().String(), value.Name)
 			continue
 		}
 
@@ -479,7 +481,7 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 			}
 		} else { // Don't count the resources that can run but not yet realized (job orchestration pending).
 			if value.Status.State == arbv1.AppWrapperStateEnqueued {
-				glog.V(10).Infof("Skipping resources for pending job %s which can run is set to: %v", value.Name, value.Status.CanRun)
+				glog.V(10).Infof("Subtract resources for job %s which can-run is set to: %v but state is still pending.", value.Name, value.Status.CanRun)
 				for _, resctrl := range qjm.qjobResControls {
 					qjv := resctrl.GetAggregatedResources(value)
 					pending = pending.Add(qjv)
@@ -492,10 +494,10 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 	glog.V(6).Infof("Schedulable idle cluster resources: %+v, subtracting dispatched resources: %+v and adding preemptable cluster resources: %+v", r, pending, preemptable)
 
 	r = r.Add(preemptable)
-	if r.AnyLess(pending) {
-		r = clusterstateapi.EmptyResource()
-	} else {
+	if pending.Less(r) {
 		r = r.Sub(pending)
+	} else {
+		r = clusterstateapi.EmptyResource()
 	}
 	
 	glog.V(4).Infof("%+v available resources to schedule", r)
@@ -585,14 +587,14 @@ func (qjm *XController) ScheduleNext() {
 				desired += ar.Replicas
 				apiQueueJob.Spec.AggrResources.Items[i].AllocatedReplicas = ar.Replicas
 			}
-			glog.V(10).Infof("[TTime] %s, %s: ScheduleNextBeforeEtcd", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
+			glog.V(10).Infof("[TTime]%s:  %s, ScheduleNextBeforeEtcd duration timestamp: %s", time.Now().String(), qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 			apiQueueJob.Status.CanRun = true
 			qj.Status.CanRun = true
 			if _, err := qjm.arbclients.ArbV1().XQueueJobs(qj.Namespace).Update(apiQueueJob); err != nil {
 													glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
 																	qj.Namespace, qj.Name, err)
 			}
-			glog.V(10).Infof("[TTime] %s, %s: ScheduleNextAfterEtcd", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
+			glog.V(10).Infof("[TTime]%s: %s, ScheduleNextAfterEtcd duration timestamp: %s", time.Now().String(), qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 		} else {
 			// start thread to backoff
 			go qjm.backoff(qj)

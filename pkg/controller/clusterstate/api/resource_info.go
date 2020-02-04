@@ -118,10 +118,6 @@ func (r *Resource) Less(rr *Resource) bool {
 	return r.MilliCPU < rr.MilliCPU && r.Memory < rr.Memory && r.GPU < rr.GPU
 }
 
-func (r *Resource) AnyLess(rr *Resource) bool {
-	return r.MilliCPU < rr.MilliCPU || r.Memory < rr.Memory || r.GPU < rr.GPU
-}
-
 func (r *Resource) LessEqual(rr *Resource) bool {
 	return (r.MilliCPU < rr.MilliCPU || math.Abs(rr.MilliCPU-r.MilliCPU) < 0.01) &&
 		(r.Memory < rr.Memory || math.Abs(rr.Memory-r.Memory) < 1) &&
