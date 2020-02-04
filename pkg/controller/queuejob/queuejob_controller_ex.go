@@ -637,7 +637,8 @@ func (cc *XController) Run(stopCh chan struct{}) {
 	// start preempt thread based on preemption of pods
 	go wait.Until(cc.PreemptQueueJobs, 60*time.Second, stopCh)
 
-	go wait.Until(cc.UpdateQueueJobs, 2*time.Second, stopCh)
+	//Temp. removal due to possible bug
+	// go wait.Until(cc.UpdateQueueJobs, 2*time.Second, stopCh)
 
 	if cc.isDispatcher {
 		go wait.Until(cc.UpdateAgent, 2*time.Second, stopCh)			// In the Agent?
