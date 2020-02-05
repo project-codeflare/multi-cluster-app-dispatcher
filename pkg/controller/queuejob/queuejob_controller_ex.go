@@ -466,7 +466,7 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 
 	for _, value := range queueJobs {
 		if value.Name == cqj {
-			glog.V(10).Infof("[getAggregatedAvailableResourcesPriority] %s: Skipping adjustments for %s since it is the job we are working.", time.Now().String(), value.Name)
+			glog.V(10).Infof("[getAggregatedAvailableResourcesPriority] %s: Skipping adjustments for %s since it is the job being processed.", time.Now().String(), value.Name)
 			continue
 		}
 		if !value.Status.CanRun {
@@ -494,7 +494,7 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 	glog.V(6).Infof("Schedulable idle cluster resources: %+v, subtracting dispatched resources: %+v and adding preemptable cluster resources: %+v", r, pending, preemptable)
 
 	r = r.Add(preemptable)
-	if pending.Less(r) {
+	if pending.LessEqual(r) {
 		r = r.Sub(pending)
 	} else {
 		r = clusterstateapi.EmptyResource()
