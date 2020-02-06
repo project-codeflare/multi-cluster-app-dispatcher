@@ -155,6 +155,23 @@ func (qjrDeployment *QueueJobResDeployment) GetAggregatedResourcesByPriority(pri
         return total
 }
 
+//func (qjrDeployment *QueueJobResDeployment) GetAggregatedResourcesByPhase(phase v1.PodPhase, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+//	total := clusterstateapi.EmptyResource()
+//	if job.Spec.AggrResources.Items != nil {
+//		//calculate scaling
+//		for _, ar := range job.Spec.AggrResources.Items {
+//			if ar.Type == arbv1.ResourceTypeDeployment {
+//				template, replicas, _ := qjrDeployment.GetPodTemplate(&ar)
+//				myres := queuejobresources.GetPodResourcesByPhase(phase, template)
+//				myres.MilliCPU = float64(replicas) * myres.MilliCPU
+//				myres.Memory = float64(replicas) * myres.Memory
+//				myres.GPU = int64(replicas) * myres.GPU
+//				total = total.Add(myres)
+//			}
+//		}
+//	}
+//	return total
+//}
 
 //Run the main goroutine responsible for watching and deployments.
 func (qjrDeployment *QueueJobResDeployment) Run(stopCh <-chan struct{}) {

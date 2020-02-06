@@ -466,11 +466,11 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 
 	for _, value := range queueJobs {
 		if value.Name == cqj {
-			glog.V(10).Infof("[getAggregatedAvailableResourcesPriority] %s: Skipping adjustments for %s since it is the job being processed.", time.Now().String(), value.Name)
+			glog.V(11).Infof("[getAggregatedAvailableResourcesPriority] %s: Skipping adjustments for %s since it is the job being processed.", time.Now().String(), value.Name)
 			continue
 		}
 		if !value.Status.CanRun {
-			glog.V(10).Infof("[getAggregatedAvailableResourcesPriority] %s: Skipping adjustments for %s since it can not run.", time.Now().String(), value.Name)
+			glog.V(11).Infof("[getAggregatedAvailableResourcesPriority] %s: Skipping adjustments for %s since it can not run.", time.Now().String(), value.Name)
 			continue
 		}
 
@@ -479,12 +479,22 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 				qjv := resctrl.GetAggregatedResources(value)
 				preemptable = preemptable.Add(qjv)
 			}
-		} else { // Don't count the resources that can run but not yet realized (job orchestration pending).
+			continue
+		} else { // Don't count the resources that can run but not yet realized (job orchestration pending or partially running).
 			if value.Status.State == arbv1.AppWrapperStateEnqueued {
-				glog.V(10).Infof("Subtract resources for job %s which can-run is set to: %v but state is still pending.", value.Name, value.Status.CanRun)
+				glog.V(10).Infof("Subtract all resources for job %s which can-run is set to: %v but state is still pending.", value.Name, value.Status.CanRun)
 				for _, resctrl := range qjm.qjobResControls {
 					qjv := resctrl.GetAggregatedResources(value)
 					pending = pending.Add(qjv)
+				}
+				continue
+			} else { //Don't count partially running jobs with pods still pending.
+				if value.Status.State == arbv1.AppWrapperStateActive && value.Status.Pending > 0 {
+					for _, resctrl := range qjm.qjobResControls {
+						qjv := resctrl.GetAggregatedResources(value)
+						pending = pending.Add(qjv)
+							glog.V(10).Infof("Subtract all resources for job %s which can-run is set to: %v and stata set to: %s but some %v pods are pending.", value.Name, value.Status.CanRun, value.Status.State, value.Status.Pending)
+					}
 				}
 				continue
 			}
@@ -639,8 +649,8 @@ func (cc *XController) Run(stopCh chan struct{}) {
 	// start preempt thread based on preemption of pods
 	go wait.Until(cc.PreemptQueueJobs, 60*time.Second, stopCh)
 
-	//Temp. removal due to possible bug
-	// go wait.Until(cc.UpdateQueueJobs, 2*time.Second, stopCh)
+	// This thread is used as a heartbeat to calculate runtime spec in the status
+	go wait.Until(cc.UpdateQueueJobs, 5*time.Second, stopCh)
 
 	if cc.isDispatcher {
 		go wait.Until(cc.UpdateAgent, 2*time.Second, stopCh)			// In the Agent?
@@ -664,15 +674,15 @@ func (qjm *XController) UpdateAgent() {
 func (qjm *XController) UpdateQueueJobs() {
 	queueJobs, err := qjm.queueJobLister.XQueueJobs("").List(labels.Everything())
 	if err != nil {
-		glog.Errorf("I return list of queueJobs %+v", err)
+		glog.Errorf("List of queueJobs %+v", err)
 		return
 	}
 	for _, newjob := range queueJobs {
 		if !qjm.qjqueue.IfExist(newjob) {
 			glog.V(10).Infof("[TTime] %s, %s: UpdateQueueJobs delay: %s", time.Now().String(), newjob.Name, time.Now().Sub(newjob.CreationTimestamp.Time))
 			qjm.enqueue(newjob)
-			}
-  }
+		}
+  	}
 }
 
 func (cc *XController) addQueueJob(obj interface{}) {
