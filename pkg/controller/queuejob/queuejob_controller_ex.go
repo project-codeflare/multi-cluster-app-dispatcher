@@ -468,36 +468,46 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 		if value.Name == cqj {
 			glog.V(11).Infof("[getAggregatedAvailableResourcesPriority] %s: Skipping adjustments for %s since it is the job being processed.", time.Now().String(), value.Name)
 			continue
-		}
-		if !value.Status.CanRun {
+		} else if !value.Status.CanRun {
 			glog.V(11).Infof("[getAggregatedAvailableResourcesPriority] %s: Skipping adjustments for %s since it can not run.", time.Now().String(), value.Name)
 			continue
-		}
-
-		if value.Spec.Priority < targetpr {
+		} else if value.Spec.Priority < targetpr {
 			for _, resctrl := range qjm.qjobResControls {
 				qjv := resctrl.GetAggregatedResources(value)
 				preemptable = preemptable.Add(qjv)
 			}
 			continue
-		} else { // Don't count the resources that can run but not yet realized (job orchestration pending or partially running).
-			if value.Status.State == arbv1.AppWrapperStateEnqueued {
-				glog.V(10).Infof("Subtract all resources for job %s which can-run is set to: %v but state is still pending.", value.Name, value.Status.CanRun)
+		} else if value.Status.State == arbv1.AppWrapperStateEnqueued {
+			// Don't count the resources that can run but not yet realized (job orchestration pending or partially running).
+			glog.V(10).Infof("Subtract all resources for job %s which can-run is set to: %v but state is still pending.", value.Name, value.Status.CanRun)
+			for _, resctrl := range qjm.qjobResControls {
+				qjv := resctrl.GetAggregatedResources(value)
+				pending = pending.Add(qjv)
+			}
+			continue
+		} else if value.Status.State == arbv1.AppWrapperStateActive {
+			if value.Status.Pending > 0 {
+				//Don't count partially running jobs with pods still pending.
 				for _, resctrl := range qjm.qjobResControls {
 					qjv := resctrl.GetAggregatedResources(value)
 					pending = pending.Add(qjv)
+					glog.V(10).Infof("Subtract all resources for job %s which can-run is set to: %v and status set to: %s but %v pod(s) are pending.", value.Name, value.Status.CanRun, value.Status.State, value.Status.Pending)
 				}
-				continue
-			} else { //Don't count partially running jobs with pods still pending.
-				if value.Status.State == arbv1.AppWrapperStateActive && value.Status.Pending > 0 {
+			} else {
+				// TODO: Hack to handle race condition when Running jobs have not yet updated the pod counts
+				// This hack uses the golang struct implied behavior of defining the object without a value.  In this case
+				// of using 'int32' novalue and value of 0 are the same.
+				if value.Status.Pending == 0 && value.Status.Running == 0 && value.Status.Succeeded == 0 && value.Status.Failed == 0 {
 					for _, resctrl := range qjm.qjobResControls {
 						qjv := resctrl.GetAggregatedResources(value)
 						pending = pending.Add(qjv)
-							glog.V(10).Infof("Subtract all resources for job %s which can-run is set to: %v and stata set to: %s but some %v pods are pending.", value.Name, value.Status.CanRun, value.Status.State, value.Status.Pending)
+						glog.V(10).Infof("Subtract all resources for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", value.Name, value.Status.CanRun, value.Status.State)
 					}
 				}
-				continue
 			}
+			continue
+		} else {
+			//Do nothing
 		}
 	}
 
@@ -731,9 +741,6 @@ func (cc *XController) enqueue(obj interface{}) {
 		glog.Errorf("Fail to enqueue AppWrapper to updateQueue, err %#v", err)
 	}
 }
-
-
-
 
 func (cc *XController) agentEventQueueWorker() {
 	if _, err := cc.agentEventQueue.Pop(func(obj interface{}) error {
