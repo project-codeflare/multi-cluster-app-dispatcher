@@ -441,8 +441,9 @@ func createReplicaSet(context *context, name string, rep int32, img string, req 
 
 func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 	//rb := []byte(`{"kind": "Pod", "apiVersion": "v1", "metadata": { "name": "foo"}}`)
-//	rb := []byte(`{"apiVersion": "v1beta1",
-	rb := []byte(`{"apiVersion": "apps/v1beta1",
+	//	rb := []byte(`{"apiVersion": "v1beta1",
+//	rb := []byte(`{"apiVersion": "apps/v1beta1",
+	rb := []byte(`{"apiVersion": "v1beta1",
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "nginx - deployment",
