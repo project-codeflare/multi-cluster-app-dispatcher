@@ -301,7 +301,7 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 
 		readyTaskNum := 0
 		for _, pod := range pods.Items {
-			if awn, found := pod.Annotations[arbv1.AppWrapperAnnotationKey]; !found || awn != aw.Name {
+			if awn, found := pod.Labels["appwrapper.arbitrator.k8s.io"]; !found || awn != aw.Name {
 				continue
 			}
 
@@ -442,15 +442,11 @@ func createReplicaSet(context *context, name string, rep int32, img string, req 
 }
 
 func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
-	// Note: Deployment name and annotation value MUST match the appwrapper name or validation will fail.
 	rb := []byte(`{"apiVersion": "apps/v1beta1",
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-1",
 		"namespace": "test",
-		"annotations": {
-			"appwrapper.k8s.io/appwrapper-name": "aw-deployment-1"
-		},
 		"labels": {
 			"app": "nginx"
 		}

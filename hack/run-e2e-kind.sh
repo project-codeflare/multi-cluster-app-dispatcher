@@ -70,6 +70,8 @@ function kind-up-cluster {
 # clean up
 function cleanup {
     echo "Cleaning up..."
+    echo " "
+    echo "AppWrappers..."
     kubectl get appwrappers -A -o yaml
     kubectl describe appwrappers -A
     echo "'test' Pod list..."

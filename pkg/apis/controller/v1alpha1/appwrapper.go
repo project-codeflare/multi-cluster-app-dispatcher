@@ -26,8 +26,7 @@ const AppWrapperPlural string = "appwrappers"
 
 // AppWrapperAnnotationKey is the annotation key of Pod to identify
 // which AppWrapper it belongs to.
-const AppWrapperAnnotationKey = "appwrapper.k8s.io/appwrapper-name"
-
+const AppWrapperAnnotationKey = "appwrapper.arbitrator.k8s.io/appwrapper-name"
 
 // Definition of AppWrapper class
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
