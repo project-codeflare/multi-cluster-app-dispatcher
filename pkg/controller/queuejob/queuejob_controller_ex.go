@@ -943,7 +943,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			for _, ar := range qj.Spec.AggrResources.Items {
 				err00 := cc.qjobResControls[ar.Type].SyncQueueJob(qj, &ar)
 				if err00 != nil {
-					glog.V(4).Infof("I have error from sync job: %v", err00)
+					glog.V(4).Infof("Error from sync job: %v", err00)
 				}
 			}
 			if glog.V(10) {

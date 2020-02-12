@@ -93,6 +93,8 @@ function kube-batch-up {
     echo "KUBECONFIG file: ${KUBECONFIG}"
     kubectl version
     kubectl config current-context
+    # Show available resources of cluster nodes
+    kubectl describe nodes
 
     # Hack to setup for 'go test' call which expects this path.
     if [ ! -z $HOME/.kube/config ]

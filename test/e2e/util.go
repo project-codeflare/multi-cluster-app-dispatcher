@@ -455,7 +455,7 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 		}
 	},
 	"spec": {
-		"replicas": "3",
+		"replicas": 3,
 		"selector": {
 			"matchLabels": {
 				"app": "nginx"
@@ -472,7 +472,7 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 					"name": "nginx",
 					"image": "nginx",
 					"ports": {
-						"containerPort": "80"
+						"containerPort": 80
 					}
 				}
 			}
