@@ -368,22 +368,14 @@ func waitAWReady(ctx *context, aw *arbv1.AppWrapper) error {
 	return waitAWReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable))
 }
 
-func waitAWReadyWithTimeout(ctx *context, aw *arbv1.AppWrapper, timeout time.Duration) error {
-	return waitAWReadyExWithTimeout(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), timeout)
-}
-
 func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
 	return wait.Poll(100*time.Millisecond, oneMinute, awPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodPending}, int(aw.Spec.SchedSpec.MinAvailable)))
 }
 
-func waitAWReadyExWithTimeout(ctx *context, aw *arbv1.AppWrapper, taskNum int, timeout time.Duration) error {
-	return wait.Poll(timeout, oneMinute, awPhase(ctx, aw,
-		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum))
-}
-
 func waitAWReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int) error {
-	return waitAWReadyExWithTimeout(ctx, aw, taskNum, 100*time.Millisecond)
+	return wait.Poll(100*time.Millisecond, oneMinute, awPhase(ctx, aw,
+		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum))
 }
 
 func createContainers(img string, req v1.ResourceList, hostport int32) []v1.Container {
@@ -450,16 +442,14 @@ func createReplicaSet(context *context, name string, rep int32, img string, req 
 }
 
 func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
-	//rb := []byte(`{"kind": "Pod", "apiVersion": "v1", "metadata": { "name": "foo"}}`)
-	//	rb := []byte(`{"apiVersion": "v1beta1",
-	//	rb := []byte(`{"apiVersion": "v1beta1",
+	// Note: Deployment name and annotation value MUST match the appwrapper name or validation will fail.
 	rb := []byte(`{"apiVersion": "apps/v1beta1",
 		"kind": "Deployment", 
 	"metadata": {
-		"name": "nginx-deployment",
+		"name": "aw-deployment-1",
 		"namespace": "test",
 		"annotations": {
-			"appwrapper.k8s.io/appwrapper-name": "nginx-deployment"
+			"appwrapper.k8s.io/appwrapper-name": "aw-deployment-1"
 		},
 		"labels": {
 			"app": "nginx"
