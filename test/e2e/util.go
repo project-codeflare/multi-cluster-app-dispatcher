@@ -473,9 +473,11 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 					{
 						"name": "nginx",
 						"image": "nginx",
-						"ports": {
-							"containerPort": 80
-						}
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
 					}
 				]
 			}
