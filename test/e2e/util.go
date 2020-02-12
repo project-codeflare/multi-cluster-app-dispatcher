@@ -367,13 +367,23 @@ func waitPodGroupUnschedulable(ctx *context, pg *arbv1.PodGroup) error {
 func waitAWReady(ctx *context, aw *arbv1.AppWrapper) error {
 	return waitAWReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable))
 }
+
+func waitAWReadyWithTimeout(ctx *context, aw *arbv1.AppWrapper, timeout time.Duration) error {
+	return waitAWReadyExWithTimeout(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), timeout)
+}
+
 func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
 	return wait.Poll(100*time.Millisecond, oneMinute, awPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodPending}, int(aw.Spec.SchedSpec.MinAvailable)))
 }
-func waitAWReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int) error {
-	return wait.Poll(100*time.Millisecond, oneMinute, awPhase(ctx, aw,
+
+func waitAWReadyExWithTimeout(ctx *context, aw *arbv1.AppWrapper, taskNum int, timeout time.Duration) error {
+	return wait.Poll(timeout, oneMinute, awPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum))
+}
+
+func waitAWReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int) error {
+	return waitAWReadyExWithTimeout(ctx, aw, taskNum, 100*time.Millisecond)
 }
 
 func createContainers(img string, req v1.ResourceList, hostport int32) []v1.Container {

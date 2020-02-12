@@ -19,6 +19,7 @@ package e2e
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"time"
 )
 
 var _ = Describe("Predicates E2E Test", func() {
@@ -29,7 +30,8 @@ var _ = Describe("Predicates E2E Test", func() {
 
 		aw := createDeploymentAW(context,"aw-deployment-1")
 
-		err := waitAWReady(context, aw)
+		err := waitAWReadyWithTimeout(context, aw, 10*time.Second)
+
 		Expect(err).NotTo(HaveOccurred())
 	})
 /*
