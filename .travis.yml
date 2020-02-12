@@ -25,4 +25,4 @@ script:
 #  - make run-test
   - make images
   - make push_images
-#  - make run-e2e
+  - make run-e2e
