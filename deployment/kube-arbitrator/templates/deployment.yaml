@@ -132,7 +132,7 @@ spec:
     kind: AppWrapper
     listKind: AppWrapperList
     plural: appwrappers
-    singular: appwrappe
+    singular: appwrapper
   scope: Namespaced
   version: v1alpha1
 ---
