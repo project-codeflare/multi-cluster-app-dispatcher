@@ -446,10 +446,10 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "apps/v1beta1",
 		"kind": "Deployment", 
 	"metadata": {
-		"name": "nginx - deployment",
+		"name": "nginx-deployment",
 		"namespace": "test",
 		"annotations": {
-			"appwrapper.k8s.io/appwrapper-name": "nginx - deployment"
+			"appwrapper.k8s.io/appwrapper-name": "nginx-deployment"
 		},
 		"labels": {
 			"app": "nginx"
