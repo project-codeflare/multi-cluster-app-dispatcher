@@ -507,7 +507,7 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrapper("default").Create(aw)
+	appwrapper, err := context.karclient.ArbV1().AppWrapper(context.namespace).Create(aw)
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
