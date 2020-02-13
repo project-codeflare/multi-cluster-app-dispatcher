@@ -21,6 +21,8 @@ before_script:
 
 script:
 #  - make
-#  - make generate-code
-  - make run-test
   - make mcad-controller
+  - make run-test
+  - make images
+  - 'if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then make push_images; fi'
+  - make run-e2e

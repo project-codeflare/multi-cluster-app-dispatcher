@@ -31,12 +31,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-const xqueueJobKindName = arbv1.AppWrapperPlural + "." + arbv1.GroupName
+const appWrapperKindName = arbv1.AppWrapperPlural + "." + arbv1.GroupName
 
-func CreateXQueueJobKind(clientset apiextensionsclient.Interface) (*apiextensionsv1beta1.CustomResourceDefinition, error) {
+func CreateAppWrapperKind(clientset apiextensionsclient.Interface) (*apiextensionsv1beta1.CustomResourceDefinition, error) {
 	crd := &apiextensionsv1beta1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: xqueueJobKindName,
+			Name: appWrapperKindName,
 		},
 		Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
 			Group:   arbv1.GroupName,
@@ -56,7 +56,7 @@ func CreateXQueueJobKind(clientset apiextensionsclient.Interface) (*apiextension
 
 	// wait for CRD being established
 	err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
-		crd, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(xqueueJobKindName, metav1.GetOptions{})
+		crd, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(appWrapperKindName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -75,14 +75,14 @@ func CreateXQueueJobKind(clientset apiextensionsclient.Interface) (*apiextension
 		return false, err
 	})
 	if err != nil {
-		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(queueJobKindName, nil)
+		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(appWrapperKindName, nil)
 		if deleteErr != nil {
 			return nil, errors.NewAggregate([]error{err, deleteErr})
 		}
 		return nil, err
 	}
 
-	glog.V(4).Infof("QueueJob CRD was created.")
+	glog.V(4).Infof("AppWrapper CRD was created.")
 
 	return crd, nil
 }

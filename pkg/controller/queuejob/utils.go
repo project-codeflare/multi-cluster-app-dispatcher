@@ -16,7 +16,7 @@ import (
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("QueueJob")
 
-var xqueueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
+var appwrapperJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
 
 // GetPodFullName returns a name that uniquely identifies a qj.
 func GetQJFullName(qj *arbv1.QueueJob) string {
@@ -130,12 +130,12 @@ func createQueueJobKind(config *rest.Config) error {
 	return nil
 }
 
-func createXQueueJobKind(config *rest.Config) error {
+func createAppWrapperKind(config *rest.Config) error {
 	extensionscs, err := apiextensionsclient.NewForConfig(config)
 	if err != nil {
 		return err
 	}
-	_, err = clients.CreateXQueueJobKind(extensionscs)
+	_, err = clients.CreateAppWrapperKind(extensionscs)
 	if err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}

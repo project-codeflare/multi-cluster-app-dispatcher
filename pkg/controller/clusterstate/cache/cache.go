@@ -55,7 +55,8 @@ type ClusterStateCache struct {
 	Nodes map[string]*api.NodeInfo
 
 	availableResources *api.Resource
-	deletedJobs *cache.FIFO
+	resourceCapacities *api.Resource
+	deletedJobs        *cache.FIFO
 
 	errTasks    *cache.FIFO
 
@@ -153,6 +154,7 @@ func newClusterStateCache(config *rest.Config) *ClusterStateCache {
 	})
 
 	sc.availableResources = api.EmptyResource()
+	sc.resourceCapacities = api.EmptyResource()
 
 	return sc
 }
@@ -192,13 +194,23 @@ func (sc *ClusterStateCache) GetUnallocatedResources() *api.Resource {
 	return r.Add(sc.availableResources)
 }
 
-// Gets available free resoures.
-func (sc *ClusterStateCache) saveState(r *api.Resource) error {
+// Gets the full capacity of resources in the cluster
+func (sc *ClusterStateCache) GetResourceCapacities() *api.Resource {
+	sc.Mutex.Lock()
+	defer sc.Mutex.Unlock()
+
+	r := api.EmptyResource()
+	return r.Add(sc.resourceCapacities)
+}
+
+// Save the cluster state.
+func (sc *ClusterStateCache) saveState(available *api.Resource, capacity *api.Resource) error {
 	glog.V(12).Infof("Saving Cluster State")
 
 	sc.Mutex.Lock()
 	defer sc.Mutex.Unlock()
-	sc.availableResources.Replace(r)
+	sc.availableResources.Replace(available)
+	sc.resourceCapacities.Replace(capacity)
 	glog.V(12).Infof("Updated Cluster State completed.")
 	return nil
 }
@@ -219,7 +231,7 @@ func (sc *ClusterStateCache) updateState() error {
 	}
 	glog.V(8).Infof("Total capacity %+v, used %+v, free space %+v", total, used, idle)
 
-	err := sc.saveState(idle)
+	err := sc.saveState(idle, total)
 	return err
 }
 
@@ -276,7 +288,7 @@ func (sc *ClusterStateCache) updateCache() {
 			glog.Errorf("Failed update state: %v", err)
 		}
 
-		time.Sleep(3 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
 

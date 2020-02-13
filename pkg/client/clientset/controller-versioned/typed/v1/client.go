@@ -28,7 +28,7 @@ type ArbV1Interface interface {
 	RESTClient() rest.Interface
 	SchedulingSpecGetter
 	QueueJobGetter
-	XQueueJobGetter
+	AppWrapperGetter
 }
 
 // ArbV1Client is used to interact with features provided by the  group.
@@ -44,8 +44,8 @@ func (c *ArbV1Client) QueueJobs(namespace string) QueueJobInterface {
 	return newQueueJobs(c, namespace)
 }
 
-func (c *ArbV1Client) XQueueJobs(namespace string) XQueueJobInterface {
-	return newXQueueJobs(c, namespace)
+func (c *ArbV1Client) AppWrappers(namespace string) AppWrapperInterface {
+	return newAppWrappers(c, namespace)
 }
 
 // NewForConfig creates a new ArbV1Client for the given config.

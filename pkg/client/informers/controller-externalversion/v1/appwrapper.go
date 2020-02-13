@@ -29,26 +29,26 @@ import (
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
 )
 
-//XQueueJobInformer provides access to a shared informer and lister for
-// QueueJobs.
-type XQueueJobInformer interface {
+//AppWrapperInformer provides access to a shared informer and lister for
+// AppWrappers.
+type AppWrapperInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.XQueueJobLister
+	Lister() v1.AppWrapperLister
 }
 
-type xqueueJobInformer struct {
+type appWrapperInformer struct {
 	factory internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 }
 
-//NewXQueueJobInformer constructs a new informer for QueueJob type.
+//NewAppWrapperInformer constructs a new informer for AppWrapper type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewXQueueJobInformer(client *rest.RESTClient, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredXQueueJobInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewAppWrapperInformer(client *rest.RESTClient, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredAppWrapperInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-func NewFilteredXQueueJobInformer(client *rest.RESTClient, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredAppWrapperInformer(client *rest.RESTClient, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	if(tweakListOptions==nil) {
 		source := cache.NewListWatchFromClient(
 			client,
@@ -76,14 +76,14 @@ func NewFilteredXQueueJobInformer(client *rest.RESTClient, namespace string, res
 	}
 }
 
-func (f *xqueueJobInformer) defaultXQueueJobInformer(client *rest.RESTClient, resyncPeriod time.Duration) cache.SharedIndexInformer {
-  return NewFilteredXQueueJobInformer(client, meta_v1.NamespaceAll, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *appWrapperInformer) defaultAppWrapperInformer(client *rest.RESTClient, resyncPeriod time.Duration) cache.SharedIndexInformer {
+  return NewFilteredAppWrapperInformer(client, meta_v1.NamespaceAll, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *xqueueJobInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&arbv1.AppWrapper{}, f.defaultXQueueJobInformer)
+func (f *appWrapperInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&arbv1.AppWrapper{}, f.defaultAppWrapperInformer)
 }
 
-func (f *xqueueJobInformer) Lister() v1.XQueueJobLister {
-	return v1.NewXQueueJobLister(f.Informer().GetIndexer())
+func (f *appWrapperInformer) Lister() v1.AppWrapperLister {
+	return v1.NewAppWrapperLister(f.Informer().GetIndexer())
 }

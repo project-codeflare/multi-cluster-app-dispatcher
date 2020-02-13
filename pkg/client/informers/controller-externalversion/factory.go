@@ -146,7 +146,8 @@ type SharedInformerFactory interface {
 
 	QueueJob() arbclient.Interface
 
-	XQueueJob() arbclient.Interface
+	AppWrapper() arbclient.Interface
+
 }
 
 func (f *sharedInformerFactory) SchedulingSpec() arbclient.Interface {
@@ -157,6 +158,6 @@ func (f *sharedInformerFactory) QueueJob() arbclient.Interface {
 	return arbclient.New(f, f.tweakListOptions)
 }
 
-func (f *sharedInformerFactory) XQueueJob() arbclient.Interface {
+func (f *sharedInformerFactory) AppWrapper() arbclient.Interface {
 	return arbclient.New(f, f.tweakListOptions)
 }

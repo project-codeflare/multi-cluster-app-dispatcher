@@ -114,6 +114,28 @@ func (r *Resource) Sub(rr *Resource) *Resource {
 		r, rr))
 }
 
+//Sub subtracts two Resource objects and return zero for negative subtractions.
+func (r *Resource) NonNegSub(rr *Resource) *Resource {
+	// Check for negative calculation
+	if r.MilliCPU < rr.MilliCPU {
+		r.MilliCPU = 0
+	} else {
+		r.MilliCPU -= rr.MilliCPU
+	}
+	if r.Memory < rr.Memory {
+		r.Memory = 0
+	} else {
+		r.Memory -= rr.Memory
+	}
+
+	if r.GPU < rr.GPU {
+		r.GPU = 0
+	} else {
+		r.GPU -= rr.GPU
+	}
+	return r
+}
+
 func (r *Resource) Less(rr *Resource) bool {
 	return r.MilliCPU < rr.MilliCPU && r.Memory < rr.Memory && r.GPU < rr.GPU
 }

@@ -24,11 +24,11 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-type XQueueJobGetter interface {
-	XQueueJobs(namespaces string) XQueueJobInterface
+type AppWrapperGetter interface {
+	AppWrappers(namespaces string) AppWrapperInterface
 }
 
-type XQueueJobInterface interface {
+type AppWrapperInterface interface {
 	Create(*v1.AppWrapper) (*v1.AppWrapper, error)
 	Update(*v1.AppWrapper) (*v1.AppWrapper, error)
 	UpdateStatus(*v1.AppWrapper) (*v1.AppWrapper, error)
@@ -37,40 +37,40 @@ type XQueueJobInterface interface {
 	List(opts meta_v1.ListOptions) (*v1.AppWrapperList, error)
 }
 
-// queuejobs implements QueueJobInterface
-type xqueuejobs struct {
+// appwrappers implements AppWrapperInterface
+type appwrappers struct {
 	client rest.Interface
 	ns     string
 }
 
-// newQueueJobs returns a QueueJobs
-func newXQueueJobs(c *ArbV1Client, namespace string) *xqueuejobs {
-	return &xqueuejobs{
+// newAppWrappers returns a AppWrapper
+func newAppWrappers(c *ArbV1Client, namespace string) *appwrappers {
+	return &appwrappers{
 		client: c.RESTClient(),
 		ns:     namespace,
 	}
 }
 
-// Create takes the representation of a queuejob and creates it.  Returns the server's representation of the queuejob, and an error, if there is any.
-func (c *xqueuejobs) Create(queuejob *v1.AppWrapper) (result *v1.AppWrapper, err error) {
+// Create takes the representation of an appwrappers and creates it.  Returns the server's representation of the appwrappers, and an error, if there is any.
+func (c *appwrappers) Create(appwrapper *v1.AppWrapper) (result *v1.AppWrapper, err error) {
 	result = &v1.AppWrapper{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource(v1.AppWrapperPlural).
-		Body(queuejob).
+		Body(appwrapper).
 		Do().
 		Into(result)
 	return
 }
 
-// Update takes the representation of a queuejob and updates it. Returns the server's representation of the queuejob, and an error, if there is any.
-func (c *xqueuejobs) Update(queuejob *v1.AppWrapper) (result *v1.AppWrapper, err error) {
+// Update takes the representation of an appwrappers and updates it. Returns the server's representation of the appwrappers, and an error, if there is any.
+func (c *appwrappers) Update(appwrapper *v1.AppWrapper) (result *v1.AppWrapper, err error) {
 	result = &v1.AppWrapper{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource(v1.AppWrapperPlural).
-		Name(queuejob.Name).
-		Body(queuejob).
+		Name(appwrapper.Name).
+		Body(appwrapper).
 		Do().
 		Into(result)
 	return
@@ -79,21 +79,21 @@ func (c *xqueuejobs) Update(queuejob *v1.AppWrapper) (result *v1.AppWrapper, err
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 
-func (c *xqueuejobs) UpdateStatus(queuejob *v1.AppWrapper) (result *v1.AppWrapper, err error) {
+func (c *appwrappers) UpdateStatus(appwrapper *v1.AppWrapper) (result *v1.AppWrapper, err error) {
 	result = &v1.AppWrapper{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource(v1.AppWrapperPlural).
-		Name(queuejob.Name).
+		Name(appwrapper.Name).
 		SubResource("status").
-		Body(queuejob).
+		Body(appwrapper).
 		Do().
 		Into(result)
 	return
 }
 
-// Delete takes name of the queuejob and deletes it. Returns an error if one occurs.
-func (c *xqueuejobs) Delete(name string, options *meta_v1.DeleteOptions) error {
+// Delete takes name of the appwrappers and deletes it. Returns an error if one occurs.
+func (c *appwrappers) Delete(name string, options *meta_v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource(v1.AppWrapperPlural).
@@ -103,8 +103,8 @@ func (c *xqueuejobs) Delete(name string, options *meta_v1.DeleteOptions) error {
 		Error()
 }
 
-// Get takes name of the queuejob, and returns the corresponding queuejob object, and an error if there is any.
-func (c *xqueuejobs) Get(name string, options meta_v1.GetOptions) (result *v1.AppWrapper, err error) {
+// Get takes name of the appwrappers, and returns the corresponding appwrappers object, and an error if there is any.
+func (c *appwrappers) Get(name string, options meta_v1.GetOptions) (result *v1.AppWrapper, err error) {
 	result = &v1.AppWrapper{}
 	err = c.client.Get().
 		Namespace(c.ns).
@@ -116,8 +116,8 @@ func (c *xqueuejobs) Get(name string, options meta_v1.GetOptions) (result *v1.Ap
 	return
 }
 
-// List takes label and field selectors, and returns the list of QueueJobs that match those selectors.
-func (c *xqueuejobs) List(opts meta_v1.ListOptions) (result *v1.AppWrapperList, err error) {
+// List takes label and field selectors, and returns the list of AppWrappers that match those selectors.
+func (c *appwrappers) List(opts meta_v1.ListOptions) (result *v1.AppWrapperList, err error) {
 	result = &v1.AppWrapperList{}
 	err = c.client.Get().
 		Namespace(c.ns).

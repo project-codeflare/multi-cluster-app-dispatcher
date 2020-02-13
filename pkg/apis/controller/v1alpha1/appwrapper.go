@@ -24,11 +24,15 @@ import (
 
 const AppWrapperPlural string = "appwrappers"
 
+// AppWrapperAnnotationKey is the annotation key of Pod to identify
+// which AppWrapper it belongs to.
+const AppWrapperAnnotationKey = "appwrapper.arbitrator.k8s.io/appwrapper-name"
+
 // Definition of AppWrapper class
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type AppWrapper struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	Spec              AppWrapperSpec   `json:"spec"`
 	Status            AppWrapperStatus `json:"status,omitempty"`
 }
