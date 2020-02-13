@@ -71,13 +71,21 @@ function kind-up-cluster {
 function cleanup {
     echo "Cleaning up..."
     echo " "
+
+    echo "Custom Resource Definitions..."
+    kubectl get crds -A -o yaml
+    kubectl describe crds -A
+
     echo "AppWrappers..."
     kubectl get appwrappers -A -o yaml
     kubectl describe appwrappers -A
+
     echo "'test' Pod list..."
     kubectl get pods -n test
+
     echo "'test' Pod yaml..."
     kubectl get pods -n test -o yaml
+
     echo "'test' Pod descriptions..."
     kubectl describe pods -n test
     echo "===================================================================================="

@@ -257,7 +257,7 @@ func createJobEx(context *context, job *jobSpec) ([]*batchv1.Job, *arbv1.AppWrap
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrapper(ns).Create(aw)
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(ns).Create(aw)
 	Expect(err).NotTo(HaveOccurred())
 
 	return jobs, appwrapper
