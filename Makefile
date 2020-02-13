@@ -1,5 +1,5 @@
 BIN_DIR=_output/bin
-RELEASE_VER=v1.15
+RELEASE_VER=v1.16
 CURRENT_DIR=$(shell pwd)
 
 mcad-controller: init generate-code
