@@ -293,7 +293,7 @@ func taskPhase(ctx *context, pg *arbv1.PodGroup, phase []v1.PodPhase, taskNum in
 */
 func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum int) wait.ConditionFunc {
 	return func() (bool, error) {
-		aw, err := ctx.karclient.ArbV1().AppWrapper(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		pods, err := ctx.kubeclient.CoreV1().Pods(aw.Namespace).List(metav1.ListOptions{})
@@ -508,7 +508,7 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrapper(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -676,7 +676,7 @@ func computeNode(ctx *context, req v1.ResourceList) (string, int32) {
 }
 
 func getPodOfAppWrapper(ctx *context, aw *arbv1.AppWrapper) []*v1.Pod {
-	aw, err := ctx.karclient.ArbV1().AppWrapper(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+	aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	pods, err := ctx.kubeclient.CoreV1().Pods(aw.Namespace).List(metav1.ListOptions{})

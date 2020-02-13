@@ -23,11 +23,11 @@ import (
 // Interface provides access to all the informers in this group version.
 type Interface interface {
 	// SchedulingSpecs returns a SchedulingSpecInformer.
-	SchedulingSpecs() SchedulingSpecInformer
+	SchedulingSpecs() 	SchedulingSpecInformer
 	// QueueJobs returns a QueueJobInformer.
-	QueueJobs() QueueJobInformer
-	XQueueJobs() XQueueJobInformer
-	AppWrapper() AppWrapperInformer
+	QueueJobs() 		QueueJobInformer
+	// AppWrappers returns a QueueJobInformer.
+	AppWrappers() 		AppWrapperInformer
 }
 
 
@@ -51,10 +51,6 @@ func (v *version) QueueJobs() QueueJobInformer {
 	return &queueJobInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
-func (v *version) XQueueJobs() XQueueJobInformer {
-	return &xqueueJobInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-func (v *version) AppWrapper() AppWrapperInformer {
+func (v *version) AppWrappers() AppWrapperInformer {
 	return &appWrapperInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }

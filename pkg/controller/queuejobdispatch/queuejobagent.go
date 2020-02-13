@@ -42,21 +42,21 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
-type XQueueJobAgent struct{
-		AgentId         	string
-		DeploymentName  	string
-		queuejobclients 	*clientset.Clientset
-		k8sClients      	*kubernetes.Clientset // for the update of aggr resouces
-		AggrResources   	*clusterstateapi.Resource
+type JobAgent struct{
+		AgentId         string
+		DeploymentName  string
+		queuejobclients *clientset.Clientset
+		k8sClients     	*kubernetes.Clientset // for the update of aggr resouces
+		AggrResources  	*clusterstateapi.Resource
 
-		queueJobInformer	informersv1.XQueueJobInformer
-		queueJobLister		listersv1.XQueueJobLister
-		queueJobSynced		func() bool
+		jobInformer 	informersv1.AppWrapperInformer
+		jobLister   	listersv1.AppWrapperLister
+		jobSynced   	func() bool
 
-		agentEventQueue		*cache.FIFO
+		agentEventQueue	*cache.FIFO
 }
 
-func NewXQueueJobAgent(config string, agentEventQueue *cache.FIFO) *XQueueJobAgent {
+func NewJobAgent(config string, agentEventQueue *cache.FIFO) *JobAgent {
 	configStrings:=strings.Split(config, ":")
 	if len(configStrings)<2 {
 		return nil
@@ -69,7 +69,7 @@ func NewXQueueJobAgent(config string, agentEventQueue *cache.FIFO) *XQueueJobAge
 		glog.V(2).Infof("[Dispatcher: Agent] Cannot crate client\n")
 		return nil
 	}
-	qa := &XQueueJobAgent{
+	qa := &JobAgent{
 		AgentId:         "/root/kubernetes/" + configStrings[0],
 		DeploymentName:  configStrings[1],
 		queuejobclients: clientset.NewForConfigOrDie(agent_config),
@@ -89,12 +89,12 @@ func NewXQueueJobAgent(config string, agentEventQueue *cache.FIFO) *XQueueJobAge
 		panic(err)
 	}
 
-	qa.queueJobInformer = arbinformers.NewFilteredSharedInformerFactory(queueJobClientForInformer, 0,
+	qa.jobInformer = arbinformers.NewFilteredSharedInformerFactory(queueJobClientForInformer, 0,
 		func(opt *metav1.ListOptions) {
 		opt.LabelSelector = "IsDispatched=true"
  		},
-		).XQueueJob().XQueueJobs()
-	qa.queueJobInformer.Informer().AddEventHandler(
+		).AppWrapper().AppWrappers()
+	qa.jobInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
 			FilterFunc: func(obj interface{}) bool {
 				switch t := obj.(type) {
@@ -112,9 +112,9 @@ func NewXQueueJobAgent(config string, agentEventQueue *cache.FIFO) *XQueueJobAge
 			},
 		})
 
-	qa.queueJobLister = qa.queueJobInformer.Lister()
+	qa.jobLister = qa.jobInformer.Lister()
 
-	qa.queueJobSynced = qa.queueJobInformer.Informer().HasSynced
+	qa.jobSynced = qa.jobInformer.Informer().HasSynced
 
 	qa.UpdateAggrResources()
 
@@ -122,7 +122,7 @@ func NewXQueueJobAgent(config string, agentEventQueue *cache.FIFO) *XQueueJobAge
 }
 
 
-func (cc *XQueueJobAgent) addQueueJob(obj interface{}) {
+func (cc *JobAgent) addQueueJob(obj interface{}) {
 	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
 		glog.Errorf("obj is not AppWrapper")
@@ -132,7 +132,7 @@ func (cc *XQueueJobAgent) addQueueJob(obj interface{}) {
 	cc.agentEventQueue.Add(qj)
 }
 
-func (cc *XQueueJobAgent) updateQueueJob(oldObj, newObj interface{}) {
+func (cc *JobAgent) updateQueueJob(oldObj, newObj interface{}) {
 	newQJ, ok := newObj.(*arbv1.AppWrapper)
 	if !ok {
 		glog.Errorf("newObj is not AppWrapper")
@@ -142,7 +142,7 @@ func (cc *XQueueJobAgent) updateQueueJob(oldObj, newObj interface{}) {
 	cc.agentEventQueue.Add(newQJ)
 }
 
-func (cc *XQueueJobAgent) deleteQueueJob(obj interface{}) {
+func (cc *JobAgent) deleteQueueJob(obj interface{}) {
 	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
 		glog.Errorf("obj is not AppWrapper")
@@ -154,20 +154,20 @@ func (cc *XQueueJobAgent) deleteQueueJob(obj interface{}) {
 
 
 
-func (qa *XQueueJobAgent) Run(stopCh chan struct{}) {
-	go qa.queueJobInformer.Informer().Run(stopCh)
-	cache.WaitForCacheSync(stopCh, qa.queueJobSynced)
+func (qa *JobAgent) Run(stopCh chan struct{}) {
+	go qa.jobInformer.Informer().Run(stopCh)
+	cache.WaitForCacheSync(stopCh, qa.jobSynced)
 	// go wait.Until(qa.UpdateAgent, 2*time.Second, stopCh)
 }
 
-func (qa *XQueueJobAgent) DeleteXQueueJob(cqj *arbv1.AppWrapper) {
+func (qa *JobAgent) DeleteJob(cqj *arbv1.AppWrapper) {
 	qj_temp:=cqj.DeepCopy()
 	glog.V(2).Infof("[Dispatcher: Agent] Request deletion of XQJ %s to Agent %s\n", qj_temp.Name, qa.AgentId)
-	qa.queuejobclients.ArbV1().XQueueJobs(qj_temp.Namespace).Delete(qj_temp.Name,  &metav1.DeleteOptions{})
+	qa.queuejobclients.ArbV1().AppWrappers(qj_temp.Namespace).Delete(qj_temp.Name,  &metav1.DeleteOptions{})
 	return
 }
 
-func (qa *XQueueJobAgent) CreateXQueueJob(cqj *arbv1.AppWrapper) {
+func (qa *JobAgent) CreateJob(cqj *arbv1.AppWrapper) {
 	qj_temp:=cqj.DeepCopy()
 	agent_qj:=&arbv1.AppWrapper{
 		TypeMeta: qj_temp.TypeMeta,
@@ -187,7 +187,7 @@ func (qa *XQueueJobAgent) CreateXQueueJob(cqj *arbv1.AppWrapper) {
 
 	// glog.Infof("[Agent] XQJ resourceVersion cleaned--Name:%s, Kind:%s\n", agent_qj.Name, agent_qj.Kind)
 	glog.V(2).Infof("[Dispatcher: Agent] Create XQJ: %s (Status: %+v) in Agent %s\n", agent_qj.Name, agent_qj.Status, qa.AgentId)
-	qa.queuejobclients.ArbV1().XQueueJobs(agent_qj.Namespace).Create(agent_qj)
+	qa.queuejobclients.ArbV1().AppWrappers(agent_qj.Namespace).Create(agent_qj)
 	// pods, err := qa.deploymentclients.CoreV1().Pods("").List(metav1.ListOptions{})
 	// if err != nil {
 	// 	glog.Infof("[Agent] Cannot Access Agent================\n")
@@ -214,7 +214,7 @@ type ClusterMetricsList struct {
 	} `json:"items"`
 }
 
-func (qa *XQueueJobAgent) UpdateAggrResources() error {
+func (qa *JobAgent) UpdateAggrResources() error {
     glog.V(6).Infof("[Dispatcher: Agent] Getting aggregated resources for Agent ID: %s with Agent QueueJob Name: %s\n", qa.AgentId, qa.DeploymentName)
 
     // Read the Agent XQJ Deployment object

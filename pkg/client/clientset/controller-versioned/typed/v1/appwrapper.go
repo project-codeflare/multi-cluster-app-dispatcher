@@ -25,7 +25,7 @@ import (
 )
 
 type AppWrapperGetter interface {
-	AppWrapper(namespaces string) AppWrapperInterface
+	AppWrappers(namespaces string) AppWrapperInterface
 }
 
 type AppWrapperInterface interface {
@@ -44,7 +44,7 @@ type appwrapper struct {
 }
 
 // newAppWrappers returns a AppWrapper
-func newAppWrapper(c *ArbV1Client, namespace string) *appwrapper {
+func newAppWrappers(c *ArbV1Client, namespace string) *appwrapper {
 	return &appwrapper{
 		client: c.RESTClient(),
 		ns:     namespace,
