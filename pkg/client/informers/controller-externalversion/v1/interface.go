@@ -23,7 +23,7 @@ import (
 // Interface provides access to all the informers in this group version.
 type Interface interface {
 	// SchedulingSpecs returns a SchedulingSpecInformer.
-	SchedulingSpecs() 	SchedulingSpecInformer
+	SchedulingSpecs()	SchedulingSpecInformer
 	// QueueJobs returns a QueueJobInformer.
 	QueueJobs() 		QueueJobInformer
 	// AppWrappers returns a QueueJobInformer.

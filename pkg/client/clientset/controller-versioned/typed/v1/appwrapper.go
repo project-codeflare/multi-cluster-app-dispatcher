@@ -38,21 +38,21 @@ type AppWrapperInterface interface {
 }
 
 // appwrappers implements AppWrapperInterface
-type appwrapper struct {
+type appwrappers struct {
 	client rest.Interface
 	ns     string
 }
 
 // newAppWrappers returns a AppWrapper
-func newAppWrappers(c *ArbV1Client, namespace string) *appwrapper {
-	return &appwrapper{
+func newAppWrappers(c *ArbV1Client, namespace string) *appwrappers {
+	return &appwrappers{
 		client: c.RESTClient(),
 		ns:     namespace,
 	}
 }
 
-// Create takes the representation of an appwrapper and creates it.  Returns the server's representation of the appwrapper, and an error, if there is any.
-func (c *appwrapper) Create(appwrapper *v1.AppWrapper) (result *v1.AppWrapper, err error) {
+// Create takes the representation of an appwrappers and creates it.  Returns the server's representation of the appwrappers, and an error, if there is any.
+func (c *appwrappers) Create(appwrapper *v1.AppWrapper) (result *v1.AppWrapper, err error) {
 	result = &v1.AppWrapper{}
 	err = c.client.Post().
 		Namespace(c.ns).
@@ -63,8 +63,8 @@ func (c *appwrapper) Create(appwrapper *v1.AppWrapper) (result *v1.AppWrapper, e
 	return
 }
 
-// Update takes the representation of an appwrapper and updates it. Returns the server's representation of the appwrapper, and an error, if there is any.
-func (c *appwrapper) Update(appwrapper *v1.AppWrapper) (result *v1.AppWrapper, err error) {
+// Update takes the representation of an appwrappers and updates it. Returns the server's representation of the appwrappers, and an error, if there is any.
+func (c *appwrappers) Update(appwrapper *v1.AppWrapper) (result *v1.AppWrapper, err error) {
 	result = &v1.AppWrapper{}
 	err = c.client.Put().
 		Namespace(c.ns).
@@ -79,7 +79,7 @@ func (c *appwrapper) Update(appwrapper *v1.AppWrapper) (result *v1.AppWrapper, e
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 
-func (c *appwrapper) UpdateStatus(appwrapper *v1.AppWrapper) (result *v1.AppWrapper, err error) {
+func (c *appwrappers) UpdateStatus(appwrapper *v1.AppWrapper) (result *v1.AppWrapper, err error) {
 	result = &v1.AppWrapper{}
 	err = c.client.Put().
 		Namespace(c.ns).
@@ -92,8 +92,8 @@ func (c *appwrapper) UpdateStatus(appwrapper *v1.AppWrapper) (result *v1.AppWrap
 	return
 }
 
-// Delete takes name of the appwrapper and deletes it. Returns an error if one occurs.
-func (c *appwrapper) Delete(name string, options *meta_v1.DeleteOptions) error {
+// Delete takes name of the appwrappers and deletes it. Returns an error if one occurs.
+func (c *appwrappers) Delete(name string, options *meta_v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource(v1.AppWrapperPlural).
@@ -103,8 +103,8 @@ func (c *appwrapper) Delete(name string, options *meta_v1.DeleteOptions) error {
 		Error()
 }
 
-// Get takes name of the appwrapper, and returns the corresponding appwrapper object, and an error if there is any.
-func (c *appwrapper) Get(name string, options meta_v1.GetOptions) (result *v1.AppWrapper, err error) {
+// Get takes name of the appwrappers, and returns the corresponding appwrappers object, and an error if there is any.
+func (c *appwrappers) Get(name string, options meta_v1.GetOptions) (result *v1.AppWrapper, err error) {
 	result = &v1.AppWrapper{}
 	err = c.client.Get().
 		Namespace(c.ns).
@@ -117,7 +117,7 @@ func (c *appwrapper) Get(name string, options meta_v1.GetOptions) (result *v1.Ap
 }
 
 // List takes label and field selectors, and returns the list of AppWrappers that match those selectors.
-func (c *appwrapper) List(opts meta_v1.ListOptions) (result *v1.AppWrapperList, err error) {
+func (c *appwrappers) List(opts meta_v1.ListOptions) (result *v1.AppWrapperList, err error) {
 	result = &v1.AppWrapperList{}
 	err = c.client.Get().
 		Namespace(c.ns).

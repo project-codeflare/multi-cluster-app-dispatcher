@@ -159,5 +159,5 @@ func (f *sharedInformerFactory) QueueJob() arbclient.Interface {
 }
 
 func (f *sharedInformerFactory) AppWrapper() arbclient.Interface {
-return arbclient.New(f, f.tweakListOptions)
+	return arbclient.New(f, f.tweakListOptions)
 }

@@ -117,11 +117,11 @@ type XController struct {
 	// is dispatcher or deployer?
 	isDispatcher bool
 
-	// Agent map: agentID -> JobAgent
-	agentMap map[string]*queuejobdispatch.JobAgent
+	// Agent map: agentID -> JobClusterAgent
+	agentMap map[string]*queuejobdispatch.JobClusterAgent
 	agentList []string
 
-	// Map for AppWrapper -> JobAgent
+	// Map for AppWrapper -> JobClusterAgent
 	dispatchMap map[string]string
 
 	// Metrics API Server
@@ -159,7 +159,7 @@ func RegisterAllQueueJobResourceTypes(regs *queuejobresources.RegisteredResource
 }
 
 func GetQueueJobAgentKey(obj interface{}) (string, error) {
-	qa, ok := obj.(*queuejobdispatch.JobAgent)
+	qa, ok := obj.(*queuejobdispatch.JobClusterAgent)
 	if !ok {
 		return "", fmt.Errorf("not a AppWrapperAgent")
 	}
@@ -349,11 +349,11 @@ func NewJobController(config *rest.Config, schedulerName string, isDispatcher bo
 	}
 
 	//create agents and agentMap
-	cc.agentMap=map[string]*queuejobdispatch.JobAgent{}
+	cc.agentMap=map[string]*queuejobdispatch.JobClusterAgent{}
 	cc.agentList=[]string{}
 	for _, agentconfig := range strings.Split(agentconfigs,",") {
 		agentData := strings.Split(agentconfig,":")
-		cc.agentMap["/root/kubernetes/" + agentData[0]]=queuejobdispatch.NewJobAgent(agentconfig, cc.agentEventQueue)
+		cc.agentMap["/root/kubernetes/" + agentData[0]]=queuejobdispatch.NewJobClusterAgent(agentconfig, cc.agentEventQueue)
 		cc.agentList=append(cc.agentList, "/root/kubernetes/" + agentData[0])
 	}
 

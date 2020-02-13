@@ -42,7 +42,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
-type JobAgent struct{
+type JobClusterAgent struct{
 		AgentId         string
 		DeploymentName  string
 		queuejobclients *clientset.Clientset
@@ -56,7 +56,7 @@ type JobAgent struct{
 		agentEventQueue	*cache.FIFO
 }
 
-func NewJobAgent(config string, agentEventQueue *cache.FIFO) *JobAgent {
+func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterAgent {
 	configStrings:=strings.Split(config, ":")
 	if len(configStrings)<2 {
 		return nil
@@ -69,7 +69,7 @@ func NewJobAgent(config string, agentEventQueue *cache.FIFO) *JobAgent {
 		glog.V(2).Infof("[Dispatcher: Agent] Cannot crate client\n")
 		return nil
 	}
-	qa := &JobAgent{
+	qa := &JobClusterAgent{
 		AgentId:         "/root/kubernetes/" + configStrings[0],
 		DeploymentName:  configStrings[1],
 		queuejobclients: clientset.NewForConfigOrDie(agent_config),
@@ -122,7 +122,7 @@ func NewJobAgent(config string, agentEventQueue *cache.FIFO) *JobAgent {
 }
 
 
-func (cc *JobAgent) addQueueJob(obj interface{}) {
+func (cc *JobClusterAgent) addQueueJob(obj interface{}) {
 	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
 		glog.Errorf("obj is not AppWrapper")
@@ -132,7 +132,7 @@ func (cc *JobAgent) addQueueJob(obj interface{}) {
 	cc.agentEventQueue.Add(qj)
 }
 
-func (cc *JobAgent) updateQueueJob(oldObj, newObj interface{}) {
+func (cc *JobClusterAgent) updateQueueJob(oldObj, newObj interface{}) {
 	newQJ, ok := newObj.(*arbv1.AppWrapper)
 	if !ok {
 		glog.Errorf("newObj is not AppWrapper")
@@ -142,7 +142,7 @@ func (cc *JobAgent) updateQueueJob(oldObj, newObj interface{}) {
 	cc.agentEventQueue.Add(newQJ)
 }
 
-func (cc *JobAgent) deleteQueueJob(obj interface{}) {
+func (cc *JobClusterAgent) deleteQueueJob(obj interface{}) {
 	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
 		glog.Errorf("obj is not AppWrapper")
@@ -154,20 +154,20 @@ func (cc *JobAgent) deleteQueueJob(obj interface{}) {
 
 
 
-func (qa *JobAgent) Run(stopCh chan struct{}) {
+func (qa *JobClusterAgent) Run(stopCh chan struct{}) {
 	go qa.jobInformer.Informer().Run(stopCh)
 	cache.WaitForCacheSync(stopCh, qa.jobSynced)
 	// go wait.Until(qa.UpdateAgent, 2*time.Second, stopCh)
 }
 
-func (qa *JobAgent) DeleteJob(cqj *arbv1.AppWrapper) {
+func (qa *JobClusterAgent) DeleteJob(cqj *arbv1.AppWrapper) {
 	qj_temp:=cqj.DeepCopy()
 	glog.V(2).Infof("[Dispatcher: Agent] Request deletion of XQJ %s to Agent %s\n", qj_temp.Name, qa.AgentId)
 	qa.queuejobclients.ArbV1().AppWrappers(qj_temp.Namespace).Delete(qj_temp.Name,  &metav1.DeleteOptions{})
 	return
 }
 
-func (qa *JobAgent) CreateJob(cqj *arbv1.AppWrapper) {
+func (qa *JobClusterAgent) CreateJob(cqj *arbv1.AppWrapper) {
 	qj_temp:=cqj.DeepCopy()
 	agent_qj:=&arbv1.AppWrapper{
 		TypeMeta: qj_temp.TypeMeta,
@@ -214,7 +214,7 @@ type ClusterMetricsList struct {
 	} `json:"items"`
 }
 
-func (qa *JobAgent) UpdateAggrResources() error {
+func (qa *JobClusterAgent) UpdateAggrResources() error {
     glog.V(6).Infof("[Dispatcher: Agent] Getting aggregated resources for Agent ID: %s with Agent QueueJob Name: %s\n", qa.AgentId, qa.DeploymentName)
 
     // Read the Agent XQJ Deployment object
