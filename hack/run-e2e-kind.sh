@@ -11,7 +11,7 @@ export KA_BIN=_output/bin
 export WAIT_TIME="20s"
 export IMAGE_REPOSITORY_MCAD="${1}"
 export IMAGE_TAG_MCAD="${2}"
-export MCAD_IMAGE_PULL_POLICY="${3-ALWAYS}"
+export MCAD_IMAGE_PULL_POLICY="${3-Always}"
 export IMAGE_MCAD="${IMAGE_REPOSITORY_MCAD}:${IMAGE_TAG_MCAD}"
 
 sudo apt-get update && sudo apt-get install -y apt-transport-https
@@ -149,6 +149,10 @@ function kube-batch-up {
     sleep 10
     helm list
     mcad_pod=$(kubectl get pods -n kube-system | grep xqueuejob | awk '{print $1}')
+    if [[ "$mcad_pod" != "" ]]
+    then
+        kubectl get pod ${mcad_pod} -n kube-system -o yaml
+    fi
 }
 
 

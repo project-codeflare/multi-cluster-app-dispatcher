@@ -1,5 +1,3 @@
-.PHONY: push-images run-e2e
-
 BIN_DIR=_output/bin
 RELEASE_VER=v1.16
 CURRENT_DIR=$(shell pwd)
