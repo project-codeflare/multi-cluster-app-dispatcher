@@ -60,11 +60,16 @@ function kind-up-cluster {
   check-prerequisites
   echo "Running kind: [kind create cluster ${CLUSTER_CONTEXT} ${KIND_OPT}]"
   kind create cluster ${CLUSTER_CONTEXT} ${KIND_OPT} --wait ${WAIT_TIME}
+
   docker images
   docker pull ${IMAGE_BUSYBOX}
   docker pull ${IMAGE_NGINX}
-  docker pull ${IMAGE_MCAD}
+  if [[ "$MCAD_IMAGE_PULL_POLICY" = "Always" ]]
+  then
+    docker pull ${IMAGE_MCAD}
+  fi
   docker images
+  
   kind load docker-image ${IMAGE_NGINX} ${CLUSTER_CONTEXT}
   kind load docker-image ${IMAGE_BUSYBOX} ${CLUSTER_CONTEXT}
   kind load docker-image ${IMAGE_MCAD} ${CLUSTER_CONTEXT}

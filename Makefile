@@ -33,8 +33,9 @@ images:
 
 push-images:
 ifeq ($(strip $(dockerhub_repository)),)
-	$(info No registry information provide.)
-	$(info Please set environment variables: dockerhub_repository, dockerhub_token, and dockerhub_id.)
+	$(info No registry information provide.  To push images to a docker registry please set)
+	$(info environment variables: dockerhub_repository, dockerhub_token, and dockerhub_id.  Environment)
+	$(info variables do not need to be set for github Travis CICD.)
 else
 	$(info Log into dockerhub)
 	echo ${dockerhub_token} | docker login -u ${dockerhub_id} --password-stdin
