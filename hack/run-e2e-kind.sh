@@ -11,6 +11,7 @@ export KA_BIN=_output/bin
 export WAIT_TIME="20s"
 export IMAGE_REPOSITORY_MCAD="${1}"
 export IMAGE_TAG_MCAD="${2}"
+export MCAD_IMAGE_PULL_POLICY="${3-Always}"
 export IMAGE_MCAD="${IMAGE_REPOSITORY_MCAD}:${IMAGE_TAG_MCAD}"
 
 sudo apt-get update && sudo apt-get install -y apt-transport-https
@@ -59,9 +60,16 @@ function kind-up-cluster {
   check-prerequisites
   echo "Running kind: [kind create cluster ${CLUSTER_CONTEXT} ${KIND_OPT}]"
   kind create cluster ${CLUSTER_CONTEXT} ${KIND_OPT} --wait ${WAIT_TIME}
+
+  docker images
   docker pull ${IMAGE_BUSYBOX}
   docker pull ${IMAGE_NGINX}
-  docker pull ${IMAGE_MCAD}
+  if [[ "$MCAD_IMAGE_PULL_POLICY" = "Always" ]]
+  then
+    docker pull ${IMAGE_MCAD}
+  fi
+  docker images
+  
   kind load docker-image ${IMAGE_NGINX} ${CLUSTER_CONTEXT}
   kind load docker-image ${IMAGE_BUSYBOX} ${CLUSTER_CONTEXT}
   kind load docker-image ${IMAGE_MCAD} ${CLUSTER_CONTEXT}
@@ -141,11 +149,15 @@ function kube-batch-up {
 
     # start mcad controller
     echo "Starting MCAD Controller..."
-    helm install kube-arbitrator --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=Always --debug
+    helm install kube-arbitrator --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY --debug
 
     sleep 10
     helm list
     mcad_pod=$(kubectl get pods -n kube-system | grep xqueuejob | awk '{print $1}')
+    if [[ "$mcad_pod" != "" ]]
+    then
+        kubectl get pod ${mcad_pod} -n kube-system -o yaml
+    fi
 }
 
 
