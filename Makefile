@@ -3,6 +3,8 @@ RELEASE_VER=v1.16
 CURRENT_DIR=$(shell pwd)
 MCAD_REGISTRY=$(shell docker ps --filter name=mcad-registry | grep -v NAME)
 LOCAL_HOST_NAME=localhost
+#LOCAL_HOST_NAME=0.0.0.0
+#LOCAL_HOST_NAME=$(shell ifconfig en0 | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*'  | grep -v '127.0.0.1')
 dockerhub_repository=${LOCAL_HOST_NAME}:5000
 
 mcad-controller: init generate-code
