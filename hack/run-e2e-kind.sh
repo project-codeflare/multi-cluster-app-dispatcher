@@ -11,6 +11,7 @@ export KA_BIN=_output/bin
 export WAIT_TIME="20s"
 export IMAGE_REPOSITORY_MCAD="${1}"
 export IMAGE_TAG_MCAD="${2}"
+export MCAD_IMAGE_PULL_POLICY="${3-ALWAYS}"
 export IMAGE_MCAD="${IMAGE_REPOSITORY_MCAD}:${IMAGE_TAG_MCAD}"
 
 sudo apt-get update && sudo apt-get install -y apt-transport-https
@@ -143,7 +144,7 @@ function kube-batch-up {
 
     # start mcad controller
     echo "Starting MCAD Controller..."
-    helm install kube-arbitrator --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=Always --debug
+    helm install kube-arbitrator --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY --debug
 
     sleep 10
     helm list
