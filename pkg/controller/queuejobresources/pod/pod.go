@@ -556,7 +556,7 @@ func (qjrPod *QueueJobResPod) GetAggregatedResources(job *arbv1.AppWrapper) *clu
                 if ar.Type == arbv1.ResourceTypePod {
 					template, err := qjrPod.GetPodTemplate(&ar)
 					if err != nil {
-						glog.Errorf("Pod Template not found in item: %+v error: %+v.  Aggregated resources set to 0.", ar, err)
+						glog.Errorf("Can not parse pod template in item: %+v error: %+v.  Aggregated resources set to 0.", ar, err)
 					} else {
 						replicas := ar.Replicas
 						myres := queuejobresources.GetPodResources(template)
@@ -593,7 +593,7 @@ func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, 
 	templateCopy, err := qjrPod.GetPodTemplate(qjobRes)
 
 	if err != nil {
-		glog.Errorf("Cannot parse pod template for QJ")
+		glog.Errorf("Can not parse pod template in job: %+v, item: %+v error: %+v.", qj, qjobRes, err)
 		return nil
 	}
 	podName := fmt.Sprintf("%s-%d-%s", qj.Name, ix, generateUUID())
