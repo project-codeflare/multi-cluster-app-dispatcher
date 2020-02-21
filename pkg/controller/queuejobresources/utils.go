@@ -35,8 +35,6 @@ func GetPodResources(template *v1.PodTemplateSpec) *clusterstateapi.Resource {
         total := clusterstateapi.EmptyResource()
         req := clusterstateapi.EmptyResource()
         limit := clusterstateapi.EmptyResource()
-        glog.Errorf("Pod Spec not found in Pod Template: %+v.  Aggregated resources set to 0.", template)
-
         spec := template.Spec
 
         if &spec == nil {

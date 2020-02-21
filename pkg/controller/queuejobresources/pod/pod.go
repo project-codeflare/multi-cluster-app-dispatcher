@@ -528,6 +528,8 @@ func (qjrPod *QueueJobResPod) GetPodTemplate(qjobRes *arbv1.AppWrapperResource) 
 
 	podGVK := schema.GroupVersion{Group: v1.GroupName, Version: "v1"}.WithKind("PodTemplate")
 
+	glog.Errorf("Pod resource not found in Pod Template: %+v.  Aggregated resources set to 0.", qjobRes)
+
 	obj, _, err := qjrPod.jsonSerializer.Decode(qjobRes.Template.Raw, &podGVK, nil)
 	if err != nil {
 		return nil, err
@@ -535,8 +537,10 @@ func (qjrPod *QueueJobResPod) GetPodTemplate(qjobRes *arbv1.AppWrapperResource) 
 
 	template, ok := obj.(*v1.PodTemplate)
 	if !ok {
-		return nil, fmt.Errorf("Queuejob resource template not define a Pod")
+		return nil, fmt.Errorf("Job resource template not define a Pod")
 	}
+
+	glog.Errorf("Pod Spec not found in Pod Template: %+v.  Aggregated resources set to 0.", template)
 
 	return &template.Template, nil
 
