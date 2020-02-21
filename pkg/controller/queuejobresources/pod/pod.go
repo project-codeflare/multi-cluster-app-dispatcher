@@ -554,14 +554,19 @@ func (qjrPod *QueueJobResPod) GetAggregatedResources(job *arbv1.AppWrapper) *clu
             //calculate scaling
             for _, ar := range job.Spec.AggrResources.Items {
                 if ar.Type == arbv1.ResourceTypePod {
-			template, _ := qjrPod.GetPodTemplate(&ar)
-			replicas := ar.Replicas
-			myres := queuejobresources.GetPodResources(template)
-                        myres.MilliCPU = float64(replicas) * myres.MilliCPU
-                        myres.Memory = float64(replicas) * myres.Memory
-                        myres.GPU = int64(replicas) * myres.GPU
-                        total = total.Add(myres)
-		}
+					template, err := qjrPod.GetPodTemplate(&ar)
+					if err != nil {
+						glog.Errorf("Pod Template not found in item: %+v error: %+v.  Aggregated resources set to 0.", ar, err)
+					} else {
+						replicas := ar.Replicas
+						myres := queuejobresources.GetPodResources(template)
+
+						myres.MilliCPU = float64(replicas) * myres.MilliCPU
+						myres.Memory = float64(replicas) * myres.Memory
+						myres.GPU = int64(replicas) * myres.GPU
+						total = total.Add(myres)
+					}
+				}
             }
         }
         return total
