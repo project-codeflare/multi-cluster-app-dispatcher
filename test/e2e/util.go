@@ -512,8 +512,8 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 //      may pass the local test but may cause controller to fail which is not
 //      part of this test's validation.
 func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
-	rb := []byte(`{"apiVersion": "v1"
-		"kind": "Pod"
+	rb := []byte(`{"apiVersion": "v1",
+		"kind": "Pod",
 		"metadata": {
 			"labels": {
 				"app": "nginx"
