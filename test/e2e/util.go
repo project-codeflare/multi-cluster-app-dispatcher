@@ -508,6 +508,66 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 	return appwrapper
 }
 
+//NOTE: Recommend this test not to be the last test in the test suite it may pass
+//      may pass the local test but may cause controller to fail which is not
+//      part of this test's validation.
+func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": v1"
+		"kind": "Pod"
+		"metadata": {
+			"labels": {
+				"app": "nginx"
+			}
+		},
+		"spec": {
+			"containers": [
+				{
+					"name": "nginx",
+					"image": "nginx",
+					"ports": [
+						{
+							"containerPort": 80
+						}
+					]
+				}
+			]
+		}
+	} `)
+	var schedSpecMin int = 2
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				Items: []arbv1.AppWrapperResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item"),
+							Namespace: context.namespace,
+						},
+						Replicas: 2,
+						Type: arbv1.ResourceTypePod,
+						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"metadata": 
 	{
