@@ -305,8 +305,7 @@ func (qjrPod *QueueJobResPod) manageQueueJob(qj *arbv1.AppWrapper, pods []*v1.Po
 
 				if newPod == nil {
 					err := fmt.Errorf("Job resource template item not define as a PodTemplate")
-					glog.Errorf("Failed to create pod %s for QueueJob %s, err %#v",
-						newPod.Name, qj.Name, err)
+					glog.Errorf("Failed to create a pod for Job %s, error: %#v.", qj.Name, err)
 					errs = append(errs, err)
 				} else {
 					_, err := qjrPod.clients.Core().Pods(newPod.Namespace).Create(newPod)

@@ -33,6 +33,17 @@ var _ = Describe("Predicates E2E Test", func() {
 
 		Expect(err).NotTo(HaveOccurred())
 	})
+
+	It("Create AppWrapper - PodTemplate Only - 2 Pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createPodTemplateAW(context,"aw-podtemplate-2")
+
+		err := waitAWReady(context, aw)
+
+		Expect(err).NotTo(HaveOccurred())
+	})
 /*
 	It("Gang scheduling", func() {
 		context := initTestContext()

@@ -134,30 +134,6 @@ func cleanupTestContext(cxt *context) {
 	//DO NOTHING
 }
 
-func cleanupTestContext2(cxt *context) {
-
-	foreground := metav1.DeletePropagationForeground
-
-	err := cxt.kubeclient.CoreV1().Namespaces().Delete(cxt.namespace, &metav1.DeleteOptions{
-		PropagationPolicy: &foreground,
-	})
-	Expect(err).NotTo(HaveOccurred())
-
-	err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(masterPriority, &metav1.DeleteOptions{
-		PropagationPolicy: &foreground,
-	})
-	Expect(err).NotTo(HaveOccurred())
-
-	err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(workerPriority, &metav1.DeleteOptions{
-		PropagationPolicy: &foreground,
-	})
-	Expect(err).NotTo(HaveOccurred())
-
-	// Wait for namespace deleted.
-	err = wait.Poll(100*time.Millisecond, oneMinute, namespaceNotExist(cxt))
-	Expect(err).NotTo(HaveOccurred())
-}
-
 type taskSpec struct {
 	min, rep int32
 	img      string
@@ -499,6 +475,70 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 						},
 						Replicas: 1,
 						Type: arbv1.ResourceTypeDeployment,
+						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"metadata": 
+	{
+		"name": "nginx",
+		"namespace": "test",
+		"labels": {
+			"app": "nginx"
+		}
+	},
+	"template": {
+		"metadata": {
+			"labels": {
+				"app": "nginx"
+			}
+		},
+		"spec": {
+			"containers": [
+				{
+					"name": "nginx",
+					"image": "nginx",
+					"ports": [
+						{
+							"containerPort": 80
+						}
+					]
+				}
+			]
+		}
+	}} `)
+	var schedSpecMin int = 2
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				Items: []arbv1.AppWrapperResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item"),
+							Namespace: context.namespace,
+						},
+						Replicas: 2,
+						Type: arbv1.ResourceTypePod,
 						Template: runtime.RawExtension{
 							Raw: rb,
 						},
