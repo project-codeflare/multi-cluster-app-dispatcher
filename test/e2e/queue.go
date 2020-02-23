@@ -42,7 +42,7 @@ var _ = Describe("Predicates E2E Test", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
-		aw := createPodTemplateAW(context,"aw-podtemplate-2")
+		aw := createBadPodTemplateAW(context,"aw-podtemplate-2")
 
 		err := waitAWReady(context, aw)
 
