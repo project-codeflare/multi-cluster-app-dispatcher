@@ -302,14 +302,22 @@ func (qjrPod *QueueJobResPod) manageQueueJob(qj *arbv1.AppWrapper, pods []*v1.Po
 			go func(ix int32) {
 				defer wait.Done()
 				newPod := qjrPod.createQueueJobPod(qj, ix, ar)
-				_, err := qjrPod.clients.Core().Pods(newPod.Namespace).Create(newPod)
-				if err != nil {
-					// Failed to create Pod, wait a moment and then create it again
-					// This is to ensure all pods under the same QueueJob created
-					// So gang-scheduling could schedule the QueueJob successfully
+
+				if newPod == nil {
+					err := fmt.Errorf("Job resource template item not define as a PodTemplate")
 					glog.Errorf("Failed to create pod %s for QueueJob %s, err %#v",
 						newPod.Name, qj.Name, err)
 					errs = append(errs, err)
+				} else {
+					_, err := qjrPod.clients.Core().Pods(newPod.Namespace).Create(newPod)
+					if err != nil {
+						// Failed to create Pod, wait a moment and then create it again
+						// This is to ensure all pods under the same QueueJob created
+						// So gang-scheduling could schedule the QueueJob successfully
+						glog.Errorf("Failed to create pod %s for QueueJob %s, err %#v",
+							newPod.Name, qj.Name, err)
+						errs = append(errs, err)
+					}
 				}
 			}(i)
 		}
@@ -399,18 +407,23 @@ func (qjrPod *QueueJobResPod) manageQueueJobPods(activePods []*v1.Pod, succeeded
 				go func(ix int32) {
 					defer wait.Done()
 					newPod := qjrPod.createQueueJobPod(qj, ix, ar)
-					//newPod := buildPod(fmt.Sprintf("%s-%d-%s", qj.Name, ix, generateUUID()), qj.Namespace, qj.Spec.Template, []metav1.OwnerReference{*metav1.NewControllerRef(qj, controllerKind)}, ix)
-					for {
-						_, err := qjrPod.clients.Core().Pods(newPod.Namespace).Create(newPod)
-						if err == nil {
-							// Create Pod successfully
-							break
-						} else {
-							// Failed to create Pod, wait a moment and then create it again
-							// This is to ensure all pods under the same QueueJob created
-							// So gang-scheduling could schedule the QueueJob successfully
-							glog.Warningf("Failed to create pod %s for QueueJob %s, err %#v, wait 2 seconds and re-create it", newPod.Name, qj.Name, err)
-							time.Sleep(2 * time.Second)
+					if newPod == nil {
+						err = fmt.Errorf("Job resource template item not define as a PodTemplate")
+						glog.Errorf("Failed to create pod %s for Job %s, err %#v",
+							newPod.Name, qj.Name, err)
+					} else {
+						for {
+							_, err := qjrPod.clients.Core().Pods(newPod.Namespace).Create(newPod)
+							if err == nil {
+								// Create Pod successfully
+								break
+							} else {
+								// Failed to create Pod, wait a moment and then create it again
+								// This is to ensure all pods under the same QueueJob created
+								// So gang-scheduling could schedule the QueueJob successfully
+								glog.Warningf("Failed to create pod %s for QueueJob %s, err %#v, wait 2 seconds and re-create it", newPod.Name, qj.Name, err)
+								time.Sleep(2 * time.Second)
+							}
 						}
 					}
 				}(i)
@@ -528,8 +541,6 @@ func (qjrPod *QueueJobResPod) GetPodTemplate(qjobRes *arbv1.AppWrapperResource) 
 
 	podGVK := schema.GroupVersion{Group: v1.GroupName, Version: "v1"}.WithKind("PodTemplate")
 
-	glog.Errorf("Pod resource not found in Pod Template: %+v.  Aggregated resources set to 0.", qjobRes)
-
 	obj, _, err := qjrPod.jsonSerializer.Decode(qjobRes.Template.Raw, &podGVK, nil)
 	if err != nil {
 		return nil, err
@@ -537,10 +548,8 @@ func (qjrPod *QueueJobResPod) GetPodTemplate(qjobRes *arbv1.AppWrapperResource) 
 
 	template, ok := obj.(*v1.PodTemplate)
 	if !ok {
-		return nil, fmt.Errorf("Job resource template not define a Pod")
+		return nil, fmt.Errorf("Job resource template item not define as a PodTemplate")
 	}
-
-	glog.Errorf("Pod Spec not found in Pod Template: %+v.  Aggregated resources set to 0.", template)
 
 	return &template.Template, nil
 
@@ -573,32 +582,37 @@ func (qjrPod *QueueJobResPod) GetAggregatedResources(job *arbv1.AppWrapper) *clu
 }
 
 func (qjrPod *QueueJobResPod) GetAggregatedResourcesByPriority(priority int, job *arbv1.AppWrapper) *clusterstateapi.Resource {
-        total := clusterstateapi.EmptyResource()
-        if job.Spec.AggrResources.Items != nil {
-            //calculate scaling
-            for _, ar := range job.Spec.AggrResources.Items {
-		  if ar.Priority < float64(priority) {
-		  	continue
-		  }
-                  if ar.Type == arbv1.ResourceTypePod {
-                         template, _ := qjrPod.GetPodTemplate(&ar)
-			 total = total.Add(queuejobresources.GetPodResources(template))
-                }
-            }
-        }
-        return total
+	total := clusterstateapi.EmptyResource()
+	if job.Spec.AggrResources.Items != nil {
+		//calculate scaling
+		for _, ar := range job.Spec.AggrResources.Items {
+			if ar.Priority < float64(priority) {
+		  		continue
+		  	}
+
+		  	if ar.Type == arbv1.ResourceTypePod {
+		  		template, err := qjrPod.GetPodTemplate(&ar)
+		  		if err != nil {
+		  			glog.Errorf("Can not parse pod template in item: %+v error: %+v.  Aggregated resources set to 0.", ar, err)
+		  		} else {
+					total = total.Add(queuejobresources.GetPodResources(template))
+		  		}
+		  	}
+		}
+	}
+	return total
 }
 
 func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, qjobRes *arbv1.AppWrapperResource) *corev1.Pod {
 	templateCopy, err := qjrPod.GetPodTemplate(qjobRes)
 
 	if err != nil {
-		glog.Errorf("Can not parse pod template in job: %+v, item: %+v error: %+v.", qj, qjobRes, err)
+		glog.Errorf("Can not parse PodTemplate in job: %+v, item: %+v error: %+v.", qj, qjobRes, err)
 		return nil
 	}
 	podName := fmt.Sprintf("%s-%d-%s", qj.Name, ix, generateUUID())
 
-	glog.Infof("I have template copy for the pod %+v", templateCopy)
+	glog.Infof("Template copy for the pod %+v", templateCopy)
 
 	tmpl := templateCopy.Labels
 

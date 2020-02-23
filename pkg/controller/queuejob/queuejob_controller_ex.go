@@ -432,7 +432,7 @@ func GetPodTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.PodTemplateSpec, err
 
 	template, ok := obj.(*v1.PodTemplate)
 	if !ok {
-		return nil, fmt.Errorf("Queuejob resource template not define a Pod")
+		return nil, fmt.Errorf("Resource template not define a PodTemplate")
 	}
 
 	return &template.Template, nil
