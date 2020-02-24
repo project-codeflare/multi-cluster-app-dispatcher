@@ -77,7 +77,7 @@ function kind-up-cluster {
 
 # clean up
 function cleanup {
-    echo "Cleaning up..."
+    echo "==========================>>>>> Cleaning up... <<<<<=========================="
     echo " "
 
     echo "Custom Resource Definitions..."
@@ -104,7 +104,7 @@ function cleanup {
     kind delete cluster ${CLUSTER_CONTEXT}
 }
 
-function kube-batch-up {
+function kube-test-env-up {
     cd ${ROOT_DIR}
 
     export KUBECONFIG="$(kind get kubeconfig-path ${CLUSTER_CONTEXT})"
@@ -165,9 +165,9 @@ trap cleanup EXIT
 
 kind-up-cluster
 
-kube-batch-up
+kube-test-env-up
 
 cd ${ROOT_DIR}
 
-echo "Running E2E tests..."
+echo "==========================>>>>> Running E2E tests... <<<<<=========================="
 go test ./test/e2e -v -timeout 30m
