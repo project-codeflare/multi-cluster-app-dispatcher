@@ -30,6 +30,10 @@ type ServerOption struct {
 	Dispatcher	bool
 	AgentConfigs 	string
 	SecurePort	int
+	DynamicPriority	bool  // If DynamicPriority=true then no preemption is allowed by program logic
+	Preemption 		bool  // Preemption is not allowed under DynamicPriority
+	SendUpdate		bool  // Send QueueJobStatus Updatae() to Etcd.  Not essential for Controller functions
+	Demo	bool  // Demo: add delay after moving HeadOfLine job to eventQueue, before examine qjqueue again
 }
 
 // NewServerOption creates a new CMServer with a default config.
@@ -48,6 +52,10 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.Kubeconfig, "kubeconfig", s.Kubeconfig, "Path to kubeconfig file with authorization and master location information.")
 	fs.BoolVar(&s.Dispatcher,"dispatcher",s.Dispatcher,"set dispather mode(true) or agent mode(false)")
 	fs.StringVar(&s.AgentConfigs, "agentconfigs", s.AgentConfigs, "Paths to agent config file:deploymentName separted by commas(,)")
+	fs.BoolVar(&s.DynamicPriority,"dynamicpriority", s.DynamicPriority,"--dynamicpriority=false/true")
+	fs.BoolVar(&s.Preemption,"preemption", s.Preemption,"--preemption=false/true")
+	fs.BoolVar(&s.SendUpdate,"sendupdate", s.SendUpdate,"--sendupdate=false/true")
+	fs.BoolVar(&s.Demo,"demo", s.Demo,"--demo=false/true")
 //	fs.IntVar(&s.SecurePort, "secure-port", 6443, "The port on which to serve secured, uthenticated access for metrics.")
 }
 
@@ -59,6 +67,30 @@ func (s *ServerOption) loadDefaultsFromEnvVars() {
 	s.Dispatcher = false
 	if envVarExists && strings.EqualFold(dispatcherMode, "true") {
 		s.Dispatcher = true
+	}
+
+	dynamicpriority, envVarExists := os.LookupEnv("DYNAMICPRIORITY")
+	s.DynamicPriority = false
+	if envVarExists && strings.EqualFold(dynamicpriority, "true") {
+		s.DynamicPriority = true
+	}
+
+	preemption, envVarExists := os.LookupEnv("PREEMPTION")
+	s.Preemption = false
+	if envVarExists && strings.EqualFold(preemption, "true") {
+		s.Preemption = true
+	}
+
+	sendupdate, envVarExists := os.LookupEnv("SENDUPDATE")
+	s.SendUpdate = false
+	if envVarExists && strings.EqualFold(sendupdate, "true") {
+		s.SendUpdate = true
+	}
+
+	demo, envVarExists := os.LookupEnv("DEMO")
+	s.Demo = false
+	if envVarExists && strings.EqualFold(demo, "true") {
+		s.Demo = true
 	}
 }
 
