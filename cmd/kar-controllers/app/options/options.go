@@ -52,10 +52,10 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.Kubeconfig, "kubeconfig", s.Kubeconfig, "Path to kubeconfig file with authorization and master location information.")
 	fs.BoolVar(&s.Dispatcher,"dispatcher",s.Dispatcher,"set dispather mode(true) or agent mode(false)")
 	fs.StringVar(&s.AgentConfigs, "agentconfigs", s.AgentConfigs, "Paths to agent config file:deploymentName separted by commas(,)")
-	fs.BoolVar(&s.DynamicPriority,"dynamicpriority", s.DynamicPriority,"--dynamicpriority=false/true")
-	fs.BoolVar(&s.Preemption,"preemption", s.Preemption,"--preemption=false/true")
-	fs.BoolVar(&s.SendUpdate,"sendupdate", s.SendUpdate,"--sendupdate=false/true")
-	fs.BoolVar(&s.Demo,"demo", s.Demo,"--demo=false/true")
+	fs.BoolVar(&s.DynamicPriority,"dynamicpriority", s.DynamicPriority,"--dynamicpriority=false/true set controller use dynamic priority")
+	fs.BoolVar(&s.Preemption,"preemption", s.Preemption,"--preemption=false/true set controller to allow preemption")
+	fs.BoolVar(&s.SendUpdate,"sendupdate", s.SendUpdate,"--sendupdate=false/true send job status updates to Etcd")
+	fs.BoolVar(&s.Demo,"demo", s.Demo,"--demo=false/true set demo mode making controller acts in slow motion")
 //	fs.IntVar(&s.SecurePort, "secure-port", 6443, "The port on which to serve secured, uthenticated access for metrics.")
 }
 
