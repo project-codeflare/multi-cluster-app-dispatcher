@@ -31,9 +31,9 @@ type ServerOption struct {
 	AgentConfigs 	string
 	SecurePort	int
 	DynamicPriority	bool  // If DynamicPriority=true then no preemption is allowed by program logic
-	Preemption 		bool  // Preemption is not allowed under DynamicPriority
-	SendUpdate		bool  // Send QueueJobStatus Updatae() to Etcd.  Not essential for Controller functions
-	Demo	bool  // Demo: add delay after moving HeadOfLine job to eventQueue, before examine qjqueue again
+	Preemption 	bool  // Preemption is not allowed under DynamicPriority
+	SendUpdate	bool  // Send QueueJobStatus Update() to Etcd.  Not essential for Controller functions
+	Demo		bool  // Demo: add delay after moving HeadOfLine job to eventQueue, before examine qjqueue again
 }
 
 // NewServerOption creates a new CMServer with a default config.
