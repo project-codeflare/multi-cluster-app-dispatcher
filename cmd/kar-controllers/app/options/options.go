@@ -50,7 +50,7 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.Kubeconfig, "kubeconfig", s.Kubeconfig, "Path to kubeconfig file with authorization and master location information.")
 	fs.BoolVar(&s.Dispatcher,"dispatcher",s.Dispatcher,"set dispather mode(true) or agent mode(false)")
 	fs.StringVar(&s.AgentConfigs, "agentconfigs", s.AgentConfigs, "Paths to agent config file:deploymentName separted by commas(,)")
-	fs.BoolVar(&s.DynamicPriority,"dynamicpriority", s.DynamicPriority,"If true set controller to use dynamic priority. If false, set controller to use static priority.  Default is false.")
+	fs.BoolVar(&s.DynamicPriority,"dynamicpriority", s.DynamicPriority,"If true, set controller to use dynamic priority. If false, set controller to use static priority.  Default is false.")
 	fs.BoolVar(&s.Preemption,"preemption", s.Preemption,"Set controller to allow preemption if set to true. Note: when set to true, the Kubernetes Scheduler must be configured to enable preemption.  Default is false.")
 //	fs.IntVar(&s.SecurePort, "secure-port", 6443, "The port on which to serve secured, uthenticated access for metrics.")
 }
