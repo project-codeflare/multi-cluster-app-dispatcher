@@ -32,8 +32,6 @@ type ServerOption struct {
 	SecurePort	int
 	DynamicPriority	bool  // If DynamicPriority=true then no preemption is allowed by program logic
 	Preemption 	bool  // Preemption is not allowed under DynamicPriority
-	SendUpdate	bool  // Send QueueJobStatus Update() to Etcd.  Not essential for Controller functions
-	Demo		bool  // Demo: add delay after moving HeadOfLine job to eventQueue, before examine qjqueue again
 }
 
 // NewServerOption creates a new CMServer with a default config.
@@ -54,8 +52,6 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.AgentConfigs, "agentconfigs", s.AgentConfigs, "Paths to agent config file:deploymentName separted by commas(,)")
 	fs.BoolVar(&s.DynamicPriority,"dynamicpriority", s.DynamicPriority,"--dynamicpriority=false/true set controller use dynamic priority")
 	fs.BoolVar(&s.Preemption,"preemption", s.Preemption,"--preemption=false/true set controller to allow preemption")
-	fs.BoolVar(&s.SendUpdate,"sendupdate", s.SendUpdate,"--sendupdate=false/true send job status updates to Etcd")
-	fs.BoolVar(&s.Demo,"demo", s.Demo,"--demo=false/true set demo mode making controller acts in slow motion")
 //	fs.IntVar(&s.SecurePort, "secure-port", 6443, "The port on which to serve secured, uthenticated access for metrics.")
 }
 
@@ -79,18 +75,6 @@ func (s *ServerOption) loadDefaultsFromEnvVars() {
 	s.Preemption = false
 	if envVarExists && strings.EqualFold(preemption, "true") {
 		s.Preemption = true
-	}
-
-	sendupdate, envVarExists := os.LookupEnv("SENDUPDATE")
-	s.SendUpdate = false
-	if envVarExists && strings.EqualFold(sendupdate, "true") {
-		s.SendUpdate = true
-	}
-
-	demo, envVarExists := os.LookupEnv("DEMO")
-	s.Demo = false
-	if envVarExists && strings.EqualFold(demo, "true") {
-		s.Demo = true
 	}
 }
 
