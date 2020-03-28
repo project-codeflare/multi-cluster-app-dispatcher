@@ -23,6 +23,8 @@ script:
 #  - make
   - make mcad-controller
   - make run-test
-  - make images
-  - make push-images
+  - 'if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then dockerhub_repository="" && make images; fi'
+  - 'if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then make images; fi'
+  - 'if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then make push-images; fi'
+  dockerhub_repository
   - make run-e2e
