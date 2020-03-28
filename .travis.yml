@@ -23,7 +23,6 @@ script:
 #  - make
   - make mcad-controller
   - make run-test
-  - make images
   # Process 'make images' when NOT a pull request
   - 'if [ "$TRAVIS_PULL_REQUEST"  = "false" ]; then make images; fi'
   # Process 'make images' when running as a pull request
