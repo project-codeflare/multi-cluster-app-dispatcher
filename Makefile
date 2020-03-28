@@ -38,7 +38,7 @@ ifeq ($(strip $(dockerhub_repository)),)
 	$(info variables do not need to be set for github Travis CICD.)
 else
 	$(info Log into dockerhub)
-	echo ${dockerhub_token} | docker login -u ${dockerhub_id} --password-stdin
+	docker login -u ${dockerhub_id} --password ${dockerhub_token}
 	$(info Tag the latest image)
 	docker tag mcad-controller:${RELEASE_VER}  ${dockerhub_repository}/mcad-controller:${RELEASE_VER}
 	$(info Push the docker image to registry)
