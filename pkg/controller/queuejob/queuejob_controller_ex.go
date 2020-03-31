@@ -18,6 +18,7 @@ package queuejob
 
 import (
 	"fmt"
+	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	"github.com/golang/glog"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter"
 	"math/rand"
@@ -82,6 +83,7 @@ var controllerKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
 //XController the AppWrapper Controller type
 type XController struct {
 	config           *rest.Config
+	serverOption *options.ServerOption
 	queueJobInformer informersv1.AppWrapperInformer
 	// resources registered for the AppWrapper
 	qjobRegisteredResources queuejobresources.RegisteredResources
@@ -177,7 +179,7 @@ func GetQueueJobKey(obj interface{}) (string, error) {
 }
 
 //NewJobController create new AppWrapper Controller
-func NewJobController(config *rest.Config, schedulerName string, isDispatcher bool, agentconfigs string) *XController {
+func NewJobController(config *rest.Config, serverOption *options.ServerOption) *XController {
 	cc := &XController{
 		config:				config,
 		clients:			kubernetes.NewForConfigOrDie(config),
@@ -188,6 +190,7 @@ func NewJobController(config *rest.Config, schedulerName string, isDispatcher bo
 		updateQueue:		cache.NewFIFO(GetQueueJobKey),
 		qjqueue:			NewSchedulingQueue(),
 		cache: 				clusterstatecache.New(config),
+		serverOption:		serverOption,
 	}
 	cc.metricsAdapter =  adapter.New(config, cc.cache)
 
@@ -341,8 +344,8 @@ func NewJobController(config *rest.Config, schedulerName string, isDispatcher bo
 	cc.refManager = queuejobresources.NewLabelRefManager()
 
 	// Set dispatcher mode or agent mode
-	cc.isDispatcher=isDispatcher
-	if isDispatcher {
+	cc.isDispatcher=serverOption.Dispatcher
+	if cc.isDispatcher {
 		glog.Infof("[Controller] Dispatcher mode")
  	}	else {
 		glog.Infof("[Controller] Agent mode")
@@ -351,13 +354,13 @@ func NewJobController(config *rest.Config, schedulerName string, isDispatcher bo
 	//create agents and agentMap
 	cc.agentMap=map[string]*queuejobdispatch.JobClusterAgent{}
 	cc.agentList=[]string{}
-	for _, agentconfig := range strings.Split(agentconfigs,",") {
+	for _, agentconfig := range strings.Split(serverOption.AgentConfigs,",") {
 		agentData := strings.Split(agentconfig,":")
 		cc.agentMap["/root/kubernetes/" + agentData[0]]=queuejobdispatch.NewJobClusterAgent(agentconfig, cc.agentEventQueue)
 		cc.agentList=append(cc.agentList, "/root/kubernetes/" + agentData[0])
 	}
 
-	if isDispatcher && len(cc.agentMap)==0 {
+	if cc.isDispatcher && len(cc.agentMap)==0 {
 		glog.Errorf("Dispatcher mode: no agent information")
 		return nil
 	}

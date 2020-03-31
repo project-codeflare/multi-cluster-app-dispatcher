@@ -44,7 +44,7 @@ func Run(opt *options.ServerOption) error {
 	config.QPS   = 100.0
 	config.Burst = 200.0
 
-	jobctrl := queuejob.NewJobController(config, opt.SchedulerName, opt.Dispatcher, opt.AgentConfigs)
+	jobctrl := queuejob.NewJobController(config, opt)
 	if jobctrl ==nil {
 		return nil
 	}
