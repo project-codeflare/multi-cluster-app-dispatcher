@@ -41,8 +41,10 @@ func Run(opt *options.ServerOption) error {
 
 	neverStop := make(chan struct{})
 
-	queuejobctrl := queuejob.NewQueueJobController(config)
-	queuejobctrl.Run(neverStop)
+	config.QPS   = 100.0
+	config.Burst = 200.0
+//	queuejobctrl := queuejob.NewQueueJobController(config)
+//	queuejobctrl.Run(neverStop)
 
 	jobctrl := queuejob.NewJobController(config, opt.SchedulerName, opt.Dispatcher, opt.AgentConfigs)
 	if jobctrl ==nil {
