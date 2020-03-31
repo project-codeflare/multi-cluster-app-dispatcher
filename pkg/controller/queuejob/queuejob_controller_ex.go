@@ -83,7 +83,7 @@ var controllerKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
 //XController the AppWrapper Controller type
 type XController struct {
 	config           *rest.Config
-	serverOption *options.ServerOption
+	serverOption     *options.ServerOption
 	queueJobInformer informersv1.AppWrapperInformer
 	// resources registered for the AppWrapper
 	qjobRegisteredResources queuejobresources.RegisteredResources
