@@ -84,6 +84,7 @@ var controllerKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
 type XController struct {
 	config           *rest.Config
 	serverOption     *options.ServerOption
+
 	queueJobInformer informersv1.AppWrapperInformer
 	// resources registered for the AppWrapper
 	qjobRegisteredResources queuejobresources.RegisteredResources
@@ -181,16 +182,16 @@ func GetQueueJobKey(obj interface{}) (string, error) {
 //NewJobController create new AppWrapper Controller
 func NewJobController(config *rest.Config, serverOption *options.ServerOption) *XController {
 	cc := &XController{
-		config:				config,
-		clients:			kubernetes.NewForConfigOrDie(config),
+		config:			config,
+		serverOption:		serverOption,
+		clients:		kubernetes.NewForConfigOrDie(config),
 		arbclients:  		clientset.NewForConfigOrDie(config),
 		eventQueue:  		cache.NewFIFO(GetQueueJobKey),
 		agentEventQueue:	cache.NewFIFO(GetQueueJobKey),
-		initQueue:	 		cache.NewFIFO(GetQueueJobKey),
+		initQueue: 		cache.NewFIFO(GetQueueJobKey),
 		updateQueue:		cache.NewFIFO(GetQueueJobKey),
-		qjqueue:			NewSchedulingQueue(),
-		cache: 				clusterstatecache.New(config),
-		serverOption:		serverOption,
+		qjqueue:		NewSchedulingQueue(),
+		cache: 			clusterstatecache.New(config),
 	}
 	cc.metricsAdapter =  adapter.New(config, cc.cache)
 
