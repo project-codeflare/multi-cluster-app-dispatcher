@@ -72,9 +72,6 @@ const (
 
 	// ControllerUIDLabel label string for queuejob controller uid
 	ControllerUIDLabel string = "controller-uid"
-
-	initialGetBackoff = 30 * time.Second
-
 )
 
 // controllerKind contains the schema.GroupVersionKind for this controller type.
@@ -625,7 +622,7 @@ func (qjm *XController) ScheduleNext() {
 
 func (qjm *XController) backoff(q *arbv1.AppWrapper) {
 	qjm.qjqueue.AddUnschedulableIfNotPresent(q)
-	time.Sleep(initialGetBackoff)
+	time.Sleep(time.Duration(qjm.serverOption.BackoffTime) * time.Second)
 	qjm.qjqueue.MoveToActiveQueueIfExists(q)
 }
 

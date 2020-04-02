@@ -48,6 +48,7 @@ type AppWrapperList struct {
 // AppWrapperSpec describes how the App Wrapper will look like.
 type AppWrapperSpec struct {
 	Priority      int                    `json:"priority,omitempty"`
+	PrioritySlope float64                `json:"priorityslope,omitempty"`
 	Service       AppWrapperService      `json:"service"`
 	AggrResources AppWrapperResourceList `json:"resources"`
 
@@ -78,6 +79,9 @@ type AppWrapperResource struct {
 	// The priority of this resource
 	Priority float64 `json:"priority"`
 
+	// The increasing rate of priority value for this resource
+	PrioritySlope float64 `json:"priorityslope"`
+
 	//The type of the resource (is the resource a Pod, a ReplicaSet, a ... ?)
 	Type ResourceType `json:"type"`
 
@@ -103,8 +107,8 @@ const (
 	ResourceTypeStatefulSet 			ResourceType = "StatefulSet"
 	ResourceTypeDeployment  			ResourceType = "Deployment"
 	ResourceTypeReplicaSet  			ResourceType = "ReplicaSet"
-	ResourceTypePersistentVolume		ResourceType = "PersistentVolume"
-	ResourceTypePersistentVolumeClaim	ResourceType = "PersistentVolumeClaim"
+	ResourceTypePersistentVolume			ResourceType = "PersistentVolume"
+	ResourceTypePersistentVolumeClaim		ResourceType = "PersistentVolumeClaim"
 	ResourceTypeNamespace				ResourceType = "Namespace"
 	ResourceTypeConfigMap				ResourceType = "ConfigMap"
 	ResourceTypeNetworkPolicy			ResourceType = "NetworkPolicy"
@@ -141,6 +145,24 @@ type AppWrapperStatus struct {
 	State AppWrapperState `json:"state,omitempty"`
 
 	Message string `json:"message,omitempty"`
+
+	// System defined Priority
+	SystemPriority float64 `json:"systempriority,omitempty"`
+
+	// State of QueueJob - Init, Queueing, HeadOfLine, Rejoining, ...
+	QueueJobState QueueJobState `json:"queuejobstate,omitempty"`
+
+	// Timestamp when controller first sees QueueJob (by Informer)
+	ControllerFirstTimestamp metav1.Time `json:"controllerfirsttimestamp,omitempty"`
+
+	// Tell Informer to ignore this update message (do not generate a controller event)
+	FilterIgnore bool `json:"filterignore,omitempty"`
+
+	// Indicate sender of this message (extremely useful for debugging)
+	Sender string `json:"sender,omitempty"`
+
+	// Indicate if message is a duplicate (for Informer to recognize duplicate messages)
+	Local bool `json:"local,omitempty"`
 }
 
 type AppWrapperState string
@@ -151,4 +173,17 @@ const (
 	AppWrapperStateActive   AppWrapperState = "Running"
 	AppWrapperStateDeleted  AppWrapperState = "Deleted"
 	AppWrapperStateFailed   AppWrapperState = "Failed"
+)
+
+type QueueJobState string
+
+const (
+	QueueJobStateInit       QueueJobState = "Init"
+	QueueJobStateQueueing   QueueJobState = "Queueing"
+	QueueJobStateHeadOfLine QueueJobState = "HeadOfLine"
+	QueueJobStateRejoining  QueueJobState = "Rejoining"
+	QueueJobStateDispatched QueueJobState = "Dispatched"
+	QueueJobStateRunning    QueueJobState = "Running"
+	QueueJobStateDeleted    QueueJobState = "Deleted"
+	QueueJobStateFailed     QueueJobState = "Failed"
 )
