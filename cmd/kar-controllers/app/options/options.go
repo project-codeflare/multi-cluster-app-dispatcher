@@ -19,19 +19,24 @@ package options
 import (
 	"github.com/spf13/pflag"
 	"os"
+	"strconv"
 	"strings"
 )
 
 // ServerOption is the main context object for the controller manager.
 type ServerOption struct {
-	Master		string
-	Kubeconfig	string
-	SchedulerName 	string
-	Dispatcher	bool
-	AgentConfigs 	string
-	SecurePort	int
-	DynamicPriority	bool  // If DynamicPriority=true then no preemption is allowed by program logic
-	Preemption 	bool  // Preemption is not allowed under DynamicPriority
+	Master			string
+	Kubeconfig		string
+	SchedulerName 		string
+	Dispatcher		bool
+	AgentConfigs 		string
+	SecurePort		int
+	DynamicPriority		bool  // If DynamicPriority=true then no preemption is allowed by program logic
+	Preemption 		bool  // Preemption is not allowed under DynamicPriority
+	BackoffTime		int   // Number of seconds a job will go away for, if it can not be scheduled.  Default is 20.
+	// Head of line job will not be bumped away for at least HeadOfLineHoldingTime seconds by higher priority jobs.
+	// Default setting to 0 disables this mechanism.
+	HeadOfLineHoldingTime	int
 }
 
 // NewServerOption creates a new CMServer with a default config.
@@ -52,6 +57,8 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.AgentConfigs, "agentconfigs", s.AgentConfigs, "Paths to agent config file:deploymentName separted by commas(,)")
 	fs.BoolVar(&s.DynamicPriority,"dynamicpriority", s.DynamicPriority,"If true, set controller to use dynamic priority. If false, set controller to use static priority.  Default is false.")
 	fs.BoolVar(&s.Preemption,"preemption", s.Preemption,"Set controller to allow preemption if set to true. Note: when set to true, the Kubernetes Scheduler must be configured to enable preemption.  Default is false.")
+	fs.IntVar(&s.BackoffTime,"backofftime", s.BackoffTime,"Number of seconds a job will go away for, if it can not be scheduled.  Default is 20.")
+	fs.IntVar(&s.HeadOfLineHoldingTime,"headoflineholdingtime", s.HeadOfLineHoldingTime,"Number of seconds a job can stay at the Head Of Line without being bumped.  Default is 0.")
 //	fs.IntVar(&s.SecurePort, "secure-port", 6443, "The port on which to serve secured, uthenticated access for metrics.")
 }
 
@@ -75,6 +82,24 @@ func (s *ServerOption) loadDefaultsFromEnvVars() {
 	s.Preemption = false
 	if envVarExists && strings.EqualFold(preemption, "true") {
 		s.Preemption = true
+	}
+
+	backoffString, envVarExists := os.LookupEnv("BACKOFFTIME")
+	s.BackoffTime = 20
+	if envVarExists {
+		backoffInt, err := strconv.Atoi(backoffString)
+		if err == nil {
+			s.BackoffTime = backoffInt
+		}
+	}
+
+	holString, envVarExists := os.LookupEnv("HEADOFLINEHOLDINGTIME")
+	s.HeadOfLineHoldingTime = 0
+	if envVarExists {
+		holInt, err := strconv.Atoi(holString)
+		if err == nil {
+			s.HeadOfLineHoldingTime = holInt
+		}
 	}
 }
 
