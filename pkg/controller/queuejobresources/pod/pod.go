@@ -327,18 +327,10 @@ func (qjrPod *QueueJobResPod) manageQueueJob(qj *arbv1.AppWrapper, pods []*v1.Po
 		}
 	}
 
-	old_flag := qj.Status.CanRun
-	old_flag_2 := qj.Status.IsDispatched
-	qj.Status = arbv1.AppWrapperStatus{
-		Pending:      pending,
-		Running:      running,
-		Succeeded:    succeeded,
-		Failed:       failed,
-		MinAvailable: int32(qj.Spec.SchedSpec.MinAvailable),
-	}
-
-	qj.Status.CanRun = old_flag
-	qj.Status.IsDispatched=old_flag_2
+	qj.Status.Pending   = pending
+	qj.Status.Running   = running
+	qj.Status.Succeeded = succeeded
+	qj.Status.Failed    = failed
 	return err
 }
 
