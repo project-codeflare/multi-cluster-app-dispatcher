@@ -1039,7 +1039,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 
 //Cleanup function
 func (cc *XController) Cleanup(queuejob *arbv1.AppWrapper) error {
-	glog.V(4).Infof("Calling cleanup for AppWrapper %s \n", queuejob.Name)
+	glog.V(4).Infof("[Cleanup] begin AppWrapper %s version=%s Status=%+v\n", queuejob.Name, queuejob.ResourceVersion, queuejob.Status)
 
 	if !cc.isDispatcher {
 		if queuejob.Spec.AggrResources.Items != nil {
@@ -1058,15 +1058,11 @@ func (cc *XController) Cleanup(queuejob *arbv1.AppWrapper) error {
 		}
 	}
 
-	old_flag := queuejob.Status.CanRun
-	queuejob.Status = arbv1.AppWrapperStatus{
-                Pending:      0,
-                Running:      0,
-                Succeeded:    0,
-                Failed:       0,
-                MinAvailable: int32(queuejob.Spec.SchedSpec.MinAvailable),
-	}
-	queuejob.Status.CanRun = old_flag
+	queuejob.Status.Pending      = 0
+	queuejob.Status.Running      = 0
+	queuejob.Status.Succeeded    = 0
+	queuejob.Status.Failed       = 0
+	glog.V(10).Infof("[Cleanup] end   AppWrapper %s version=%s Status=%+v\n", queuejob.Name, queuejob.ResourceVersion, queuejob.Status)
 
 	return nil
 }
