@@ -603,18 +603,24 @@ func (qjm *XController) ScheduleNext() {
 			if e != nil {
 				return
 			}
+			if larger(apiQueueJob.ResourceVersion, qj.ResourceVersion) {
+				glog.V(10).Infof("[ScheduleNext] %s found more recent copy from cache          &qj=%p          qj=%+v", qj.Name, qj, qj)
+				glog.V(10).Infof("[ScheduleNext] %s found more recent copy from cache &apiQueueJob=%p apiQueueJob=%+v", apiQueueJob.Name, apiQueueJob, apiQueueJob)
+				apiQueueJob.DeepCopyInto(qj)
+			}
 			desired := int32(0)
-			for i, ar := range apiQueueJob.Spec.AggrResources.Items {
+			for i, ar := range qj.Spec.AggrResources.Items {
 				desired += ar.Replicas
-				apiQueueJob.Spec.AggrResources.Items[i].AllocatedReplicas = ar.Replicas
+				qj.Spec.AggrResources.Items[i].AllocatedReplicas = ar.Replicas
 			}
 			glog.V(10).Infof("[TTime]%s:  %s, ScheduleNextBeforeEtcd duration timestamp: %s", time.Now().String(), qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
-			apiQueueJob.Status.CanRun = true
+//			apiQueueJob.Status.CanRun = true
 			qj.Status.CanRun = true
-			if _, err := qjm.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(apiQueueJob); err != nil {
-													glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
-																	qj.Namespace, qj.Name, err)
-			}
+//			if _, err := qjm.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(apiQueueJob); err != nil {
+//				glog.Errorf("Failed to update status of AppWrapper %v/%v: %v", qj.Namespace, qj.Name, err)
+//			}
+			qj.Status.FilterIgnore = false   // update CanRun & Spec
+			qjm.updateEtcd(qj, "[ScheduleNext]setCanRun")
 			glog.V(10).Infof("[TTime]%s: %s, ScheduleNextAfterEtcd duration timestamp: %s", time.Now().String(), qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 		} else {
 			// start thread to backoff
@@ -623,6 +629,21 @@ func (qjm *XController) ScheduleNext() {
 	}
 }
 
+// Update AppWrappers in etcd
+func (cc *XController) updateEtcd(qj *arbv1.AppWrapper, at string) error {
+	qj.Status.Sender = "before "+ at  // set Sender string to indicate code location
+	qj.Status.Local  = false  // for Informer FilterFunc to pickup
+	if qjj, err := cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj); err != nil {
+		glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s at %s %v qj=%+v", qj.Name, at, err, qj)
+		return err
+	} else {  // qjj should be the same as qj except with newer ResourceVersion
+		qj.ResourceVersion = qjj.ResourceVersion  // update new ResourceVersion from etcd
+	}
+	glog.V(10).Infof("[updateEtcd] AppWrapperUpdate success %s at %s &qj=%p qj=%+v", qj.Name, at, qj, qj)
+	qj.Status.Local  = true   // for Informer FilterFunc to ignore duplicate
+	qj.Status.Sender = "after  "+ at  // set Sender string to indicate code location
+	return nil
+}
 
 func (qjm *XController) backoff(q *arbv1.AppWrapper) {
 	qjm.qjqueue.AddUnschedulableIfNotPresent(q)
