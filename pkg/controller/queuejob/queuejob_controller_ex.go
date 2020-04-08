@@ -613,7 +613,6 @@ func (qjm *XController) ScheduleNext() {
 				desired += ar.Replicas
 				qj.Spec.AggrResources.Items[i].AllocatedReplicas = ar.Replicas
 			}
-			glog.V(10).Infof("[TTime]%s:  %s, ScheduleNextBeforeEtcd duration timestamp: %s", time.Now().String(), qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 //			apiQueueJob.Status.CanRun = true
 			qj.Status.CanRun = true
 //			if _, err := qjm.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(apiQueueJob); err != nil {
@@ -621,7 +620,7 @@ func (qjm *XController) ScheduleNext() {
 //			}
 			qj.Status.FilterIgnore = false   // update CanRun & Spec
 			qjm.updateEtcd(qj, "[ScheduleNext]setCanRun")
-			glog.V(10).Infof("[TTime]%s: %s, ScheduleNextAfterEtcd duration timestamp: %s", time.Now().String(), qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
+			glog.V(4).Infof("[ScheduleNext] after HeadOfLine %s 2Delay=%s activeQ=%t, Unsched=%t Status=%+v", qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj.Status)
 		} else {
 			// start thread to backoff
 			go qjm.backoff(qj)
@@ -632,7 +631,7 @@ func (qjm *XController) ScheduleNext() {
 // Update AppWrappers in etcd
 func (cc *XController) updateEtcd(qj *arbv1.AppWrapper, at string) error {
 	qj.Status.Sender = "before "+ at  // set Sender string to indicate code location
-	qj.Status.Local  = false  // for Informer FilterFunc to pickup
+	qj.Status.Local  = false          // for Informer FilterFunc to pickup
 	if qjj, err := cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj); err != nil {
 		glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s at %s %v qj=%+v", qj.Name, at, err, qj)
 		return err
@@ -640,7 +639,7 @@ func (cc *XController) updateEtcd(qj *arbv1.AppWrapper, at string) error {
 		qj.ResourceVersion = qjj.ResourceVersion  // update new ResourceVersion from etcd
 	}
 	glog.V(10).Infof("[updateEtcd] AppWrapperUpdate success %s at %s &qj=%p qj=%+v", qj.Name, at, qj, qj)
-	qj.Status.Local  = true   // for Informer FilterFunc to ignore duplicate
+	qj.Status.Local  = true           // for Informer FilterFunc to ignore duplicate
 	qj.Status.Sender = "after  "+ at  // set Sender string to indicate code location
 	return nil
 }
@@ -963,7 +962,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 
 			qj.Status.State = arbv1.AppWrapperStateEnqueued
 			glog.V(10).Infof("[TTime] %s, %s: WorkerBeforeEtcd", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
-			_, err = cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj)
+/*			_, err = cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj)
 			if err != nil {
 				return err
 			}
@@ -971,7 +970,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 		}
 
 		if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued {
-			cc.qjqueue.AddIfNotPresent(qj)
+*/			cc.qjqueue.AddIfNotPresent(qj)
 			return nil
 		}
 
