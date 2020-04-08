@@ -735,7 +735,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 			qj.Name, qj.CreationTimestamp, qj.Status.ControllerFirstTimestamp, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time))
 	}
 	glog.V(10).Infof("[Informer-addQJ] %s &qj=%p  qj=%+v", qj.Name, qj, qj)
-	glog.V(4).Infof("[Informer-addQJ] enqueue QueueJob %s Status=%+v", qj.Name, qj.Status)
+	glog.V(4).Infof("[Informer-addQJ] enqueue %s Status=%+v", qj.Name, qj.Status)
 	cc.enqueue(qj)
 }
 
@@ -748,7 +748,7 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 	oldQJ, ok := oldObj.(*arbv1.AppWrapper)
 	if !ok {
 		glog.Errorf("[Informer-updateQJ] oldObj is not AppWrapper.  enqueue(newQJ).  oldObj=%+v", oldObj)
-		glog.V(10).Infof("[Informer-updateQJ] %s &newQJ=%p newQJ=%+v", newQJ.Name, newQJ, newQJ)
+		glog.V(4).Infof("[Informer-updateQJ] BadOld enqueue %s newQJ=%p newQJ=%+v", newQJ.Name, newQJ, newQJ)
 		cc.enqueue(newQJ)
 		return
 	}
@@ -758,7 +758,7 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 		glog.V(10).Infof("[Informer-updateQJ] ignore OutOfOrder arrival &newQJ=%p newQJ=%+v", newQJ, newQJ)
 		return
 	}
-	glog.V(10).Infof("[Informer-updateQJ] %s &newQJ=%p newQJ=%+v", newQJ.Name, newQJ, newQJ)
+	glog.V(4).Infof("[Informer-updateQJ] normal enqueue %s &newQJ=%p newQJ=%+v", newQJ.Name, newQJ, newQJ)
 	cc.enqueue(newQJ)
 }
 
@@ -997,6 +997,8 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 					glog.V(10).Infof("[Agent Controller] XQJ %s has Overhead Before Creating Resouces: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
 				}
 			}
+			glog.V(4).Infof("[worker-manageQJ] before dispatching to Etcd %s 3Delay=%s version=%s Status=%+v",
+				qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.ResourceVersion, qj.Status)
 			for _, ar := range qj.Spec.AggrResources.Items {
 				err00 := cc.qjobResControls[ar.Type].SyncQueueJob(qj, &ar)
 				if err00 != nil {
@@ -1012,9 +1014,13 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			}
 
 			// TODO(k82cn): replaced it with `UpdateStatus`
-			if _, err := cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj); err != nil {
-				glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
-					qj.Namespace, qj.Name, err)
+//			if _, err := cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj); err != nil {
+//				glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
+//					qj.Namespace, qj.Name, err)
+//				return err
+//			}
+			qj.Status.FilterIgnore = false  // keep original behavior
+			if err := cc.updateEtcd(qj, "[manageQueueJob]afterEtcdDispatching"); err != nil {
 				return err
 			}
 		} // Bugfix to eliminate performance problem of overloading the event queue.
