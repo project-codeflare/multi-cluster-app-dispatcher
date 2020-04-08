@@ -217,38 +217,29 @@ func (qjrPod *QueueJobResPod) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) e
 		},
 	}
 	selector, err := metav1.LabelSelectorAsSelector(sel)
-  if err != nil {
-          return fmt.Errorf("couldn't convert QueueJob selector: %v", err)
-  }
+	if err != nil {
+		return fmt.Errorf("couldn't convert QueueJob selector: %v", err)
+	}
 	// List all pods under QueueJob
 	// pods, errt := qjrPod.podStore.Pods(queuejob.Namespace).List(selector)
 	pods, errt := qjrPod.podStore.Pods("").List(selector)
 
-  if errt != nil {
-          return  errt
-  }
+	if errt != nil {
+		return  errt
+	}
 
 	running := int32(queuejobresources.FilterPods(pods, v1.PodRunning))
-  pending := int32(queuejobresources.FilterPods(pods, v1.PodPending))
-  succeeded := int32(queuejobresources.FilterPods(pods, v1.PodSucceeded))
-  failed := int32(queuejobresources.FilterPods(pods, v1.PodFailed))
+	pending := int32(queuejobresources.FilterPods(pods, v1.PodPending))
+	succeeded := int32(queuejobresources.FilterPods(pods, v1.PodSucceeded))
+	failed := int32(queuejobresources.FilterPods(pods, v1.PodFailed))
 
-  glog.Infof("There are %d pods of QueueJob %s:  pending %d, running %d, succeeded %d, failed %d",
-                len(pods), queuejob.Name,  pending, running, succeeded, failed)
+	glog.Infof("There are %d pods of QueueJob %s:  pending %d, running %d, succeeded %d, failed %d",
+		len(pods), queuejob.Name,  pending, running, succeeded, failed)
 
-	old_flag := queuejob.Status.CanRun
-	old_flag_2 := queuejob.Status.IsDispatched
-	old_state := queuejob.Status.State
-  queuejob.Status = arbv1.AppWrapperStatus{
-                Pending:      pending,
-                Running:      running,
-                Succeeded:    succeeded,
-                Failed:       failed,
-                MinAvailable: int32(queuejob.Spec.SchedSpec.MinAvailable),
-  }
-  queuejob.Status.CanRun = old_flag
-	queuejob.Status.State = old_state
-	queuejob.Status.IsDispatched= old_flag_2
+	queuejob.Status.Pending      = pending
+	queuejob.Status.Running      = running
+	queuejob.Status.Succeeded    = succeeded
+	queuejob.Status.Failed       = failed
 
 	return nil
 }
