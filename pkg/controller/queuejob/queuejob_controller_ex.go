@@ -613,18 +613,14 @@ func (qjm *XController) ScheduleNext() {
 				desired += ar.Replicas
 				qj.Spec.AggrResources.Items[i].AllocatedReplicas = ar.Replicas
 			}
-//			apiQueueJob.Status.CanRun = true
 			qj.Status.CanRun = true
-//			if _, err := qjm.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(apiQueueJob); err != nil {
-//				glog.Errorf("Failed to update status of AppWrapper %v/%v: %v", qj.Namespace, qj.Name, err)
-//			}
-			qj.Status.FilterIgnore = true   // update CanRun & Spec
+			qj.Status.FilterIgnore = true   // update CanRun & Spec.  no need to trigger event
 			qjm.updateEtcd(qj, "[ScheduleNext]setCanRun")
 			// add to eventQueue for dispatching to Etcd
-			if err := qjm.eventQueue.Add(qj); err != nil {
+			if err := qjm.eventQueue.Add(qj); err != nil {  // unsuccessful add to eventQueue, add back to activeQ
 				glog.Errorf("Fail to enqueue AppWrapper %s to eventQueue, back to activeQ. err %#v", qj.Name, err)
 				qjm.qjqueue.MoveToActiveQueueIfExists(qj)
-			} else {
+			} else {  // successful add to eventQueue, remove from qjqueue
 				qjm.qjqueue.Delete(qj)
 				glog.V(4).Infof("[ScheduleNext] after HeadOfLine %s 2Delay=%s activeQ=%t, Unsched=%t Status=%+v", qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj.Status)
 			}
@@ -735,11 +731,11 @@ func (cc *XController) addQueueJob(obj interface{}) {
 		qj.Status.ControllerFirstTimestamp = firstTime
 		qj.Status.SystemPriority = float64(qj.Spec.Priority)
 		qj.Status.QueueJobState  = arbv1.QueueJobStateInit
-		glog.V(4).Infof("[Informer-addQJ] %s CreationTimestamp=%s ControllerFirstTimestamp=%s 0Delay=%s",
-			qj.Name, qj.CreationTimestamp, qj.Status.ControllerFirstTimestamp, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time))
+		glog.V(4).Infof("[Informer-addQJ] %s 0Delay=%s CreationTimestamp=%s ControllerFirstTimestamp=%s",
+			qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.CreationTimestamp, qj.Status.ControllerFirstTimestamp)
 	} else {
-		glog.V(4).Infof("[Informer-addQJ] %s CreationTimestamp=%s ControllerFirstTimestamp=%s *Delay=%s",
-			qj.Name, qj.CreationTimestamp, qj.Status.ControllerFirstTimestamp, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time))
+		glog.V(4).Infof("[Informer-addQJ] %s *Delay=%s CreationTimestamp=%s ControllerFirstTimestamp=%s",
+			qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.CreationTimestamp, qj.Status.ControllerFirstTimestamp)
 	}
 	glog.V(10).Infof("[Informer-addQJ] %s &qj=%p  qj=%+v", qj.Name, qj, qj)
 	glog.V(4).Infof("[Informer-addQJ] enqueue %s Status=%+v", qj.Name, qj.Status)
@@ -968,22 +964,17 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			}
 
 			qj.Status.State = arbv1.AppWrapperStateEnqueued
-			glog.V(10).Infof("[TTime] %s, %s: WorkerBeforeEtcd", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
-/*			_, err = cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj)
-			if err != nil {
-				return err
-			}
+			qj.Status.QueueJobState  = arbv1.QueueJobStateQueueing
+			cc.qjqueue.AddIfNotPresent(qj)
+			glog.V(4).Infof("[worker-manageQJ] %s 1Delay=%s AfterAddToActiveQ version=%s activeQ=%t Unsched=%t Status=%+v",
+				qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.ResourceVersion, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj.Status)
+
 			return nil
 		}
 
-		if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued {
-*/			cc.qjqueue.AddIfNotPresent(qj)
-			return nil
-		}
-
-		is_first_deployment := false
+//		is_first_deployment := false
 		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive {
-			is_first_deployment = true
+//			is_first_deployment = true
 			qj.Status.State = arbv1.AppWrapperStateActive
 		// Bugfix to eliminate performance problem of overloading the event queue.}
 
@@ -997,36 +988,38 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 					}
 				}
 			}
-			if glog.V(10) {
-				if (is_first_deployment) {
-					current_time := time.Now()
-					glog.V(10).Infof("[TTime] %s, %s: WorkerBeforeCreatingResouces", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
-					glog.V(10).Infof("[Agent Controller] XQJ %s has Overhead Before Creating Resouces: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
-				}
-			}
-			glog.V(4).Infof("[worker-manageQJ] before dispatching to Etcd %s 3Delay=%s version=%s Status=%+v",
+//			if glog.V(10) {
+//				if (is_first_deployment) {
+//					current_time := time.Now()
+//					glog.V(10).Infof("[TTime] %s, %s: WorkerBeforeCreatingResouces", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
+//					glog.V(10).Infof("[Agent Controller] XQJ %s has Overhead Before Creating Resouces: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
+//				}
+//			}
+			glog.V(4).Infof("[worker-manageQJ] %s 3Delay=%s BeforeDispatchingToEtcd version=%s Status=%+v",
 				qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.ResourceVersion, qj.Status)
+			success := false
 			for _, ar := range qj.Spec.AggrResources.Items {
 				err00 := cc.qjobResControls[ar.Type].SyncQueueJob(qj, &ar)
 				if err00 != nil {
 					glog.V(4).Infof("Error from sync job: %v", err00)
+				} else {
+					success = true
 				}
 			}
-			if glog.V(10) {
-				if (is_first_deployment) {
-					current_time := time.Now()
-					glog.V(10).Infof("[TTime] %s, %s: WorkerAfterCreatingResouces", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
-					glog.V(10).Infof("[Agent Controller] XQJ %s has Overhead After Creating Resouces: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
-				}
+			if success { // set QueueJobStateRunning if at least one resource is successfully dispatched
+				qj.Status.QueueJobState = arbv1.QueueJobStateDispatched
+				glog.V(4).Infof("[worker-manageQJ] %s 4Delay=%s AtLeastOneResourceDispatchedToEtcd version=%s Status=%+v",
+					qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.ResourceVersion, qj.Status)
 			}
+//			if glog.V(10) {
+//				if (is_first_deployment) {
+//					current_time := time.Now()
+//					glog.V(10).Infof("[Agent Controller] XQJ %s has Overhead After Creating Resouces: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
+//				}
+//			}
 
 			// TODO(k82cn): replaced it with `UpdateStatus`
-//			if _, err := cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj); err != nil {
-//				glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
-//					qj.Namespace, qj.Name, err)
-//				return err
-//			}
-			qj.Status.FilterIgnore = false  // keep original behavior
+			qj.Status.FilterIgnore = true  // keep original behavior
 			if err := cc.updateEtcd(qj, "[manageQueueJob]afterEtcdDispatching"); err != nil {
 				return err
 			}
