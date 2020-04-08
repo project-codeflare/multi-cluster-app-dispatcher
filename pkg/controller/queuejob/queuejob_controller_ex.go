@@ -618,9 +618,16 @@ func (qjm *XController) ScheduleNext() {
 //			if _, err := qjm.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(apiQueueJob); err != nil {
 //				glog.Errorf("Failed to update status of AppWrapper %v/%v: %v", qj.Namespace, qj.Name, err)
 //			}
-			qj.Status.FilterIgnore = false   // update CanRun & Spec
+			qj.Status.FilterIgnore = true   // update CanRun & Spec
 			qjm.updateEtcd(qj, "[ScheduleNext]setCanRun")
-			glog.V(4).Infof("[ScheduleNext] after HeadOfLine %s 2Delay=%s activeQ=%t, Unsched=%t Status=%+v", qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj.Status)
+			// add to eventQueue for dispatching to Etcd
+			if err := qjm.eventQueue.Add(qj); err != nil {
+				glog.Errorf("Fail to enqueue AppWrapper %s to eventQueue, back to activeQ. err %#v", qj.Name, err)
+				qjm.qjqueue.MoveToActiveQueueIfExists(qj)
+			} else {
+				qjm.qjqueue.Delete(qj)
+				glog.V(4).Infof("[ScheduleNext] after HeadOfLine %s 2Delay=%s activeQ=%t, Unsched=%t Status=%+v", qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj.Status)
+			}
 		} else {
 			// start thread to backoff
 			go qjm.backoff(qj)
