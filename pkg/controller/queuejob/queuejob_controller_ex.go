@@ -322,8 +322,12 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 			FilterFunc: func(obj interface{}) bool {
 				switch t := obj.(type) {
 				case *arbv1.AppWrapper:
-					glog.V(4).Infof("Filter AppWrapper name(%s) namespace(%s) State:%+v\n", t.Name, t.Namespace,t.Status)
-					return true
+					glog.V(4).Infof("[Informer] Filter Name=%s Version=%s Local=%t FilterIgnore=%t Sender=%s &qj=%p qj=%+v", t.Name, t.ResourceVersion, t.Status.Local, t.Status.FilterIgnore, t.Status.Sender, t, t)
+					if t.Status.Local == true { // ignore duplicate message from cache
+						return false
+					}
+					t.Status.Local = true // another copy of this will be recognized as duplicate
+					return !t.Status.FilterIgnore  // ignore update messages
 				default:
 					return false
 				}
@@ -693,13 +697,25 @@ func (qjm *XController) UpdateQueueJobs() {
 }
 
 func (cc *XController) addQueueJob(obj interface{}) {
+	firstTime := metav1.Now()
 	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
 		glog.Errorf("obj is not AppWrapper")
 		return
 	}
-	glog.V(10).Infof("[TTime] %s, %s: AddedQueueJob delay: %s", time.Now().String(), qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
-	glog.V(4).Infof("QueueJob added - info -  %+v")
+	glog.V(10).Infof("[Informer-addQJ] %s &qj=%p  qj=%+v", qj.Name, qj, qj)
+	if qj.Status.QueueJobState == "" {
+		qj.Status.ControllerFirstTimestamp = firstTime
+		qj.Status.SystemPriority = float64(qj.Spec.Priority)
+		qj.Status.QueueJobState  = arbv1.QueueJobStateInit
+		glog.V(4).Infof("[Informer-addQJ] %s CreationTimestamp=%s ControllerFirstTimestamp=%s 0Delay=%s",
+			qj.Name, qj.CreationTimestamp, qj.Status.ControllerFirstTimestamp, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time))
+	} else {
+		glog.V(4).Infof("[Informer-addQJ] %s CreationTimestamp=%s ControllerFirstTimestamp=%s *Delay=%s",
+			qj.Name, qj.CreationTimestamp, qj.Status.ControllerFirstTimestamp, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time))
+	}
+	glog.V(10).Infof("[Informer-addQJ] %s &qj=%p  qj=%+v", qj.Name, qj, qj)
+	glog.V(4).Infof("[Informer-addQJ] enqueue QueueJob %s Status=%+v", qj.Name, qj.Status)
 	cc.enqueue(qj)
 }
 
@@ -709,8 +725,28 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 		glog.Errorf("newObj is not AppWrapper")
 		return
 	}
-	glog.V(10).Infof("[TTime] %s, %s: updateQueueJob delay: %s", time.Now().String(), newQJ.Name, time.Now().Sub(newQJ.CreationTimestamp.Time))
+	oldQJ, ok := oldObj.(*arbv1.AppWrapper)
+	if !ok {
+		glog.Errorf("[Informer-updateQJ] oldObj is not AppWrapper.  enqueue(newQJ).  oldObj=%+v", oldObj)
+		glog.V(10).Infof("[Informer-updateQJ] %s &newQJ=%p newQJ=%+v", newQJ.Name, newQJ, newQJ)
+		cc.enqueue(newQJ)
+		return
+	}
+	// AppWrappers may come out of order.  Ignore old ones.
+	if (oldQJ.Name == newQJ.Name) && (larger(oldQJ.ResourceVersion, newQJ.ResourceVersion)) {
+		glog.V(10).Infof("[Informer-updateQJ] ignore OutOfOrder arrival &oldQJ=%p oldQJ=%+v", oldQJ, oldQJ)
+		glog.V(10).Infof("[Informer-updateQJ] ignore OutOfOrder arrival &newQJ=%p newQJ=%+v", newQJ, newQJ)
+		return
+	}
+	glog.V(10).Infof("[Informer-updateQJ] %s &newQJ=%p newQJ=%+v", newQJ.Name, newQJ, newQJ)
 	cc.enqueue(newQJ)
+}
+
+// a, b arbitrary length numerical string.  returns true if a larger than b
+func larger (a, b string) bool {
+	if len(a) > len(b) { return true  } // Longer string is larger
+	if len(a) < len(b) { return false } // Longer string is larger
+	return a > b // Equal length, lexicographic order
 }
 
 func (cc *XController) deleteQueueJob(obj interface{}) {
