@@ -952,8 +952,6 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			//	Name(qj.Name).Body(qj).Do().Into(&result)
 		}
 
-		// glog.Infof("I have job with name %s status %+v ", qj.Name, qj.Status)
-
 		if !qj.Status.CanRun && (qj.Status.State != arbv1.AppWrapperStateEnqueued && qj.Status.State != arbv1.AppWrapperStateDeleted) {
 			// if there are running resources for this job then delete them because the job was put in
 			// pending state...
@@ -1019,7 +1017,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 //			}
 
 			// TODO(k82cn): replaced it with `UpdateStatus`
-			qj.Status.FilterIgnore = true  // keep original behavior
+			qj.Status.FilterIgnore = true  // update State & QueueJobState after dispatch
 			if err := cc.updateEtcd(qj, "[manageQueueJob]afterEtcdDispatching"); err != nil {
 				return err
 			}
