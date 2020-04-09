@@ -622,7 +622,7 @@ func (qjm *XController) ScheduleNext() {
 				qjm.qjqueue.MoveToActiveQueueIfExists(qj)
 			} else {  // successful add to eventQueue, remove from qjqueue
 				qjm.qjqueue.Delete(qj)
-				glog.V(4).Infof("[ScheduleNext] after HeadOfLine %s 2Delay=%s activeQ=%t, Unsched=%t Status=%+v", qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj.Status)
+				glog.V(4).Infof("[ScheduleNext] %s 2Delay=%s AfterHeadOfLine activeQ=%t, Unsched=%t version=%s Status=%+v", qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj.ResourceVersion, qj.Status)
 			}
 		} else {
 			// start thread to backoff
@@ -738,7 +738,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 			qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.CreationTimestamp, qj.Status.ControllerFirstTimestamp)
 	}
 	glog.V(10).Infof("[Informer-addQJ] %s &qj=%p  qj=%+v", qj.Name, qj, qj)
-	glog.V(4).Infof("[Informer-addQJ] enqueue %s Status=%+v", qj.Name, qj.Status)
+	glog.V(4).Infof("[Informer-addQJ] enqueue %s version=%s Status=%+v", qj.Name, qj.ResourceVersion, qj.Status)
 	cc.enqueue(qj)
 }
 
@@ -966,8 +966,8 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			qj.Status.State = arbv1.AppWrapperStateEnqueued
 			qj.Status.QueueJobState  = arbv1.QueueJobStateQueueing
 			cc.qjqueue.AddIfNotPresent(qj)
-			glog.V(4).Infof("[worker-manageQJ] %s 1Delay=%s AfterAddToActiveQ version=%s activeQ=%t Unsched=%t Status=%+v",
-				qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.ResourceVersion, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj.Status)
+			glog.V(4).Infof("[worker-manageQJ] %s 1Delay=%s AfterAddToActiveQ activeQ=%t Unsched=%t version=%s Status=%+v",
+				qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj.ResourceVersion, qj.Status)
 
 			return nil
 		}
