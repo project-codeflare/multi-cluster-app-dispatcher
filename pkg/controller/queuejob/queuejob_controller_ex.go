@@ -741,20 +741,20 @@ func (cc *XController) addQueueJob(obj interface{}) {
 			qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.CreationTimestamp, qj.Status.ControllerFirstTimestamp)
 	}
 	glog.V(10).Infof("[Informer-addQJ] %s &qj=%p  qj=%+v", qj.Name, qj, qj)
-	glog.V(4).Infof("[Informer-addQJ] enqueue %s &qj=%p version=%s Status=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status)
+	glog.V(4).Infof("[Informer-addQJ] enqueue %s &qj=%p Version=%s Status=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status)
 	cc.enqueue(qj)
 }
 
 func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 	newQJ, ok := newObj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("newObj is not AppWrapper")
+		glog.Errorf("[Informer-updateQJ] new object is not AppWrapper")
 		return
 	}
 	oldQJ, ok := oldObj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("[Informer-updateQJ] oldObj is not AppWrapper.  enqueue(newQJ).  oldObj=%+v", oldObj)
-		glog.V(4).Infof("[Informer-updateQJ] Bad_oldObj enqueue %s &newQJ=%p version=$s Status=%+v", newQJ.Name, newQJ, newQJ.ResourceVersion, newQJ.Status)
+		glog.Errorf("[Informer-updateQJ] old object is not AppWrapper.  enqueue(newQJ).  oldObj=%+v", oldObj)
+		glog.V(4).Infof("[Informer-updateQJ] BadOldObject enqueue %s &newQJ=%p Version=%s Status=%+v", newQJ.Name, newQJ, newQJ.ResourceVersion, newQJ.Status)
 		cc.enqueue(newQJ)
 		return
 	}
@@ -764,7 +764,7 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 		glog.V(10).Infof("[Informer-updateQJ] ignore OutOfOrder arrival &newQJ=%p newQJ=%+v", newQJ, newQJ)
 		return
 	}
-	glog.V(4).Infof("[Informer-updateQJ] normal enqueue %s &newQJ=%p version=$s Status=%+v", newQJ.Name, newQJ, newQJ.ResourceVersion, newQJ.Status)
+	glog.V(4).Infof("[Informer-updateQJ] normal enqueue %s &newQJ=%p Version=%s Status=%+v", newQJ.Name, newQJ, newQJ.ResourceVersion, newQJ.Status)
 	cc.enqueue(newQJ)
 }
 
@@ -967,7 +967,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			qj.Status.State = arbv1.AppWrapperStateEnqueued
 			qj.Status.QueueJobState  = arbv1.QueueJobStateQueueing
 			cc.qjqueue.AddIfNotPresent(qj)
-			glog.V(4).Infof("[worker-manageQJ] %s 1Delay=%s AfterAddToActiveQ activeQ=%t Unsched=%t version=%s Status=%+v",
+			glog.V(4).Infof("[worker-manageQJ] %s 1Delay=%s AfterAddToActiveQ activeQ=%t Unsched=%t Version=%s Status=%+v",
 				qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj.ResourceVersion, qj.Status)
 
 			return nil
@@ -989,21 +989,25 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 					}
 				}
 			}
-			glog.V(4).Infof("[worker-manageQJ] %s 3Delay=%s BeforeDispatchingToEtcd version=%s Status=%+v",
+			glog.V(4).Infof("[worker-manageQJ] %s 3Delay=%s BeforeDispatchingToEtcd Version=%s Status=%+v",
 				qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.ResourceVersion, qj.Status)
-			success := false
+			dispatched := true
 			for _, ar := range qj.Spec.AggrResources.Items {
 				err00 := cc.qjobResControls[ar.Type].SyncQueueJob(qj, &ar)
 				if err00 != nil {
-					glog.V(4).Infof("Error from sync job: %v", err00)
-				} else {
-					success = true
+					glog.V(4).Infof("[worker-manageQJ] Error dispatching job=%s type=%v Status=%+v err=%+v", qj.Name, ar.Type, qj.Status, err00)
+					dispatched = false
+					break
 				}
 			}
-			if success { // set QueueJobStateRunning if at least one resource is successfully dispatched
+			if dispatched { // set QueueJobStateRunning if all resources are successfully dispatched
 				qj.Status.QueueJobState = arbv1.QueueJobStateDispatched
-				glog.V(4).Infof("[worker-manageQJ] %s 4Delay=%s AtLeastOneResourceDispatchedToEtcd version=%s Status=%+v",
+				glog.V(4).Infof("[worker-manageQJ] %s 4Delay=%s AtLeastOneResourceDispatchedToEtcd Version=%s Status=%+v",
 					qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.ResourceVersion, qj.Status)
+			} else {
+				qj.Status.State = arbv1.AppWrapperStateFailed
+				qj.Status.QueueJobState = arbv1.QueueJobStateFailed
+				cc.Cleanup(qj)
 			}
 
 			// TODO(k82cn): replaced it with `UpdateStatus`
@@ -1089,7 +1093,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 
 //Cleanup function
 func (cc *XController) Cleanup(queuejob *arbv1.AppWrapper) error {
-	glog.V(4).Infof("[Cleanup] begin AppWrapper %s version=%s Status=%+v\n", queuejob.Name, queuejob.ResourceVersion, queuejob.Status)
+	glog.V(4).Infof("[Cleanup] begin AppWrapper %s Version=%s Status=%+v\n", queuejob.Name, queuejob.ResourceVersion, queuejob.Status)
 
 	if !cc.isDispatcher {
 		if queuejob.Spec.AggrResources.Items != nil {
@@ -1112,7 +1116,7 @@ func (cc *XController) Cleanup(queuejob *arbv1.AppWrapper) error {
 	queuejob.Status.Running      = 0
 	queuejob.Status.Succeeded    = 0
 	queuejob.Status.Failed       = 0
-	glog.V(4).Infof("[Cleanup] end   AppWrapper %s version=%s Status=%+v\n", queuejob.Name, queuejob.ResourceVersion, queuejob.Status)
+	glog.V(4).Infof("[Cleanup] end   AppWrapper %s Version=%s Status=%+v\n", queuejob.Name, queuejob.ResourceVersion, queuejob.Status)
 
 	return nil
 }
