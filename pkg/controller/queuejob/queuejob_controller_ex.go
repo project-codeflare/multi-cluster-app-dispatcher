@@ -323,6 +323,7 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 				switch t := obj.(type) {
 				case *arbv1.AppWrapper:
 					glog.V(4).Infof("[Informer] Filter Name=%s Version=%s Local=%t FilterIgnore=%t Sender=%s &qj=%p qj=%+v", t.Name, t.ResourceVersion, t.Status.Local, t.Status.FilterIgnore, t.Status.Sender, t, t)
+					// todo: This is a current workaround for duplicate message bug.
 					if t.Status.Local == true { // ignore duplicate message from cache
 						return false
 					}
@@ -603,6 +604,7 @@ func (qjm *XController) ScheduleNext() {
 			if e != nil {
 				return
 			}
+			// make sure qj has the latest information
 			if larger(apiQueueJob.ResourceVersion, qj.ResourceVersion) {
 				glog.V(10).Infof("[ScheduleNext] %s found more recent copy from cache          &qj=%p          qj=%+v", qj.Name, qj, qj)
 				glog.V(10).Infof("[ScheduleNext] %s found more recent copy from cache &apiQueueJob=%p apiQueueJob=%+v", apiQueueJob.Name, apiQueueJob, apiQueueJob)
@@ -632,6 +634,7 @@ func (qjm *XController) ScheduleNext() {
 }
 
 // Update AppWrappers in etcd
+// todo: This is a current workaround for duplicate message bug.
 func (cc *XController) updateEtcd(qj *arbv1.AppWrapper, at string) error {
 	qj.Status.Sender = "before "+ at  // set Sender string to indicate code location
 	qj.Status.Local  = false          // for Informer FilterFunc to pickup
@@ -738,7 +741,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 			qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.CreationTimestamp, qj.Status.ControllerFirstTimestamp)
 	}
 	glog.V(10).Infof("[Informer-addQJ] %s &qj=%p  qj=%+v", qj.Name, qj, qj)
-	glog.V(4).Infof("[Informer-addQJ] enqueue %s version=%s Status=%+v", qj.Name, qj.ResourceVersion, qj.Status)
+	glog.V(4).Infof("[Informer-addQJ] enqueue %s &qj=%p version=%s Status=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status)
 	cc.enqueue(qj)
 }
 
@@ -751,7 +754,7 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 	oldQJ, ok := oldObj.(*arbv1.AppWrapper)
 	if !ok {
 		glog.Errorf("[Informer-updateQJ] oldObj is not AppWrapper.  enqueue(newQJ).  oldObj=%+v", oldObj)
-		glog.V(4).Infof("[Informer-updateQJ] BadOld enqueue %s newQJ=%p newQJ=%+v", newQJ.Name, newQJ, newQJ)
+		glog.V(4).Infof("[Informer-updateQJ] Bad_oldObj enqueue %s &newQJ=%p version=$s Status=%+v", newQJ.Name, newQJ, newQJ.ResourceVersion, newQJ.Status)
 		cc.enqueue(newQJ)
 		return
 	}
@@ -761,7 +764,7 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 		glog.V(10).Infof("[Informer-updateQJ] ignore OutOfOrder arrival &newQJ=%p newQJ=%+v", newQJ, newQJ)
 		return
 	}
-	glog.V(4).Infof("[Informer-updateQJ] normal enqueue %s &newQJ=%p newQJ=%+v", newQJ.Name, newQJ, newQJ)
+	glog.V(4).Infof("[Informer-updateQJ] normal enqueue %s &newQJ=%p version=$s Status=%+v", newQJ.Name, newQJ, newQJ.ResourceVersion, newQJ.Status)
 	cc.enqueue(newQJ)
 }
 
@@ -986,13 +989,6 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 					}
 				}
 			}
-//			if glog.V(10) {
-//				if (is_first_deployment) {
-//					current_time := time.Now()
-//					glog.V(10).Infof("[TTime] %s, %s: WorkerBeforeCreatingResouces", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
-//					glog.V(10).Infof("[Agent Controller] XQJ %s has Overhead Before Creating Resouces: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
-//				}
-//			}
 			glog.V(4).Infof("[worker-manageQJ] %s 3Delay=%s BeforeDispatchingToEtcd version=%s Status=%+v",
 				qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.ResourceVersion, qj.Status)
 			success := false
@@ -1009,12 +1005,6 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 				glog.V(4).Infof("[worker-manageQJ] %s 4Delay=%s AtLeastOneResourceDispatchedToEtcd version=%s Status=%+v",
 					qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.ResourceVersion, qj.Status)
 			}
-//			if glog.V(10) {
-//				if (is_first_deployment) {
-//					current_time := time.Now()
-//					glog.V(10).Infof("[Agent Controller] XQJ %s has Overhead After Creating Resouces: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
-//				}
-//			}
 
 			// TODO(k82cn): replaced it with `UpdateStatus`
 			qj.Status.FilterIgnore = true  // update State & QueueJobState after dispatch
