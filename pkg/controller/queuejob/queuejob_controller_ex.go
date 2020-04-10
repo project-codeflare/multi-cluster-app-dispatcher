@@ -554,10 +554,11 @@ func (qjm *XController) ScheduleNext() {
 	// amount of resources asked by the job
 	qj, err := qjm.qjqueue.Pop()
 	if err != nil {
-		glog.V(4).Infof("Cannot pop QueueJob from the queue!")
+		glog.V(4).Infof("[ScheduleNext] Cannot pop QueueJob from qjqueue!")
 	}
+	qj.Status.QueueJobState = arbv1.QueueJobStateHeadOfLine
+	qjm.qjqueue.AddUnschedulableIfNotPresent(qj)  // working on qj, avoid other threads putting it back to activeQ
 	glog.V(10).Infof("[TTime] %s, %s: ScheduleNextStart", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
-	// glog.Infof("I have queuejob %+v", qj)
 	if(qjm.isDispatcher) {
 		glog.V(2).Infof("[Controller: Dispatcher Mode] Dispatch Next QueueJob: %s\n", qj.Name)
 	}else{
@@ -639,7 +640,7 @@ func (cc *XController) updateEtcd(qj *arbv1.AppWrapper, at string) error {
 	qj.Status.Sender = "before "+ at  // set Sender string to indicate code location
 	qj.Status.Local  = false          // for Informer FilterFunc to pickup
 	if qjj, err := cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj); err != nil {
-		glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s at %s %v qj=%+v", qj.Name, at, err, qj)
+		glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s at %s err=%v qj=%+v", qj.Name, at, err, qj)
 		return err
 	} else {  // qjj should be the same as qj except with newer ResourceVersion
 		qj.ResourceVersion = qjj.ResourceVersion  // update new ResourceVersion from etcd
@@ -726,7 +727,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 	firstTime := metav1.Now()
 	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("obj is not AppWrapper")
+		glog.Errorf("[Informer-addQJ] object is not AppWrapper. object=%+v", obj)
 		return
 	}
 	glog.V(10).Infof("[Informer-addQJ] %s &qj=%p  qj=%+v", qj.Name, qj, qj)
@@ -748,7 +749,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 	newQJ, ok := newObj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("[Informer-updateQJ] new object is not AppWrapper")
+		glog.Errorf("[Informer-updateQJ] new object is not AppWrapper. object=%+v", newObj)
 		return
 	}
 	oldQJ, ok := oldObj.(*arbv1.AppWrapper)
