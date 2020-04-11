@@ -625,7 +625,7 @@ func (qjm *XController) ScheduleNext() {
 				qjm.qjqueue.MoveToActiveQueueIfExists(qj)
 			} else {  // successful add to eventQueue, remove from qjqueue
 				qjm.qjqueue.Delete(qj)
-				glog.V(4).Infof("[ScheduleNext] %s 2Delay=%s AfterHeadOfLine activeQ=%t, Unsched=%t version=%s Status=%+v", qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj.ResourceVersion, qj.Status)
+				glog.V(4).Infof("[ScheduleNext] %s 2Delay=%s AfterHeadOfLine_eventQueue.Add activeQ=%t, Unsched=%t version=%s Status=%+v", qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj.ResourceVersion, qj.Status)
 			}
 		} else {
 			// start thread to backoff
@@ -755,7 +755,7 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 	oldQJ, ok := oldObj.(*arbv1.AppWrapper)
 	if !ok {
 		glog.Errorf("[Informer-updateQJ] old object is not AppWrapper.  enqueue(newQJ).  oldObj=%+v", oldObj)
-		glog.V(4).Infof("[Informer-updateQJ] BadOldObject enqueue %s &newQJ=%p Version=%s Status=%+v", newQJ.Name, newQJ, newQJ.ResourceVersion, newQJ.Status)
+		glog.V(4).Infof("[Informer-updateQJ] %s *Delay=%s BadOldObject enqueue &newQJ=%p Version=%s Status=%+v", newQJ.Name, time.Now().Sub(newQJ.Status.ControllerFirstTimestamp.Time), newQJ, newQJ.ResourceVersion, newQJ.Status)
 		cc.enqueue(newQJ)
 		return
 	}
@@ -765,7 +765,7 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 		glog.V(10).Infof("[Informer-updateQJ] ignore OutOfOrder arrival &newQJ=%p newQJ=%+v", newQJ, newQJ)
 		return
 	}
-	glog.V(4).Infof("[Informer-updateQJ] normal enqueue %s &newQJ=%p Version=%s Status=%+v", newQJ.Name, newQJ, newQJ.ResourceVersion, newQJ.Status)
+	glog.V(4).Infof("[Informer-updateQJ] %s *Delay=%s normal enqueue &newQJ=%p Version=%s Status=%+v", newQJ.Name, time.Now().Sub(newQJ.Status.ControllerFirstTimestamp.Time), newQJ, newQJ.ResourceVersion, newQJ.Status)
 	cc.enqueue(newQJ)
 }
 
@@ -779,26 +779,25 @@ func larger (a, b string) bool {
 func (cc *XController) deleteQueueJob(obj interface{}) {
 	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("obj is not AppWrapper")
+		glog.Errorf("[Informer-deleteQJ] obj is not AppWrapper. obj=%+v", obj)
 		return
 	}
-	glog.V(10).Infof("[TTime] %s, %s: deleteQueueJob delay: %s", time.Now().String(), qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
+	glog.V(4).Infof("[Informer-deleteQJ] %s *Delay=%s before enqueue &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj, qj.ResourceVersion, qj.Status)
 	cc.enqueue(qj)
 }
 
 func (cc *XController) enqueue(obj interface{}) {
 	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("obj is not AppWrapper")
+		glog.Errorf("[enqueue] obj is not AppWrapper. obj=%+v", obj)
 		return
 	}
 
-	glog.V(10).Infof("[TTime]: %s Enqueuing Job: %s to EventQ\n", time.Now().String(), qj.Name)
+	glog.V(4).Infof("[enqueue] %s *Delay=%s before eventQueue.Add &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj, qj.ResourceVersion, qj.Status)
 
-	err := cc.eventQueue.Add(obj)
-
+	err := cc.eventQueue.Add(qj)
 	if err != nil {
-		glog.Errorf("Fail to enqueue AppWrapper to updateQueue, err %#v", err)
+		glog.Errorf("[enqueue] Fail to enqueue AppWrapper %s to eventQueue, ignore.  err=%#v", qj.Name, err)
 	}
 }
 
