@@ -621,7 +621,7 @@ func (qjm *XController) ScheduleNext() {
 			qjm.updateEtcd(qj, "[ScheduleNext]setCanRun")
 			// add to eventQueue for dispatching to Etcd
 			if err := qjm.eventQueue.Add(qj); err != nil {  // unsuccessful add to eventQueue, add back to activeQ
-				glog.Errorf("Fail to enqueue AppWrapper %s to eventQueue, back to activeQ. err %#v", qj.Name, err)
+				glog.Errorf("[ScheduleNext] Fail to enqueue AppWrapper %s to eventQueue, back to activeQ. err %#v", qj.Name, err)
 				qjm.qjqueue.MoveToActiveQueueIfExists(qj)
 			} else {  // successful add to eventQueue, remove from qjqueue
 				qjm.qjqueue.Delete(qj)
@@ -741,7 +741,6 @@ func (cc *XController) addQueueJob(obj interface{}) {
 		glog.V(4).Infof("[Informer-addQJ] %s *Delay=%s CreationTimestamp=%s ControllerFirstTimestamp=%s",
 			qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.CreationTimestamp, qj.Status.ControllerFirstTimestamp)
 	}
-	glog.V(10).Infof("[Informer-addQJ] %s &qj=%p  qj=%+v", qj.Name, qj, qj)
 	glog.V(4).Infof("[Informer-addQJ] enqueue %s &qj=%p Version=%s Status=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status)
 	cc.enqueue(qj)
 }
@@ -868,29 +867,29 @@ func (cc *XController) worker() {
 		case *arbv1.AppWrapper:
 			queuejob = v
 		default:
-			glog.Errorf("Un-supported type of %v", obj)
+			glog.Errorf("[worker] eventQueue.Pop un-supported type. obj=%+v", obj)
 			return nil
 		}
-		glog.V(10).Infof("[TTime] %s: %s, WorkerFromEventQueue delay: %s - Pop Begin ", time.Now().String(), queuejob.Name, time.Now().Sub(queuejob.CreationTimestamp.Time))
+		glog.V(10).Infof("[worker] %s *Delay=%s eventQueue.PopBegin &newQJ=%p Version=%s Status=%+v", queuejob.Name, time.Now().Sub(queuejob.Status.ControllerFirstTimestamp.Time), queuejob, queuejob.ResourceVersion, queuejob.Status)
 
 		if queuejob == nil {
 			if acc, err := meta.Accessor(obj); err != nil {
-				glog.Warningf("Failed to get AppWrapper for %v/%v", acc.GetNamespace(), acc.GetName())
+				glog.Warningf("[worker] Failed to get AppWrapper for %v/%v", acc.GetNamespace(), acc.GetName())
 			}
 
 			return nil
 		}
 		// sync AppWrapper
 		if err := cc.syncQueueJob(queuejob); err != nil {
-			glog.Errorf("Failed to sync AppWrapper %s, err %#v", queuejob.Name, err)
+			glog.Errorf("[worker] Failed to sync AppWrapper %s, err %#v", queuejob.Name, err)
 			// If any error, requeue it.
 			return err
 		}
 
-		glog.V(10).Infof("[TTime] %s: %s, WorkerFromEventQueue delay: %s - Pop End ", time.Now().String(), queuejob.Name, time.Now().Sub(queuejob.CreationTimestamp.Time))
+		glog.V(10).Infof("[worker] %s *Delay=%s eventQueue.PopEnd &newQJ=%p Version=%s Status=%+v", queuejob.Name, time.Now().Sub(queuejob.Status.ControllerFirstTimestamp.Time), queuejob, queuejob.ResourceVersion, queuejob.Status)
 		return nil
 	}); err != nil {
-		glog.Errorf("Fail to pop item from updateQueue, err %#v", err)
+		glog.Errorf("[worker] Fail to pop item from eventQueue, err %#v", err)
 		return
 	}
 }
@@ -911,8 +910,8 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 	// If it is Agent (not a dispatcher), update pod information
 	if(!cc.isDispatcher){
 		// we call sync for each controller
-	  // update pods running, pending,...
-	  cc.qjobResControls[arbv1.ResourceTypePod].UpdateQueueJobStatus(qj)
+		// update pods running, pending,...
+		cc.qjobResControls[arbv1.ResourceTypePod].UpdateQueueJobStatus(qj)
 	}
 
 	return cc.manageQueueJob(queueJob)
@@ -973,9 +972,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			return nil
 		}
 
-//		is_first_deployment := false
 		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive {
-//			is_first_deployment = true
 			qj.Status.State = arbv1.AppWrapperStateActive
 		// Bugfix to eliminate performance problem of overloading the event queue.}
 
@@ -1002,7 +999,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			}
 			if dispatched { // set QueueJobStateRunning if all resources are successfully dispatched
 				qj.Status.QueueJobState = arbv1.QueueJobStateDispatched
-				glog.V(4).Infof("[worker-manageQJ] %s 4Delay=%s AtLeastOneResourceDispatchedToEtcd Version=%s Status=%+v",
+				glog.V(4).Infof("[worker-manageQJ] %s 4Delay=%s AllResourceDispatchedToEtcd Version=%s Status=%+v",
 					qj.Name, metav1.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.ResourceVersion, qj.Status)
 			} else {
 				qj.Status.State = arbv1.AppWrapperStateFailed
