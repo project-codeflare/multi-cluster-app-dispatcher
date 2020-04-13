@@ -26,7 +26,7 @@ type Interface interface {
 	SyncQueueJob(queuejob *qjobv1.AppWrapper, qjobRes *qjobv1.AppWrapperResource) error
 	UpdateQueueJobStatus(queuejob *qjobv1.AppWrapper) error
 	GetAggregatedResources(queuejob *qjobv1.AppWrapper) *clusterstateapi.Resource
-	GetAggregatedResourcesByPriority(priority int, queuejob *qjobv1.AppWrapper) *clusterstateapi.Resource
+	GetAggregatedResourcesByPriority(priority float64, queuejob *qjobv1.AppWrapper) *clusterstateapi.Resource
 	//TODO: Add to calculate more accurate partial deployments while job is being realized
 //	GetAggregatedResourcesByPhase(phase v1.PodPhase, queuejob *qjobv1.AppWrapper) *clusterstateapi.Resource
 	Cleanup(queuejob *qjobv1.AppWrapper, qjobRes *qjobv1.AppWrapperResource) error
