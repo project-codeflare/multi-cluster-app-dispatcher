@@ -47,7 +47,7 @@ type AppWrapperList struct {
 
 // AppWrapperSpec describes how the App Wrapper will look like.
 type AppWrapperSpec struct {
-	Priority      int                    `json:"priority,omitempty"`
+	Priority      float64                `json:"priority,omitempty"`
 	PrioritySlope float64                `json:"priorityslope,omitempty"`
 	Service       AppWrapperService      `json:"service"`
 	AggrResources AppWrapperResourceList `json:"resources"`

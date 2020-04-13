@@ -456,28 +456,28 @@ func (qjm *XController) GetAggregatedResources(cqj *arbv1.AppWrapper) *clusterst
 }
 
 
-func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cqj string) *clusterstateapi.Resource {
+func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64, cqj string) *clusterstateapi.Resource {
 	r := qjm.cache.GetUnallocatedResources()
 	preemptable := clusterstateapi.EmptyResource()
 	// Resources that can fit but have not dispatched.
 	pending := clusterstateapi.EmptyResource()
 
-	glog.V(4).Infof("Idle cluster resources %+v", r)
+	glog.V(4).Infof("[getAggAvaiResPri] Idle cluster resources %+v", r)
 
 	queueJobs, err := qjm.queueJobLister.AppWrappers("").List(labels.Everything())
 	if err != nil {
-		glog.Errorf("Unable to obtain the list of queueJobs %+v", err)
+		glog.Errorf("[getAggAvaiResPri] Unable to obtain the list of queueJobs %+v", err)
 		return r
 	}
 
 	for _, value := range queueJobs {
 		if value.Name == cqj {
-			glog.V(11).Infof("[getAggregatedAvailableResourcesPriority] %s: Skipping adjustments for %s since it is the job being processed.", time.Now().String(), value.Name)
+			glog.V(11).Infof("[getAggAvaiResPri] %s: Skipping adjustments for %s since it is the job being processed.", time.Now().String(), value.Name)
 			continue
 		} else if !value.Status.CanRun {
-			glog.V(11).Infof("[getAggregatedAvailableResourcesPriority] %s: Skipping adjustments for %s since it can not run.", time.Now().String(), value.Name)
+			glog.V(11).Infof("[getAggAvaiResPri] %s: Skipping adjustments for %s since it can not run.", time.Now().String(), value.Name)
 			continue
-		} else if value.Spec.Priority < targetpr {
+		} else if value.Status.SystemPriority < targetpr {
 			for _, resctrl := range qjm.qjobResControls {
 				qjv := resctrl.GetAggregatedResources(value)
 				preemptable = preemptable.Add(qjv)
@@ -485,7 +485,7 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 			continue
 		} else if value.Status.State == arbv1.AppWrapperStateEnqueued {
 			// Don't count the resources that can run but not yet realized (job orchestration pending or partially running).
-			glog.V(10).Infof("Subtract all resources for job %s which can-run is set to: %v but state is still pending.", value.Name, value.Status.CanRun)
+			glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources for job %s which can-run is set to: %v but state is still pending.", value.Name, value.Status.CanRun)
 			for _, resctrl := range qjm.qjobResControls {
 				qjv := resctrl.GetAggregatedResources(value)
 				pending = pending.Add(qjv)
@@ -497,7 +497,7 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 				for _, resctrl := range qjm.qjobResControls {
 					qjv := resctrl.GetAggregatedResources(value)
 					pending = pending.Add(qjv)
-					glog.V(10).Infof("Subtract all resources for job %s which can-run is set to: %v and status set to: %s but %v pod(s) are pending.", value.Name, value.Status.CanRun, value.Status.State, value.Status.Pending)
+					glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources for job %s which can-run is set to: %v and status set to: %s but %v pod(s) are pending.", value.Name, value.Status.CanRun, value.Status.State, value.Status.Pending)
 				}
 			} else {
 				// TODO: Hack to handle race condition when Running jobs have not yet updated the pod counts
@@ -507,7 +507,7 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 					for _, resctrl := range qjm.qjobResControls {
 						qjv := resctrl.GetAggregatedResources(value)
 						pending = pending.Add(qjv)
-						glog.V(10).Infof("Subtract all resources for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", value.Name, value.Status.CanRun, value.Status.State)
+						glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", value.Name, value.Status.CanRun, value.Status.State)
 					}
 				}
 			}
@@ -517,12 +517,12 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr int, cq
 		}
 	}
 
-	glog.V(6).Infof("Schedulable idle cluster resources: %+v, subtracting dispatched resources: %+v and adding preemptable cluster resources: %+v", r, pending, preemptable)
+	glog.V(6).Infof("[getAggAvaiResPri] Schedulable idle cluster resources: %+v, subtracting dispatched resources: %+v and adding preemptable cluster resources: %+v", r, pending, preemptable)
 
 	r = r.Add(preemptable)
 	r = r.NonNegSub(pending)
 
-	glog.V(4).Infof("%+v available resources to schedule", r)
+	glog.V(4).Infof("[getAggAvaiResPri] %+v available resources to schedule", r)
 	return r
 }
 
@@ -738,7 +738,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 	glog.V(10).Infof("[Informer-addQJ] %s &qj=%p  qj=%+v", qj.Name, qj, qj)
 	if qj.Status.QueueJobState == "" {
 		qj.Status.ControllerFirstTimestamp = firstTime
-		qj.Status.SystemPriority = float64(qj.Spec.Priority)
+		qj.Status.SystemPriority = qj.Spec.Priority
 		qj.Status.QueueJobState  = arbv1.QueueJobStateInit
 		glog.V(4).Infof("[Informer-addQJ] %s 0Delay=%s CreationTimestamp=%s ControllerFirstTimestamp=%s",
 			qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time), qj.CreationTimestamp, qj.Status.ControllerFirstTimestamp)

@@ -132,7 +132,7 @@ func (qjrConfigMap *QueueJobResConfigMap) deleteConfigMap(obj interface{}) {
 }
 
 
-func (qjrConfigMap *QueueJobResConfigMap) GetAggregatedResourcesByPriority(priority int, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrConfigMap *QueueJobResConfigMap) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
         total := clusterstateapi.EmptyResource()
         return total
 }

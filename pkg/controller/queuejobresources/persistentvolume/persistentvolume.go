@@ -131,7 +131,7 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) deletePersistentVolume(o
 }
 
 
-func (qjrPersistentvolume *QueueJobResPersistentvolume) GetAggregatedResourcesByPriority(priority int, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrPersistentvolume *QueueJobResPersistentvolume) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
         total := clusterstateapi.EmptyResource()
         return total
 }

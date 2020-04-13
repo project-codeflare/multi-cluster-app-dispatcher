@@ -563,12 +563,12 @@ func (qjrPod *QueueJobResPod) GetAggregatedResources(job *arbv1.AppWrapper) *clu
         return total
 }
 
-func (qjrPod *QueueJobResPod) GetAggregatedResourcesByPriority(priority int, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrPod *QueueJobResPod) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	total := clusterstateapi.EmptyResource()
 	if job.Spec.AggrResources.Items != nil {
 		//calculate scaling
 		for _, ar := range job.Spec.AggrResources.Items {
-			if ar.Priority < float64(priority) {
+			if ar.Priority < priority {
 		  		continue
 		  	}
 
