@@ -603,6 +603,7 @@ func (qjm *XController) ScheduleNext() {
 		if aggqj.LessEqual(resources) {
 			// qj is ready to go!
 			apiQueueJob, e := qjm.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
+			// apiQueueJob's ControllerFirstTimestamp is only microsecond level instead of nanosecond level
 			if e != nil {
 				return
 			}
@@ -721,12 +722,12 @@ func (qjm *XController) UpdateAgent() {
 func (qjm *XController) UpdateQueueJobs() {
 	queueJobs, err := qjm.queueJobLister.AppWrappers("").List(labels.Everything())
 	if err != nil {
-		glog.Errorf("List of queueJobs %+v", err)
+		glog.Errorf("[UpdateQueueJobs] List of queueJobs err=%+v", err)
 		return
 	}
 	for _, newjob := range queueJobs {
 		if !qjm.qjqueue.IfExist(newjob) {
-			glog.V(10).Infof("[TTime] %s, %s: UpdateQueueJobs delay: %s", time.Now().String(), newjob.Name, time.Now().Sub(newjob.CreationTimestamp.Time))
+			glog.V(4).Infof("[UpdateQueueJobs] enqueue %s &qj=%p Version=%s Status=%+v", newjob.Name, newjob, newjob.ResourceVersion, newjob.Status)
 			qjm.enqueue(newjob)
 		}
   	}
@@ -801,7 +802,7 @@ func (cc *XController) enqueue(obj interface{}) {
 		return
 	}
 
-	err := cc.eventQueue.Add(qj)
+	err := cc.eventQueue.Add(qj)  // add to FIFO queue if not in, update object & keep position if already in FIFO queue
 	if err != nil {
 		glog.Errorf("[enqueue] Fail to enqueue %s to eventQueue, ignore.  *Delay=%.6f seconds &qj=%p Version=%s Status=%+v err=%#v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qj, qj.ResourceVersion, qj.Status, err)
 	} else {
@@ -905,6 +906,7 @@ func (cc *XController) worker() {
 
 func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 	queueJob, err := cc.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
+	// queueJob's ControllerFirstTimestamp is only microsecond level instead of nanosecond level
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			if (cc.isDispatcher) {
@@ -915,8 +917,12 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 		}
 		return err
 	}
-	glog.V(4).Infof("[worker-syncQJ] &qj      =%p       qj=%+v", qj, qj)
-	glog.V(4).Infof("[worker-syncQJ] &queueJob=%p queueJob=%+v", queueJob, queueJob)
+	// make sure qj has the latest information
+	if larger(queueJob.ResourceVersion, qj.ResourceVersion) {
+		glog.V(10).Infof("[ScheduleNext] %s found more recent copy from cache       &qj=%p       qj=%+v", qj.Name, qj, qj)
+		glog.V(10).Infof("[ScheduleNext] %s found more recent copy from cache &queueJob=%p queueJob=%+v", queueJob.Name, queueJob, queueJob)
+		queueJob.DeepCopyInto(qj)
+	}
 
 	// If it is Agent (not a dispatcher), update pod information
 	if(!cc.isDispatcher){
@@ -925,7 +931,7 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 		cc.qjobResControls[arbv1.ResourceTypePod].UpdateQueueJobStatus(qj)
 	}
 
-	return cc.manageQueueJob(queueJob)
+	return cc.manageQueueJob(qj)
 }
 
 // manageQueueJob is the core method responsible for managing the number of running
