@@ -153,7 +153,7 @@ type AppWrapperStatus struct {
 	QueueJobState QueueJobState `json:"queuejobstate,omitempty"`
 
 	// Timestamp when controller first sees QueueJob (by Informer)
-	ControllerFirstTimestamp metav1.Time `json:"controllerfirsttimestamp,omitempty"`
+	ControllerFirstTimestamp metav1.MicroTime `json:"controllerfirsttimestamp,omitempty"`
 
 	// Tell Informer to ignore this update message (do not generate a controller event)
 	FilterIgnore bool `json:"filterignore,omitempty"`
