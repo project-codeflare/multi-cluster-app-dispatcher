@@ -929,6 +929,12 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 		// we call sync for each controller
 		// update pods running, pending,...
 		cc.qjobResControls[arbv1.ResourceTypePod].UpdateQueueJobStatus(qj)
+
+		if (qj.Status.Running > 0) {  // set QueueJobStateRunning if at least one resource running
+			qj.Status.QueueJobState = arbv1.QueueJobStateRunning
+			qj.Status.FilterIgnore = true  // Update QueueJobStateRunning
+			cc.updateEtcd(qj, "[syncQueueJob]setRunning")
+		}
 	}
 
 	return cc.manageQueueJob(qj)
