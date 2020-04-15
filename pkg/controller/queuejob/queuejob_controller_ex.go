@@ -579,13 +579,14 @@ func (qjm *XController) ScheduleNext() {
 			qjm.qjqueue.AddIfNotPresent(qjtemp.(*arbv1.AppWrapper))
 		}
 		// Print qjqueue.ativeQ for debugging
-		pq := qjm.qjqueue.(*PriorityQueue)
-		if qjm.qjqueue.Length() > 0 {
-			items := pq.activeQ.data.items
-			for key, element := range items {
-				qjtemp := element.obj.(*arbv1.AppWrapper)
-				glog.V(10).Infof("[ScheduleNext] AfterCalc: qjqLength=%d Key=%s index=%d Priority=%.1f SystemPriority=%.1f QueueJobState=%s",
-					qjm.qjqueue.Length(), key, element.index, qjtemp.Spec.Priority, qjtemp.Status.SystemPriority, qjtemp.Status.QueueJobState)
+		if glog.V(10) {
+			pq := qjm.qjqueue.(*PriorityQueue)
+			if qjm.qjqueue.Length() > 0 {
+				for key, element := range pq.activeQ.data.items {
+					qjtemp := element.obj.(*arbv1.AppWrapper)
+					glog.V(10).Infof("[ScheduleNext] AfterCalc: qjqLength=%d Key=%s index=%d Priority=%.1f SystemPriority=%.1f QueueJobState=%s",
+						qjm.qjqueue.Length(), key, element.index, qjtemp.Spec.Priority, qjtemp.Status.SystemPriority, qjtemp.Status.QueueJobState)
+				}
 			}
 		}
 
