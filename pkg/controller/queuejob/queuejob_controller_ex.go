@@ -507,7 +507,7 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64
 					for _, resctrl := range qjm.qjobResControls {
 						qjv := resctrl.GetAggregatedResources(value)
 						pending = pending.Add(qjv)
-						glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", value.Name, value.Status.CanRun, value.Status.State)
+						glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", qjv, resctrl, value.Name, value.Status.CanRun, value.Status.State)
 					}
 				}
 			}
