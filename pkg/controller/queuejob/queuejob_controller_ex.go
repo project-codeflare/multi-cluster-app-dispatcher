@@ -569,8 +569,6 @@ func (qjm *XController) ScheduleNext() {
 		for qjm.qjqueue.Length() > 0 {
 			qjtemp, _ := qjm.qjqueue.Pop()
 			qjtemp.Status.SystemPriority = qjtemp.Spec.Priority + qjtemp.Spec.PrioritySlope * (time.Now().Sub(qjtemp.Status.ControllerFirstTimestamp.Time)).Seconds()
-//			qjtemp.Status.FilterIgnore = true   // update SystemPriority only
-//			qjm.updateEtcd(qjtemp, "[ScheduleNext]updateSystemPriority")
 			tempQ.Add(qjtemp)
 		}
 		// move AppWrappers back to activeQ and sort based on SystemPriority

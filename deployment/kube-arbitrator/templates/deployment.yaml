@@ -321,7 +321,7 @@ spec:
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["mcad-controller"]
-        args: ["--v", "4", "--logtostderr", "--dynamicpriority=true"]
+        args: ["--v", "4", "--logtostderr"]
 #        args: ["--v", "10", "--logtostderr", "--secure-port=6443"]
         ports:
         - containerPort: 6443
