@@ -131,7 +131,7 @@ func (qjrSecret *QueueJobResSecret) deleteSecret(obj interface{}) {
 }
 
 
-func (qjrSecret *QueueJobResSecret) GetAggregatedResourcesByPriority(priority int, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrSecret *QueueJobResSecret) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
         total := clusterstateapi.EmptyResource()
         return total
 }

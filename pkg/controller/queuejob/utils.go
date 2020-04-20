@@ -35,6 +35,10 @@ func HigherPriorityQJ(qj1, qj2 interface{} ) bool {
 	return (qj1.(*arbv1.AppWrapper).Spec.Priority > qj2.(*arbv1.AppWrapper).Spec.Priority)
 }
 
+func HigherSystemPriorityQJ(qj1, qj2 interface{} ) bool {
+	return (qj1.(*arbv1.AppWrapper).Status.SystemPriority > qj2.(*arbv1.AppWrapper).Status.SystemPriority)
+}
+
 func generateUUID() string {
 	id := uuid.NewUUID()
 

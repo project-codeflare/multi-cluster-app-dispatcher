@@ -98,7 +98,7 @@ var _ = SchedulingQueue(&PriorityQueue{})
 
 func NewPriorityQueue() *PriorityQueue {
 	pq := &PriorityQueue{
-		activeQ:        newHeap(cache.MetaNamespaceKeyFunc, HigherPriorityQJ),
+		activeQ:        newHeap(cache.MetaNamespaceKeyFunc, HigherSystemPriorityQJ),
 		unschedulableQ: newUnschedulableQJMap(),
 	}
 	pq.cond.L = &pq.lock

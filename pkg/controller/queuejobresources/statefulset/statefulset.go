@@ -140,12 +140,12 @@ func (qjrStatefulSet *QueueJobResStatefulSet) GetAggregatedResources(queueJob *a
 	return total
 }
 
-func (qjrStatefulSet *QueueJobResStatefulSet) GetAggregatedResourcesByPriority(priority int, queueJob *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrStatefulSet *QueueJobResStatefulSet) GetAggregatedResourcesByPriority(priority float64, queueJob *arbv1.AppWrapper) *clusterstateapi.Resource {
 	total := clusterstateapi.EmptyResource()
 	if queueJob.Spec.AggrResources.Items != nil {
 		//calculate scaling
 		for _, ar := range queueJob.Spec.AggrResources.Items {
-			if ar.Priority < float64(priority) {
+			if ar.Priority < priority {
 				continue
 			}
 			if ar.Type == arbv1.ResourceTypeStatefulSet {

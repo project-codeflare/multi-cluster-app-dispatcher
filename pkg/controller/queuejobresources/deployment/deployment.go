@@ -138,12 +138,12 @@ func (qjrDeployment *QueueJobResDeployment) GetAggregatedResources(job *arbv1.Ap
 	return total
 }
 
-func (qjrDeployment *QueueJobResDeployment) GetAggregatedResourcesByPriority(priority int, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrDeployment *QueueJobResDeployment) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
         total := clusterstateapi.EmptyResource()
         if job.Spec.AggrResources.Items != nil {
             //calculate scaling
             for _, ar := range job.Spec.AggrResources.Items {
-                  if ar.Priority < float64(priority) {
+                  if ar.Priority < priority {
                         continue
                   }
                   if ar.Type == arbv1.ResourceTypeDeployment {
@@ -274,10 +274,10 @@ func (qjrDeployment *QueueJobResDeployment) SyncQueueJob(queuejob *arbv1.AppWrap
 			deploymentInQjr.Labels[k] = v
 		}
 		deploymentInQjr.Labels[queueJobName] = queuejob.Name
-    if deploymentInQjr.Spec.Template.Labels == nil {
-            deploymentInQjr.Labels = map[string]string{}
-    }
-    deploymentInQjr.Spec.Template.Labels[queueJobName] = queuejob.Name
+		if deploymentInQjr.Spec.Template.Labels == nil {
+			deploymentInQjr.Labels = map[string]string{}
+		}
+		deploymentInQjr.Spec.Template.Labels[queueJobName] = queuejob.Name
 
 		wait := sync.WaitGroup{}
 		wait.Add(int(diff))

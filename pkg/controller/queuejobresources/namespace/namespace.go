@@ -131,7 +131,7 @@ func (qjrNamespace *QueueJobResNamespace) deleteNamespace(obj interface{}) {
 }
 
 
-func (qjrNamespace *QueueJobResNamespace) GetAggregatedResourcesByPriority(priority int, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrNamespace *QueueJobResNamespace) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
         total := clusterstateapi.EmptyResource()
         return total
 }

@@ -47,7 +47,7 @@ type AppWrapperList struct {
 
 // AppWrapperSpec describes how the App Wrapper will look like.
 type AppWrapperSpec struct {
-	Priority      int                    `json:"priority,omitempty"`
+	Priority      float64                `json:"priority,omitempty"`
 	PrioritySlope float64                `json:"priorityslope,omitempty"`
 	Service       AppWrapperService      `json:"service"`
 	AggrResources AppWrapperResourceList `json:"resources"`
@@ -152,8 +152,8 @@ type AppWrapperStatus struct {
 	// State of QueueJob - Init, Queueing, HeadOfLine, Rejoining, ...
 	QueueJobState QueueJobState `json:"queuejobstate,omitempty"`
 
-	// Timestamp when controller first sees QueueJob (by Informer)
-	ControllerFirstTimestamp metav1.Time `json:"controllerfirsttimestamp,omitempty"`
+	// Microsecond level timestamp when controller first sees QueueJob (by Informer)
+	ControllerFirstTimestamp metav1.MicroTime `json:"controllerfirsttimestamp,omitempty"`
 
 	// Tell Informer to ignore this update message (do not generate a controller event)
 	FilterIgnore bool `json:"filterignore,omitempty"`
