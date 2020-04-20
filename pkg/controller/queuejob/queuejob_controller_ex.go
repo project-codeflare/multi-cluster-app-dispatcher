@@ -644,7 +644,7 @@ func (qjm *XController) ScheduleNext() {
 		HOLStartTime := time.Now()
 		forwarded := false
 		// Try to forward to eventQueue for at most HeadOfLineHoldingTime
-		for (!forwarded && time.Now().Before(HOLStartTime.Add(time.Duration(qjm.serverOption.HeadOfLineHoldingTime)*time.Second))) {
+		for !forwarded {
 			priorityindex := qj.Status.SystemPriority
 			// Support for Non-Preemption
 			if !qjm.serverOption.Preemption     { priorityindex = -math.MaxFloat64 }
@@ -689,6 +689,8 @@ func (qjm *XController) ScheduleNext() {
 				glog.V(10).Infof("[ScheduleNext] HOL Blocking by %s after  addUnsched for %s activeQ=%t Unsched=%t", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj))
 				time.Sleep(time.Second * 1)  // Try to dispatch once per second
 			}
+			// stop trying to dispatch after HeadOfLineHoldingTime
+			if (time.Now().After(HOLStartTime.Add(time.Duration(qjm.serverOption.HeadOfLineHoldingTime)*time.Second))) { break }
 		}
 		if !forwarded {
 			// start thread to backoff
