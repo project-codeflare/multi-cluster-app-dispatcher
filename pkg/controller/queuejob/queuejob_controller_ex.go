@@ -724,6 +724,7 @@ func (cc *XController) Run(stopCh chan struct{}) {
 
 	cache.WaitForCacheSync(stopCh, cc.queueJobSynced)
 
+	// update snapshot of ClientStateCache every second
 	cc.cache.Run(stopCh)
 
 	// go wait.Until(cc.ScheduleNext, 2*time.Second, stopCh)
@@ -757,12 +758,22 @@ func (qjm *XController) UpdateAgent() {
 }
 
 func (qjm *XController) UpdateQueueJobs() {
+	firstTime := metav1.NowMicro()
 	queueJobs, err := qjm.queueJobLister.AppWrappers("").List(labels.Everything())
 	if err != nil {
 		glog.Errorf("[UpdateQueueJobs] List of queueJobs err=%+v", err)
 		return
 	}
 	for _, newjob := range queueJobs {
+		// UpdateQueueJobs can be the first to see a new AppWrapper job, under heavy load
+		if newjob.Status.QueueJobState == "" {
+			newjob.Status.ControllerFirstTimestamp = firstTime
+			newjob.Status.SystemPriority = newjob.Spec.Priority
+			newjob.Status.QueueJobState = arbv1.QueueJobStateInit
+			glog.V(4).Infof("[UpdateQueueJobs] %s 0Delay=%.6f seconds CreationTimestamp=%s ControllerFirstTimestamp=%s",
+				newjob.Name, time.Now().Sub(newjob.Status.ControllerFirstTimestamp.Time).Seconds(), newjob.CreationTimestamp, newjob.Status.ControllerFirstTimestamp)
+		}
+		glog.V(10).Infof("[UpdateQueueJobs] %s: qjqueue=%t &qj=%p Version=%s Status=%+v", newjob.Name, qjm.qjqueue.IfExist(newjob), newjob, newjob.ResourceVersion, newjob.Status)
 		if !qjm.qjqueue.IfExist(newjob) {
 			glog.V(4).Infof("[UpdateQueueJobs] enqueue %s &qj=%p Version=%s Status=%+v", newjob.Name, newjob, newjob.ResourceVersion, newjob.Status)
 			qjm.enqueue(newjob)
@@ -1024,14 +1035,22 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			}
 
 			qj.Status.State = arbv1.AppWrapperStateEnqueued
-			qj.Status.QueueJobState  = arbv1.QueueJobStateQueueing
-			if err = cc.qjqueue.AddIfNotPresent(qj); err != nil {
-				glog.Errorf("[worker-manageQJ] Fail to add %s to activeQueue. Back to eventQueue activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v err=%#v",
-					qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, err)
-				cc.enqueue(qj)
+			//  add qj to qjqueue only when it is not in UnschedulableQ
+			if cc.qjqueue.IfExistUnschedulableQ(qj) {
+				glog.V(10).Infof("[worker-manageQJ] leaving %s to qjqueue.UnschedulableQ activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 			} else {
-				glog.V(4).Infof("[worker-manageQJ] %s 1Delay=%.6f seconds activeQ.Add_success activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
-					qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+				glog.V(10).Infof("[worker-manageQJ] before add to activeQ %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+				qj.Status.QueueJobState = arbv1.QueueJobStateQueueing
+				qj.Status.FilterIgnore = true // Update Queueing status, add to qjqueue for ScheduleNext
+				cc.updateEtcd(qj, "[manageQueueJob]setQueueing")
+				if err = cc.qjqueue.AddIfNotPresent(qj); err != nil {
+					glog.Errorf("[worker-manageQJ] Fail to add %s to activeQueue. Back to eventQueue activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v err=%#v",
+						qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, err)
+					cc.enqueue(qj)
+				} else {
+					glog.V(4).Infof("[worker-manageQJ] %s 1Delay=%.6f seconds activeQ.Add_success activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
+						qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+				}
 			}
 			return nil
 		} // End of first execution of qj to add to qjqueue for ScheduleNext
