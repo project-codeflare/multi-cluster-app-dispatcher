@@ -701,6 +701,8 @@ func (qjm *XController) backoff(q *arbv1.AppWrapper) {
 	time.Sleep(time.Duration(qjm.serverOption.BackoffTime) * time.Second)
 	qjm.qjqueue.MoveToActiveQueueIfExists(q)
 	q.Status.QueueJobState = arbv1.QueueJobStateQueueing
+	q.Status.FilterIgnore = true  // update QueueJobState only, no work needed
+	qjm.updateEtcd(q, "[backoff] Queueing")
 	glog.V(4).Infof("[backoff] %s activeQ.Add after sleep for %d seconds. activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", q.Name, qjm.serverOption.BackoffTime, qjm.qjqueue.IfExistActiveQ((q)), qjm.qjqueue.IfExistUnschedulableQ((q)), q, q.ResourceVersion, q.Status)
 }
 
