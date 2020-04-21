@@ -677,20 +677,24 @@ func (qjm *XController) ScheduleNext() {
 				// add to eventQueue for dispatching to Etcd
 				if err := qjm.eventQueue.Add(qj); err != nil { // unsuccessful add to eventQueue, add back to activeQ
 					glog.Errorf("[ScheduleNext] Fail to add %s to eventQueue, activeQ.Add_toSchedulingQueue &qj=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, err)
-					qjm.qjqueue.MoveToActiveQueueIfExists(qj)
+//					qjm.qjqueue.MoveToActiveQueueIfExists(qj)
 				} else { // successful add to eventQueue, remove from qjqueue
 					qjm.qjqueue.Delete(qj)
 					forwarded = true
 					glog.V(4).Infof("[ScheduleNext] %s 2Delay=%.6f seconds eventQueue.Add_afterHeadOfLine activeQ=%t, Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				}
 			} else {  // Not enough free resources to dispatch HOL
-				qjm.qjqueue.Delete(qj)  // Delete from activeQ in case other threads add it back
-				qjm.qjqueue.AddUnschedulableIfNotPresent(qj)
+//				qjm.qjqueue.Delete(qj)  // Delete from activeQ in case other threads add it back
+//				qjm.qjqueue.AddUnschedulableIfNotPresent(qj)
 				glog.V(10).Infof("[ScheduleNext] HOL Blocking by %s after  addUnsched for %s activeQ=%t Unsched=%t", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj))
-				time.Sleep(time.Second * 1)  // Try to dispatch once per second
+//				time.Sleep(time.Second * 1)  // Try to dispatch once per second
 			}
 			// stop trying to dispatch after HeadOfLineHoldingTime
-			if (time.Now().After(HOLStartTime.Add(time.Duration(qjm.serverOption.HeadOfLineHoldingTime)*time.Second))) { break }
+			if (forwarded || time.Now().After(HOLStartTime.Add(time.Duration(qjm.serverOption.HeadOfLineHoldingTime)*time.Second))) {
+				break
+			} else {
+				time.Sleep(time.Second * 1)  // Try to dispatch once per second
+			}
 		}
 		if !forwarded {
 			// start thread to backoff
