@@ -60,6 +60,16 @@ var _ = Describe("Predicates E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createStatefulSetAW(context,"aw-statefulset-2")
+
+		err := waitAWReady(context, aw)
+
+		Expect(err).To(HaveOccurred())
+	})
 	/*
 	It("Gang scheduling", func() {
 		context := initTestContext()
