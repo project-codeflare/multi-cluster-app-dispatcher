@@ -68,7 +68,7 @@ var _ = Describe("Predicates E2E Test", func() {
 
 		err := waitAWReady(context, aw)
 
-		Expect(err).To(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 	})
 	/*
 	It("Gang scheduling", func() {
