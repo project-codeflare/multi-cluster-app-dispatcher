@@ -389,7 +389,7 @@ func awNamespacePhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.NamespacePh
 			}
 		}
 
-		return 0 <= readyTaskNum, nil
+		return 0 < readyTaskNum, nil
 	}
 }
 func waitAWReady(ctx *context, aw *arbv1.AppWrapper) error {

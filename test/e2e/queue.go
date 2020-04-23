@@ -71,7 +71,7 @@ var _ = Describe("Predicates E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("Create AppWrapper - Namespace Only - 2 Pods", func() {
+	It("Create AppWrapper - Namespace Only - 0 Pods", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
