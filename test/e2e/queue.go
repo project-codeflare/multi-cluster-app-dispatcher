@@ -75,9 +75,9 @@ var _ = Describe("Predicates E2E Test", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
-		aw := createStatefulSetAW(context,"aw-namespace-0")
+		aw := createNamespaceAW(context,"aw-namespace-0")
 
-		err := waitAWReady(context, aw)
+		err := waitAWNonComputeResourceActive(context, aw)
 
 		Expect(err).NotTo(HaveOccurred())
 	})

@@ -358,6 +358,40 @@ func waitPodGroupUnschedulable(ctx *context, pg *arbv1.PodGroup) error {
 }
 */
 
+func waitAWNonComputeResourceActive(ctx *context, aw *arbv1.AppWrapper) error {
+	return waitAWNamespaceActive(ctx, aw)
+}
+
+func waitAWNamespaceActive(ctx *context, aw *arbv1.AppWrapper) error {
+	return wait.Poll(100*time.Millisecond, oneMinute, awNamespacePhase(ctx, aw,
+		[]v1.NamespacePhase{v1.NamespaceActive} ))
+}
+
+func awNamespacePhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.NamespacePhase) wait.ConditionFunc {
+	return func() (bool, error) {
+		aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		namespaces, err := ctx.kubeclient.CoreV1().Namespaces().List(metav1.ListOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		readyTaskNum := 0
+		for _, namespace := range namespaces.Items {
+			if awns, found := namespace.Labels["appwrapper.arbitrator.k8s.io"]; !found || awns != aw.Name {
+				continue
+			}
+
+			for _, p := range phase {
+				if namespace.Status.Phase == p {
+					readyTaskNum++
+					break
+				}
+			}
+		}
+
+		return 0 <= readyTaskNum, nil
+	}
+}
 func waitAWReady(ctx *context, aw *arbv1.AppWrapper) error {
 	return waitAWReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable))
 }
@@ -366,6 +400,7 @@ func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
 	return wait.Poll(100*time.Millisecond, oneMinute, awPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodPending}, int(aw.Spec.SchedSpec.MinAvailable)))
 }
+
 
 func waitAWReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int) error {
 	return wait.Poll(100*time.Millisecond, oneMinute, awPhase(ctx, aw,
