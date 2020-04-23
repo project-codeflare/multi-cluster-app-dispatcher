@@ -508,7 +508,47 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 	return appwrapper
 }
 
+func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "v1",
+		"kind": "Namespace", 
+	"metadata": {
+		"name": "aw-namespace-1",
+		"labels": {
+			"app": "aw-namespace-1"
+		}
+	}} `)
+	var schedSpecMin int = 0
 
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				Items: []arbv1.AppWrapperResource{
+					{
+//						ObjectMeta: metav1.ObjectMeta{
+//							Name:      fmt.Sprintf("%s-%s", name, "item1"),
+//						},
+						Replicas: 1,
+						Type: arbv1.ResourceTypeNamespace,
+						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
 func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "StatefulSet", 
