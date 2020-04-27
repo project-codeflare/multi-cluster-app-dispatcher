@@ -104,6 +104,11 @@ function cleanup {
     echo "---"
     echo "'all' Namespaces  list..."
     kubectl get namespaces
+
+    echo "---"
+    echo "'aw-namespace-1' Namespace  list..."
+    kubectl get namespace aw-namespace-1 -o yaml
+
     echo "===================================================================================="
     echo "==========================>>>>> MCAD Controller Logs <<<<<=========================="
     echo "===================================================================================="

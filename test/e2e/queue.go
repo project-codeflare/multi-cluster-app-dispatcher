@@ -73,7 +73,7 @@ var _ = Describe("Predicates E2E Test", func() {
 
 	It("Create AppWrapper - Namespace Only - 0 Pods", func() {
 		context := initTestContext()
-//putmeback		defer cleanupTestContext(context)
+// Put me back		defer cleanupTestContext(context)
 
 		aw := createNamespaceAW(context,"aw-namespace-0")
 

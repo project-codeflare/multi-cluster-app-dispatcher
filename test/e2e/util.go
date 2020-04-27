@@ -364,8 +364,7 @@ func waitAWNonComputeResourceActive(ctx *context, aw *arbv1.AppWrapper) error {
 
 func waitAWNamespaceActive(ctx *context, aw *arbv1.AppWrapper) error {
 	return wait.Poll(100*time.Millisecond, oneMinute, awNamespacePhase(ctx, aw,
-		[]v1.NamespacePhase{v1.NamespaceTerminating} ))
-//		[]v1.NamespacePhase{v1.NamespaceActive} ))
+		[]v1.NamespacePhase{v1.NamespaceActive} ))
 }
 
 func awNamespacePhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.NamespacePhase) wait.ConditionFunc {
