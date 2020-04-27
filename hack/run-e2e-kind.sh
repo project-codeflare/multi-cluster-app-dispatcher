@@ -84,18 +84,31 @@ function cleanup {
     kubectl get crds -A -o yaml
     kubectl describe crds -A
 
+    echo "---"
     echo "AppWrappers..."
     kubectl get appwrappers -A -o yaml
     kubectl describe appwrappers -A
 
+    echo "---"
     echo "'test' Pod list..."
     kubectl get pods -n test
 
+    echo "---"
     echo "'test' Pod yaml..."
     kubectl get pods -n test -o yaml
 
+    echo "---"
     echo "'test' Pod descriptions..."
     kubectl describe pods -n test
+
+    echo "---"
+    echo "'all' Namespaces  list..."
+    kubectl get namespaces
+
+    echo "---"
+    echo "'aw-namespace-1' Namespace  list..."
+    kubectl get namespace aw-namespace-1 -o yaml
+
     echo "===================================================================================="
     echo "==========================>>>>> MCAD Controller Logs <<<<<=========================="
     echo "===================================================================================="

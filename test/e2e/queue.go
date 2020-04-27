@@ -60,6 +60,27 @@ var _ = Describe("Predicates E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createStatefulSetAW(context,"aw-statefulset-2")
+
+		err := waitAWReady(context, aw)
+
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("Create AppWrapper - Namespace Only - 0 Pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createNamespaceAW(context,"aw-namespace-0")
+
+		err := waitAWNonComputeResourceActive(context, aw)
+
+		Expect(err).NotTo(HaveOccurred())
+	})
 	/*
 	It("Gang scheduling", func() {
 		context := initTestContext()
