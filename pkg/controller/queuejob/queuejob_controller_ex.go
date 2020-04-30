@@ -88,6 +88,9 @@ type XController struct {
 	// controllers for these resources
 	qjobResControls map[arbv1.ResourceType]queuejobresources.Interface
 
+	// Captures all available resources in the cluster
+	genericresources *queuejobresources.GenericResources
+
 	clients    *kubernetes.Clientset
 	arbclients *clientset.Clientset
 
@@ -191,6 +194,8 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		cache: 			clusterstatecache.New(config),
 	}
 	cc.metricsAdapter =  adapter.New(config, cc.cache)
+
+	cc.genericresources = queuejobresources.NewAppWrapperGenericResource(config)
 
 	cc.qjobResControls = map[arbv1.ResourceType]queuejobresources.Interface{}
 	RegisterAllQueueJobResourceTypes(&cc.qjobRegisteredResources)
@@ -446,11 +451,24 @@ func GetPodTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.PodTemplateSpec, err
 }
 
 func (qjm *XController) GetAggregatedResources(cqj *arbv1.AppWrapper) *clusterstateapi.Resource {
+	//todo: deprecate resource controllers
 	allocated := clusterstateapi.EmptyResource()
         for _, resctrl := range qjm.qjobResControls {
                 qjv     := resctrl.GetAggregatedResources(cqj)
                 allocated = allocated.Add(qjv)
         }
+
+	for _, item := range cqj.Spec.AggrResources.Items {
+		qjv, _ := queuejobresources.GetResources(&item)
+		replicas := item.Replicas
+		qjv.MilliCPU = qjv.MilliCPU * float64(replicas)
+		qjv.Memory = qjv.Memory * float64(replicas)
+		qjv.GPU = qjv.GPU * int64(replicas)
+		allocated = allocated.Add(qjv)
+	}
+
+
+
 
         return allocated
 }

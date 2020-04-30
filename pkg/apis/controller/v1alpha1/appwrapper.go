@@ -88,6 +88,22 @@ type AppWrapperResource struct {
 	//The template for the resource; it is now a raw text because we don't know for what resource
 	//it should be instantiated
 	Template runtime.RawExtension `json:"template"`
+
+	//The template for the resource; it is now a raw text because we don't know for what resource
+	//it should be instantiated
+	GenericTemplate runtime.RawExtension `json:"generictemplate"`
+
+	//Optional section that specifies resource requirements for non-standard k8s resources, follows same format as that
+	// of standard k8s resources
+	CustomPodResources []CustomPodResourceTemplate `json:"custompodresources,omitempty"`
+}
+
+type CustomPodResourceTemplate struct {
+	Replicas int             `json:"replicas"`
+	//todo: replace with
+	//Containers []Container Contain v1.ResourceRequirements
+	Requests v1.ResourceList `json:"requests"`
+	Limits   v1.ResourceList `json:"limits"`
 }
 
 // a collection of AppWrapperResource
