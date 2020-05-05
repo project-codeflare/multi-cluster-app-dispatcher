@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package queuejobresources
+package genericresource
 
 import (
 	"encoding/json"
@@ -70,7 +70,7 @@ func join(strs ...string) string {
 	return result
 }
 
-func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperResource) (podList []*v1.Pod, err error) {
+func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperGenericResource) (podList []*v1.Pod, err error) {
 
 	startTime := time.Now()
 	defer func() {
@@ -85,7 +85,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	if err != nil {
 		glog.Fatal(err)
 	}
-	ext := awr.Template
+	ext := awr.GenericTemplate
 	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
 	versions := &runtime.VersionedObjects{}
 	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, versions)
@@ -200,6 +200,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 		if reflect.DeepEqual(thisOwnerRef, parent) {
 			pods = append(pods, &pod)
 		}
+		glog.V(10).Infof("[SyncQueueJob] pod %s created from a Generic Item\n", pod.Name)
 	}
 	return pods, nil
 }
@@ -270,7 +271,7 @@ func createObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 	}
 }
 
-func GetResources(awr *arbv1.AppWrapperResource) (resource *clusterstateapi.Resource, er error) {
+func GetResources(awr *arbv1.AppWrapperGenericResource) (resource *clusterstateapi.Resource, er error) {
 
 	totalresource := clusterstateapi.EmptyResource()
 	if awr.GenericTemplate.Raw != nil {
@@ -280,14 +281,14 @@ func GetResources(awr *arbv1.AppWrapperResource) (resource *clusterstateapi.Reso
 				res := getContainerResources(item, replicas)
 				totalresource = totalresource.Add(res)
 			}
-			glog.V(10).Infof("[GetResources] Requested total allocation resource from containers `%v`.\n", totalresource)
+			glog.V(8).Infof("[GetResources] Requested total allocation resource from containers `%v`.\n", totalresource)
 		} else {
 			podresources := awr.CustomPodResources
 			for _, item := range podresources {
 				res := getPodResources(item)
 				totalresource = totalresource.Add(res)
 			}
-			glog.V(10).Infof("[GetResources] Requested total allocation resource from pods `%v`.\n", totalresource)
+			glog.V(8).Infof("[GetResources] Requested total allocation resource from pods `%v`.\n", totalresource)
 		}
 	}
 	return totalresource, nil

@@ -12,4 +12,4 @@ apk add libc-dev
 apk add gcc
 
 go env
-cd .. && make run-test && make mcad-controller
+cd ..  && make mcad-controller && make run-test

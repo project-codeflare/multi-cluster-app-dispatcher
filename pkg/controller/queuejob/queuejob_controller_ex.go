@@ -41,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/genericresource"
 	resconfigmap "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/configmap" // ConfigMap
 	resdeployment "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/deployment"
 	resnamespace "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/namespace"                         // NP
@@ -89,7 +90,7 @@ type XController struct {
 	qjobResControls map[arbv1.ResourceType]queuejobresources.Interface
 
 	// Captures all available resources in the cluster
-	genericresources *queuejobresources.GenericResources
+	genericresources *genericresource.GenericResources
 
 	clients    *kubernetes.Clientset
 	arbclients *clientset.Clientset
@@ -195,7 +196,7 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	}
 	cc.metricsAdapter =  adapter.New(config, cc.cache)
 
-	cc.genericresources = queuejobresources.NewAppWrapperGenericResource(config)
+	cc.genericresources = genericresource.NewAppWrapperGenericResource(config)
 
 	cc.qjobResControls = map[arbv1.ResourceType]queuejobresources.Interface{}
 	RegisterAllQueueJobResourceTypes(&cc.qjobRegisteredResources)
@@ -458,17 +459,14 @@ func (qjm *XController) GetAggregatedResources(cqj *arbv1.AppWrapper) *clusterst
                 allocated = allocated.Add(qjv)
         }
 
-	for _, item := range cqj.Spec.AggrResources.Items {
-		qjv, _ := queuejobresources.GetResources(&item)
-		replicas := item.Replicas
+	for _, genericItem := range cqj.Spec.AggrResources.GenericItems {
+		qjv, _ := genericresource.GetResources(&genericItem)
+		replicas := genericItem.Replicas
 		qjv.MilliCPU = qjv.MilliCPU * float64(replicas)
 		qjv.Memory = qjv.Memory * float64(replicas)
 		qjv.GPU = qjv.GPU * int64(replicas)
 		allocated = allocated.Add(qjv)
 	}
-
-
-
 
         return allocated
 }
@@ -500,12 +498,29 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64
 				qjv := resctrl.GetAggregatedResources(value)
 				preemptable = preemptable.Add(qjv)
 			}
+			for _, genericItem := range value.Spec.AggrResources.GenericItems {
+				qjv, _ := genericresource.GetResources(&genericItem)
+				replicas := genericItem.Replicas
+				qjv.MilliCPU = qjv.MilliCPU * float64(replicas)
+				qjv.Memory = qjv.Memory * float64(replicas)
+				qjv.GPU = qjv.GPU * int64(replicas)
+				preemptable = preemptable.Add(qjv)
+			}
+
 			continue
 		} else if value.Status.State == arbv1.AppWrapperStateEnqueued {
 			// Don't count the resources that can run but not yet realized (job orchestration pending or partially running).
 			glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources for job %s which can-run is set to: %v but state is still pending.", value.Name, value.Status.CanRun)
 			for _, resctrl := range qjm.qjobResControls {
 				qjv := resctrl.GetAggregatedResources(value)
+				pending = pending.Add(qjv)
+			}
+			for _, genericItem := range value.Spec.AggrResources.GenericItems {
+				qjv, _ := genericresource.GetResources(&genericItem)
+				replicas := genericItem.Replicas
+				qjv.MilliCPU = qjv.MilliCPU * float64(replicas)
+				qjv.Memory = qjv.Memory * float64(replicas)
+				qjv.GPU = qjv.GPU * int64(replicas)
 				pending = pending.Add(qjv)
 			}
 			continue
@@ -517,6 +532,14 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64
 					pending = pending.Add(qjv)
 					glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources for job %s which can-run is set to: %v and status set to: %s but %v pod(s) are pending.", value.Name, value.Status.CanRun, value.Status.State, value.Status.Pending)
 				}
+				for _, genericItem := range value.Spec.AggrResources.GenericItems {
+					qjv, _ := genericresource.GetResources(&genericItem)
+					replicas := genericItem.Replicas
+					qjv.MilliCPU = qjv.MilliCPU * float64(replicas)
+					qjv.Memory = qjv.Memory * float64(replicas)
+					qjv.GPU = qjv.GPU * int64(replicas)
+					pending = pending.Add(qjv)
+				}
 			} else {
 				// TODO: Hack to handle race condition when Running jobs have not yet updated the pod counts
 				// This hack uses the golang struct implied behavior of defining the object without a value.  In this case
@@ -526,6 +549,14 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64
 						qjv := resctrl.GetAggregatedResources(value)
 						pending = pending.Add(qjv)
 						glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", qjv, resctrl, value.Name, value.Status.CanRun, value.Status.State)
+					}
+					for _, genericItem := range value.Spec.AggrResources.GenericItems {
+						qjv, _ := genericresource.GetResources(&genericItem)
+						replicas := genericItem.Replicas
+						qjv.MilliCPU = qjv.MilliCPU * float64(replicas)
+						qjv.Memory = qjv.Memory * float64(replicas)
+						qjv.GPU = qjv.GPU * int64(replicas)
+						pending = pending.Add(qjv)
 					}
 				}
 			}
@@ -1082,6 +1113,16 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 					break
 				}
 			}
+			// Handle generic resources
+			for _, ar := range qj.Spec.AggrResources.GenericItems {
+				glog.V(10).Infof("[worker-manageQJ] before dispatch Generic.SyncQueueJob %s &qj=%p Version=%s Status=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status)
+				_, err00 := cc.genericresources.SyncQueueJob(qj, &ar)
+				if err00 != nil {
+					glog.Errorf("[worker-manageQJ] Error dispatching job=%s Status=%+v err=%+v", qj.Name, qj.Status, err00)
+					dispatched = false
+				}
+			}
+
 			if dispatched { // set QueueJobStateRunning if all resources are successfully dispatched
 				qj.Status.QueueJobState = arbv1.QueueJobStateDispatched
 				glog.V(4).Infof("[worker-manageQJ] %s 4Delay=%.6f seconds AllResourceDispatchedToEtcd Version=%s Status=%+v",

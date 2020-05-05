@@ -30,8 +30,16 @@ var _ = Describe("Predicates E2E Test", func() {
 		aw := createDeploymentAW(context,"aw-deployment-1")
 
 		err := waitAWReady(context, aw)
+		Expect(err).To(HaveOccurred())
 
-		Expect(err).NotTo(HaveOccurred())
+		//// Now delete the appwrapper
+		//pods := getPodsOfAppWrapper(context, aw)
+		//err = deleteAppWrapper(context, "aw-deployment-1")
+		//Expect(err).NotTo(HaveOccurred())
+		//
+		//// Wait for the pods of the deleted the appwrapper to be destroyed
+		//err= waitAWDeleted(context, aw, pods)
+		//Expect(err).NotTo(HaveOccurred())
 	})
 
 	//NOTE: Recommend this test not to be the last test in the test suite it may pass

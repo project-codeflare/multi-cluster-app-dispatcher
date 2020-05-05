@@ -285,6 +285,33 @@ func taskPhase(ctx *context, pg *arbv1.PodGroup, phase []v1.PodPhase, taskNum in
 	}
 }
 */
+
+func podPhase(ctx *context, namespace string, pods []*v1.Pod, phase []v1.PodPhase, taskNum int) wait.ConditionFunc {
+	return func() (bool, error) {
+		podList, err := ctx.kubeclient.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		phaseListTaskNum := 0
+
+		for _, podFromPodList := range podList.Items {
+			for _, awPod := range pods {
+				if awn, found := podFromPodList.Labels["appwrapper.arbitrator.k8s.io"]; !found || awn != awPod.Name {
+					continue
+				}
+			}
+
+			for _, p := range phase {
+				if podFromPodList.Status.Phase == p {
+					phaseListTaskNum++
+					break
+				}
+			}
+		}
+
+		return taskNum == phaseListTaskNum, nil
+	}
+}
+
 func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum int) wait.ConditionFunc {
 	return func() (bool, error) {
 		aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
@@ -396,6 +423,10 @@ func waitAWReady(ctx *context, aw *arbv1.AppWrapper) error {
 	return waitAWReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable))
 }
 
+func waitAWDeleted(ctx *context, aw *arbv1.AppWrapper, pods []*v1.Pod) error {
+	return waitAWPodsTerminatedEx(ctx, aw.Namespace, pods,0)
+}
+
 func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
 	return wait.Poll(100*time.Millisecond, oneMinute, awPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodPending}, int(aw.Spec.SchedSpec.MinAvailable)))
@@ -405,6 +436,11 @@ func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
 func waitAWReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int) error {
 	return wait.Poll(100*time.Millisecond, oneMinute, awPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum))
+}
+
+func waitAWPodsTerminatedEx(ctx *context, namespace string, pods []*v1.Pod, taskNum int) error {
+	return wait.Poll(100*time.Millisecond, oneMinute,podPhase(ctx, namespace, pods,
+		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded, v1.PodUnknown, v1.PodFailed, v1.PodPending}, taskNum))
 }
 
 func createContainers(img string, req v1.ResourceList, hostport int32) []v1.Container {
@@ -787,6 +823,14 @@ func deleteReplicaSet(ctx *context, name string) error {
 	})
 }
 
+func deleteAppWrapper(ctx *context, name string) error {
+	foreground := metav1.DeletePropagationForeground
+	return ctx.karclient.ArbV1().AppWrappers(ctx.namespace).Delete(name, &metav1.DeleteOptions{
+		PropagationPolicy: &foreground,
+	})
+}
+
+
 func replicaSetReady(ctx *context, name string) wait.ConditionFunc {
 	return func() (bool, error) {
 		deployment, err := ctx.kubeclient.ExtensionsV1beta1().ReplicaSets(ctx.namespace).Get(name, metav1.GetOptions{})
@@ -941,24 +985,24 @@ func computeNode(ctx *context, req v1.ResourceList) (string, int32) {
 	return "", 0
 }
 
-func getPodOfAppWrapper(ctx *context, aw *arbv1.AppWrapper) []*v1.Pod {
+func getPodsOfAppWrapper(ctx *context, aw *arbv1.AppWrapper) []*v1.Pod {
 	aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	pods, err := ctx.kubeclient.CoreV1().Pods(aw.Namespace).List(metav1.ListOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
-	var awpod []*v1.Pod
+	var awpods []*v1.Pod
 
 	for _, pod := range pods.Items {
 		if gn, found := pod.Annotations[arbv1.AppWrapperAnnotationKey]; !found || gn != aw.Name {
 			continue
 		}
-		awpod = append(awpod, &pod)
+		awpods = append(awpods, &pod)
 
 	}
 
-	return awpod
+	return awpods
 }
 
 func taintAllNodes(ctx *context, taints []v1.Taint) error {
