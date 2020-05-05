@@ -21,7 +21,7 @@ sudo apt-get update
 sudo apt-get install -y kubectl
 
 # Download kind binary (0.2.0)
-sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/0.2.0/kind-linux-amd64
+sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.5.1/kind-linux-amd64
 sudo chmod +x /usr/local/bin/kind
 
 # check if kind installed
