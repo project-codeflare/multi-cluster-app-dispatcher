@@ -1,12 +1,15 @@
 # this config file contains all config fields with comments
 kind: Config
 apiVersion: kind.sigs.k8s.io/v1alpha2
-kubernetesVersion: 1.11.10
 # 1 control plane node and 3 workers
 nodes:
   # the control plane node config
   - role: control-plane
+    # Kubernetes version 1.11.10
+    image: kindest/node:v1:11:10@sha256:bb22258625199ba5e47fb17a8a8a7601e536cd03456b42c1ee32672302b1f909
   # the three workers
   - role: worker
     # replicas specifies the number of nodes to create with this configuration
     replicas: 3
+    # Kubernetes version 1.11.10
+    image: kindest/node:v1:11:10@sha256:bb22258625199ba5e47fb17a8a8a7601e536cd03456b42c1ee32672302b1f909

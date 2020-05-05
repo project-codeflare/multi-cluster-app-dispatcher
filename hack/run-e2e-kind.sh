@@ -122,9 +122,12 @@ function kube-test-env-up {
 
     export KUBECONFIG="$(kind get kubeconfig-path ${CLUSTER_CONTEXT})"
     echo "KUBECONFIG file: ${KUBECONFIG}"
+    echo "kubectl version"
     kubectl version
+    echo "kubectl config current-context"
     kubectl config current-context
     # Show available resources of cluster nodes
+    echo "kubectl describe nodes"
     kubectl describe nodes
 
     # Hack to setup for 'go test' call which expects this path.
