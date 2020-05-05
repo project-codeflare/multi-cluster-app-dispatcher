@@ -4,8 +4,9 @@ export ROOT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/..
 export LOG_LEVEL=3
 export CLEANUP_CLUSTER=${CLEANUP_CLUSTER:-1}
 export CLUSTER_CONTEXT="--name test"
-export IMAGE_NGINX="nginx:latest"
-export IMAGE_BUSYBOX="busybox:latest"
+# Using older image due to older version of kubernetes cluster"
+export IMAGE_NGINX="nginx:1.15.12"
+export IMAGE_ECHOSERVER="k8s.gcr.io/echoserver:1.4"
 export KIND_OPT=${KIND_OPT:=" --config ${ROOT_DIR}/hack/e2e-kind-config.yaml"}
 export KA_BIN=_output/bin
 export WAIT_TIME="20s"
@@ -18,10 +19,11 @@ sudo apt-get update && sudo apt-get install -y apt-transport-https
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
 sudo apt-get update
-sudo apt-get install -y kubectl
+# Using older version due to older version of kubernetes cluster"
+sudo apt-get install -y  kubectl=1.11.10-00
 
 # Download kind binary (0.2.0)
-sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/0.2.0/kind-linux-amd64
+sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.3.0/kind-linux-amd64
 sudo chmod +x /usr/local/bin/kind
 
 # check if kind installed
@@ -62,7 +64,7 @@ function kind-up-cluster {
   kind create cluster ${CLUSTER_CONTEXT} ${KIND_OPT} --wait ${WAIT_TIME}
 
   docker images
-  docker pull ${IMAGE_BUSYBOX}
+  docker pull ${IMAGE_ECHOSERVER}
   docker pull ${IMAGE_NGINX}
   if [[ "$MCAD_IMAGE_PULL_POLICY" = "Always" ]]
   then
@@ -71,7 +73,7 @@ function kind-up-cluster {
   docker images
   
   kind load docker-image ${IMAGE_NGINX} ${CLUSTER_CONTEXT}
-  kind load docker-image ${IMAGE_BUSYBOX} ${CLUSTER_CONTEXT}
+  kind load docker-image ${IMAGE_ECHOSERVER} ${CLUSTER_CONTEXT}
   kind load docker-image ${IMAGE_MCAD} ${CLUSTER_CONTEXT}
 }
 
@@ -80,13 +82,20 @@ function cleanup {
     echo "==========================>>>>> Cleaning up... <<<<<=========================="
     echo " "
 
+
     echo "Custom Resource Definitions..."
-    kubectl get crds -A -o yaml
-    kubectl describe crds -A
+    echo "kubectl get crds -o yaml"
+    kubectl get crds -o yaml
+    echo "---"
+    echo "kubectl describe crds"
+    kubectl describe crds
 
     echo "---"
-    echo "AppWrappers..."
+    echo "Get All AppWrappers..."
     kubectl get appwrappers -A -o yaml
+
+    echo "---"
+    echo "Describe all AppWrappers..."
     kubectl describe appwrappers -A
 
     echo "---"
@@ -117,24 +126,136 @@ function cleanup {
     kind delete cluster ${CLUSTER_CONTEXT}
 }
 
+debug_function() {
+  echo "---"
+  echo "kubectl create namespace test"
+  kubectl create namespace test
+
+cat <<EOF > aw-ss.0.yaml
+apiVersion: arbitrator.incubator.k8s.io/v1alpha1
+kind: AppWrapper
+metadata:
+  name: hellodiana-2-test-0
+  namespace: test
+spec:
+  schedulingSpec:
+    minAvailable: 2
+  resources:
+    Items:
+    - replicas: 1
+      metadata:
+        name: hellodiana-2-test-0
+        namespace: test
+      type: StatefulSet
+      template:
+        apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+        kind: StatefulSet
+        metadata:
+          name: hellodiana-2-test-0
+          namespace: test
+          labels:
+            app: hellodiana-2-test-0
+        spec:
+          selector:
+            matchLabels:
+              app: hellodiana-2-test-0
+          replicas: 2
+          template:
+            metadata:
+              labels:
+                app: hellodiana-2-test-0
+                size: "2"
+            spec:
+              containers:
+               - name: hellodiana-2-test-0
+                 image: k8s.gcr.io/echoserver:1.4
+                 imagePullPolicy: Always
+                 ports:
+                 - containerPort: 80
+EOF
+
+  echo "---" 
+  echo "kubectl get statefulsets"
+  kubectl get statefulsets -n test
+  
+  echo "---" 
+  echo "kubectl create -f  aw-ss.0.yaml"
+  kubectl create -f  aw-ss.0.yaml
+
+  echo "---"
+  echo "kubectl get appwrappers -o yaml"
+  kubectl get appwrappers -o yaml -n test
+
+  sleep 5
+
+  echo "---" 
+  echo "kubectl get statefulsets"
+  kubectl get statefulsets -n test
+
+  sleep 5
+
+  echo "---" 
+  echo "kubectl describe statefulsets"
+  kubectl describe statefulsets -n test
+
+  sleep 5
+
+  echo "---" 
+  echo "kubectl get pods"
+  kubectl get pods -n test
+
+  sleep 5
+
+  echo "---"
+  echo "kubectl get pods -o yaml"
+  kubectl get pods -n test -o yaml
+
+  echo "---" 
+  echo "kubectl describe pods"
+  kubectl describe pods -n test
+
+  echo "---"
+  echo "kubectl delete -f  aw-ss.0.yaml"
+  kubectl delete -f  aw-ss.0.yaml
+
+  echo "---"
+  echo "kubectl delete namespace test"
+  kubectl delete namespace test
+}
+
 function kube-test-env-up {
     cd ${ROOT_DIR}
 
+    echo "---"
     export KUBECONFIG="$(kind get kubeconfig-path ${CLUSTER_CONTEXT})"
+
+    echo "---"
     echo "KUBECONFIG file: ${KUBECONFIG}"
+
+    echo "---"
+    echo "kubectl version"
     kubectl version
+
+    echo "---"
+    echo "kubectl config current-context"
     kubectl config current-context
-    # Show available resources of cluster nodes
-    kubectl describe nodes
+
+    echo "---"
+    echo "kubectl get nodes"
+    kubectl get nodes -o wide
 
     # Hack to setup for 'go test' call which expects this path.
     if [ ! -z $HOME/.kube/config ]
     then
       cp $KUBECONFIG $HOME/.kube/config
+
+      echo "---"
       cat $HOME/.kube/config
     fi
 
     # Install Helm Client
+
+    echo "---"
     echo "Installing Helm Client..."
     curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get > install-helm.sh
     chmod u+x install-helm.sh
@@ -172,6 +293,12 @@ function kube-test-env-up {
     then
         kubectl get pod ${mcad_pod} -n kube-system -o yaml
     fi
+
+    # Show available resources of cluster nodes
+
+    echo "---"
+    echo "kubectl describe nodes"
+    kubectl describe nodes
 }
 
 
