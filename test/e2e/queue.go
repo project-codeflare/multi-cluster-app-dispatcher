@@ -30,7 +30,7 @@ var _ = Describe("Predicates E2E Test", func() {
 		aw := createDeploymentAW(context,"aw-deployment-1")
 
 		err := waitAWReady(context, aw)
-		Expect(err).To(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 
 		//// Now delete the appwrapper
 		//pods := getPodsOfAppWrapper(context, aw)
