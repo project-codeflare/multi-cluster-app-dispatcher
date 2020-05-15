@@ -46,7 +46,8 @@ import (
 	csapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 )
 
-var oneMinute = 1 * time.Minute
+//var oneMinute = 1 * time.Minute
+var threeMinute = 3 * time.Minute
 
 var oneCPU = v1.ResourceList{"cpu": resource.MustParse("1000m")}
 var twoCPU = v1.ResourceList{"cpu": resource.MustParse("2000m")}
@@ -148,7 +149,7 @@ func cleanupTestContext(cxt *context) {
        Expect(err).NotTo(HaveOccurred())
 
        // Wait for namespace deleted.
-       err = wait.Poll(100*time.Millisecond, oneMinute, namespaceNotExist(cxt))
+       err = wait.Poll(100*time.Millisecond, threeMinute, namespaceNotExist(cxt))
        Expect(err).NotTo(HaveOccurred())
 }
 
@@ -365,23 +366,23 @@ func waitPodGroupReady(ctx *context, pg *arbv1.PodGroup) error {
 }
 
 func waitPodGroupPending(ctx *context, pg *arbv1.PodGroup) error {
-	return wait.Poll(100*time.Millisecond, oneMinute, taskPhase(ctx, pg,
+	return wait.Poll(100*time.Millisecond, threeMinute, taskPhase(ctx, pg,
 		[]v1.PodPhase{v1.PodPending}, int(pg.Spec.MinMember)))
 }
 
 func waitTasksReadyEx(ctx *context, pg *arbv1.PodGroup, taskNum int) error {
-	return wait.Poll(100*time.Millisecond, oneMinute, taskPhase(ctx, pg,
+	return wait.Poll(100*time.Millisecond, threeMinute, taskPhase(ctx, pg,
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum))
 }
 
 func waitTasksPendingEx(ctx *context, pg *arbv1.PodGroup, taskNum int) error {
-	return wait.Poll(100*time.Millisecond, oneMinute, taskPhase(ctx, pg,
+	return wait.Poll(100*time.Millisecond, threeMinute, taskPhase(ctx, pg,
 		[]v1.PodPhase{v1.PodPending}, taskNum))
 }
 
 func waitPodGroupUnschedulable(ctx *context, pg *arbv1.PodGroup) error {
 	now := time.Now()
-	return wait.Poll(10*time.Second, oneMinute, podGroupUnschedulable(ctx, pg, now))
+	return wait.Poll(10*time.Second, threeMinute, podGroupUnschedulable(ctx, pg, now))
 }
 */
 
@@ -390,7 +391,7 @@ func waitAWNonComputeResourceActive(ctx *context, aw *arbv1.AppWrapper) error {
 }
 
 func waitAWNamespaceActive(ctx *context, aw *arbv1.AppWrapper) error {
-	return wait.Poll(100*time.Millisecond, oneMinute, awNamespacePhase(ctx, aw,
+	return wait.Poll(100*time.Millisecond, threeMinute, awNamespacePhase(ctx, aw,
 		[]v1.NamespacePhase{v1.NamespaceActive} ))
 }
 
@@ -428,18 +429,18 @@ func waitAWDeleted(ctx *context, aw *arbv1.AppWrapper, pods []*v1.Pod) error {
 }
 
 func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
-	return wait.Poll(100*time.Millisecond, oneMinute, awPhase(ctx, aw,
+	return wait.Poll(100*time.Millisecond, threeMinute, awPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodPending}, int(aw.Spec.SchedSpec.MinAvailable)))
 }
 
 
 func waitAWReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int) error {
-	return wait.Poll(100*time.Millisecond, oneMinute, awPhase(ctx, aw,
+	return wait.Poll(100*time.Millisecond, threeMinute, awPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum))
 }
 
 func waitAWPodsTerminatedEx(ctx *context, namespace string, pods []*v1.Pod, taskNum int) error {
-	return wait.Poll(100*time.Millisecond, oneMinute,podPhase(ctx, namespace, pods,
+	return wait.Poll(100*time.Millisecond, threeMinute,podPhase(ctx, namespace, pods,
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded, v1.PodUnknown, v1.PodFailed, v1.PodPending}, taskNum))
 }
 
@@ -856,7 +857,7 @@ func replicaSetReady(ctx *context, name string) wait.ConditionFunc {
 }
 
 func waitReplicaSetReady(ctx *context, name string) error {
-	return wait.Poll(100*time.Millisecond, oneMinute, replicaSetReady(ctx, name))
+	return wait.Poll(100*time.Millisecond, threeMinute, replicaSetReady(ctx, name))
 }
 
 func clusterSize(ctx *context, req v1.ResourceList) int32 {

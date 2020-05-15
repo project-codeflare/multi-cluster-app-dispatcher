@@ -42,6 +42,17 @@ var _ = Describe("Predicates E2E Test", func() {
 		//Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createStatefulSetAW(context,"aw-statefulset-2")
+
+		err := waitAWReady(context, aw)
+
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	//NOTE: Recommend this test not to be the last test in the test suite it may pass
 	//      may pass the local test but may cause controller to fail which is not
 	//      part of this test's validation.
@@ -62,17 +73,6 @@ var _ = Describe("Predicates E2E Test", func() {
 		defer cleanupTestContext(context)
 
 		aw := createPodTemplateAW(context,"aw-podtemplate-2")
-
-		err := waitAWReady(context, aw)
-
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
-		context := initTestContext()
-		defer cleanupTestContext(context)
-
-		aw := createStatefulSetAW(context,"aw-statefulset-2")
 
 		err := waitAWReady(context, aw)
 
