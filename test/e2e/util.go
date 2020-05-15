@@ -331,6 +331,14 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 				if pod.Status.Phase == p {
 					readyTaskNum++
 					break
+				} else {
+					conds := pod.Status.Conditions
+					for _, cond := range conds {
+						s := cond.Status
+						r := cond.Reason
+						m := cond.Message
+						fmt.Fprintf(os.Stdout, "pod: %s, status: %s, reason: %s, message: %s" , pod.Name, s, r, m)
+					}
 				}
 			}
 		}
@@ -628,26 +636,26 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 		"name": "aw-statefulset-1",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-statefulset-1"
 		}
 	},
 	"spec": {
 		"replicas": 2,
 		"selector": {
 			"matchLabels": {
-				"app": "nginx"
+				"app": "aw-statefulset-1"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "nginx"
+					"app": "aw-statefulset-1"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "nginx",
+						"name": "aw-statefulset-1",
 						"image": "nginx",
 						"ports": [
 							{
