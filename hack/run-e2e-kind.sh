@@ -120,13 +120,27 @@ function cleanup {
 function kube-test-env-up {
     cd ${ROOT_DIR}
 
+    echo "---"
     export KUBECONFIG="$(kind get kubeconfig-path ${CLUSTER_CONTEXT})"
+
+    echo "---"
     echo "KUBECONFIG file: ${KUBECONFIG}"
+
+    echo "---"
     echo "kubectl version"
     kubectl version
+
+    echo "---"
     echo "kubectl config current-context"
     kubectl config current-context
+
+    echo "---"
+    echo "kubectl get nodes"
+    kubectl get nodes -o wide
+
     # Show available resources of cluster nodes
+
+    echo "---"
     echo "kubectl describe nodes"
     kubectl describe nodes
 
@@ -134,10 +148,14 @@ function kube-test-env-up {
     if [ ! -z $HOME/.kube/config ]
     then
       cp $KUBECONFIG $HOME/.kube/config
+
+      echo "---"
       cat $HOME/.kube/config
     fi
 
     # Install Helm Client
+
+    echo "---"
     echo "Installing Helm Client..."
     curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get > install-helm.sh
     chmod u+x install-helm.sh

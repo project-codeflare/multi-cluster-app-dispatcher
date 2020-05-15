@@ -32,32 +32,32 @@ var _ = Describe("Predicates E2E Test", func() {
 		err := waitAWReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
-		// Now delete the appwrapper
-		pods := getPodsOfAppWrapper(context, aw)
-		err = deleteAppWrapper(context, "aw-deployment-1")
-		Expect(err).NotTo(HaveOccurred())
-
-		// Wait for the pods of the deleted the appwrapper to be destroyed
-		err= waitAWDeleted(context, aw, pods)
-		Expect(err).NotTo(HaveOccurred())
+		//// Now delete the appwrapper
+		//pods := getPodsOfAppWrapper(context, aw)
+		//err = deleteAppWrapper(context, "aw-deployment-1")
+		//Expect(err).NotTo(HaveOccurred())
+		//
+		//// Wait for the pods of the deleted the appwrapper to be destroyed
+		//err= waitAWDeleted(context, aw, pods)
+		//Expect(err).NotTo(HaveOccurred())
 	})
 
 	//NOTE: Recommend this test not to be the last test in the test suite it may pass
 	//      may pass the local test but may cause controller to fail which is not
 	//      part of this test's validation.
 
-	It("Create AppWrapper - PodTemplate Only - 2 Pods", func() {
+	It("Create AppWrapper- Bad PodTemplate", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
-		aw := createBadPodTemplateAW(context,"aw-podtemplate-2")
+		aw := createBadPodTemplateAW(context,"aw-bad-podtemplate-2")
 
 		err := waitAWReady(context, aw)
 
 		Expect(err).To(HaveOccurred())
 	})
 
-	It("Create AppWrapper - Bad PodTemplate", func() {
+	It("Create AppWrapper  - PodTemplate Only - 2 Pods", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
