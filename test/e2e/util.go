@@ -337,7 +337,7 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 						s := cond.Status
 						r := cond.Reason
 						m := cond.Message
-						fmt.Fprintf(os.Stdout, "pod: %s, status: %s, reason: %s, message: %s" , pod.Name, s, r, m)
+						fmt.Fprintf(os.Stdout, "pod: %s, status: %s, reason: %s, message: %s\n" , pod.Name, s, r, m)
 					}
 				}
 			}

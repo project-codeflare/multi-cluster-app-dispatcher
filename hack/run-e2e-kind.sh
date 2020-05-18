@@ -163,17 +163,25 @@ EOF
   echo "kubectl create -f  aw-ss.0.yaml"
   kubectl create -f  aw-ss.0.yaml
 
+  sleep 5
+
   echo "---" 
   echo "kubectl get statefulsets"
   kubectl get statefulsets
+
+  sleep 5
 
   echo "---" 
   echo "kubectl describe statefulsets"
   kubectl describe statefulsets
 
+  sleep 5
+
   echo "---" 
   echo "kubectl get pods"
   kubectl get pods
+
+  sleep 5
 
   echo "---" 
   echo "kubectl describe pods"
