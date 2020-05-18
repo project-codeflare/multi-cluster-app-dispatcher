@@ -117,6 +117,69 @@ function cleanup {
     kind delete cluster ${CLUSTER_CONTEXT}
 }
 
+deleteme_function() {
+cat <<EOF > aw-ss.0.yaml
+apiVersion: arbitrator.incubator.k8s.io/v1alpha1
+kind: AppWrapper
+metadata:
+  name: hellodiana-2-test-0
+spec:
+  schedulingSpec:
+    minAvailable: 2
+  resources:
+    Items:
+    - replicas: 1
+      type: StatefulSet
+      template:
+        apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+        kind: StatefulSet
+        metadata:
+          name: hellodiana-2-test-0
+          labels:
+            app: hellodiana-2-test-0
+        spec:
+          selector:
+            matchLabels:
+              app: hellodiana-2-test-0
+          replicas: 2
+          template:
+            metadata:
+              labels:
+                app: hellodiana-2-test-0
+                size: "2"
+            spec:
+              containers:
+               - name: hellodiana-2-test-0
+                 image: nginx
+                 ports:
+                 - containerPort: 80
+EOF
+
+  echo "---" 
+  echo "kubectl get statefulsets"
+  kubectl get statefulsets
+  
+  echo "---" 
+  echo "kubectl create -f  aw-ss.0.yaml"
+  kubectl create -f  aw-ss.0.yaml
+
+  echo "---" 
+  echo "kubectl get statefulsets"
+  kubectl get statefulsets
+
+  echo "---" 
+  echo "kubectl describe statefulsets"
+  kubectl describe statefulsets
+
+  echo "---" 
+  echo "kubectl get pods"
+  kubectl get pods
+
+  echo "---" 
+  echo "kubectl describe pods"
+  kubectl describe pods
+}
+
 function kube-test-env-up {
     cd ${ROOT_DIR}
 
@@ -193,6 +256,8 @@ function kube-test-env-up {
     then
         kubectl get pod ${mcad_pod} -n kube-system -o yaml
     fi
+
+    deleteme_function
 }
 
 
