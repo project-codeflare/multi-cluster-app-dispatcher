@@ -118,11 +118,16 @@ function cleanup {
 }
 
 deleteme_function() {
+  echo "---"
+  echo "kubectl create namespace test"
+  kubectl create namespace test
+
 cat <<EOF > aw-ss.0.yaml
 apiVersion: arbitrator.incubator.k8s.io/v1alpha1
 kind: AppWrapper
 metadata:
   name: hellodiana-2-test-0
+  namespace: test
 spec:
   schedulingSpec:
     minAvailable: 2
@@ -135,6 +140,7 @@ spec:
         kind: StatefulSet
         metadata:
           name: hellodiana-2-test-0
+          namespace: test
           labels:
             app: hellodiana-2-test-0
         spec:
@@ -157,7 +163,7 @@ EOF
 
   echo "---" 
   echo "kubectl get statefulsets"
-  kubectl get statefulsets
+  kubectl get statefulsets -n test
   
   echo "---" 
   echo "kubectl create -f  aw-ss.0.yaml"
@@ -167,25 +173,33 @@ EOF
 
   echo "---" 
   echo "kubectl get statefulsets"
-  kubectl get statefulsets
+  kubectl get statefulsets -n test
 
   sleep 5
 
   echo "---" 
   echo "kubectl describe statefulsets"
-  kubectl describe statefulsets
+  kubectl describe statefulsets -n test
 
   sleep 5
 
   echo "---" 
   echo "kubectl get pods"
-  kubectl get pods
+  kubectl get pods -n test
 
   sleep 5
 
   echo "---" 
   echo "kubectl describe pods"
-  kubectl describe pods
+  kubectl describe pods -n test
+
+  echo "---"
+  echo "kubectl delete -f  aw-ss.0.yaml"
+  kubectl delete -f  aw-ss.0.yaml
+
+  echo "---"
+  echo "kubectl delete namespace test"
+  kubectl delete namespace test
 }
 
 function kube-test-env-up {
