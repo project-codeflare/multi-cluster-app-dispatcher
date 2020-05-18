@@ -85,8 +85,11 @@ function cleanup {
     kubectl describe crds -A
 
     echo "---"
-    echo "AppWrappers..."
+    echo "Get All AppWrappers..."
     kubectl get appwrappers -A -o yaml
+
+    echo "---"
+    echo "Describe all AppWrappers..."
     kubectl describe appwrappers -A
 
     echo "---"
@@ -169,6 +172,10 @@ EOF
   echo "kubectl create -f  aw-ss.0.yaml"
   kubectl create -f  aw-ss.0.yaml
 
+  echo "---"
+  echo "kubectl get appwrappers -o yaml"
+  kubectl get appwrappers -o yaml -n test
+
   sleep 5
 
   echo "---" 
@@ -188,6 +195,10 @@ EOF
   kubectl get pods -n test
 
   sleep 5
+
+  echo "---"
+  echo "kubectl get pods -o yaml"
+  kubectl get pods -n test -o yaml
 
   echo "---" 
   echo "kubectl describe pods"

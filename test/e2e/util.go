@@ -332,15 +332,32 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 					readyTaskNum++
 					break
 				} else {
-					conds := pod.Status.Conditions
 					pReason := pod.Status.Reason
 					pMsg := pod.Status.Message
-					fmt.Fprintf(os.Stdout, "=== pod: %s, reason: %s, message: %s\n" , pod.Name, pReason, pMsg)
+					if len(pReason) > 0 || len (pMsg) > 0 {
+						fmt.Fprintf(os.Stdout, "=== pod: %s, phase: %s, reason: %s, message: %s\n" , pod.Name, p, pReason, pMsg)
+					}
+					conds := pod.Status.Conditions
 					for _, cond := range conds {
 						s := cond.Status
 						r := cond.Reason
 						m := cond.Message
-						fmt.Fprintf(os.Stdout, "pod: %s, status: %s, reason: %s, message: %s\n" , pod.Name, s, r, m)
+						if len(r) > 0 || len (m) > 0 {
+							fmt.Fprintf(os.Stdout, "condition for pod: %s, phase: %s, status: %s, reason: %s, message: %s\n" , pod.Name, p, s, r, m)
+						}
+					}
+					containerStatuses := pod.Status.ContainerStatuses
+					for _, containerStatus := range containerStatuses {
+						waitingState := containerStatus.State.Waiting
+						if waitingState != nil {
+							wReason := waitingState.Reason
+							wMsg := waitingState.Message
+							if len(wReason) > 0 || len (wMsg) > 0 {
+								containerName := containerStatus.Name
+								fmt.Fprintf(os.Stdout, "condition for pod: %s, phase: %s, container name: %s, " +
+									"reason: %s, message: %s\n" , pod.Name, p, containerName, wReason, wMsg)
+							}
+						}
 					}
 				}
 			}
