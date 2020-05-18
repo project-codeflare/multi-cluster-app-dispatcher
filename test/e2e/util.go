@@ -47,7 +47,7 @@ import (
 )
 
 //var oneMinute = 1 * time.Minute
-var threeMinute = 3 * time.Minute
+var threeMinute = 90 * time.Second
 
 var oneCPU = v1.ResourceList{"cpu": resource.MustParse("1000m")}
 var twoCPU = v1.ResourceList{"cpu": resource.MustParse("2000m")}
@@ -333,6 +333,9 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 					break
 				} else {
 					conds := pod.Status.Conditions
+					pReason := pod.Status.Reason
+					pMsg := pod.Status.Message
+					fmt.Fprintf(os.Stdout, "=== pod: %s, reason: %s, message: %s\n" , pod.Name, pReason, pMsg)
 					for _, cond := range conds {
 						s := cond.Status
 						r := cond.Reason
