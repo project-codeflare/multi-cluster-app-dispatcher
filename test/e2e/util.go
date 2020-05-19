@@ -677,6 +677,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 					{
 						"name": "aw-statefulset-1",
 						"image": "nginx",
+						"imagePullPolicy": "Never"
 						"ports": [
 							{
 								"containerPort": 80

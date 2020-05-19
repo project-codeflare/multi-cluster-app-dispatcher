@@ -160,6 +160,7 @@ spec:
               containers:
                - name: hellodiana-2-test-0
                  image: nginx
+                 imagePullPolicy: Never
                  ports:
                  - containerPort: 80
 EOF
