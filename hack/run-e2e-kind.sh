@@ -137,6 +137,9 @@ spec:
   resources:
     Items:
     - replicas: 1
+      metadata:
+        name: hellodiana-2-test-0
+        namespace: test
       type: StatefulSet
       template:
         apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
