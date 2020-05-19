@@ -675,8 +675,9 @@ func (qjm *XController) ScheduleNext() {
 				qj.Status.FilterIgnore = true // update CanRun & Spec.  no need to trigger event
 				qjm.updateEtcd(qj, "[ScheduleNext]setCanRun")
 				// add to eventQueue for dispatching to Etcd
-				if err := qjm.eventQueue.Add(qj); err != nil { // unsuccessful add to eventQueue
+				if err := qjm.eventQueue.Add(qj); err != nil { // unsuccessful add to eventQueue, add back to activeQ
 					glog.Errorf("[ScheduleNext] Fail to add %s to eventQueue, activeQ.Add_toSchedulingQueue &qj=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, err)
+					qjm.qjqueue.MoveToActiveQueueIfExists(qj)
 				} else { // successful add to eventQueue, remove from qjqueue
 					qjm.qjqueue.Delete(qj)
 					forwarded = true
@@ -785,6 +786,7 @@ func (qjm *XController) UpdateAgent() {
 
 func (qjm *XController) UpdateQueueJobs() {
 	firstTime := metav1.NowMicro()
+	// retrive queueJobs from local cache.  no guarantee queueJobs contain up-to-date information
 	queueJobs, err := qjm.queueJobLister.AppWrappers("").List(labels.Everything())
 	if err != nil {
 		glog.Errorf("[UpdateQueueJobs] List of queueJobs err=%+v", err)
@@ -998,8 +1000,8 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 	}
 	// make sure qj has the latest information
 	if larger(queueJob.ResourceVersion, qj.ResourceVersion) {
-		glog.V(10).Infof("[ScheduleNext] %s found more recent copy from cache       &qj=%p       qj=%+v", qj.Name, qj, qj)
-		glog.V(10).Infof("[ScheduleNext] %s found more recent copy from cache &queueJob=%p queueJob=%+v", queueJob.Name, queueJob, queueJob)
+		glog.V(10).Infof("[worker-syncQJ] %s found more recent copy from cache       &qj=%p       qj=%+v", qj.Name, qj, qj)
+		glog.V(10).Infof("[worker-syncQJ] %s found more recent copy from cache &queueJob=%p queueJob=%+v", queueJob.Name, queueJob, queueJob)
 		queueJob.DeepCopyInto(qj)
 	}
 
