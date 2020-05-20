@@ -6,7 +6,7 @@ export CLEANUP_CLUSTER=${CLEANUP_CLUSTER:-1}
 export CLUSTER_CONTEXT="--name test"
 # todo: CLEANUP export IMAGE_NGINX="nginx:latest"
 export IMAGE_NGINX="nginx:1.15.12"
-export IMAGE_BUSYBOX="busybox:latest"
+export IMAGE_ECHOSERVER="k8s.gcr.io/echoserver:1.4"
 export KIND_OPT=${KIND_OPT:=" --config ${ROOT_DIR}/hack/e2e-kind-config.yaml"}
 export KA_BIN=_output/bin
 export WAIT_TIME="20s"
@@ -64,7 +64,7 @@ function kind-up-cluster {
   kind create cluster ${CLUSTER_CONTEXT} ${KIND_OPT} --wait ${WAIT_TIME}
 
   docker images
-  docker pull ${IMAGE_BUSYBOX}
+  docker pull ${IMAGE_ECHOSERVER}
   docker pull ${IMAGE_NGINX}
   if [[ "$MCAD_IMAGE_PULL_POLICY" = "Always" ]]
   then
@@ -73,7 +73,7 @@ function kind-up-cluster {
   docker images
   
   kind load docker-image ${IMAGE_NGINX} ${CLUSTER_CONTEXT}
-  kind load docker-image ${IMAGE_BUSYBOX} ${CLUSTER_CONTEXT}
+  kind load docker-image ${IMAGE_ECHOSERVER} ${CLUSTER_CONTEXT}
   kind load docker-image ${IMAGE_MCAD} ${CLUSTER_CONTEXT}
 }
 
