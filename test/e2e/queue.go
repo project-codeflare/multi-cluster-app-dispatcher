@@ -23,6 +23,17 @@ import (
 
 var _ = Describe("Predicates E2E Test", func() {
 
+	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
+		context := initTestContext()
+		//todo: deleteme		defer cleanupTestContext(context)
+
+		aw := createStatefulSetAW(context,"aw-statefulset-2")
+
+		err := waitAWReady(context, aw)
+
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	It("Create AppWrapper - Deployment Only", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
@@ -40,17 +51,6 @@ var _ = Describe("Predicates E2E Test", func() {
 		//// Wait for the pods of the deleted the appwrapper to be destroyed
 		//err= waitAWDeleted(context, aw, pods)
 		//Expect(err).NotTo(HaveOccurred())
-	})
-
-	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
-		context := initTestContext()
-//todo: deleteme		defer cleanupTestContext(context)
-
-		aw := createStatefulSetAW(context,"aw-statefulset-2")
-
-		err := waitAWReady(context, aw)
-
-		Expect(err).NotTo(HaveOccurred())
 	})
 
 	//NOTE: Recommend this test not to be the last test in the test suite it may pass
