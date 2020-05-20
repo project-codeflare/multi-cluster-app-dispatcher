@@ -4,7 +4,7 @@ export ROOT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/..
 export LOG_LEVEL=3
 export CLEANUP_CLUSTER=${CLEANUP_CLUSTER:-1}
 export CLUSTER_CONTEXT="--name test"
-# todo: CLEANUP export IMAGE_NGINX="nginx:latest"
+# Using older image due to older version of kubernetes cluster"
 export IMAGE_NGINX="nginx:1.15.12"
 export IMAGE_ECHOSERVER="k8s.gcr.io/echoserver:1.4"
 export KIND_OPT=${KIND_OPT:=" --config ${ROOT_DIR}/hack/e2e-kind-config.yaml"}
@@ -19,7 +19,7 @@ sudo apt-get update && sudo apt-get install -y apt-transport-https
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
 sudo apt-get update
-# todo: FIXME sudo apt-get install -y kubectl
+# Using older version due to older version of kubernetes cluster"
 sudo apt-get install -y  kubectl=1.11.10-00
 
 # Download kind binary (0.2.0)
@@ -168,8 +168,8 @@ spec:
             spec:
               containers:
                - name: hellodiana-2-test-0
-                 image: nginx
-                 imagePullPolicy: Never
+                 image: nginx:1.15.12
+                 imagePullPolicy: Always
                  ports:
                  - containerPort: 80
 EOF
@@ -244,12 +244,6 @@ function kube-test-env-up {
     echo "kubectl get nodes"
     kubectl get nodes -o wide
 
-    # Show available resources of cluster nodes
-
-    echo "---"
-    echo "kubectl describe nodes"
-    kubectl describe nodes
-
     # Hack to setup for 'go test' call which expects this path.
     if [ ! -z $HOME/.kube/config ]
     then
@@ -300,7 +294,17 @@ function kube-test-env-up {
         kubectl get pod ${mcad_pod} -n kube-system -o yaml
     fi
 
+    # Show available resources of cluster nodes
+
+    echo "---"
+    echo "kubectl describe nodes"
+    kubectl describe nodes
+
     deleteme_function
+
+    sleep 10
+    deleteme_function
+
 }
 
 
