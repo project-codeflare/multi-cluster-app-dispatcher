@@ -25,7 +25,7 @@ var _ = Describe("Predicates E2E Test", func() {
 
 	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
 		context := initTestContext()
-		//todo: deleteme		defer cleanupTestContext(context)
+		defer cleanupTestContext(context)
 
 		aw := createStatefulSetAW(context,"aw-statefulset-2")
 
