@@ -4,7 +4,8 @@ export ROOT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/..
 export LOG_LEVEL=3
 export CLEANUP_CLUSTER=${CLEANUP_CLUSTER:-1}
 export CLUSTER_CONTEXT="--name test"
-export IMAGE_NGINX="nginx:latest"
+# todo: CLEANUP export IMAGE_NGINX="nginx:latest"
+export IMAGE_NGINX="nginx:1.15.12"
 export IMAGE_BUSYBOX="busybox:latest"
 export KIND_OPT=${KIND_OPT:=" --config ${ROOT_DIR}/hack/e2e-kind-config.yaml"}
 export KA_BIN=_output/bin
@@ -81,9 +82,13 @@ function cleanup {
     echo "==========================>>>>> Cleaning up... <<<<<=========================="
     echo " "
 
+
     echo "Custom Resource Definitions..."
-    kubectl get crds -A -o yaml
-    kubectl describe crds -A
+    echo "kubectl get crds -o yaml"
+    kubectl get crds -o yaml
+    echo "---"
+    echo "kubectl describe crds"
+    kubectl describe crds
 
     echo "---"
     echo "Get All AppWrappers..."
