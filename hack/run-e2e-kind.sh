@@ -126,7 +126,7 @@ function cleanup {
     kind delete cluster ${CLUSTER_CONTEXT}
 }
 
-deleteme_function() {
+debug_function() {
   echo "---"
   echo "kubectl create namespace test"
   kubectl create namespace test
@@ -299,12 +299,6 @@ function kube-test-env-up {
     echo "---"
     echo "kubectl describe nodes"
     kubectl describe nodes
-
-    deleteme_function
-
-    sleep 10
-    deleteme_function
-
 }
 
 

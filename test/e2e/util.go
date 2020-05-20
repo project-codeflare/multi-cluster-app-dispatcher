@@ -337,28 +337,15 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 						fmt.Fprintf(os.Stdout, "=== pod: %s, phase: %s, reason: %s, message: %s\n" , pod.Name, p, pReason, pMsg)
 					}
 					containerStatuses := pod.Status.ContainerStatuses
-					containerMessageFound := false
 					for _, containerStatus := range containerStatuses {
 						waitingState := containerStatus.State.Waiting
 						if waitingState != nil {
 							wMsg := waitingState.Message
 							if len (wMsg) > 0 {
-								containerMessageFound = true
 								wReason := waitingState.Reason
 								containerName := containerStatus.Name
 								fmt.Fprintf(os.Stdout, "condition for pod: %s, phase: %s, container name: %s, " +
 									"reason: %s, message: %s\n" , pod.Name, p, containerName, wReason, wMsg)
-							}
-						}
-					}
-					if containerMessageFound {
-						conds := pod.Status.Conditions
-						for _, cond := range conds {
-							m := cond.Message
-							if len (m) > 0 {
-								s := cond.Status
-								r := cond.Reason
-								fmt.Fprintf(os.Stdout, "condition for pod: %s, phase: %s, status: %s, reason: %s, message: %s\n" , pod.Name, p, s, r, m)
 							}
 						}
 					}
