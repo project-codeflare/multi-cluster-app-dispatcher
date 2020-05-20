@@ -168,7 +168,7 @@ spec:
             spec:
               containers:
                - name: hellodiana-2-test-0
-                 image: nginx:1.15.12
+                 image: k8s.gcr.io/echoserver:1.4
                  imagePullPolicy: Always
                  ports:
                  - containerPort: 80

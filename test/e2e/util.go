@@ -565,7 +565,7 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 				"containers": [
 					{
 						"name": "nginx",
-						"image": "nginx:1.15.12",
+						"image": "k8s.gcr.io/echoserver:1.4",
 						"ports": [
 							{
 								"containerPort": 80
@@ -679,7 +679,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 				"containers": [
 					{
 						"name": "aw-statefulset-1",
-						"image": "nginx:1.15.12",
+						"image": "k8s.gcr.io/echoserver:1.4",
 						"imagePullPolicy": "Never",
 						"ports": [
 							{
@@ -740,7 +740,7 @@ func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "nginx",
-					"image": "nginx:1.15.12",
+					"image": "k8s.gcr.io/echoserver:1.4",
 					"ports": [
 						{
 							"containerPort": 80
@@ -804,7 +804,7 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "nginx",
-					"image": "nginx:1.15.12",
+					"image": "k8s.gcr.io/echoserver:1.4",
 					"ports": [
 						{
 							"containerPort": 80
