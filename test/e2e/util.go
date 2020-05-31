@@ -598,6 +598,78 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 	return appwrapper
 }
 
+func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "apps/v1beta1",
+		"kind": "Deployment", 
+	"metadata": {
+		"name": "aw-generic-deployment-3",
+		"namespace": "test",
+		"labels": {
+			"app": "aw-generic-deployment-3"
+		}
+	},
+	"spec": {
+		"replicas": 3,
+		"selector": {
+			"matchLabels": {
+				"app": "aw-generic-deployment-3"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "aw-generic-deployment-3"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "aw-generic-deployment-3",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `)
+	var schedSpecMin int = 3
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "aw-generic-deployment-3-item1"),
+							Namespace: context.namespace,
+						},
+						Replicas: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "v1",
 		"kind": "Namespace", 
