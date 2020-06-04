@@ -317,12 +317,22 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 		aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
+		if aw != nil {
+			fmt.Fprintf(os.Stdout, "[awPhase] Checking pod phases for AppWrapper: %s, \n" , aw.Name)
+		}
+
 		pods, err := ctx.kubeclient.CoreV1().Pods(aw.Namespace).List(metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
+
+		if pods == nil || pods.Size() < 1 {
+			fmt.Fprintf(os.Stdout, "[awPhase] No pods found for AppWrapper %s, Namespace: %s \n",
+				aw.Name, aw.Namespace)
+		}
 
 		readyTaskNum := 0
 		for _, pod := range pods.Items {
 			if awn, found := pod.Labels["appwrapper.arbitrator.k8s.io"]; !found || awn != aw.Name {
+				fmt.Fprintf(os.Stdout, "[awPhase] Pod %s not part of AppWrapper: %s, labels: %v\n", pod.Name, aw.Name, pod.Labels)
 				continue
 			}
 
@@ -334,7 +344,7 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 					pMsg := pod.Status.Message
 					if len (pMsg) > 0 {
 						pReason := pod.Status.Reason
-						fmt.Fprintf(os.Stdout, "=== pod: %s, phase: %s, reason: %s, message: %s\n" , pod.Name, p, pReason, pMsg)
+						fmt.Fprintf(os.Stdout, "[awPhase] pod: %s, phase: %s, reason: %s, message: %s\n" , pod.Name, p, pReason, pMsg)
 					}
 					containerStatuses := pod.Status.ContainerStatuses
 					for _, containerStatus := range containerStatuses {
@@ -344,7 +354,7 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 							if len (wMsg) > 0 {
 								wReason := waitingState.Reason
 								containerName := containerStatus.Name
-								fmt.Fprintf(os.Stdout, "condition for pod: %s, phase: %s, container name: %s, " +
+								fmt.Fprintf(os.Stdout, "[awPhase] condition for pod: %s, phase: %s, container name: %s, " +
 									"reason: %s, message: %s\n" , pod.Name, p, containerName, wReason, wMsg)
 							}
 						}
