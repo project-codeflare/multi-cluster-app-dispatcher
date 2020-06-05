@@ -79,7 +79,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	}()
 
 	namespaced := true
-//todo:DELETEME	dd := common.KubeClient.Discovery()
+	//todo:DELETEME	dd := common.KubeClient.Discovery()
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
@@ -99,7 +99,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 		return []*v1.Pod{}, err
 	}
 
-//todo:DELETEME		restconfig := common.KubeConfig
+	//todo:DELETEME		restconfig := common.KubeConfig
 	restconfig := gr.kubeClientConfig
 	restconfig.GroupVersion = &schema.GroupVersion{
 		Group:   mapping.GroupVersionKind.Group,
@@ -157,6 +157,9 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	labels[appwrapperJobName] = aw.Name
 	labels[resourceName] = unstruct.GetName()
 	unstruct.SetLabels(labels)
+
+	// Add labels to pod templete if one exists.
+	addLabelsToPodTemplateField(unstruct, labels)
 	replicas := awr.Replicas
 	labelSelector := fmt.Sprintf("%s=%s, %s=%s", appwrapperJobName, aw.Name, resourceName, unstruct.GetName())
 	inEtcd, err := dclient.Resource(rsrc).List(metav1.ListOptions{LabelSelector: labelSelector})
@@ -205,6 +208,45 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	return pods, nil
 }
 
+//checks if object has pod template spec and add new labels
+func addLabelsToPodTemplateField(unstruct unstructured.Unstructured, labels map[string]string) (hasFields bool) {
+	spec, isFound, _ := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
+	if !isFound {
+		return false
+	}
+	template, isFound, _ := unstructured.NestedMap(spec, "template")
+	if !isFound {
+		return false
+	}
+
+	marshal, _ := json.Marshal(template)
+	unmarshal := v1.PodTemplateSpec{}
+	if err := json.Unmarshal(marshal, &unmarshal); err != nil {
+		glog.Warning(err)
+		return false
+	}
+	metadata, isFound, _ := unstructured.NestedMap(spec, "metadata")
+	if !isFound {
+		return false
+	}
+	existingLabels, isFound, _ := unstructured.NestedStringMap(metadata, "labels")
+	if !isFound {
+		return false
+	}
+	newLength := len(existingLabels) + len(labels)
+	m := make(map[string]string, newLength) // convert map[string]string into map[string]interface{}
+	for k, v := range existingLabels {
+		m[k] = v
+	}
+
+	for k, v := range labels {
+		m[k] = v
+	}
+
+	unstructured.SetNestedStringMap(unstruct.Object, m, "spec", "template", "metadata", "labels")
+
+	return isFound
+}
 //checks if object has replicas and containers field
 func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, containers []v1.Container) {
 	var unstruct unstructured.Unstructured

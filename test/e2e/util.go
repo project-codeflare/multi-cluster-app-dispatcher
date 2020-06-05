@@ -317,16 +317,12 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 		aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		if aw != nil {
-			fmt.Fprintf(os.Stdout, "[awPhase] Checking pod phases for AppWrapper: %s, \n" , aw.Name)
-		}
-
 		pods, err := ctx.kubeclient.CoreV1().Pods(aw.Namespace).List(metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		if pods == nil || pods.Size() < 1 {
-			fmt.Fprintf(os.Stdout, "[awPhase] No pods found for AppWrapper %s, Namespace: %s \n",
-				aw.Name, aw.Namespace)
+			fmt.Fprintf(os.Stdout, "[awPhase] Listing pods found for Namespace: %s resuling in no pods found that could match AppWrapper: %s \n",
+				aw.Namespace, aw.Name)
 		}
 
 		readyTaskNum := 0
