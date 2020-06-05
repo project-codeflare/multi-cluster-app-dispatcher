@@ -159,7 +159,11 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	unstruct.SetLabels(labels)
 
 	// Add labels to pod templete if one exists.
-	addLabelsToPodTemplateField(unstruct, labels)
+	podTemplateFound := addLabelsToPodTemplateField(&unstruct, labels)
+	if !podTemplateFound {
+		glog.V(4).Infof("[SyncQueueJob] No pod template spec found for job: %s ", aw.Name)
+	}
+
 	replicas := awr.Replicas
 	labelSelector := fmt.Sprintf("%s=%s, %s=%s", appwrapperJobName, aw.Name, resourceName, unstruct.GetName())
 	inEtcd, err := dclient.Resource(rsrc).List(metav1.ListOptions{LabelSelector: labelSelector})
@@ -209,7 +213,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 }
 
 //checks if object has pod template spec and add new labels
-func addLabelsToPodTemplateField(unstruct unstructured.Unstructured, labels map[string]string) (hasFields bool) {
+func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map[string]string) (hasFields bool) {
 	spec, isFound, _ := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
 	if !isFound {
 		return false
