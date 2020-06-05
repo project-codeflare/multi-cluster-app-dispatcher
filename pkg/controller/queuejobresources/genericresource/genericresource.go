@@ -231,12 +231,7 @@ func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map
 		glog.Warning(err)
 		return false
 	}
-	metadata, isFound, _ := unstructured.NestedMap(spec, "metadata")
-	if !isFound {
-		glog.V(4).Infof("[addLabelsToPodTemplateField] 'spec.template.metadata' field not found.")
-		return false
-	}
-	existingLabels, isFound, _ := unstructured.NestedStringMap(metadata, "labels")
+	existingLabels, isFound, _ := unstructured.NestedStringMap(template, "metadata", "labels")
 	if !isFound {
 		glog.V(4).Infof("[addLabelsToPodTemplateField] 'spec.template.metadata.labels' field not found.")
 		return false
@@ -251,7 +246,10 @@ func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map
 		m[k] = v
 	}
 
-	unstructured.SetNestedStringMap(unstruct.Object, m, "spec", "template", "metadata", "labels")
+	if err := unstructured.SetNestedStringMap(unstruct.Object, m, "spec", "template", "metadata", "labels"); err != nil {
+		glog.Warning(err)
+		return false
+	}
 
 	return isFound
 }
