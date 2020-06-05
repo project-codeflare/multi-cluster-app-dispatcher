@@ -161,7 +161,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	// Add labels to pod templete if one exists.
 	podTemplateFound := addLabelsToPodTemplateField(&unstruct, labels)
 	if !podTemplateFound {
-		glog.V(4).Infof("[SyncQueueJob] No pod template spec found for job: %s ", aw.Name)
+		glog.V(4).Infof("[SyncQueueJob] No pod template spec exists for job: %s to add labels.", aw.Name)
 	}
 
 	replicas := awr.Replicas
@@ -216,10 +216,12 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map[string]string) (hasFields bool) {
 	spec, isFound, _ := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
 	if !isFound {
+		glog.V(4).Infof("[addLabelsToPodTemplateField] 'spec' field not found.")
 		return false
 	}
 	template, isFound, _ := unstructured.NestedMap(spec, "template")
 	if !isFound {
+		glog.V(4).Infof("[addLabelsToPodTemplateField] 'spec.template' field not found.")
 		return false
 	}
 
@@ -231,10 +233,12 @@ func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map
 	}
 	metadata, isFound, _ := unstructured.NestedMap(spec, "metadata")
 	if !isFound {
+		glog.V(4).Infof("[addLabelsToPodTemplateField] 'spec.template.metadata' field not found.")
 		return false
 	}
 	existingLabels, isFound, _ := unstructured.NestedStringMap(metadata, "labels")
 	if !isFound {
+		glog.V(4).Infof("[addLabelsToPodTemplateField] 'spec.template.metadata.labels' field not found.")
 		return false
 	}
 	newLength := len(existingLabels) + len(labels)
