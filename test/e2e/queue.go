@@ -90,11 +90,33 @@ var _ = Describe("Predicates E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("Create AppWrapper  - Generic PodTemplate Only - 2 Pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createGenericPodTemplateAW(context,"aw-generic-podtemplate-2")
+
+		err := waitAWReady(context, aw)
+
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	It("Create AppWrapper - Namespace Only - 0 Pods", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
 		aw := createNamespaceAW(context,"aw-namespace-0")
+
+		err := waitAWNonComputeResourceActive(context, aw)
+
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("Create AppWrapper - Generic Namespace Only - 0 Pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createGenericNamespaceAW(context,"aw-generic-namespace-0")
 
 		err := waitAWNonComputeResourceActive(context, aw)
 

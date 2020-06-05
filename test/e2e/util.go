@@ -698,12 +698,47 @@ func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 			AggrResources: arbv1.AppWrapperResourceList{
 				Items: []arbv1.AppWrapperResource{
 					{
-//						ObjectMeta: metav1.ObjectMeta{
-//							Name:      fmt.Sprintf("%s-%s", name, "item1"),
-//						},
 						Replicas: 1,
 						Type: arbv1.ResourceTypeNamespace,
 						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createGenericNamespaceAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "v1",
+		"kind": "Namespace", 
+	"metadata": {
+		"name": "aw-generic-namespace-0",
+		"labels": {
+			"app": "aw-generic-namespace-0"
+		}
+	}} `)
+	var schedSpecMin int = 0
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						Replicas: 1,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
@@ -900,6 +935,69 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 						Replicas: 2,
 						Type: arbv1.ResourceTypePod,
 						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createGenericPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"metadata": 
+	{
+		"name": "nginx",
+		"namespace": "test",
+		"labels": {
+			"app": "nginx"
+		}
+	},
+	"template": {
+		"metadata": {
+			"labels": {
+				"app": "nginx"
+			}
+		},
+		"spec": {
+			"containers": [
+				{
+					"name": "nginx",
+					"image": "k8s.gcr.io/echoserver:1.4",
+					"ports": [
+						{
+							"containerPort": 80
+						}
+					]
+				}
+			]
+		}
+	}} `)
+	var schedSpecMin int = 2
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item"),
+							Namespace: context.namespace,
+						},
+						Replicas: 2,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
