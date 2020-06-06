@@ -90,11 +90,23 @@ var _ = Describe("Predicates E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+
+	It("Create AppWrapper  - Pod Only - 1 Pod", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createGenericPodAW(context,"aw-generic-pod-1")
+
+		err := waitAWReady(context, aw)
+
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	It("Create AppWrapper  - Generic PodTemplate Only - 2 Pods", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
-		aw := createGenericPodTemplateAW(context,"aw-generic-podtemplate-2")
+		aw := createBadGenericPodTemplateAW(context,"aw-generic-podtemplate-2")
 
 		err := waitAWReady(context, aw)
 

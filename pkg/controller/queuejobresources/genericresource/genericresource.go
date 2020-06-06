@@ -22,8 +22,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/google/uuid"
-
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	"github.com/golang/glog"
 	"k8s.io/api/core/v1"
@@ -164,23 +162,25 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 		glog.V(4).Infof("[SyncQueueJob] No pod template spec exists for resource: %s to add labels.", awr.Name)
 	}
 
-	replicas := awr.Replicas
+//	replicas := awr.Replicas
+	// Get the resource  to see if it exists
 	labelSelector := fmt.Sprintf("%s=%s, %s=%s", appwrapperJobName, aw.Name, resourceName, unstruct.GetName())
 	inEtcd, err := dclient.Resource(rsrc).List(metav1.ListOptions{LabelSelector: labelSelector})
-	diff := 0
+//	diff := 0
 	if err != nil {
 		return []*v1.Pod{}, err
 	}
-	if inEtcd != nil {
-		diff = int(replicas) - len(inEtcd.Items)
-	} else {
-		diff = int(replicas)
-	}
-	for diff > 0 {
+//	if inEtcd != nil {
+//		diff = int(replicas) - len(inEtcd.Items)
+//	} else {
+//		diff = int(replicas)
+//	}
+//	for diff > 0 {
+	if inEtcd == nil || len(inEtcd.Items) < 1 {
 		newName := name
-		if diff > 1 {
-			newName = name + "-" + uuid.New().String()
-		}
+//		if diff > 1 {
+//			newName = name + "-" + uuid.New().String()
+//		}
 		if len(newName) > 63 {
 			newName = newName[:63]
 		}
@@ -193,7 +193,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 				glog.Errorf("Error creating the object `%v`, the error is `%v`", newName, errors.ReasonForError(err))
 			}
 		}
-		diff--
+//		diff--
 	}
 	thisObj, err := dclient.Resource(rsrc).Namespace(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
