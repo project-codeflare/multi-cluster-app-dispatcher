@@ -752,6 +752,7 @@ func createGenericNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 
 	return appwrapper
 }
+
 func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "StatefulSet", 
@@ -809,7 +810,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
 							Namespace: context.namespace,
 						},
-						Replicas: 1,
+						Replicas: 2,
 						Type: arbv1.ResourceTypeStatefulSet,
 						Template: runtime.RawExtension{
 							Raw: rb,
@@ -825,6 +826,80 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 
 	return appwrapper
 }
+
+func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "apps/v1",
+		"kind": "StatefulSet", 
+	"metadata": {
+		"name": "aw-generic-statefulset-2",
+		"namespace": "test",
+		"labels": {
+			"app": "aw-generic-statefulset-2"
+		}
+	},
+	"spec": {
+		"replicas": 2,
+		"selector": {
+			"matchLabels": {
+				"app": "aw-generic-statefulset-2"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "aw-generic-statefulset-2"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "aw-generic-statefulset-2",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"imagePullPolicy": "Never",
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `)
+	var schedSpecMin int = 2
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item1"),
+							Namespace: context.namespace,
+						},
+						Replicas: 2,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 //NOTE: Recommend this test not to be the last test in the test suite it may pass
 //      may pass the local test but may cause controller to fail which is not
 //      part of this test's validation.
