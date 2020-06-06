@@ -106,11 +106,11 @@ var _ = Describe("Predicates E2E Test", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
-		aw := createGenericPodAW(context,"aw-bad-generic-pod-1")
+		aw := createBadGenericPodAW(context,"aw-bad-generic-pod-1")
 
 		err := waitAWReady(context, aw)
 
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).To(HaveOccurred())
 	})
 
 	It("Create AppWrapper  - Bad Generic PodTemplate Only - 2 Pods", func() {
@@ -121,7 +121,7 @@ var _ = Describe("Predicates E2E Test", func() {
 
 		err := waitAWReady(context, aw)
 
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).To(HaveOccurred())
 	})
 
 	It("Create AppWrapper - Namespace Only - 0 Pods", func() {
