@@ -102,7 +102,7 @@ var _ = Describe("Predicates E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("Create AppWrapper  - Bad Generic Pod Only - 1 Pod", func() {
+	It("Create AppWrapper  - Bad Generic Pod Only", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
@@ -113,7 +113,7 @@ var _ = Describe("Predicates E2E Test", func() {
 		Expect(err).To(HaveOccurred())
 	})
 
-	It("Create AppWrapper  - Bad Generic PodTemplate Only - 2 Pods", func() {
+	It("Create AppWrapper  - Bad Generic PodTemplate Only", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 

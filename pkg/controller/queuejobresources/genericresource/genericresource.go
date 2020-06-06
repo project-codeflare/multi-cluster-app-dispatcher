@@ -159,28 +159,19 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	// Add labels to pod templete if one exists.
 	podTemplateFound := addLabelsToPodTemplateField(&unstruct, labels)
 	if !podTemplateFound {
-		glog.V(4).Infof("[SyncQueueJob] No pod template spec exists for resource: %s to add labels.", awr.Name)
+		glog.V(4).Infof("[SyncQueueJob] No pod template spec exists for resource: %s to add labels.", name)
 	}
 
-//	replicas := awr.Replicas
 	// Get the resource  to see if it exists
 	labelSelector := fmt.Sprintf("%s=%s, %s=%s", appwrapperJobName, aw.Name, resourceName, unstruct.GetName())
 	inEtcd, err := dclient.Resource(rsrc).List(metav1.ListOptions{LabelSelector: labelSelector})
-//	diff := 0
 	if err != nil {
 		return []*v1.Pod{}, err
 	}
-//	if inEtcd != nil {
-//		diff = int(replicas) - len(inEtcd.Items)
-//	} else {
-//		diff = int(replicas)
-//	}
-//	for diff > 0 {
+
+	// Check to see if object already exists in etcd, if not, create the object.
 	if inEtcd == nil || len(inEtcd.Items) < 1 {
 		newName := name
-//		if diff > 1 {
-//			newName = name + "-" + uuid.New().String()
-//		}
 		if len(newName) > 63 {
 			newName = newName[:63]
 		}
@@ -194,13 +185,22 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 				return []*v1.Pod{}, err
 			}
 		}
-//		diff--
 	}
-	thisObj, err := dclient.Resource(rsrc).Namespace(namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
+
+	// Get the related resources of created object
+	var thisObj *unstructured.Unstructured
+	var err1 error
+	if namespaced {
+		thisObj, err1 = dclient.Resource(rsrc).Namespace(namespace).Get(name, metav1.GetOptions{})
+	} else {
+		thisObj, err1 = dclient.Resource(rsrc).Get(name, metav1.GetOptions{})
+	}
+	if err1 != nil {
 		glog.Errorf("Could not get created resource with error %v", err)
 	}
 	thisOwnerRef := metav1.NewControllerRef(thisObj, thisObj.GroupVersionKind())
+
+
 	podL, _ := gr.clients.CoreV1().Pods("").List(metav1.ListOptions{})
 	pods := []*v1.Pod{}
 	for _, pod := range (*podL).Items {
