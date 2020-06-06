@@ -191,6 +191,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 				glog.V(4).Infof("%v\n", err.Error())
 			} else {
 				glog.Errorf("Error creating the object `%v`, the error is `%v`", newName, errors.ReasonForError(err))
+				return []*v1.Pod{}, err
 			}
 		}
 //		diff--
