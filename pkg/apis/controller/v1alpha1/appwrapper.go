@@ -104,13 +104,13 @@ type AppWrapperGenericResource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 	// Replicas is the number of desired replicas
-	Replicas int32 `json:"replicas,omitempty" protobuf:"bytes,2,opt,name=replicas"`
+	DesiredAvailable int32 `json:"replicas,omitempty" protobuf:"bytes,2,opt,name=desiredavailable"`
 
 	// The minimal available pods to run for this AppWrapper; the default value is nil
 	MinAvailable *int32 `json:"minavailable,omitempty" protobuf:"bytes,3,opt,name=minavailable"`
 
 	// The number of allocated replicas from this resource type
-	AllocatedReplicas int32 `json:"allocatedreplicas"`
+	Allocated int32 `json:"allocated"`
 
 	// The priority of this resource
 	Priority float64 `json:"priority"`

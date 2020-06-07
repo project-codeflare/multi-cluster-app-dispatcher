@@ -660,7 +660,7 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 							Name:      fmt.Sprintf("%s-%s", name, "aw-generic-deployment-3-item1"),
 							Namespace: context.namespace,
 						},
-						Replicas: 1,
+						DesiredAvailable: 1,
 						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
@@ -737,7 +737,7 @@ func createGenericNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 			AggrResources: arbv1.AppWrapperResourceList{
 				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
-						Replicas: 1,
+						DesiredAvailable: 0,
 						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
@@ -757,29 +757,29 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "StatefulSet", 
 	"metadata": {
-		"name": "aw-statefulset-1",
+		"name": "aw-statefulset-2",
 		"namespace": "test",
 		"labels": {
-			"app": "aw-statefulset-1"
+			"app": "aw-statefulset-2"
 		}
 	},
 	"spec": {
 		"replicas": 2,
 		"selector": {
 			"matchLabels": {
-				"app": "aw-statefulset-1"
+				"app": "aw-statefulset-2"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "aw-statefulset-1"
+					"app": "aw-statefulset-2"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "aw-statefulset-1",
+						"name": "aw-statefulset-2",
 						"image": "k8s.gcr.io/echoserver:1.4",
 						"imagePullPolicy": "Never",
 						"ports": [
@@ -810,7 +810,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
 							Namespace: context.namespace,
 						},
-						Replicas: 2,
+						Replicas: 1,
 						Type: arbv1.ResourceTypeStatefulSet,
 						Template: runtime.RawExtension{
 							Raw: rb,
@@ -884,7 +884,7 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
 							Namespace: context.namespace,
 						},
-						Replicas: 2,
+						DesiredAvailable: 2,
 						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
@@ -1182,7 +1182,7 @@ func createBadGenericPodTemplateAW(context *context, name string) *arbv1.AppWrap
 							Name:      fmt.Sprintf("%s-%s", name, "item"),
 							Namespace: context.namespace,
 						},
-						Replicas: 2,
+						DesiredAvailable: 2,
 						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
