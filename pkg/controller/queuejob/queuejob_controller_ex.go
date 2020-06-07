@@ -462,10 +462,6 @@ func (qjm *XController) GetAggregatedResources(cqj *arbv1.AppWrapper) *clusterst
 
 	for _, genericItem := range cqj.Spec.AggrResources.GenericItems {
 		qjv, _ := genericresource.GetResources(&genericItem)
-		replicas := genericItem.Replicas
-		qjv.MilliCPU = qjv.MilliCPU * float64(replicas)
-		qjv.Memory = qjv.Memory * float64(replicas)
-		qjv.GPU = qjv.GPU * int64(replicas)
 		allocated = allocated.Add(qjv)
 	}
 
@@ -501,10 +497,6 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64
 			}
 			for _, genericItem := range value.Spec.AggrResources.GenericItems {
 				qjv, _ := genericresource.GetResources(&genericItem)
-				replicas := genericItem.Replicas
-				qjv.MilliCPU = qjv.MilliCPU * float64(replicas)
-				qjv.Memory = qjv.Memory * float64(replicas)
-				qjv.GPU = qjv.GPU * int64(replicas)
 				preemptable = preemptable.Add(qjv)
 			}
 
@@ -518,11 +510,8 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64
 			}
 			for _, genericItem := range value.Spec.AggrResources.GenericItems {
 				qjv, _ := genericresource.GetResources(&genericItem)
-				replicas := genericItem.Replicas
-				qjv.MilliCPU = qjv.MilliCPU * float64(replicas)
-				qjv.Memory = qjv.Memory * float64(replicas)
-				qjv.GPU = qjv.GPU * int64(replicas)
 				pending = pending.Add(qjv)
+				glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v but state is still pending.", qjv, genericItem, value.Name, value.Status.CanRun)
 			}
 			continue
 		} else if value.Status.State == arbv1.AppWrapperStateActive {
@@ -535,11 +524,8 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64
 				}
 				for _, genericItem := range value.Spec.AggrResources.GenericItems {
 					qjv, _ := genericresource.GetResources(&genericItem)
-					replicas := genericItem.Replicas
-					qjv.MilliCPU = qjv.MilliCPU * float64(replicas)
-					qjv.Memory = qjv.Memory * float64(replicas)
-					qjv.GPU = qjv.GPU * int64(replicas)
 					pending = pending.Add(qjv)
+					glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but %v pod(s) are pending.", qjv, genericItem, value.Name, value.Status.CanRun, value.Status.State, value.Status.Pending)
 				}
 			} else {
 				// TODO: Hack to handle race condition when Running jobs have not yet updated the pod counts
@@ -553,11 +539,8 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64
 					}
 					for _, genericItem := range value.Spec.AggrResources.GenericItems {
 						qjv, _ := genericresource.GetResources(&genericItem)
-						replicas := genericItem.Replicas
-						qjv.MilliCPU = qjv.MilliCPU * float64(replicas)
-						qjv.Memory = qjv.Memory * float64(replicas)
-						qjv.GPU = qjv.GPU * int64(replicas)
 						pending = pending.Add(qjv)
+						glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", qjv, genericItem, value.Name, value.Status.CanRun, value.Status.State)
 					}
 				}
 			}
