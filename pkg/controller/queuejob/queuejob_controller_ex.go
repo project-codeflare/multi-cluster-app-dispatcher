@@ -42,6 +42,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/genericresource"
 	resconfigmap "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/configmap" // ConfigMap
 	resdeployment "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/deployment"
 	resnamespace "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/namespace"                         // NP
@@ -88,6 +89,9 @@ type XController struct {
 	qjobRegisteredResources queuejobresources.RegisteredResources
 	// controllers for these resources
 	qjobResControls map[arbv1.ResourceType]queuejobresources.Interface
+
+	// Captures all available resources in the cluster
+	genericresources *genericresource.GenericResources
 
 	clients    *kubernetes.Clientset
 	arbclients *clientset.Clientset
@@ -192,6 +196,8 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		cache: 			clusterstatecache.New(config),
 	}
 	cc.metricsAdapter =  adapter.New(config, cc.cache)
+
+	cc.genericresources = genericresource.NewAppWrapperGenericResource(config)
 
 	cc.qjobResControls = map[arbv1.ResourceType]queuejobresources.Interface{}
 	RegisterAllQueueJobResourceTypes(&cc.qjobRegisteredResources)
@@ -447,11 +453,17 @@ func GetPodTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.PodTemplateSpec, err
 }
 
 func (qjm *XController) GetAggregatedResources(cqj *arbv1.AppWrapper) *clusterstateapi.Resource {
+	//todo: deprecate resource controllers
 	allocated := clusterstateapi.EmptyResource()
         for _, resctrl := range qjm.qjobResControls {
                 qjv     := resctrl.GetAggregatedResources(cqj)
                 allocated = allocated.Add(qjv)
         }
+
+	for _, genericItem := range cqj.Spec.AggrResources.GenericItems {
+		qjv, _ := genericresource.GetResources(&genericItem)
+		allocated = allocated.Add(qjv)
+	}
 
         return allocated
 }
@@ -483,6 +495,11 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64
 				qjv := resctrl.GetAggregatedResources(value)
 				preemptable = preemptable.Add(qjv)
 			}
+			for _, genericItem := range value.Spec.AggrResources.GenericItems {
+				qjv, _ := genericresource.GetResources(&genericItem)
+				preemptable = preemptable.Add(qjv)
+			}
+
 			continue
 		} else if value.Status.State == arbv1.AppWrapperStateEnqueued {
 			// Don't count the resources that can run but not yet realized (job orchestration pending or partially running).
@@ -490,6 +507,11 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64
 				qjv := resctrl.GetAggregatedResources(value)
 				pending = pending.Add(qjv)
 				glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v but state is still pending.", qjv, resctrl, value.Name, value.Status.CanRun)
+			}
+			for _, genericItem := range value.Spec.AggrResources.GenericItems {
+				qjv, _ := genericresource.GetResources(&genericItem)
+				pending = pending.Add(qjv)
+				glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v but state is still pending.", qjv, genericItem, value.Name, value.Status.CanRun)
 			}
 			continue
 		} else if value.Status.State == arbv1.AppWrapperStateActive {
@@ -500,6 +522,11 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64
 					pending = pending.Add(qjv)
 					glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but %v pod(s) are pending.", qjv, resctrl, value.Name, value.Status.CanRun, value.Status.State, value.Status.Pending)
 				}
+				for _, genericItem := range value.Spec.AggrResources.GenericItems {
+					qjv, _ := genericresource.GetResources(&genericItem)
+					pending = pending.Add(qjv)
+					glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but %v pod(s) are pending.", qjv, genericItem, value.Name, value.Status.CanRun, value.Status.State, value.Status.Pending)
+				}
 			} else {
 				// TODO: Hack to handle race condition when Running jobs have not yet updated the pod counts
 				// This hack uses the golang struct implied behavior of defining the object without a value.  In this case
@@ -509,6 +536,11 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64
 						qjv := resctrl.GetAggregatedResources(value)
 						pending = pending.Add(qjv)
 						glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", qjv, resctrl, value.Name, value.Status.CanRun, value.Status.State)
+					}
+					for _, genericItem := range value.Spec.AggrResources.GenericItems {
+						qjv, _ := genericresource.GetResources(&genericItem)
+						pending = pending.Add(qjv)
+						glog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", qjv, genericItem, value.Name, value.Status.CanRun, value.Status.State)
 					}
 				}
 			}
@@ -1116,6 +1148,16 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 					break
 				}
 			}
+			// Handle generic resources
+			for _, ar := range qj.Spec.AggrResources.GenericItems {
+				glog.V(10).Infof("[worker-manageQJ] before dispatch Generic.SyncQueueJob %s &qj=%p Version=%s Status=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status)
+				_, err00 := cc.genericresources.SyncQueueJob(qj, &ar)
+				if err00 != nil {
+					glog.Errorf("[worker-manageQJ] Error dispatching job=%s Status=%+v err=%+v", qj.Name, qj.Status, err00)
+					dispatched = false
+				}
+			}
+
 			if dispatched { // set QueueJobStateRunning if all resources are successfully dispatched
 				qj.Status.QueueJobState = arbv1.QueueJobStateDispatched
 				glog.V(4).Infof("[worker-manageQJ] %s 4Delay=%.6f seconds AllResourceDispatchedToEtcd Version=%s Status=%+v",

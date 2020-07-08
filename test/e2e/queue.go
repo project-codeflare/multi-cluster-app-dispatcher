@@ -21,13 +21,24 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Predicates E2E Test", func() {
+var _ = Describe("AppWrapper E2E Test", func() {
 
 	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
 		aw := createStatefulSetAW(context,"aw-statefulset-2")
+
+		err := waitAWReady(context, aw)
+
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("Create AppWrapper - Generic StatefulSet Only - 2 Pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createGenericStatefulSetAW(context,"aw-generic-statefulset-2")
 
 		err := waitAWReady(context, aw)
 
@@ -53,8 +64,19 @@ var _ = Describe("Predicates E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("Create AppWrapper - Generic Deployment Only - 3 pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createGenericDeploymentAW(context,"aw-generic-deployment-3")
+
+		err := waitAWReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+	})
+
 	//NOTE: Recommend this test not to be the last test in the test suite it may pass
-	//      may pass the local test but may cause controller to fail which is not
+	//      the local test but may cause controller to fail which is not
 	//      part of this test's validation.
 
 	It("Create AppWrapper- Bad PodTemplate", func() {
@@ -62,6 +84,17 @@ var _ = Describe("Predicates E2E Test", func() {
 		defer cleanupTestContext(context)
 
 		aw := createBadPodTemplateAW(context,"aw-bad-podtemplate-2")
+
+		err := waitAWReady(context, aw)
+
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("Create AppWrapper  - Bad Generic PodTemplate Only", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createBadGenericPodTemplateAW(context,"aw-generic-podtemplate-2")
 
 		err := waitAWReady(context, aw)
 
@@ -79,11 +112,45 @@ var _ = Describe("Predicates E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+
+	It("Create AppWrapper  - Generic Pod Only - 1 Pod", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createGenericPodAW(context,"aw-generic-pod-1")
+
+		err := waitAWReady(context, aw)
+
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("Create AppWrapper  - Bad Generic Pod Only", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createBadGenericPodAW(context,"aw-bad-generic-pod-1")
+
+		err := waitAWReady(context, aw)
+
+		Expect(err).To(HaveOccurred())
+	})
+
 	It("Create AppWrapper - Namespace Only - 0 Pods", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
 		aw := createNamespaceAW(context,"aw-namespace-0")
+
+		err := waitAWNonComputeResourceActive(context, aw)
+
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("Create AppWrapper - Generic Namespace Only - 0 Pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createGenericNamespaceAW(context,"aw-generic-namespace-0")
 
 		err := waitAWNonComputeResourceActive(context, aw)
 

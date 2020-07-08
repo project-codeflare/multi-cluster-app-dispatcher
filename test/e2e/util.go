@@ -320,9 +320,15 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 		pods, err := ctx.kubeclient.CoreV1().Pods(aw.Namespace).List(metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
+		if pods == nil || pods.Size() < 1 {
+			fmt.Fprintf(os.Stdout, "[awPhase] Listing pods found for Namespace: %s resuling in no pods found that could match AppWrapper: %s \n",
+				aw.Namespace, aw.Name)
+		}
+
 		readyTaskNum := 0
 		for _, pod := range pods.Items {
 			if awn, found := pod.Labels["appwrapper.arbitrator.k8s.io"]; !found || awn != aw.Name {
+				fmt.Fprintf(os.Stdout, "[awPhase] Pod %s not part of AppWrapper: %s, labels: %v\n", pod.Name, aw.Name, pod.Labels)
 				continue
 			}
 
@@ -334,7 +340,7 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 					pMsg := pod.Status.Message
 					if len (pMsg) > 0 {
 						pReason := pod.Status.Reason
-						fmt.Fprintf(os.Stdout, "=== pod: %s, phase: %s, reason: %s, message: %s\n" , pod.Name, p, pReason, pMsg)
+						fmt.Fprintf(os.Stdout, "[awPhase] pod: %s, phase: %s, reason: %s, message: %s\n" , pod.Name, p, pReason, pMsg)
 					}
 					containerStatuses := pod.Status.ContainerStatuses
 					for _, containerStatus := range containerStatuses {
@@ -344,7 +350,7 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 							if len (wMsg) > 0 {
 								wReason := waitingState.Reason
 								containerName := containerStatus.Name
-								fmt.Fprintf(os.Stdout, "condition for pod: %s, phase: %s, container name: %s, " +
+								fmt.Fprintf(os.Stdout, "[awPhase] condition for pod: %s, phase: %s, container name: %s, " +
 									"reason: %s, message: %s\n" , pod.Name, p, containerName, wReason, wMsg)
 							}
 						}
@@ -598,6 +604,78 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 	return appwrapper
 }
 
+func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "apps/v1beta1",
+		"kind": "Deployment", 
+	"metadata": {
+		"name": "aw-generic-deployment-3",
+		"namespace": "test",
+		"labels": {
+			"app": "aw-generic-deployment-3"
+		}
+	},
+	"spec": {
+		"replicas": 3,
+		"selector": {
+			"matchLabels": {
+				"app": "aw-generic-deployment-3"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "aw-generic-deployment-3"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "aw-generic-deployment-3",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `)
+	var schedSpecMin int = 3
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "aw-generic-deployment-3-item1"),
+							Namespace: context.namespace,
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "v1",
 		"kind": "Namespace", 
@@ -620,9 +698,6 @@ func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 			AggrResources: arbv1.AppWrapperResourceList{
 				Items: []arbv1.AppWrapperResource{
 					{
-//						ObjectMeta: metav1.ObjectMeta{
-//							Name:      fmt.Sprintf("%s-%s", name, "item1"),
-//						},
 						Replicas: 1,
 						Type: arbv1.ResourceTypeNamespace,
 						Template: runtime.RawExtension{
@@ -639,33 +714,72 @@ func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 
 	return appwrapper
 }
+
+func createGenericNamespaceAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "v1",
+		"kind": "Namespace", 
+	"metadata": {
+		"name": "aw-generic-namespace-0",
+		"labels": {
+			"app": "aw-generic-namespace-0"
+		}
+	}} `)
+	var schedSpecMin int = 0
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						DesiredAvailable: 0,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "StatefulSet", 
 	"metadata": {
-		"name": "aw-statefulset-1",
+		"name": "aw-statefulset-2",
 		"namespace": "test",
 		"labels": {
-			"app": "aw-statefulset-1"
+			"app": "aw-statefulset-2"
 		}
 	},
 	"spec": {
 		"replicas": 2,
 		"selector": {
 			"matchLabels": {
-				"app": "aw-statefulset-1"
+				"app": "aw-statefulset-2"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "aw-statefulset-1"
+					"app": "aw-statefulset-2"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "aw-statefulset-1",
+						"name": "aw-statefulset-2",
 						"image": "k8s.gcr.io/echoserver:1.4",
 						"imagePullPolicy": "Never",
 						"ports": [
@@ -712,6 +826,80 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 
 	return appwrapper
 }
+
+func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "apps/v1",
+		"kind": "StatefulSet", 
+	"metadata": {
+		"name": "aw-generic-statefulset-2",
+		"namespace": "test",
+		"labels": {
+			"app": "aw-generic-statefulset-2"
+		}
+	},
+	"spec": {
+		"replicas": 2,
+		"selector": {
+			"matchLabels": {
+				"app": "aw-generic-statefulset-2"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "aw-generic-statefulset-2"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "aw-generic-statefulset-2",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"imagePullPolicy": "Never",
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `)
+	var schedSpecMin int = 2
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item1"),
+							Namespace: context.namespace,
+						},
+						DesiredAvailable: 2,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 //NOTE: Recommend this test not to be the last test in the test suite it may pass
 //      may pass the local test but may cause controller to fail which is not
 //      part of this test's validation.
@@ -822,6 +1010,180 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 						Replicas: 2,
 						Type: arbv1.ResourceTypePod,
 						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "v1",
+		"kind": "Pod",
+		"metadata": {
+			"name": "aw-generic-pod-1",
+			"namespace": "test",
+			"labels": {
+				"app": "aw-generic-pod-1"
+			}
+		},
+		"spec": {
+			"containers": [
+				{
+					"name": "aw-generic-pod-1",
+					"image": "k8s.gcr.io/echoserver:1.4",
+					"ports": [
+						{
+							"containerPort": 80
+						}
+					]
+				}
+			]
+		}
+	} `)
+	var schedSpecMin int = 1
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item"),
+							Namespace: context.namespace,
+						},
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createBadGenericPodAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "v1",
+		"kind": "Pod",
+		"metadata": {
+			"labels": {
+				"app": "aw-bad-generic-pod-1"
+			}
+		},
+		"spec": {
+			"containers": [
+				{
+					"name": "aw-bad-generic-pod-1",
+					"image": "k8s.gcr.io/echoserver:1.4",
+					"ports": [
+						{
+							"containerPort": 80
+						}
+					]
+				}
+			]
+		}
+	} `)
+	var schedSpecMin int = 1
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item"),
+							Namespace: context.namespace,
+						},
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+func createBadGenericPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"metadata": 
+	{
+		"name": "nginx",
+		"namespace": "test",
+		"labels": {
+			"app": "nginx"
+		}
+	},
+	"template": {
+		"metadata": {
+			"labels": {
+				"app": "nginx"
+			}
+		},
+		"spec": {
+			"containers": [
+				{
+					"name": "nginx",
+					"image": "k8s.gcr.io/echoserver:1.4",
+					"ports": [
+						{
+							"containerPort": 80
+						}
+					]
+				}
+			]
+		}
+	}} `)
+	var schedSpecMin int = 2
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item"),
+							Namespace: context.namespace,
+						},
+						DesiredAvailable: 2,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},

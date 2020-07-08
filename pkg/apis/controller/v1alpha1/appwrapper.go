@@ -57,6 +57,13 @@ type AppWrapperSpec struct {
 	// SchedSpec specifies the parameters for scheduling.
 	SchedSpec SchedulingSpecTemplate `json:"schedulingSpec,omitempty" protobuf:"bytes,2,opt,name=schedulingSpec"`
 }
+// a collection of AppWrapperResource
+type AppWrapperResourceList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []AppWrapperResource
+	GenericItems	[]AppWrapperGenericResource
+}
 
 // AppWrapperService is App Wrapper service definition
 type AppWrapperService struct {
@@ -64,6 +71,7 @@ type AppWrapperService struct {
 }
 
 // AppWrapperResource is App Wrapper aggregation resource
+//todo: To be depricated
 type AppWrapperResource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -88,13 +96,43 @@ type AppWrapperResource struct {
 	//The template for the resource; it is now a raw text because we don't know for what resource
 	//it should be instantiated
 	Template runtime.RawExtension `json:"template"`
+
 }
 
-// a collection of AppWrapperResource
-type AppWrapperResourceList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []AppWrapperResource
+// AppWrapperResource is App Wrapper aggregation resource
+type AppWrapperGenericResource struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata"`
+	// Replicas is the number of desired replicas
+	DesiredAvailable int32 `json:"replicas,omitempty" protobuf:"bytes,2,opt,name=desiredavailable"`
+
+	// The minimal available pods to run for this AppWrapper; the default value is nil
+	MinAvailable *int32 `json:"minavailable,omitempty" protobuf:"bytes,3,opt,name=minavailable"`
+
+	// The number of allocated replicas from this resource type
+	Allocated int32 `json:"allocated"`
+
+	// The priority of this resource
+	Priority float64 `json:"priority"`
+
+	// The increasing rate of priority value for this resource
+	PrioritySlope float64 `json:"priorityslope"`
+
+	//The template for the resource; it is now a raw text because we don't know for what resource
+	//it should be instantiated
+	GenericTemplate runtime.RawExtension `json:"generictemplate"`
+
+	//Optional section that specifies resource requirements for non-standard k8s resources, follows same format as that
+	// of standard k8s resources
+	CustomPodResources []CustomPodResourceTemplate `json:"custompodresources,omitempty"`
+}
+
+type CustomPodResourceTemplate struct {
+	Replicas int             `json:"replicas"`
+	//todo: replace with
+	//Containers []Container Contain v1.ResourceRequirements
+	Requests v1.ResourceList `json:"requests"`
+	Limits   v1.ResourceList `json:"limits"`
 }
 
 // App Wrapper resources type
