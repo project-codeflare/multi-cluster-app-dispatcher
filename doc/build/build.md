@@ -1,12 +1,12 @@
-# Multi-Cluster-App-Deployer Controller Build Instructions
+# Multi-Cluster-App-Dispatcher Controller Build Instructions
 
-This document will show how to build the `Multi-Cluster-App-Deployer` Kubernetes Controller that operates on an AppWrapper kubernetes custom resource definition. It is for [master](https://github.com/IBM/multi-cluster-app-dispatcher/tree/master) branch.
+This document will show how to build the `Multi-Cluster-App-Deployer` (`MCAD`) Kubernetes Controller that operates on an `AppWrapper` kubernetes custom resource definition. Instructions are for the [master](https://github.com/IBM/multi-cluster-app-dispatcher/tree/master) branch.
 
 ## 1. Pre-condition
 
 ### Docker Environment
 
-To build `Multi-Cluster-App-Deployer`, a running Docker env. must be available. Here is a document on [Getting Started with Docker](https://www.docker.com/get-started). 
+To build `Multi-Cluster-App-Deployer`, a running Docker environment must be available. Here is a document on [Getting Started with Docker](https://www.docker.com/get-started).
 
 ### Clone Multi-Cluster-App-Deployer Git Repo
 
@@ -20,22 +20,22 @@ Checking out files: 100% (####/####), done.
 $
 ```
 
-## 2. Building the Multi-Cluster-App-Deployer Controller 
+## 2. Building the Multi-Cluster-App-Deployer Controller
 
-### Build the Executables 
+### Build the Executable
 
 Run the build script `build.sh`:
 ```
 $ cd multi-cluster-app-dispatcher/deployment/
 
-$ ./build.sh 
+$ ./build.sh
 ...
 + cd ..
 + make generate-code
 Compiling deepcopy-gen
 Generating deepcopy
 go build -o _output/bin/deepcopy-gen ./cmd/deepcopy-gen/
-_output/bin/deepcopy-gen -i ./pkg/apis/controller/v1alpha1/ -O zz_generated.deepcopy 
+_output/bin/deepcopy-gen -i ./pkg/apis/controller/v1alpha1/ -O zz_generated.deepcopy
 + make kar-controller
 mkdir -p _output/bin
 CGO_ENABLED=0 GOARCH=amd64 go build -o _output/bin/kar-controllers ./cmd/kar-controllers/
@@ -49,9 +49,9 @@ deepcopy-gen	kar-controllers
 $
 ```
 
-### Build the Multi-Cluster-App-Dispatcher
+### Build the Multi-Cluster-App-Dispatcher Image
 
-Run the image build scfript `image.sh`:
+Run the image build script `image.sh`:
 
 ```
 $ ./image.sh
@@ -80,3 +80,11 @@ REPOSITORY          TAG                 IMAGE ID            CREATED             
 mcad-controller     deleteme            1dbf126976cf        11 minutes ago      272MB
 $
 ```
+### Push the Multi-Cluster-App-Dispatcher Image to a Image Repository
+The following example assumes an available `<repository>/mcad-controller` on [Docker Hub](https://hub.docker.com)
+```
+$ docker login
+$ docker push <respository>/mcad-controller:v1.14
+```
+
+Refer to [deployment](../deploy/deployment.md) on how to deploy the `multi-cluster-app-dispatcher` as a controller in Kubernetes.
