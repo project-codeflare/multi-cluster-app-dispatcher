@@ -5,7 +5,7 @@ deploymentName: xqueuejob-controller
 namespace: kube-system
 replicaCount: 1
 image:
-  repository: registry.stage1.ng.bluemix.net/ibm/kube-arbitrator
+  repository: mcad-controller
   tag: latest
   pullPolicy: Always
 resources:

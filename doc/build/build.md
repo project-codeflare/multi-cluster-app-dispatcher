@@ -1,57 +1,67 @@
-# Multi-Cluster-App-Deployer Controller Build Instructions
+# Multi-Cluster-App-Dispatcher Controller Build Instructions
 
-This document will show how to build the `Multi-Cluster-App-Deployer` Kubernetes Controller that operates on an AppWrapper kubernetes custom resource definition. It is for [master](https://github.com/IBM/multi-cluster-app-dispatcher/tree/master) branch.
+This document will show how to build the `Multi-Cluster-App-Deployer` (`MCAD`) Kubernetes Controller that operates on an `AppWrapper` kubernetes custom resource definition. Instructions are for the [master](https://github.com/IBM/multi-cluster-app-dispatcher/tree/master) branch.
 
 ## 1. Pre-condition
 
 ### Docker Environment
 
-To build `Multi-Cluster-App-Deployer`, a running Docker env. must be available. Here is a document on [Getting Started with Docker](https://www.docker.com/get-started). 
+To build `Multi-Cluster-App-Deployer`, a running Docker environment must be available. Here is a document on [Getting Started with Docker](https://www.docker.com/get-started).
 
 ### Clone Multi-Cluster-App-Deployer Git Repo
 
-Clone this repo in your local environement:
+Clone this repo in your local environment:
 
+__Option 1__: Clone this github project to your local machine via HTTPS
 ```
-$ git clone git@github.com:IBM/multi-cluster-app-dispatcher.git
+$ git clone https://github.com/IBM/multi-cluster-app-dispatcher.git
 Cloning into 'multi-cluster-app-dispatcher'...
 Checking connectivity... done.
 Checking out files: 100% (####/####), done.
 $
 ```
 
-## 2. Building the Multi-Cluster-App-Deployer Controller 
+__Option 2__: Clone this github project to your local machine via SSH
+```
+$ git clone git@github.com:IBM/multi-cluster-app-dispatcher.git
+Cloning into 'multi-cluster-app-dispatcher'...
+Checking connectivity... done.
+Checking out files: 100% (####/####), done.
+$
 
-### Build the Executables 
+```
+## 2. Building the Multi-Cluster-App-Deployer Controller
+
+### Build the Executable
 
 Run the build script `build.sh`:
 ```
 $ cd multi-cluster-app-dispatcher/deployment/
 
-$ ./build.sh 
+$ ./build.sh
 ...
 + cd ..
 + make generate-code
 Compiling deepcopy-gen
 Generating deepcopy
 go build -o _output/bin/deepcopy-gen ./cmd/deepcopy-gen/
-_output/bin/deepcopy-gen -i ./pkg/apis/controller/v1alpha1/ -O zz_generated.deepcopy 
+_output/bin/deepcopy-gen -i ./pkg/apis/controller/v1alpha1/ -O zz_generated.deepcopy
 + make kar-controller
 mkdir -p _output/bin
 CGO_ENABLED=0 GOARCH=amd64 go build -o _output/bin/kar-controllers ./cmd/kar-controllers/
 $
 ```
 
-Ensure the executables: `deepcopy-gen`, `kar-controllers`  are created in the target output directory:
+Ensure the executables: `deepcopy-gen`, `mcad-controllers`  are created in the target output directory:
 ```
 $ ls ../_output/bin/
-deepcopy-gen	kar-controllers
+deepcopy-gen	mcad-controller
 $
 ```
 
-### Build the Multi-Cluster-App-Dispatcher
+### Build the Multi-Cluster-App-Dispatcher Image
 
-Run the image build scfript `image.sh`:
+Run the image build script `image.sh`:
 
 ```
 $ ./image.sh
@@ -75,8 +85,21 @@ Removing intermediate container f2db4649e7a6
 Successfully built 1dbf126976cf
 Successfully tagged mcad-controller:v1.14
 $
+```
+
+Note the *image name* and *image tag* from the image build script (`./image.sh`) above.  For example the *image name* and *image tag* built after running the example above is `mcad-controller:v1.14`.  List the Docker images to ensure the image exists.
+
+```
 $ docker images mcad-controller
 REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
-mcad-controller     deleteme            1dbf126976cf        11 minutes ago      272MB
+mcad-controller     v.1.14            1dbf126976cf        11 minutes ago      272MB
 $
 ```
+### Push the Multi-Cluster-App-Dispatcher Image to an Image Repository
+The following example assumes an available `<repository>/mcad-controller` on [Docker Hub](https://hub.docker.com)
+```
+$ docker login
+$ docker push <respository>/mcad-controller:v1.14
+```
+
+Refer to [deployment](../deploy/deployment.md) on how to deploy the `multi-cluster-app-dispatcher` as a controller in Kubernetes.

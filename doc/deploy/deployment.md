@@ -1,5 +1,5 @@
 # Deploying Multi-Cluster-App-Wrapper Controller
-Follow the instructions below to deploy the __Multi-Cluster Application Wrapper__ (_MCAD_) controller in an existing Kubernetes cluster:
+Follow the instructions below to deploy the __Multi-Cluster Application Dispatcher__ (_MCAD_) controller in an existing Kubernetes cluster:
 
 ## Pre-Reqs
 ### - Cluster running Kubernetes v1.10 or higher.
@@ -7,25 +7,28 @@ Follow the instructions below to deploy the __Multi-Cluster Application Wrapper_
 # kubectl version --short=true
 Client Version: v1.11.9
 Server Version: v1.11.9
+#
 ```
 ### - Access to the `kube-system` namespace.
 ```
-kubectl get pods -n kube-system
+# kubectl get pods -n kube-system
+#
 ```
 ### - Install the Helm Package Manager
 Install the Helm Client on your local machine and the Helm Cerver on your kubernetes cluster.  Helm installation documentation is [here]
 (https://docs.helm.sh/using_helm/#installing-helm).  After you install Helm you can list the Help packages installed with the following command:
 ```
-helm list
+# helm list
+#
 ```
 
 ### Access to a Docker Registry with the Multi-Cluster-App-Wrapper docker image.
 Follow the build instructions [here](../build/build.md) to build the `multi-cluster-app-dispatcher` controller docker image and push the image to a docker registry.
 
 
-### Determine if the cluster has enough resources for installing the Helm chart for the Multi-Cluster-App-Dispatcher.
+### Determine Resources for Installing the Helm Chart for the Multi-Cluster-App-Dispatcher.
 
-The default memory resource demand for the `multi-cluster-app-dispatcher` controller is `2G`.  If your cluster is a small installation such as MiniKube you will want to adjust the Helm installation resource requests accordingly.  
+The default memory resource demand for the `multi-cluster-app-dispatcher` controller is `2Gig`.  If your cluster is a small installation such as __MiniKube__ you will want to adjust the Helm installation resource requests for the `MCAD` controller accordingly.  
 
 
 To list available compute nodes on your cluster enter the following command:
@@ -74,22 +77,23 @@ Allocated resources:
 Events:     <none>
 
 ```
-In the example above, there is only one node (`minikube`) in the cluster with the majority of the cluster memory used (`1,254Mi` used out of `1,936Mi` allocatable capacity) leaving less than `700Mi` available capacity for new pod deployments in the cluster.  Since the default memory demand for the <em>Multi-Cluster Application Dispatcher</em> controller pod is `2G` the cluster has insufficient memory to deploy the controller.  Instruction notes provided below show how to override the defaults according to the available capacity in your cluster.
+In the example above, there is only one node (`minikube`) in the cluster with the majority of the cluster memory used (`1,254Mi`) out of `1,936Mi` allocatable capacity) leaving less than `700Mi` available capacity for new pod deployments in the cluster.  Since the default memory demand for the <em>Multi-Cluster Application Dispatcher</em> controller pod is `2Gig` the cluster has __insufficient__ memory to deploy the controller.  Instruction notes provided below in [*Example 3*](#example-3) shows how to adjust the resource definitions using the `Helm` parameters to fit in the available capacity in your cluster.
 
 ## Installation Instructions
 ### 1. Download the github project.
 
-
-#### 1.a)  Option 1: Download this github project to your local machine via HTTPS
+#### 1.a.  Option 1: Download this github project to your local machine via HTTPS
 ```bash
-git clone https://github.com/IBM/multi-cluster-app-dispatcher.git
+# git clone https://github.com/IBM/multi-cluster-app-dispatcher.git
+#
 ```
 or
-#### 1.b) Option 2: Download this github project to your local machine via SSH
+#### 1.b. Option 2: Download this github project to your local machine via SSH
 ```
-git clone git@github.com:IBM/multi-cluster-app-dispatcher.git
+# git clone git@github.com:IBM/multi-cluster-app-dispatcher.git
+#
 ```
-### 2. Navigate to the Helm deployment directory.
+### 2. Navigate to the Helm Deployment Directory.
 ```
 cd multi-cluster-app-wrapper/deployment
 ```
@@ -98,7 +102,7 @@ cd multi-cluster-app-wrapper/deployment
 Install the __Multi-Cluster-App-Dispatcher Controller__ using the commands below.  The `--wait` parameter in the Helm command below is  used to ensure all pods of the helm chart are running and will not return unless the default timeout expires (*typically 300 seconds*) or all the pods are in `Running` state.
 
 
-Before submitting the command below you should ensure you have enough resources in your cluster to deploy the helm chart (*see Pre-Reqs section above*).  If you do not have enough compute resources in your cluster you can adjust the resource request via the command line.  See an example below.
+Before submitting the command below you should ensure you have enough resources in your cluster to deploy the helm chart (*see __Pre-Reqs__ section above*).  If you do not have enough compute resources in your cluster to run with the default allocation, you can adjust the resource request via the command line by using the optional parameters `--resources.*.*`.  See an example [*Example 3*](#example-3) in section __3.a.__ below.
 
 All Helm parameters are described in the table at the bottom of this section.
 #### 3.a)  Start the Multi-Cluster-App-Dispatcher Controller on All Target Deployment Clusters (*Agent Mode*).
@@ -107,18 +111,21 @@ __Agent Mode__: Install and set up the `multi-cluster-app-dispatcher` controller
 helm install kube-arbitrator --namespace kube-system --wait --set image.repository=<image repository and name> --set image.tag=<image tag> --set imagePullSecret.name=<Name of image pull kubernetes secret> --set imagePullSecret.password=<REPLACE_WITH_REGISTRY_TOKEN_GENERATED_IN_PREREQs_STAGE1_REGISTRY.d)>  --set localConfigName=<Local Kubernetes Config File for Current Cluster>  --set volumes.hostPath=<Host_Path_location_of_local_Kubernetes_config_file>
 ```
 
-For example (*Assuming the default for `image.repository`, `image.tag`*):
+##### Example 1
+*Assuming the default for `image.repository` and `image.tag` fields*:
 ```
 helm install kube-arbitrator --namespace kube-system
 ```
-or
+##### Example 2
+*Assuming the MCAD controller image is already pulled onto the local target machine with the following image `image.repository=mcad-controller`, `image.tag=latest`*
 ```
-helm install kube-arbitrator --namespace kube-system --wait --set imagePullSecret.name=mcad-controller-registry-secret --set imagePullSecret.password=eyJhbGc...y8gJNcpnipUu0 --set image.pullPolicy=Always --set localConfigName=config_110 --set volumes.hostPath=/etc/kubernetes
+helm install kube-arbitrator --namespace kube-system --wait --set image.pullPolicy=Never --set image.repository=mcad-controller --set image.tag=latest
 ```
-NOTE: You can adjust the cpu and memory demands of the deployment with command line overrides.  For example:
+##### Example 3
+To adjust the cpu and memory demands of the deployment with command line overrides example:
 
 ```
-helm install kube-arbitrator --namespace kube-system --wait -set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=myDockerReegistry/mcad-controller --set image.tag=v1.11 --set image.pullPolicy=Always
+helm install kube-arbitrator --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=myDockerReegistry/mcad-controller --set image.tag=latest --set image.pullPolicy=Always
 ```
 #### 3.b)  Start the Multi-Cluster-App-Dispatcher Controller on the Controller Cluster (*Dispatcher Mode*).
 _Dispatcher Mode__: Install and set up the Multi-Cluster-App-Dispatcher Controler (_MCAD_) in *Dispatcher Mode* for the control cluster that will dispatch the _MCAD_ controller to an *Agent* cluster using Helm.
@@ -160,10 +167,10 @@ The following table lists the configurable parameters of the helm chart and thei
 | `volumes.hostPath`    | Full path on the host location where the `localConfigName` file is stored  |   | `/etc/kubernetes`      |
 
 
-### 5. Verify the installation.
+### 4. Verify the installation.
 List the Helm installation.  The `STATUS` should be `DEPLOYED`.  
 
-NOTE: The `--wait` parameter in the helm installation command from *step #3* above ensures all resources are deployed and running if the `STATUS` indicates `DEPLOYED`.  Installing the Helm Chart without the `--wait` parameter does not ensure all resources are successfully running but may still show a `Status` of `Deployed`.  
+NOTE: The `--wait` parameter in the helm installation command from [Step 3](#3-run-the-installation-using-helm) above ensures all resources are deployed and running if the `STATUS` indicates `DEPLOYED`.  Installing the Helm Chart without the `--wait` parameter does not ensure all resources are successfully running but may still show a `Status` of `Deployed`.  
 
 The `STATUS` value of `FAILED` indicates all resources were not created and running before the timeout occurred.  Usually this indicates a pod creation failure is due to insufficient resources to create the Multi-Cluster-App-Dispatcher Controller pod.  Example instructions on how to adjust the resources requested for the Helm chart are described in the `NOTE` comment of *step #4* above.
 ```
@@ -175,12 +182,14 @@ opinionated-antelope	1       	Mon Jan 21 00:52:39 2019	DEPLOYED	kube-arbitrator-
 
 Ensure the new custom resource is enabled by listing the `appwrappeer` jobs.
 ```bash
-kubectl get appwrappers
+$ kubectl get appwrappers
+No resources found in default namespace.
+$
 ```
 
-Since no `appwrapper` jobs have yet to be deployed into the current cluster you should receive a message indicating `No resources found` for `appwrappers` but your cluster now has _MCAD_ controller enabled.  Use the [tutorial](../doc/usage/tutorial.md) to deploy an example `appwrapper` job.
+Since no `appwrapper` jobs have yet to be deployed into the current cluster you should receive a message indicating `No resources found` for `appwrappers` but your cluster now has _MCAD_ controller enabled.  Use the [tutorial](../usage/tutorial.md) to deploy an example `appwrapper` job.
 
-### 6.  Remove the Multi-Cluster-App-Dispatcher Controller from your cluster.
+### 5.  Remove the Multi-Cluster-App-Dispatcher Controller from your cluster.
 
 List the deployed Helm charts and identify the name of the Multi-Cluster-App-Dispatcher Controller installation.
 ```bash
