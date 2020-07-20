@@ -317,6 +317,11 @@ spec:
           path: {{ .Values.volumes.hostPath }}
 #{{ end }}
       containers:
+      - name: "quota-management"
+        image: "{{ .Values.httpImage.repository }}:{{ .Values.httpImage.tag }}"
+        imagePullPolicy: {{ .Values.httpImage.pullPolicy }}
+        ports:
+        - containerPort: 8081
       - name: {{ .Chart.Name }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -338,7 +343,7 @@ spec:
 #{{ if .Values.configMap.name }}
         envFrom:
           - configMapRef:
-              name: {{ .Values.configMap.name }}
+            name: {{ .Values.configMap.name }}
 #{{ end }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}

@@ -19,6 +19,7 @@ package queuejob
 import (
 	"fmt"
 	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
+	quotamanager "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota"
 	"github.com/golang/glog"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter"
 	"math"
@@ -134,6 +135,9 @@ type XController struct {
 
 	// EventQueueforAgent
 	agentEventQueue *cache.FIFO
+
+	// Quota Manager
+	quotaManager quotamanager.QuotaManager
 }
 
 type JobAndClusterAgent struct{
@@ -194,6 +198,7 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		updateQueue:		cache.NewFIFO(GetQueueJobKey),
 		qjqueue:		NewSchedulingQueue(),
 		cache: 			clusterstatecache.New(config),
+		quotaManager:		quotamanager.NewResourcePlanManager("localhost", "8081"),
 	}
 	cc.metricsAdapter =  adapter.New(config, cc.cache)
 
@@ -292,8 +297,6 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		return nil
 	}
 	cc.qjobResControls[arbv1.ResourceTypeNetworkPolicy] = resControlNetworkPolicy
-
-
 
 	// initialize deployment sub-resource control
 	resControlDeployment, found, err := cc.qjobRegisteredResources.InitQueueJobResource(arbv1.ResourceTypeDeployment, config)
@@ -685,7 +688,7 @@ func (qjm *XController) ScheduleNext() {
 			resources := qjm.getAggregatedAvailableResourcesPriority(priorityindex, qj.Name)
 			glog.V(2).Infof("[ScheduleNext] XQJ %s with resources %v to be scheduled on aggregated idle resources %v", qj.Name, aggqj, resources)
 
-			if aggqj.LessEqual(resources) {
+			if aggqj.LessEqual(resources) && qjm.quotaManager.Fits(qj, resources) {
 				// qj is ready to go!
 				apiQueueJob, e := qjm.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
 				// apiQueueJob's ControllerFirstTimestamp is only microsecond level instead of nanosecond level

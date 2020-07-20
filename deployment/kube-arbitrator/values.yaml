@@ -8,6 +8,12 @@ image:
   repository: mcad-controller
   tag: latest
   pullPolicy: Always
+
+httpImage:
+  repository: restserver
+  tag: latest
+  pullPolicy: Always
+
 resources:
   limits:
     cpu: 2000m
