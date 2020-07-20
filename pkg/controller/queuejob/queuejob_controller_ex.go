@@ -198,7 +198,7 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		updateQueue:		cache.NewFIFO(GetQueueJobKey),
 		qjqueue:		NewSchedulingQueue(),
 		cache: 			clusterstatecache.New(config),
-		quotaManager:		quotamanager.NewResourcePlanManager("localhost", "8081"),
+		quotaManager:		quotamanager.NewResourcePlanManager("http", "localhost", "8081"),
 	}
 	cc.metricsAdapter =  adapter.New(config, cc.cache)
 

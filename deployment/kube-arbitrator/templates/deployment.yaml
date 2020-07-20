@@ -322,6 +322,13 @@ spec:
         imagePullPolicy: {{ .Values.httpImage.pullPolicy }}
         ports:
         - containerPort: 8081
+        volumeMounts:
+          - mountPath: /tmp
+            name: temp-vol
+#{{ if .Values.volumes.hostPath }}
+          - name: agent-config-vol
+            mountPath: /root/kubernetes
+#{{ end }}
       - name: {{ .Chart.Name }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}

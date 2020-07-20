@@ -67,15 +67,15 @@ type Request struct {
 // NewSchedulingQueue initializes a new scheduling queue. If pod priority is
 // enabled a priority queue is returned. If it is disabled, a FIFO is returned.
 func NewQuotaManager() QuotaManager {
-		return NewResourcePlanManager()
+		return NewResourcePlanManager("", "", "")
 }
 
 // Making sure that PriorityQueue implements SchedulingQueue.
 var _ = QuotaManager(&ResourcePlanManager{})
 
 
-func NewResourcePlanManager(host string, port string) *ResourcePlanManager {
-	url := host + ":" + port
+func NewResourcePlanManager(protocol string, host string, port string) *ResourcePlanManager {
+	url := protocol + "://" + host + ":" + port
 	rpm := &ResourcePlanManager{
 		url: url,
 	}
