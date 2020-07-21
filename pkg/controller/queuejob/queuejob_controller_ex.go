@@ -1273,7 +1273,7 @@ func (cc *XController) Cleanup(queuejob *arbv1.AppWrapper) error {
 			}
 		}
 	}
-
+	cc.quotaManager.Release(queuejob)
 	queuejob.Status.Pending      = 0
 	queuejob.Status.Running      = 0
 	queuejob.Status.Succeeded    = 0

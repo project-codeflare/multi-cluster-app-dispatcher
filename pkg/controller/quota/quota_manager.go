@@ -33,15 +33,20 @@ import (
 	"io/ioutil"
 	"math"
 	"net/http"
+	"strings"
 
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	"github.com/golang/glog"
 )
 
+var quotaContext 	    = "quota_context"
+var quotaContextPreemptable = "quota_preemptable"
+
 // QuotaManager is an interface quota management solutions
 type QuotaManager interface {
 	Fits(aw *arbv1.AppWrapper, resources *clusterstateapi.Resource) bool
+	Release(aw *arbv1.AppWrapper) bool
 }
 
 // PriorityQueue implements a scheduling queue. It is an alternative to FIFO.
@@ -57,11 +62,11 @@ type ResourcePlanManager struct {
 }
 
 type Request struct {
-	id          string
-	group       string
-	demand      int
-	priority    int
-	preemptable bool
+	Id          string `json:"id"`
+	Group       string `json:"group"`
+	Demand      []int  `json:"demand"`
+	Priority    int    `json:"priority"`
+	Preemptable bool   `json:"preemptable"`
 }
 
 // NewSchedulingQueue initializes a new scheduling queue. If pod priority is
@@ -85,34 +90,108 @@ func NewResourcePlanManager(protocol string, host string, port string) *Resource
 func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, resources *clusterstateapi.Resource) bool {
 
 	awId := aw.Namespace + aw.Name
-	awCPU_Demand := int(math.Trunc(resources.MilliCPU / 1000))
-	req := Request{
-		id:          awId,
-		group:       "M",
-		demand:      awCPU_Demand,
-		priority:    0,
-		preemptable: false,
+	group := "default" //Default
+	preemptable := false
+	labels := aw.GetLabels()
+	if ( labels!= nil) {
+		qc := labels[quotaContext]
+		if (len(qc) > 0) {
+			group = qc
+		} else {
+			glog.V(4).Infof("[Fits] AppWrapper: %s does not have a %s label, using default.", awId, quotaContext)
+		}
+
+		p := labels[quotaContextPreemptable]
+		if (len(p) > 0) && (strings.ToUpper(p) == "TRUE") {
+			preemptable = true
+		}
+	} else {
+		glog.V(4).Infof("[Fits] AppWrapper: %s does not any context quota labels, using default.", awId)
 	}
 
-	doesFit := true
+	awCPU_Demand := int(math.Trunc(resources.MilliCPU / 1000))
+	var demand []int
+	demand = append(demand, awCPU_Demand)
+	req := Request{
+		Id:          awId,
+		Group:       group,
+		Demand:      demand,
+		Priority:    0,
+		Preemptable: preemptable,
+	}
+
+	doesFit := false
 	// If a url does not exists then assume fits quota
 	if len(rpm.url) < 1 {
-		glog.V(6).Infof("[Fits] No quota manager exists, %+v meets quota by default.", resources)
+		glog.V(4).Infof("[Fits] No quota manager exists, %+v meets quota by default.", resources)
 		return doesFit
 	}
 
-	//jsonData := map[string]string{"firstname": "Nic", "lastname": "Raboy"}
-	jsonValue, _ := json.Marshal(req)
 	uri := rpm.url + "/quota/alloc"
-	response, err := http.Post(uri, "application/json", bytes.NewBuffer(jsonValue))
+	buf := new(bytes.Buffer)
+	err := json.NewEncoder(buf).Encode(req)
 	if err != nil {
-		glog.Errorf("[Fits] Fail to add access quotamanager: %s, err=%#v.", rpm.url, err)
+		glog.Errorf("[Fits] Failed encoding of request: %v, err=%#v.", req, err)
+		return doesFit
+	}
+
+	glog.V(4).Infof("[Fits] Sending request: %v in buffer: %v, buffer size: %v, to uri: %s", req, buf, buf.Len(), uri)
+	response, err := http.Post(uri, "application/json; charset=utf-8", buf)
+	defer response.Body.Close()
+	if err != nil {
+		glog.Errorf("[Fits] Fail to add access quotamanager: %s, err=%#v.", uri, err)
 
 	} else {
 		data, _ := ioutil.ReadAll(response.Body)
 		glog.V(4).Infof("[Fits] Response from quota mananger body: %s", string(data))
 		glog.V(4).Infof("[Fits] Response from quota mananger status: %s", response.Status)
-		glog.V(4).Infof("[Fits] Response from quota mananger status code: %v", response.StatusCode)
+		statusCode := response.StatusCode
+		glog.V(4).Infof("[Fits] Response from quota mananger status code: %v", statusCode)
+		if statusCode == 200 {
+			doesFit = true
+		}
 	}
-	return true
+	return doesFit
+}
+
+func (rpm *ResourcePlanManager) Release(aw *arbv1.AppWrapper) bool {
+	released := false
+	awId := aw.Namespace + aw.Name
+	uri := rpm.url + "/quota/release/" + awId
+	glog.V(4).Infof("[Release] Sending request to release resources for: %s ", uri)
+
+	// Create client
+	client := &http.Client{}
+
+	// Create request
+	req, err := http.NewRequest("DELETE", uri, nil)
+	if err != nil {
+		glog.Errorf("[Release] Failed to create http delete request for : %s, err=%#v.", awId, err)
+		return released
+	}
+
+	// Fetch Request
+	resp, err := client.Do(req)
+	if err != nil {
+		glog.Errorf("[Release] Failed http delete request for: %s, err=%#v.", awId, err)
+		return released
+	}
+	defer resp.Body.Close()
+
+	// Read Response Body
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		glog.V(4).Infof("[Release] Failed to aquire response from http delete request id: %s, err=%#v.", awId, err)
+	} else {
+		glog.V(4).Infof("[Release] Response from quota mananger body: %s", string(respBody))
+	}
+
+	glog.V(4).Infof("[Release] Response from quota mananger status: %s", resp.Status)
+	statusCode := resp.StatusCode
+	glog.V(4).Infof("[Release] Response from quota mananger status code: %v", statusCode)
+	if statusCode == 204 {
+		released = true
+	}
+
+	return released
 }
