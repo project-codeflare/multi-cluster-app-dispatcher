@@ -37,6 +37,7 @@ configMap:
   name:
   dispatcherMode: "false"
   agentConfigs:
+  quoteRestUrl:
 
 volumes:
   hostPath:

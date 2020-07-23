@@ -72,23 +72,26 @@ type Request struct {
 // NewSchedulingQueue initializes a new scheduling queue. If pod priority is
 // enabled a priority queue is returned. If it is disabled, a FIFO is returned.
 func NewQuotaManager() QuotaManager {
-		return NewResourcePlanManager("", "", "")
+		return NewResourcePlanManager("")
 }
 
 // Making sure that PriorityQueue implements SchedulingQueue.
 var _ = QuotaManager(&ResourcePlanManager{})
 
 
-func NewResourcePlanManager(protocol string, host string, port string) *ResourcePlanManager {
-	url := protocol + "://" + host + ":" + port
+func NewResourcePlanManager(quotaManagerUrl string) *ResourcePlanManager {
 	rpm := &ResourcePlanManager{
-		url: url,
+		url: quotaManagerUrl,
 	}
 	return rpm
 }
 
-func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, resources *clusterstateapi.Resource) bool {
+func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource) bool {
 
+	// Handle uninitialized quota manager
+	if len(rpm.url) < 0 {
+		return true
+	}
 	awId := aw.Namespace + aw.Name
 	group := "default" //Default
 	preemptable := false
@@ -109,9 +112,11 @@ func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, resources *clustersta
 		glog.V(4).Infof("[Fits] AppWrapper: %s does not any context quota labels, using default.", awId)
 	}
 
-	awCPU_Demand := int(math.Trunc(resources.MilliCPU / 1000))
+	awCPU_Demand := int(math.Trunc(awResDemands.MilliCPU))
+	awMem_Demand := int(math.Trunc(awResDemands.Memory)/1000000)
 	var demand []int
 	demand = append(demand, awCPU_Demand)
+	demand = append(demand, awMem_Demand)
 	req := Request{
 		Id:          awId,
 		Group:       group,
@@ -123,7 +128,7 @@ func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, resources *clustersta
 	doesFit := false
 	// If a url does not exists then assume fits quota
 	if len(rpm.url) < 1 {
-		glog.V(4).Infof("[Fits] No quota manager exists, %+v meets quota by default.", resources)
+		glog.V(4).Infof("[Fits] No quota manager exists, %+v meets quota by default.", awResDemands)
 		return doesFit
 	}
 
@@ -155,6 +160,12 @@ func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, resources *clustersta
 }
 
 func (rpm *ResourcePlanManager) Release(aw *arbv1.AppWrapper) bool {
+
+	// Handle uninitialized quota manager
+	if len(rpm.url) < 0 {
+		return true
+	}
+
 	released := false
 	awId := aw.Namespace + aw.Name
 	uri := rpm.url + "/quota/release/" + awId

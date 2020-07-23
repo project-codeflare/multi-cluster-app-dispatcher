@@ -317,6 +317,7 @@ spec:
           path: {{ .Values.volumes.hostPath }}
 #{{ end }}
       containers:
+#{{ if .Values.httpImage.repository }}
       - name: "quota-management"
         image: "{{ .Values.httpImage.repository }}:{{ .Values.httpImage.tag }}"
         imagePullPolicy: {{ .Values.httpImage.pullPolicy }}
@@ -329,11 +330,12 @@ spec:
           - name: agent-config-vol
             mountPath: /root/kubernetes
 #{{ end }}
+#{{ end }}
       - name: {{ .Chart.Name }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["mcad-controller"]
-        args: ["--v", "4", "--logtostderr"]
+        args: ["--v", "10", "--logtostderr"]
 #        args: ["--v", "10", "--logtostderr", "--secure-port=6443"]
         ports:
         - containerPort: 6443
@@ -349,7 +351,7 @@ spec:
 #{{ end }}
 #{{ if .Values.configMap.name }}
         envFrom:
-          - configMapRef:
+        - configMapRef:
             name: {{ .Values.configMap.name }}
 #{{ end }}
         resources:
