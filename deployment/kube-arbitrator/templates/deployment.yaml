@@ -317,7 +317,7 @@ spec:
           path: {{ .Values.volumes.hostPath }}
 #{{ end }}
       containers:
-#{{ if .Values.httpImage.repository }}
+#{{ if .Values.configMap.quotaRestUrl }}
       - name: "quota-management"
         image: "{{ .Values.httpImage.repository }}:{{ .Values.httpImage.tag }}"
         imagePullPolicy: {{ .Values.httpImage.pullPolicy }}
