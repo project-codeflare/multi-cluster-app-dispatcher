@@ -89,7 +89,7 @@ func NewResourcePlanManager(quotaManagerUrl string) *ResourcePlanManager {
 func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource) bool {
 
 	// Handle uninitialized quota manager
-	if len(rpm.url) < 0 {
+	if len(rpm.url) <= 0 {
 		return true
 	}
 	awId := aw.Namespace + aw.Name
