@@ -35,7 +35,7 @@ nodeSelector:
 
 configMap:
   name:
-  dispatcherMode: false
+  dispatcherMode: '"false"'
   agentConfigs:
   quoteRestUrl:
 
