@@ -14,6 +14,24 @@ spec:
   selector:
     app: custom-metrics-apiserver
 ---
+#{{ if .Values.configMap.quotaRestUrl }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: quota-http-server
+spec:
+  type: NodePort
+  selector:
+    app: custom-metrics-apiserver
+  ports:
+    # By default and for convenience, the `targetPort` is set to the same value as the `port` field.
+    - port: 8082
+      targetPort: 80
+      # Optional field
+      # By default and for convenience, the Kubernetes control plane will allocate a port from a range (default: 30000-32767)
+      nodePort: 30082
+#{{ end }}
+---
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
 metadata:
@@ -318,6 +336,11 @@ spec:
 #{{ end }}
       containers:
 #{{ if .Values.configMap.quotaRestUrl }}
+      - name: "quota-httpserver"
+        image: "{{ .Values.httpServerImage.repository }}:{{ .Values.httpServerImage.tag }}"
+        imagePullPolicy: {{ .Values.httpServerImage.pullPolicy }}
+        ports:
+        - containerPort: 80
       - name: "quota-management"
         image: "{{ .Values.httpImage.repository }}:{{ .Values.httpImage.tag }}"
         imagePullPolicy: {{ .Values.httpImage.pullPolicy }}
