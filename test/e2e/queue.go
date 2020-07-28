@@ -28,11 +28,19 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestContext(context)
 
 		// This should fill up the worker node and most of the master node
-		aw := createDeploymentAWwithCPU(context,"aw-deployment-2-900cpu")
+		aw := createDeploymentAWwith900CPU(context,"aw-deployment-2-900cpu")
 
 		err := waitAWReady(context, aw)
 
 		Expect(err).NotTo(HaveOccurred())
+
+		// This should fill up the master node
+		aw2 := createDeploymentAWwith125CPU(context,"aw-deployment-2-125cpu")
+
+		err = waitAWReady(context, aw2)
+
+		Expect(err).NotTo(HaveOccurred())
+
 	})
 
 	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
