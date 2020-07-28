@@ -43,6 +43,26 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
+	It("MCAD CPU Accounting Fail Test", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		// This should fill up the worker node and most of the master node
+		aw := createDeploymentAWwith900CPU(context,"aw-deployment-2-900cpu")
+
+		err := waitAWReady(context, aw)
+
+		Expect(err).NotTo(HaveOccurred())
+
+		// This should fill up the master node
+		aw2 := createDeploymentAWwith126CPU(context,"aw-deployment-2-126cpu")
+
+		err = waitAWReady(context, aw2)
+
+		Expect(err).To(HaveOccurred())
+
+	})
+
 	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
