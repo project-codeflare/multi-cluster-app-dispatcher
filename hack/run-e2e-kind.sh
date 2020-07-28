@@ -294,6 +294,8 @@ function kube-test-env-up {
         kubectl get pod ${mcad_pod} -n kube-system -o yaml
     fi
 
+    # Turn off master taints
+    kubectl taint nodes --all node-role.kubernetes.io/master-
     # Show available resources of cluster nodes
 
     echo "---"
