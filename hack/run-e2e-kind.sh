@@ -92,11 +92,11 @@ function cleanup {
 
     echo "---"
     echo "Get All AppWrappers..."
-    kubectl get appwrappers -A -o yaml
+    kubectl get appwrappers -all-namespaces -o yaml
 
     echo "---"
     echo "Describe all AppWrappers..."
-    kubectl describe appwrappers -A
+    kubectl describe appwrappers -all-namespaces
 
     echo "---"
     echo "'test' Pod list..."
