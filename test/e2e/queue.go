@@ -17,8 +17,10 @@ limitations under the License.
 package e2e
 
 import (
+	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"os"
 	"time"
 )
 
@@ -197,6 +199,13 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		err2 := waitAWReadyQuiet(context, aw2)
+		if err2 != nil {
+			fmt.Fprintf(os.Stdout, "[E2E] Received expected error for last test case: %s, err = %+v\n",
+				aw.Name, err2)
+		} else {
+			fmt.Fprintf(os.Stdout, "[E2E] Did not received expected error for last test case: %s\n",
+				aw.Name)
+		}
 		Expect(err2).To(HaveOccurred())
 
 	})
