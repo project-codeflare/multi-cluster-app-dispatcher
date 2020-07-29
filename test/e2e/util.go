@@ -312,7 +312,7 @@ func podPhase(ctx *context, namespace string, pods []*v1.Pod, phase []v1.PodPhas
 	}
 }
 
-func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum int) wait.ConditionFunc {
+func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum int, quite bool) wait.ConditionFunc {
 	return func() (bool, error) {
 		aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
@@ -327,9 +327,11 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 
 		readyTaskNum := 0
 		for _, pod := range pods.Items {
-			if awn, found := pod.Labels["appwrapper.arbitrator.k8s.io"]; !found || awn != aw.Name {
-				fmt.Fprintf(os.Stdout, "[awPhase] Pod %s not part of AppWrapper: %s, labels: %v\n", pod.Name, aw.Name, pod.Labels)
-				continue
+			if ! quite {
+				if awn, found := pod.Labels["appwrapper.arbitrator.k8s.io"]; !found || awn != aw.Name {
+					fmt.Fprintf(os.Stdout, "[awPhase] Pod %s not part of AppWrapper: %s, labels: %v\n", pod.Name, aw.Name, pod.Labels)
+					continue
+				}
 			}
 
 			for _, p := range phase {
@@ -445,8 +447,13 @@ func awNamespacePhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.NamespacePh
 	}
 }
 func waitAWReady(ctx *context, aw *arbv1.AppWrapper) error {
-	return waitAWReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable))
+	return waitAWReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), false)
 }
+
+func waitAWReadyQuiet(ctx *context, aw *arbv1.AppWrapper) error {
+	return waitAWReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), true)
+}
+
 
 func waitAWDeleted(ctx *context, aw *arbv1.AppWrapper, pods []*v1.Pod) error {
 	return waitAWPodsTerminatedEx(ctx, aw.Namespace, pods,0)
@@ -454,13 +461,13 @@ func waitAWDeleted(ctx *context, aw *arbv1.AppWrapper, pods []*v1.Pod) error {
 
 func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
 	return wait.Poll(100*time.Millisecond, ninetySeconds, awPhase(ctx, aw,
-		[]v1.PodPhase{v1.PodPending}, int(aw.Spec.SchedSpec.MinAvailable)))
+		[]v1.PodPhase{v1.PodPending}, int(aw.Spec.SchedSpec.MinAvailable), false))
 }
 
 
-func waitAWReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int) error {
+func waitAWReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
 	return wait.Poll(100*time.Millisecond, ninetySeconds, awPhase(ctx, aw,
-		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum))
+		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite))
 }
 
 func waitAWPodsTerminatedEx(ctx *context, namespace string, pods []*v1.Pod, taskNum int) error {

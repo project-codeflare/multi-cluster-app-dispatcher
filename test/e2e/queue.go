@@ -62,7 +62,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		err := waitAWReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = waitAWReady(context, aw2)
+		err = waitAWReadyQuiet(context, aw2)
 		Expect(err).To(HaveOccurred())
 
 	})
