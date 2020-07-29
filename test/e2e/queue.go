@@ -37,11 +37,11 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// Wait for 30 seconds for pods to become running
 		time.Sleep(30 * time.Second)
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 
-		err = waitAWReady(context, aw2)
+		err = waitAWPodsReady(context, aw2)
 		Expect(err).NotTo(HaveOccurred())
 
 	})
@@ -52,7 +52,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createStatefulSetAW(context,"aw-statefulset-2")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -63,7 +63,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createGenericStatefulSetAW(context,"aw-generic-statefulset-2")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -74,7 +74,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createDeploymentAW(context,"aw-deployment-1")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Now delete the appwrapper
@@ -93,7 +93,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createGenericDeploymentAW(context,"aw-generic-deployment-3")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 	})
@@ -108,7 +108,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createBadPodTemplateAW(context,"aw-bad-podtemplate-2")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
 		Expect(err).To(HaveOccurred())
 	})
@@ -119,7 +119,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createBadGenericPodTemplateAW(context,"aw-generic-podtemplate-2")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
 		Expect(err).To(HaveOccurred())
 	})
@@ -130,7 +130,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createPodTemplateAW(context,"aw-podtemplate-2")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -142,7 +142,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createGenericPodAW(context,"aw-generic-pod-1")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -153,7 +153,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createBadGenericPodAW(context,"aw-bad-generic-pod-1")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
 		Expect(err).To(HaveOccurred())
 	})
@@ -193,11 +193,11 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// Wait for 30 seconds for pods to become running
 		time.Sleep(30 * time.Second)
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = waitAWReadyQuiet(context, aw2)
-		Expect(err).To(HaveOccurred())
+		err2 := waitAWReadyQuiet(context, aw2)
+		Expect(err2).To(HaveOccurred())
 
 	})
 
@@ -260,7 +260,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		job.name = "q1-qj-1"
 		job.queue = "q1"
 		_, aw1 := createJobEx(context, job)
-		err := waitAWReady(context, aw1)
+		err := waitAWPodsReady(context, aw1)
 		Expect(err).NotTo(HaveOccurred())
 
 		expected := int(rep) / 2
@@ -275,10 +275,10 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		job.name = "q2-qj-2"
 		job.queue = "q2"
 		_, aw2 := createJobEx(context, job)
-		err = waitAWReadyEx(context, aw2, expected)
+		err = waitAWPodsReadyEx(context, aw2, expected)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = waitAWReadyEx(context, aw1, expected)
+		err = waitAWPodsReadyEx(context, aw1, expected)
 		Expect(err).NotTo(HaveOccurred())
 	})
 */
