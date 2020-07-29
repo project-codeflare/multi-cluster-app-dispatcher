@@ -321,7 +321,7 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 		Expect(err).NotTo(HaveOccurred())
 
 		if pods == nil || pods.Size() < 1 {
-			fmt.Fprintf(os.Stdout, "[awPhase] Listing pods found for Namespace: %s resuling in no pods found that could match AppWrapper: %s \n",
+			fmt.Fprintf(os.Stdout, "[awPhase] Listing pods found for Namespace: %s resulting in no pods found that could match AppWrapper: %s \n",
 				aw.Namespace, aw.Name)
 		}
 

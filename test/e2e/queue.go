@@ -19,6 +19,7 @@ package e2e
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"time"
 )
 
 var _ = Describe("AppWrapper E2E Test", func() {
@@ -30,15 +31,17 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith900CPU(context,"aw-deployment-2-900cpu")
 
-		err := waitAWReady(context, aw)
-
-		Expect(err).NotTo(HaveOccurred())
-
 		// This should fill up the master node
 		aw2 := createDeploymentAWwith125CPU(context,"aw-deployment-2-125cpu")
 
-		err = waitAWReady(context, aw2)
+		// Wait for 30 seconds for pods to become running
+		time.Sleep(30 * time.Second)
 
+		err := waitAWReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+
+		err = waitAWReady(context, aw2)
 		Expect(err).NotTo(HaveOccurred())
 
 	})
@@ -50,15 +53,16 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith900CPU(context,"aw-deployment-2-900cpu")
 
-		err := waitAWReady(context, aw)
-
-		Expect(err).NotTo(HaveOccurred())
-
 		// This should fill up the master node
 		aw2 := createDeploymentAWwith126CPU(context,"aw-deployment-2-126cpu")
 
-		err = waitAWReady(context, aw2)
+		// Wait for 30 seconds for pods to become running
+		time.Sleep(30 * time.Second)
 
+		err := waitAWReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = waitAWReady(context, aw2)
 		Expect(err).To(HaveOccurred())
 
 	})
