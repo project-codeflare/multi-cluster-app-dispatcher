@@ -319,7 +319,7 @@ func awStatePhase(ctx *context, aw *arbv1.AppWrapper, phase []arbv1.AppWrapperSt
 
 		phaseCount := 0
 		if ! quite {
-			fmt.Fprintf(os.Stdout, "[awStatePhase] AW %s found with state: %s.\n", aw.Name, aw.Name, aw.Status.State)
+			fmt.Fprintf(os.Stdout, "[awStatePhase] AW %s found with state: %s.\n", aw.Name, aw.Status.State)
 		}
 
 		for _, p := range phase {
