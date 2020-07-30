@@ -329,7 +329,7 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 			FilterFunc: func(obj interface{}) bool {
 				switch t := obj.(type) {
 				case *arbv1.AppWrapper:
-					glog.V(4).Infof("[Informer] Filter Name=%s Version=%s Local=%t FilterIgnore=%t Sender=%s &qj=%p qj=%+v", t.Name, t.ResourceVersion, t.Status.Local, t.Status.FilterIgnore, t.Status.Sender, t, t)
+					glog.V(10).Infof("[Informer] Filter Name=%s Version=%s Local=%t FilterIgnore=%t Sender=%s &qj=%p qj=%+v", t.Name, t.ResourceVersion, t.Status.Local, t.Status.FilterIgnore, t.Status.Sender, t, t)
 					// todo: This is a current workaround for duplicate message bug.
 					if t.Status.Local == true { // ignore duplicate message from cache
 						return false
