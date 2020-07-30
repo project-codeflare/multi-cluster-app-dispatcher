@@ -36,7 +36,8 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the master node
 		aw2 := createDeploymentAWwith125CPU(context,"aw-deployment-2-125cpu")
 
-		err = waitAWPodsReady(context, aw2)
+		// Using quite mode due to creating of pods in earlier step.
+		err = waitAWReadyQuiet(context, aw2)
 		Expect(err).NotTo(HaveOccurred())
 
 	})
