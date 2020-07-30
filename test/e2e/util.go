@@ -356,12 +356,9 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 			
 			for _, p := range phase {
 				if pod.Status.Phase == p {
-					if quite {
-						if awn, found := pod.Labels["appwrapper.arbitrator.k8s.io"]; !found || awn != aw.Name {
-							fmt.Fprintf(os.Stdout, "[awPodPhase] Found pod %s of AppWrapper: %s, phase: %v\n", pod.Name, aw.Name, p)
-							continue
-						}
-					}
+					//DEBUGif quite {
+					//DEBUG	fmt.Fprintf(os.Stdout, "[awPodPhase] Found pod %s of AppWrapper: %s, phase: %v\n", pod.Name, aw.Name, p)
+					//DEBUG}
 					readyTaskNum++
 					break
 				} else {
@@ -387,9 +384,9 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 			}
 		}
 
-		if taskNum <= readyTaskNum && quite {
-			fmt.Fprintf(os.Stdout, "[awPodPhase] Successfully found %v pods of AppWrapper: %s, state: %s\n", readyTaskNum, aw.Name, aw.Status.State)
-		}
+		//DEBUGif taskNum <= readyTaskNum && quite {
+		//DEBUG	fmt.Fprintf(os.Stdout, "[awPodPhase] Successfully found %v pods of AppWrapper: %s, state: %s\n", readyTaskNum, aw.Name, aw.Status.State)
+		//DEBUG}
 
 		return taskNum <= readyTaskNum, nil
 	}
