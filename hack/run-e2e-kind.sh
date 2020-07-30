@@ -92,11 +92,11 @@ function cleanup {
 
     echo "---"
     echo "Get All AppWrappers..."
-    kubectl get appwrappers -A -o yaml
+    kubectl get appwrappers --all-namespaces -o yaml
 
     echo "---"
     echo "Describe all AppWrappers..."
-    kubectl describe appwrappers -A
+    kubectl describe appwrappers --all-namespaces
 
     echo "---"
     echo "'test' Pod list..."
@@ -283,8 +283,8 @@ function kube-test-env-up {
 
     # start mcad controller
     echo "Starting MCAD Controller..."
-    echo "helm install kube-arbitrator namespace kube-system wait set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=1000m set resources.limits.memory=1024Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY debug"
-    helm install kube-arbitrator --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY --debug
+    echo "helm install kube-arbitrator namespace kube-system wait set loglevel=4 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=1000m set resources.limits.memory=1024Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY debug"
+    helm install kube-arbitrator --namespace kube-system --wait --set loglevel=4 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY --debug
 
     sleep 10
     helm list
@@ -294,6 +294,8 @@ function kube-test-env-up {
         kubectl get pod ${mcad_pod} -n kube-system -o yaml
     fi
 
+    # Turn off master taints
+    kubectl taint nodes --all node-role.kubernetes.io/master-
     # Show available resources of cluster nodes
 
     echo "---"

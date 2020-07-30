@@ -23,13 +23,32 @@ import (
 
 var _ = Describe("AppWrapper E2E Test", func() {
 
+	It("MCAD CPU Accounting Test", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		// This should fill up the worker node and most of the master node
+		aw := createDeploymentAWwith900CPU(context,"aw-deployment-2-900cpu")
+
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+		// This should fill up the master node
+		aw2 := createDeploymentAWwith125CPU(context,"aw-deployment-2-125cpu")
+
+		// Using quite mode due to creating of pods in earlier step.
+		err = waitAWReadyQuiet(context, aw2)
+		Expect(err).NotTo(HaveOccurred())
+
+	})
+
 	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
 		aw := createStatefulSetAW(context,"aw-statefulset-2")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -40,7 +59,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createGenericStatefulSetAW(context,"aw-generic-statefulset-2")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -51,7 +70,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createDeploymentAW(context,"aw-deployment-1")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Now delete the appwrapper
@@ -70,7 +89,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createGenericDeploymentAW(context,"aw-generic-deployment-3")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 	})
@@ -85,7 +104,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createBadPodTemplateAW(context,"aw-bad-podtemplate-2")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
 		Expect(err).To(HaveOccurred())
 	})
@@ -96,7 +115,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createBadGenericPodTemplateAW(context,"aw-generic-podtemplate-2")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
 		Expect(err).To(HaveOccurred())
 	})
@@ -107,7 +126,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createPodTemplateAW(context,"aw-podtemplate-2")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -119,7 +138,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createGenericPodAW(context,"aw-generic-pod-1")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -130,7 +149,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createBadGenericPodAW(context,"aw-bad-generic-pod-1")
 
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
 		Expect(err).To(HaveOccurred())
 	})
@@ -156,6 +175,26 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		Expect(err).NotTo(HaveOccurred())
 	})
+	
+	It("MCAD CPU Accounting Fail Test", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		// This should fill up the worker node and most of the master node
+		aw := createDeploymentAWwith900CPU(context,"aw-deployment-2-900cpu")
+
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+		// This should not fit on cluster
+		aw2 := createDeploymentAWwith126CPU(context,"aw-deployment-2-126cpu")
+
+		err = waitAWReadyQuiet(context, aw2)
+		Expect(err).To(HaveOccurred())
+
+	})
+
+
 	/*
 	It("Gang scheduling", func() {
 		context := initTestContext()
@@ -214,7 +253,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		job.name = "q1-qj-1"
 		job.queue = "q1"
 		_, aw1 := createJobEx(context, job)
-		err := waitAWReady(context, aw1)
+		err := waitAWPodsReady(context, aw1)
 		Expect(err).NotTo(HaveOccurred())
 
 		expected := int(rep) / 2
@@ -229,10 +268,10 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		job.name = "q2-qj-2"
 		job.queue = "q2"
 		_, aw2 := createJobEx(context, job)
-		err = waitAWReadyEx(context, aw2, expected)
+		err = waitAWPodsReadyEx(context, aw2, expected)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = waitAWReadyEx(context, aw1, expected)
+		err = waitAWPodsReadyEx(context, aw1, expected)
 		Expect(err).NotTo(HaveOccurred())
 	})
 */

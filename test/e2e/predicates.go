@@ -138,7 +138,7 @@ var _ = Describe("Predicates E2E Test", func() {
 		}
 
 		_, aw := createJobEx(context, job)
-		err := waitAWReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 		pods := getPodOfAppWrapper(context, aw)
@@ -183,7 +183,7 @@ var _ = Describe("Predicates E2E Test", func() {
 		err = removeTaintsFromAllNodes(context, taints)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = waitAWReady(context, aw)
+		err = waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 	})
 */

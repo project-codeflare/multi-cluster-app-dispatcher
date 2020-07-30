@@ -312,7 +312,27 @@ func podPhase(ctx *context, namespace string, pods []*v1.Pod, phase []v1.PodPhas
 	}
 }
 
-func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum int) wait.ConditionFunc {
+func awStatePhase(ctx *context, aw *arbv1.AppWrapper, phase []arbv1.AppWrapperState, taskNum int, quite bool) wait.ConditionFunc {
+	return func() (bool, error) {
+		aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		phaseCount := 0
+		if ! quite {
+			fmt.Fprintf(os.Stdout, "[awStatePhase] AW %s found with state: %s.\n", aw.Name, aw.Status.State)
+		}
+
+		for _, p := range phase {
+			if aw.Status.State == p {
+				phaseCount++
+				break
+			}
+		}
+		return 1 <= phaseCount, nil
+	}
+}
+
+func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum int, quite bool) wait.ConditionFunc {
 	return func() (bool, error) {
 		aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
@@ -321,26 +341,31 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 		Expect(err).NotTo(HaveOccurred())
 
 		if pods == nil || pods.Size() < 1 {
-			fmt.Fprintf(os.Stdout, "[awPhase] Listing pods found for Namespace: %s resuling in no pods found that could match AppWrapper: %s \n",
+			fmt.Fprintf(os.Stdout, "[awPodPhase] Listing pods found for Namespace: %s resulting in no pods found that could match AppWrapper: %s \n",
 				aw.Namespace, aw.Name)
 		}
 
 		readyTaskNum := 0
 		for _, pod := range pods.Items {
 			if awn, found := pod.Labels["appwrapper.arbitrator.k8s.io"]; !found || awn != aw.Name {
-				fmt.Fprintf(os.Stdout, "[awPhase] Pod %s not part of AppWrapper: %s, labels: %v\n", pod.Name, aw.Name, pod.Labels)
+				if ! quite {
+					fmt.Fprintf(os.Stdout, "[awPodPhase] Pod %s not part of AppWrapper: %s, labels: %s\n", pod.Name, aw.Name, pod.Labels)
+				}
 				continue
 			}
-
+			
 			for _, p := range phase {
 				if pod.Status.Phase == p {
+					//DEBUGif quite {
+					//DEBUG	fmt.Fprintf(os.Stdout, "[awPodPhase] Found pod %s of AppWrapper: %s, phase: %v\n", pod.Name, aw.Name, p)
+					//DEBUG}
 					readyTaskNum++
 					break
 				} else {
 					pMsg := pod.Status.Message
 					if len (pMsg) > 0 {
 						pReason := pod.Status.Reason
-						fmt.Fprintf(os.Stdout, "[awPhase] pod: %s, phase: %s, reason: %s, message: %s\n" , pod.Name, p, pReason, pMsg)
+						fmt.Fprintf(os.Stdout, "[awPodPhase] pod: %s, phase: %s, reason: %s, message: %s\n" , pod.Name, p, pReason, pMsg)
 					}
 					containerStatuses := pod.Status.ContainerStatuses
 					for _, containerStatus := range containerStatuses {
@@ -350,7 +375,7 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 							if len (wMsg) > 0 {
 								wReason := waitingState.Reason
 								containerName := containerStatus.Name
-								fmt.Fprintf(os.Stdout, "[awPhase] condition for pod: %s, phase: %s, container name: %s, " +
+								fmt.Fprintf(os.Stdout, "[awPodPhase] condition for pod: %s, phase: %s, container name: %s, " +
 									"reason: %s, message: %s\n" , pod.Name, p, containerName, wReason, wMsg)
 							}
 						}
@@ -358,6 +383,10 @@ func awPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum in
 				}
 			}
 		}
+
+		//DEBUGif taskNum <= readyTaskNum && quite {
+		//DEBUG	fmt.Fprintf(os.Stdout, "[awPodPhase] Successfully found %v pods of AppWrapper: %s, state: %s\n", readyTaskNum, aw.Name, aw.Status.State)
+		//DEBUG}
 
 		return taskNum <= readyTaskNum, nil
 	}
@@ -444,23 +473,28 @@ func awNamespacePhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.NamespacePh
 		return 0 < readyTaskNum, nil
 	}
 }
-func waitAWReady(ctx *context, aw *arbv1.AppWrapper) error {
-	return waitAWReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable))
+func waitAWPodsReady(ctx *context, aw *arbv1.AppWrapper) error {
+	return waitAWPodsReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), false)
 }
+
+func waitAWReadyQuiet(ctx *context, aw *arbv1.AppWrapper) error {
+	return waitAWPodsReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), true)
+}
+
 
 func waitAWDeleted(ctx *context, aw *arbv1.AppWrapper, pods []*v1.Pod) error {
 	return waitAWPodsTerminatedEx(ctx, aw.Namespace, pods,0)
 }
 
 func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
-	return wait.Poll(100*time.Millisecond, ninetySeconds, awPhase(ctx, aw,
-		[]v1.PodPhase{v1.PodPending}, int(aw.Spec.SchedSpec.MinAvailable)))
+	return wait.Poll(100*time.Millisecond, ninetySeconds, awPodPhase(ctx, aw,
+		[]v1.PodPhase{v1.PodPending}, int(aw.Spec.SchedSpec.MinAvailable), false))
 }
 
 
-func waitAWReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int) error {
-	return wait.Poll(100*time.Millisecond, ninetySeconds, awPhase(ctx, aw,
-		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum))
+func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
+	return wait.Poll(100*time.Millisecond, ninetySeconds, awPodPhase(ctx, aw,
+		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite))
 }
 
 func waitAWPodsTerminatedEx(ctx *context, namespace string, pods []*v1.Pod, taskNum int) error {
@@ -604,6 +638,240 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 	return appwrapper
 }
 
+func createDeploymentAWwith900CPU(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "apps/v1beta1",
+		"kind": "Deployment", 
+	"metadata": {
+		"name": "aw-deployment-2-900cpu",
+		"namespace": "test",
+		"labels": {
+			"app": "nginx"
+		}
+	},
+	"spec": {
+		"replicas": 2,
+		"selector": {
+			"matchLabels": {
+				"app": "nginx"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "nginx"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "nginx",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"resources": {
+							"requests": {
+								"cpu": "900m"
+							}
+						},
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `)
+	var schedSpecMin int = 2
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				Items: []arbv1.AppWrapperResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item1"),
+							Namespace: context.namespace,
+						},
+						Replicas: 1,
+						Type: arbv1.ResourceTypeDeployment,
+						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createDeploymentAWwith125CPU(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "apps/v1beta1",
+		"kind": "Deployment", 
+	"metadata": {
+		"name": "aw-deployment-2-125cpu",
+		"namespace": "test",
+		"labels": {
+			"app": "nginx"
+		}
+	},
+	"spec": {
+		"replicas": 2,
+		"selector": {
+			"matchLabels": {
+				"app": "nginx"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "nginx"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "nginx",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"resources": {
+							"requests": {
+								"cpu": "125m"
+							}
+						},
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `)
+	var schedSpecMin int = 2
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				Items: []arbv1.AppWrapperResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item1"),
+							Namespace: context.namespace,
+						},
+						Replicas: 1,
+						Type: arbv1.ResourceTypeDeployment,
+						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createDeploymentAWwith126CPU(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "apps/v1beta1",
+		"kind": "Deployment", 
+	"metadata": {
+		"name": "aw-deployment-2-126cpu",
+		"namespace": "test",
+		"labels": {
+			"app": "nginx"
+		}
+	},
+	"spec": {
+		"replicas": 2,
+		"selector": {
+			"matchLabels": {
+				"app": "nginx"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "nginx"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "nginx",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"resources": {
+							"requests": {
+								"cpu": "126m"
+							}
+						},
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `)
+	var schedSpecMin int = 2
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				Items: []arbv1.AppWrapperResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item1"),
+							Namespace: context.namespace,
+						},
+						Replicas: 1,
+						Type: arbv1.ResourceTypeDeployment,
+						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "apps/v1beta1",
 		"kind": "Deployment", 
@@ -675,6 +943,7 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 
 	return appwrapper
 }
+
 
 func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "v1",
