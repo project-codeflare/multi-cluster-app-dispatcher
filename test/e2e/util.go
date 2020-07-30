@@ -347,10 +347,13 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 
 		readyTaskNum := 0
 		for _, pod := range pods.Items {
-			if ! quite {
-				fmt.Fprintf(os.Stdout, "[awPodPhase] Pod %s not part of AppWrapper: %s, labels: %s\n", pod.Name, aw.Name, pod.Labels)
+			if awn, found := pod.Labels["appwrapper.arbitrator.k8s.io"]; !found || awn != aw.Name {
+				if ! quite {
+					fmt.Fprintf(os.Stdout, "[awPodPhase] Pod %s not part of AppWrapper: %s, labels: %s\n", pod.Name, aw.Name, pod.Labels)
+				}
+				continue
 			}
-
+			
 			for _, p := range phase {
 				if pod.Status.Phase == p {
 					if quite {
