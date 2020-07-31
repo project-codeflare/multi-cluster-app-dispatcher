@@ -974,11 +974,6 @@ func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand s
 					{
 						"name": "%s",
 						"image": "k8s.gcr.io/echoserver:1.4",
-						"resources": {
-							"requests": {
-								"cpu": "%s"
-							}
-						},
 						"ports": [
 							{
 								"containerPort": 80
@@ -988,8 +983,14 @@ func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand s
 				]
 			}
 		}
-	}} `, name, name, replicas, name, name, name, cpuDemand))
+	}} `, name, name, replicas, name, name, name))
+//	}} `, name, name, replicas, name, name, name, cpuDemand))
 
+	//"resources": {
+	//	"requests": {
+	//		"cpu": "%s"
+	//	}
+	//},
 	var schedSpecMin int = replicas
 
 	aw := &arbv1.AppWrapper{

@@ -17,11 +17,8 @@ limitations under the License.
 package e2e
 
 import (
-	"fmt"
-	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"os"
 )
 
 var _ = Describe("AppWrapper E2E Test", func() {
@@ -30,34 +27,40 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
-		const (
-			awCount = 1
-		)
 
-		replicas := 2
-		var aws [awCount]*arbv1.AppWrapper
-		for i := 0; i < awCount; i++ {
-//			name := "aw-generic-deployment-2pods-"
-			name := "aw-generic-deployment-2"
-			if i < 99 {
-				name += "0"
-			}
-			if i < 9 {
-				name += "0"
-			}
-			suffix := i + 1
-			name += string(suffix)
-			cpuDemand := "10m"
-			fmt.Fprintf(os.Stdout, "[e2e] Creating AW %s with %s cpu and %d replica(s).\n", name, cpuDemand, replicas)
-			aws[i] = createGenericDeploymentWithCPUAW(context, "w-generic-deployment-200", "10m", 2)
-			//aws[i] = createGenericDeploymentWithCPUAW(context, "name", cpuDemand, replicas)
-		}
+		aw := createGenericDeploymentWithCPUAW(context,"aw-generic-deployment-3", "10m", 10)
 
-		for i := 0; i < awCount; i++ {
-			fmt.Fprintf(os.Stdout, "[e2e] Checking for %d replicas running for AW %s .\n", replicas, aws[i].Name)
-			err  := waitAWReadyQuiet(context, aws[i])
-			Expect(err).NotTo(HaveOccurred())
-		}
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+//		const (
+//			awCount = 1
+//		)
+//
+//		replicas := 2
+//		var aws [awCount]*arbv1.AppWrapper
+//		for i := 0; i < awCount; i++ {
+////			name := "aw-generic-deployment-2pods-"
+//			name := "aw-generic-deployment-2"
+//			if i < 99 {
+//				name += "0"
+//			}
+//			if i < 9 {
+//				name += "0"
+//			}
+//			suffix := i + 1
+//			name += string(suffix)
+//			cpuDemand := "10m"
+//			fmt.Fprintf(os.Stdout, "[e2e] Creating AW %s with %s cpu and %d replica(s).\n", name, cpuDemand, replicas)
+//			aws[i] = createGenericDeploymentWithCPUAW(context, "w-generic-deployment-200", "10m", 2)
+//			//aws[i] = createGenericDeploymentWithCPUAW(context, "name", cpuDemand, replicas)
+//		}
+//
+//		for i := 0; i < awCount; i++ {
+//			fmt.Fprintf(os.Stdout, "[e2e] Checking for %d replicas running for AW %s .\n", replicas, aws[i].Name)
+//			err  := waitAWReadyQuiet(context, aws[i])
+//			Expect(err).NotTo(HaveOccurred())
+//		}
 	})
 
 	It("MCAD CPU Accounting Test", func() {
