@@ -22,16 +22,17 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"os"
+	"time"
 )
 
 var _ = Describe("AppWrapper E2E Test", func() {
 
-	It("Create AppWrapper - Generic 100 Deployment Only - 2 pods each", func() {
+	It("Create AppWrapper - Generic 30 Deployment Only - 2 pods each", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
 		const (
-			awCount = 100
+			awCount = 30
 		)
 
 		replicas := 2
@@ -50,6 +51,8 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			aws[i] = createGenericDeploymentWithCPUAW(context, name, cpuDemand, replicas)
 		}
 
+		// Give the deployments time to create pods
+		time.Sleep(3 * time.Minute)
 		for i := 0; i < awCount; i++ {
 			fmt.Fprintf(os.Stdout, "[e2e] Checking for %d replicas running for AW %s.\n", replicas, aws[i].Name)
 			err  := waitAWReadyQuiet(context, aws[i])
