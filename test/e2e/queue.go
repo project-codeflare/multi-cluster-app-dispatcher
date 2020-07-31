@@ -29,7 +29,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	It("Create AppWrapper - Generic 100 Deployment Only - 2 pods each", func() {
 		context := initTestContext()
-		defer cleanupTestContextExtendedTime(context, 4000)
+		defer cleanupTestContextExtendedTime(context, (240 * time.Second))
 
 		const (
 			awCount = 100

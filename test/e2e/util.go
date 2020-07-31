@@ -130,7 +130,7 @@ func namespaceNotExist(ctx *context) wait.ConditionFunc {
 }
 
 
-func cleanupTestContextExtendedTime(cxt *context, milliseconds time.Duration) {
+func cleanupTestContextExtendedTime(cxt *context, seconds time.Duration) {
 	foreground := metav1.DeletePropagationForeground
 
 	err := cxt.kubeclient.CoreV1().Namespaces().Delete(cxt.namespace, &metav1.DeleteOptions{
@@ -149,7 +149,7 @@ func cleanupTestContextExtendedTime(cxt *context, milliseconds time.Duration) {
 	Expect(err).NotTo(HaveOccurred())
 
 	// Wait for namespace deleted.
-	err = wait.Poll(milliseconds*time.Millisecond, ninetySeconds, namespaceNotExist(cxt))
+	err = wait.Poll(100*time.Millisecond, seconds, namespaceNotExist(cxt))
 	Expect(err).NotTo(HaveOccurred())
 
 }
