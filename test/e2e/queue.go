@@ -37,7 +37,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		//Expect(err).NotTo(HaveOccurred())
 
 		const (
-			awCount = 1
+			awCount = 10
 		)
 
 		replicas := 2
@@ -51,7 +51,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 				name = fmt.Sprintf("%s%s", name, "0")
 			}
 			name = fmt.Sprintf("%s%d", name, i+1)
-			cpuDemand := "10m"
+			cpuDemand := "5m"
 			fmt.Fprintf(os.Stdout, "[e2e] Creating AW %s with %s cpu and %d replica(s).\n", name, cpuDemand, replicas)
 			aws[i] = createGenericDeploymentWithCPUAW(context, name, cpuDemand, replicas)
 		}
