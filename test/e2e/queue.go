@@ -26,18 +26,12 @@ import (
 
 var _ = Describe("AppWrapper E2E Test", func() {
 
-	It("Create AppWrapper - Generic 10 Deployment Only - 2 pods each", func() {
+	It("Create AppWrapper - Generic 100 Deployment Only - 2 pods each", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
-
-		//aw := createGenericDeploymentWithCPUAW(context,"aw-generic-deployment-3", "10m", 10)
-		//
-		//err := waitAWPodsReady(context, aw)
-		//Expect(err).NotTo(HaveOccurred())
-
 		const (
-			awCount = 10
+			awCount = 100
 		)
 
 		replicas := 2
@@ -57,7 +51,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		}
 
 		for i := 0; i < awCount; i++ {
-			fmt.Fprintf(os.Stdout, "[e2e] Checking for %d replicas running for AW %s .\n", replicas, aws[i].Name)
+			fmt.Fprintf(os.Stdout, "[e2e] Checking for %d replicas running for AW %s.\n", replicas, aws[i].Name)
 			err  := waitAWReadyQuiet(context, aws[i])
 			Expect(err).NotTo(HaveOccurred())
 		}
