@@ -31,7 +31,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestContext(context)
 
 		const (
-			awCount = 10
+			awCount = 1
 		)
 
 		replicas := 2
@@ -49,7 +49,8 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			name += string(suffix)
 			cpuDemand := "10m"
 			fmt.Fprintf(os.Stdout, "[e2e] Creating AW %s with %s cpu and %d replica(s).\n", name, cpuDemand, replicas)
-			aws[i] = createGenericDeploymentWithCPUAW(context, name, cpuDemand, replicas)
+			aws[i] = createGenericDeploymentWithCPUAW(context, "w-generic-deployment-200", "10m", 2)
+			//aws[i] = createGenericDeploymentWithCPUAW(context, "name", cpuDemand, replicas)
 		}
 
 		for i := 0; i < awCount; i++ {
