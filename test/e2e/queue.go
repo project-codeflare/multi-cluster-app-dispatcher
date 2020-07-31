@@ -53,7 +53,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			//}
 			//suffix := i + 1
 			//name += string(suffix)
-			name += string(replicas)
+			name = fmt.Sprintf("%s%d", name, replicas)
 			cpuDemand := "10m"
 			fmt.Fprintf(os.Stdout, "[e2e] Creating AW %s with %s cpu and %d replica(s).\n", name, cpuDemand, replicas)
 			//aws[i] = createGenericDeploymentWithCPUAW(context, "aw-generic-deployment-3", "10m", 2)
