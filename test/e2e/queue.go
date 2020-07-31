@@ -17,21 +17,38 @@ limitations under the License.
 package e2e
 
 import (
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("AppWrapper E2E Test", func() {
 
-	It("Create AppWrapper - Generic Deployment Only - 10 pods", func() {
+	It("Create AppWrapper - Generic 10 Deployment Only - 2 pods each", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
-		aw := createGenericDeploymentWithCPUAW(context,"aw-generic-deployment-3", "10m", 10)
+		const (
+			awCount = 10
+		)
 
-		err := waitAWPodsReady(context, aw)
-		Expect(err).NotTo(HaveOccurred())
+		var aws [awCount]*arbv1.AppWrapper
+		for i := 0; i < awCount; i++ {
+			name := "aw-generic-deployment-2pods-"
+			if i < 99 {
+				name = name + "0"
+			}
+			if i < 9 {
+				name = name + "0"
+			}
+			name = name + string(i+1)
+			aws[i] = createGenericDeploymentWithCPUAW(context, name, "5m", 2)
+		}
 
+		for i := 0; i < awCount; i++ {
+			err  := waitAWReadyQuiet(context, aws[i])
+			Expect(err).NotTo(HaveOccurred())
+		}
 	})
 
 	It("MCAD CPU Accounting Test", func() {
