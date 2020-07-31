@@ -17,9 +17,11 @@ limitations under the License.
 package e2e
 
 import (
+	"fmt"
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"os"
 )
 
 var _ = Describe("AppWrapper E2E Test", func() {
@@ -32,20 +34,24 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			awCount = 10
 		)
 
+		replicas := 2
 		var aws [awCount]*arbv1.AppWrapper
 		for i := 0; i < awCount; i++ {
 			name := "aw-generic-deployment-2pods-"
 			if i < 99 {
-				name = name + "0"
+				name += "0"
 			}
 			if i < 9 {
-				name = name + "0"
+				name += "0"
 			}
-			name = name + string(i+1)
-			aws[i] = createGenericDeploymentWithCPUAW(context, name, "5m", 2)
+			name += string(i+1)
+			cpuDemand := "10m"
+			fmt.Fprintf(os.Stdout, "[e2e] Creating AW %s with %s cpu and %d replica(s).\n", name, cpuDemand, 2)
+			aws[i] = createGenericDeploymentWithCPUAW(context, name, cpuDemand, replicas)
 		}
 
 		for i := 0; i < awCount; i++ {
+			fmt.Fprintf(os.Stdout, "[e2e] Checking for %d replicas running for AW %s .\n", replicas, aws[i].Name)
 			err  := waitAWReadyQuiet(context, aws[i])
 			Expect(err).NotTo(HaveOccurred())
 		}
