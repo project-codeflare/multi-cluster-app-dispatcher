@@ -27,12 +27,12 @@ import (
 
 var _ = Describe("AppWrapper E2E Test", func() {
 
-	It("Create AppWrapper - Generic 60 Deployment Only - 2 pods each", func() {
+	It("Create AppWrapper - Generic 100 Deployment Only - 2 pods each", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
 		const (
-			awCount = 60
+			awCount = 100
 		)
 
 		replicas := 2
