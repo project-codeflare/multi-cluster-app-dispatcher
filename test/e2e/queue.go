@@ -52,7 +52,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		}
 
 		// Give the deployments time to create pods
-		time.Sleep(3 * time.Minute)
+		time.Sleep(1 * time.Minute)
 		for i := 0; i < awCount; i++ {
 			fmt.Fprintf(os.Stdout, "[e2e] Checking for %d replicas running for AW %s.\n", replicas, aws[i].Name)
 			err  := waitAWReadyQuiet(context, aws[i])
