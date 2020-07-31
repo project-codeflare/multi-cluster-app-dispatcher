@@ -129,27 +129,32 @@ func namespaceNotExist(ctx *context) wait.ConditionFunc {
 	}
 }
 
+
+func cleanupTestContextExtendedTime(cxt *context, milliseconds time.Duration) {
+	foreground := metav1.DeletePropagationForeground
+
+	err := cxt.kubeclient.CoreV1().Namespaces().Delete(cxt.namespace, &metav1.DeleteOptions{
+		PropagationPolicy: &foreground,
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(masterPriority, &metav1.DeleteOptions{
+		PropagationPolicy: &foreground,
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(workerPriority, &metav1.DeleteOptions{
+		PropagationPolicy: &foreground,
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	// Wait for namespace deleted.
+	err = wait.Poll(milliseconds*time.Millisecond, ninetySeconds, namespaceNotExist(cxt))
+	Expect(err).NotTo(HaveOccurred())
+
+}
 func cleanupTestContext(cxt *context) {
-       foreground := metav1.DeletePropagationForeground
-
-       err := cxt.kubeclient.CoreV1().Namespaces().Delete(cxt.namespace, &metav1.DeleteOptions{
-               PropagationPolicy: &foreground,
-       })
-       Expect(err).NotTo(HaveOccurred())
-
-       err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(masterPriority, &metav1.DeleteOptions{
-               PropagationPolicy: &foreground,
-       })
-       Expect(err).NotTo(HaveOccurred())
-
-       err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(workerPriority, &metav1.DeleteOptions{
-               PropagationPolicy: &foreground,
-       })
-       Expect(err).NotTo(HaveOccurred())
-
-       // Wait for namespace deleted.
-       err = wait.Poll(100*time.Millisecond, ninetySeconds, namespaceNotExist(cxt))
-       Expect(err).NotTo(HaveOccurred())
+	cleanupTestContextExtendedTime(cxt, 100)
 }
 
 type taskSpec struct {
