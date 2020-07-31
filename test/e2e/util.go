@@ -989,13 +989,7 @@ func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand s
 			}
 		}
 	}} `, name, name, replicas, name, name, name, cpuDemand))
-//      }} `, name, name, replicas, name, name, name))
 
-	//"resources": {
-	//	"requests": {
-	//		"cpu": "%s"
-	//	}
-	//},
 	var schedSpecMin int = replicas
 
 	aw := &arbv1.AppWrapper{
