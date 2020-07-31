@@ -23,6 +23,17 @@ import (
 
 var _ = Describe("AppWrapper E2E Test", func() {
 
+	It("Create AppWrapper - Generic Deployment Only - 10 pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
+
+		aw := createGenericDeploymentWithCPUAW(context,"aw-generic-deployment-3", "10m", 10)
+
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+	})
+
 	It("MCAD CPU Accounting Test", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
