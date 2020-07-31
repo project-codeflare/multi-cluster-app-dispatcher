@@ -150,11 +150,14 @@ func cleanupTestContextExtendedTime(cxt *context, seconds time.Duration) {
 
 	// Wait for namespace deleted.
 	err = wait.Poll(100*time.Millisecond, seconds, namespaceNotExist(cxt))
+	if err != nil {
+		fmt.Fprintf(os.Stdout, "[cleanupTestContextExtendedTime] Failure check for namespace: %s.\n", cxt.namespace)
+	}
 	Expect(err).NotTo(HaveOccurred())
 
 }
 func cleanupTestContext(cxt *context) {
-	cleanupTestContextExtendedTime(cxt, 100)
+	cleanupTestContextExtendedTime(cxt, ninetySeconds)
 }
 
 type taskSpec struct {
