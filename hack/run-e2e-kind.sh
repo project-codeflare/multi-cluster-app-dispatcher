@@ -64,11 +64,11 @@ function kind-up-cluster {
   kind create cluster ${CLUSTER_CONTEXT} ${KIND_OPT} --wait ${WAIT_TIME}
 
   docker images
-  docker pull ${IMAGE_ECHOSERVER}
-  docker pull ${IMAGE_NGINX}
+  docker pull --quite ${IMAGE_ECHOSERVER}
+  docker pull --quite ${IMAGE_NGINX}
   if [[ "$MCAD_IMAGE_PULL_POLICY" = "Always" ]]
   then
-    docker pull ${IMAGE_MCAD}
+    docker pull --quite ${IMAGE_MCAD}
   fi
   docker images
   
@@ -259,7 +259,6 @@ function kube-test-env-up {
     echo "Installing Helm Client..."
     curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get > install-helm.sh
     chmod u+x install-helm.sh
-    cat install-helm.sh
     ./install-helm.sh --version v2.16.3
 
     # Start Helm Server
@@ -287,6 +286,7 @@ function kube-test-env-up {
     helm install kube-arbitrator --namespace kube-system --wait --set loglevel=3 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY
 
     sleep 10
+    echo "Listing MCAD Controller Helm Chart and Pod YAML..."
     helm list
     mcad_pod=$(kubectl get pods -n kube-system | grep xqueuejob | awk '{print $1}')
     if [[ "$mcad_pod" != "" ]]

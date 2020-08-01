@@ -29,7 +29,7 @@ images:
 	$(info List executable directory)
 	ls -l ${CURRENT_DIR}/_output/bin
 	$(info Build the docker image)
-	docker build --no-cache --tag mcad-controller:${RELEASE_VER} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
+	docker build --quite --no-cache --tag mcad-controller:${RELEASE_VER} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
 
 push-images:
 ifeq ($(strip $(dockerhub_repository)),)
