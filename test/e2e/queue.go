@@ -47,7 +47,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			}
 			name = fmt.Sprintf("%s%d", name, i+1)
 			cpuDemand := "5m"
-			if (i % modDivisor) == 0 {
+			if ((i+1) % modDivisor) == 0 || i ==0 {
 				fmt.Fprintf(os.Stdout, "[e2e] Creating AW %s with %s cpu and %d replica(s).\n", name, cpuDemand, replicas)
 			}
 			aws[i] = createGenericDeploymentWithCPUAW(context, name, cpuDemand, replicas)
@@ -56,7 +56,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// Give the deployments time to create pods
 		time.Sleep(2 * time.Minute)
 		for i := 0; i < awCount; i++ {
-			if (i % modDivisor) == 0 {
+			if ((i+1) % modDivisor) == 0 || i ==0 {
 				fmt.Fprintf(os.Stdout, "[e2e] Checking for %d replicas running for AW %s.\n", replicas, aws[i].Name)
 			}
 			err  := waitAWReadyQuiet(context, aws[i])
