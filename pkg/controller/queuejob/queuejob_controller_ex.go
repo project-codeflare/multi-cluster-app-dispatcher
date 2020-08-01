@@ -738,7 +738,7 @@ func (cc *XController) updateEtcd(qj *arbv1.AppWrapper, at string) error {
 	qj.Status.Sender = "before "+ at  // set Sender string to indicate code location
 	qj.Status.Local  = false          // for Informer FilterFunc to pickup
 	if qjj, err := cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj); err != nil {
-		glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s at %s err=%v qj=%+v", qj.Name, at, err, qj)
+		glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s, namespace: %s at %s err=%v qj=%+v", qj.Name, qj.Namespace, at, err)
 		return err
 	} else {  // qjj should be the same as qj except with newer ResourceVersion
 		qj.ResourceVersion = qjj.ResourceVersion  // update new ResourceVersion from etcd
