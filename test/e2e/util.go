@@ -129,27 +129,35 @@ func namespaceNotExist(ctx *context) wait.ConditionFunc {
 	}
 }
 
+
+func cleanupTestContextExtendedTime(cxt *context, seconds time.Duration) {
+	foreground := metav1.DeletePropagationForeground
+
+	err := cxt.kubeclient.CoreV1().Namespaces().Delete(cxt.namespace, &metav1.DeleteOptions{
+		PropagationPolicy: &foreground,
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(masterPriority, &metav1.DeleteOptions{
+		PropagationPolicy: &foreground,
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(workerPriority, &metav1.DeleteOptions{
+		PropagationPolicy: &foreground,
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	// Wait for namespace deleted.
+	err = wait.Poll(100*time.Millisecond, seconds, namespaceNotExist(cxt))
+	if err != nil {
+		fmt.Fprintf(os.Stdout, "[cleanupTestContextExtendedTime] Failure check for namespace: %s.\n", cxt.namespace)
+	}
+	Expect(err).NotTo(HaveOccurred())
+
+}
 func cleanupTestContext(cxt *context) {
-       foreground := metav1.DeletePropagationForeground
-
-       err := cxt.kubeclient.CoreV1().Namespaces().Delete(cxt.namespace, &metav1.DeleteOptions{
-               PropagationPolicy: &foreground,
-       })
-       Expect(err).NotTo(HaveOccurred())
-
-       err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(masterPriority, &metav1.DeleteOptions{
-               PropagationPolicy: &foreground,
-       })
-       Expect(err).NotTo(HaveOccurred())
-
-       err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(workerPriority, &metav1.DeleteOptions{
-               PropagationPolicy: &foreground,
-       })
-       Expect(err).NotTo(HaveOccurred())
-
-       // Wait for namespace deleted.
-       err = wait.Poll(100*time.Millisecond, ninetySeconds, namespaceNotExist(cxt))
-       Expect(err).NotTo(HaveOccurred())
+	cleanupTestContextExtendedTime(cxt, ninetySeconds)
 }
 
 type taskSpec struct {
@@ -944,6 +952,85 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 	return appwrapper
 }
 
+
+func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand string, replicas int) *arbv1.AppWrapper {
+	rb := []byte(fmt.Sprintf(`{
+	"apiVersion": "apps/v1beta1",
+	"kind": "Deployment", 
+	"metadata": {
+		"name": "%s",
+		"namespace": "test",
+		"labels": {
+			"app": "%s"
+		}
+	},
+	"spec": {
+		"replicas": %d,
+		"selector": {
+			"matchLabels": {
+				"app": "%s"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "%s"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "%s",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"resources": {
+							"requests": {
+								"cpu": "%s"
+							}
+						},
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `, name, name, replicas, name, name, name, cpuDemand))
+
+	var schedSpecMin int = replicas
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item1"),
+							Namespace: context.namespace,
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
 
 func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "v1",

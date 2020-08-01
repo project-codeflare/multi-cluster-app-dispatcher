@@ -17,15 +17,56 @@ limitations under the License.
 package e2e
 
 import (
+	"fmt"
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"os"
+	"time"
 )
 
 var _ = Describe("AppWrapper E2E Test", func() {
 
+	It("Create AppWrapper - Generic 100 Deployment Only - 2 pods each", func() {
+		context := initTestContext()
+		defer cleanupTestContextExtendedTime(context, (240 * time.Second))
+
+		const (
+			awCount = 100
+		)
+		modDivisor := int(awCount/10)
+		replicas := 2
+		var aws [awCount]*arbv1.AppWrapper
+		for i := 0; i < awCount; i++ {
+			name := fmt.Sprintf("%s%d-", "aw-generic-deployment-", replicas)
+			if i < 99 {
+				name = fmt.Sprintf("%s%s", name, "0")
+			}
+			if i < 9 {
+				name = fmt.Sprintf("%s%s", name, "0")
+			}
+			name = fmt.Sprintf("%s%d", name, i+1)
+			cpuDemand := "5m"
+			if ((i+1) % modDivisor) == 0 || i ==0 {
+				fmt.Fprintf(os.Stdout, "[e2e] Creating AW %s with %s cpu and %d replica(s).\n", name, cpuDemand, replicas)
+			}
+			aws[i] = createGenericDeploymentWithCPUAW(context, name, cpuDemand, replicas)
+		}
+
+		// Give the deployments time to create pods
+		time.Sleep(2 * time.Minute)
+		for i := 0; i < awCount; i++ {
+			if ((i+1) % modDivisor) == 0 || i ==0 {
+				fmt.Fprintf(os.Stdout, "[e2e] Checking for %d replicas running for AW %s.\n", replicas, aws[i].Name)
+			}
+			err  := waitAWReadyQuiet(context, aws[i])
+			Expect(err).NotTo(HaveOccurred())
+		}
+	})
+
 	It("MCAD CPU Accounting Test", func() {
 		context := initTestContext()
-		defer cleanupTestContext(context)
+		defer cleanupTestContextExtendedTime(context, (240 * time.Second))
 
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith900CPU(context,"aw-deployment-2-900cpu")
@@ -39,7 +80,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// Using quite mode due to creating of pods in earlier step.
 		err = waitAWReadyQuiet(context, aw2)
 		Expect(err).NotTo(HaveOccurred())
-
 	})
 
 	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {

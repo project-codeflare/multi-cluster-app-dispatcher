@@ -237,7 +237,7 @@ func (sc *ClusterStateCache) updateState() error {
 
 
 func (sc *ClusterStateCache) deleteJob(job *api.JobInfo) {
-	glog.V(3).Infof("Attempting to delete Job <%v:%v/%v>", job.UID, job.Namespace, job.Name)
+	glog.V(4).Infof("[deleteJob] Attempting to delete Job <%v:%v/%v>", job.UID, job.Namespace, job.Name)
 
 	time.AfterFunc(5*time.Second, func() {
 		sc.deletedJobs.AddIfNotPresent(job)
@@ -257,7 +257,7 @@ func (sc *ClusterStateCache) processCleanupJob() error {
 
 			if api.JobTerminated(job) {
 				delete(sc.Jobs, job.UID)
-				glog.V(3).Infof("Job <%v:%v/%v> was deleted.", job.UID, job.Namespace, job.Name)
+				glog.V(3).Infof("[processCleanupJob] Job <%v:%v/%v> was deleted.", job.UID, job.Namespace, job.Name)
 			} else {
 				// Retry
 				sc.deleteJob(job)
