@@ -196,7 +196,7 @@ func (sc *ClusterStateCache) AddPod(obj interface{}) {
 			pod.Namespace, pod.Name, err)
 		return
 	} else {
-		glog.V(3).Infof("Added pod <%s/%v> into cache.", pod.Namespace, pod.Name)
+		glog.V(4).Infof("[AddPod] Added pod <%s/%v> into cache.", pod.Namespace, pod.Name)
 	}
 	return
 }
