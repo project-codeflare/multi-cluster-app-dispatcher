@@ -222,7 +222,7 @@ func (sc *ClusterStateCache) UpdatePod(oldObj, newObj interface{}) {
 		return
 	}
 
-	glog.V(3).Infof("Updated pod <%s/%v> in cache.", oldPod.Namespace, oldPod.Name)
+	glog.V(4).Infof("[UpdatePod] Updated pod <%s/%v> in cache.", oldPod.Namespace, oldPod.Name)
 
 	return
 }

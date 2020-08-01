@@ -233,7 +233,7 @@ func (qjrPod *QueueJobResPod) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) e
 	succeeded := int32(queuejobresources.FilterPods(pods, v1.PodSucceeded))
 	failed := int32(queuejobresources.FilterPods(pods, v1.PodFailed))
 
-	glog.Infof("There are %d pods of QueueJob %s:  pending %d, running %d, succeeded %d, failed %d",
+	glog.Infof("[UpdateQueueJobStatus] There are %d pods of QueueJob %s:  pending %d, running %d, succeeded %d, failed %d",
 		len(pods), queuejob.Name,  pending, running, succeeded, failed)
 
 	queuejob.Status.Pending      = pending
@@ -264,7 +264,7 @@ func (qjrPod *QueueJobResPod) manageQueueJob(qj *arbv1.AppWrapper, pods []*v1.Po
 	succeeded := int32(queuejobresources.FilterPods(pods, v1.PodSucceeded))
 	failed := int32(queuejobresources.FilterPods(pods, v1.PodFailed))
 
-	glog.Infof("There are %d pods of QueueJob %s:  replicas: %d pending %d, running %d, succeeded %d, failed %d",
+	glog.Infof("[manageQueueJob] There are %d pods of QueueJob %s:  replicas: %d pending %d, running %d, succeeded %d, failed %d",
 		len(pods), qj.Name, replicas, pending, running, succeeded, failed)
 
 	ss, err := qjrPod.arbclients.ArbV1().SchedulingSpecs(qj.Namespace).List(metav1.ListOptions{
@@ -285,7 +285,7 @@ func (qjrPod *QueueJobResPod) manageQueueJob(qj *arbv1.AppWrapper, pods []*v1.Po
 
 	// Create pod if necessary
 	if diff := int32(replicas) - pending - running - succeeded; diff > 0 {
-		glog.V(3).Infof("Try to create %v Pods for QueueJob %v/%v", diff, qj.Namespace, qj.Name)
+		glog.V(3).Infof("[manageQueueJob] Try to create %v Pods for QueueJob %v/%v", diff, qj.Namespace, qj.Name)
 		var errs []error
 		wait := sync.WaitGroup{}
 		wait.Add(int(diff))
@@ -589,7 +589,7 @@ func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, 
 	templateCopy, err := qjrPod.GetPodTemplate(qjobRes)
 
 	if err != nil {
-		glog.Errorf("Cannot parse PodTemplate in job: %s, namespace: %s, item: %+v error: %+v.",
+		glog.Errorf("[createQueueJobPod] Cannot parse PodTemplate in job: %s, namespace: %s, item: %+v error: %+v.",
 			qj.Name, qj.Namespace,qjobRes, err)
 		return nil
 	}
