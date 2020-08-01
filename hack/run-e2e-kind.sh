@@ -64,11 +64,11 @@ function kind-up-cluster {
   kind create cluster ${CLUSTER_CONTEXT} ${KIND_OPT} --wait ${WAIT_TIME}
 
   docker images
-  docker pull --quite ${IMAGE_ECHOSERVER}
-  docker pull --quite ${IMAGE_NGINX}
+  docker pull --quiet ${IMAGE_ECHOSERVER}
+  docker pull --quiet ${IMAGE_NGINX}
   if [[ "$MCAD_IMAGE_PULL_POLICY" = "Always" ]]
   then
-    docker pull --quite ${IMAGE_MCAD}
+    docker pull --quiet ${IMAGE_MCAD}
   fi
   docker images
   
