@@ -589,7 +589,8 @@ func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, 
 	templateCopy, err := qjrPod.GetPodTemplate(qjobRes)
 
 	if err != nil {
-		glog.Errorf("Cannot parse PodTemplate in job: %+v, item: %+v error: %+v.", qj, qjobRes, err)
+		glog.Errorf("Cannot parse PodTemplate in job: %s, namespace: %s, item: %+v error: %+v.",
+			qj.Name, qj.Namespace,qjobRes, err)
 		return nil
 	}
 	podName := fmt.Sprintf("%s-%d-%s", qj.Name, ix, generateUUID())
