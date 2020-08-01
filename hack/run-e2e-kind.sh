@@ -283,8 +283,8 @@ function kube-test-env-up {
 
     # start mcad controller
     echo "Starting MCAD Controller..."
-    echo "helm install kube-arbitrator namespace kube-system wait set loglevel=4 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=1000m set resources.limits.memory=1024Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY debug"
-    helm install kube-arbitrator --namespace kube-system --wait --set loglevel=4 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY --debug
+    echo "helm install kube-arbitrator namespace kube-system wait set loglevel=3 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=1000m set resources.limits.memory=1024Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY debug"
+    helm install kube-arbitrator --namespace kube-system --wait --set loglevel=3 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY --debug
 
     sleep 10
     helm list
