@@ -237,7 +237,7 @@ func (sc *ClusterStateCache) updateState() error {
 
 
 func (sc *ClusterStateCache) deleteJob(job *api.JobInfo) {
-	glog.V(3).Infof("Attempting to delete Job <%v:%v/%v>", job.UID, job.Namespace, job.Name)
+	glog.V(4).Infof("[deleteJob] Attempting to delete Job <%v:%v/%v>", job.UID, job.Namespace, job.Name)
 
 	time.AfterFunc(5*time.Second, func() {
 		sc.deletedJobs.AddIfNotPresent(job)
@@ -257,7 +257,7 @@ func (sc *ClusterStateCache) processCleanupJob() error {
 
 			if api.JobTerminated(job) {
 				delete(sc.Jobs, job.UID)
-				glog.V(3).Infof("Job <%v:%v/%v> was deleted.", job.UID, job.Namespace, job.Name)
+				glog.V(3).Infof("[processCleanupJob] Job <%v:%v/%v> was deleted.", job.UID, job.Namespace, job.Name)
 			} else {
 				// Retry
 				sc.deleteJob(job)
@@ -335,7 +335,7 @@ func (sc *ClusterStateCache) Snapshot() *api.ClusterInfo {
 		// If no scheduling spec, does not handle it.
 		if value.SchedSpec == nil && value.PDB == nil {
 			// Jobs.Tasks are more recognizable than Jobs.UID
-			glog.V(3).Infof("The scheduling spec of Job <%v> with tasks <%+v> is nil, ignore it.", value.UID, value.Tasks)
+			glog.V(5).Infof("The scheduling spec of Job <%v> with tasks <%+v> is nil, ignore it.", value.UID, value.Tasks)
 			continue
 		}
 

@@ -92,11 +92,11 @@ function cleanup {
 
     echo "---"
     echo "Get All AppWrappers..."
-    kubectl get appwrappers -A -o yaml
+    kubectl get appwrappers --all-namespaces -o yaml
 
     echo "---"
     echo "Describe all AppWrappers..."
-    kubectl describe appwrappers -A
+    kubectl describe appwrappers --all-namespaces
 
     echo "---"
     echo "'test' Pod list..."
@@ -259,7 +259,6 @@ function kube-test-env-up {
     echo "Installing Helm Client..."
     curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get > install-helm.sh
     chmod u+x install-helm.sh
-    cat install-helm.sh
     ./install-helm.sh --version v2.16.3
 
     # Start Helm Server
@@ -283,10 +282,11 @@ function kube-test-env-up {
 
     # start mcad controller
     echo "Starting MCAD Controller..."
-    echo "helm install kube-arbitrator namespace kube-system wait set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=1000m set resources.limits.memory=1024Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY debug"
-    helm install kube-arbitrator --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY --debug
+    echo "helm install kube-arbitrator namespace kube-system wait set loglevel=3 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=1000m set resources.limits.memory=1024Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY"
+    helm install kube-arbitrator --namespace kube-system --wait --set loglevel=3 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY
 
     sleep 10
+    echo "Listing MCAD Controller Helm Chart and Pod YAML..."
     helm list
     mcad_pod=$(kubectl get pods -n kube-system | grep xqueuejob | awk '{print $1}')
     if [[ "$mcad_pod" != "" ]]
@@ -294,6 +294,8 @@ function kube-test-env-up {
         kubectl get pod ${mcad_pod} -n kube-system -o yaml
     fi
 
+    # Turn off master taints
+    kubectl taint nodes --all node-role.kubernetes.io/master-
     # Show available resources of cluster nodes
 
     echo "---"
