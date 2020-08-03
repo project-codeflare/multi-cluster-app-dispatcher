@@ -137,19 +137,19 @@ func (p *PriorityQueue) IfExistUnschedulableQ(qj *qjobv1.AppWrapper) bool {
 }
 
 // Move QJ from unschedulableQ to activeQ if exists
-func (p *PriorityQueue) MoveToActiveQueueIfExists(qj *qjobv1.AppWrapper) error {
+func (p *PriorityQueue) MoveToActiveQueueIfExists(aw *qjobv1.AppWrapper) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	if p.unschedulableQ.Get(qj) != nil {
-		p.unschedulableQ.Delete(qj)
-		err := p.activeQ.Add(qj)
-		if err != nil {
-			glog.Errorf("Error adding QJ %v to the scheduling queue: %v\n", qj.Name, err)
-		}
-		p.cond.Broadcast()
-		return err
+	if p.unschedulableQ.Get(aw) != nil {
+		p.unschedulableQ.Delete(aw)
 	}
-	return nil
+	err := p.activeQ.AddIfNotPresent(aw)
+	if err != nil {
+		glog.Errorf("[MoveToActiveQueueIfExists] Error adding AW %v to the scheduling queue: %v\n", aw.Name, err)
+	}
+	p.cond.Broadcast()
+
+	return err
 }
 
 
