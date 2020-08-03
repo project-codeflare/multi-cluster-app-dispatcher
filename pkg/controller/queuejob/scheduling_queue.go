@@ -142,14 +142,14 @@ func (p *PriorityQueue) MoveToActiveQueueIfExists(aw *qjobv1.AppWrapper) error {
 	defer p.lock.Unlock()
 	if p.unschedulableQ.Get(aw) != nil {
 		p.unschedulableQ.Delete(aw)
+		err := p.activeQ.AddIfNotPresent(aw)
+		if err != nil {
+			glog.Errorf("[MoveToActiveQueueIfExists] Error adding AW %v to the scheduling queue: %v\n", aw.Name, err)
+		}
+		p.cond.Broadcast()
+		return err
 	}
-	err := p.activeQ.AddIfNotPresent(aw)
-	if err != nil {
-		glog.Errorf("[MoveToActiveQueueIfExists] Error adding AW %v to the scheduling queue: %v\n", aw.Name, err)
-	}
-	p.cond.Broadcast()
-
-	return err
+	return nil
 }
 
 

@@ -705,15 +705,17 @@ func (qjm *XController) ScheduleNext() {
 				}
 				qj.Status.CanRun = true
 				qj.Status.FilterIgnore = true // update CanRun & Spec.  no need to trigger event
-				qjm.updateEtcd(qj, "[ScheduleNext]setCanRun")
-				// add to eventQueue for dispatching to Etcd
-				if err := qjm.eventQueue.Add(qj); err != nil { // unsuccessful add to eventQueue, add back to activeQ
-					glog.Errorf("[ScheduleNext] Fail to add %s to eventQueue, activeQ.Add_toSchedulingQueue &qj=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, err)
-					qjm.qjqueue.MoveToActiveQueueIfExists(qj)
-				} else { // successful add to eventQueue, remove from qjqueue
-					qjm.qjqueue.Delete(qj)
-					forwarded = true
-					glog.V(3).Infof("[ScheduleNext] %s 2Delay=%.6f seconds eventQueue.Add_afterHeadOfLine activeQ=%t, Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+				// Handle k8s watch race condition
+				if err := qjm.updateEtcd(qj, "ScheduleNext - setCanRun"); err == nil {
+					// add to eventQueue for dispatching to Etcd
+					if err = qjm.eventQueue.Add(qj); err != nil { // unsuccessful add to eventQueue, add back to activeQ
+						glog.Errorf("[ScheduleNext] Fail to add %s to eventQueue, activeQ.Add_toSchedulingQueue &qj=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, err)
+						qjm.qjqueue.MoveToActiveQueueIfExists(qj)
+					} else { // successful add to eventQueue, remove from qjqueue
+						qjm.qjqueue.Delete(qj)
+						forwarded = true
+						glog.V(3).Infof("[ScheduleNext] %s Delay=%.6f seconds eventQueue.Add_afterHeadOfLine activeQ=%t, Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+					}
 				}
 			} else { // Not enough free resources to dispatch HOL
 				glog.V(3).Infof("[ScheduleNext] HOL Blocking by %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
