@@ -199,7 +199,6 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		updateQueue:		cache.NewFIFO(GetQueueJobKey),
 		qjqueue:		NewSchedulingQueue(),
 		cache: 			clusterstatecache.New(config),
-		quotaManager:		quotamanager.NewResourcePlanManager(serverOption.QuotaRestURL),
 	}
 	cc.metricsAdapter =  adapter.New(config, cc.cache)
 
@@ -353,6 +352,8 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		})
 	cc.queueJobLister = cc.queueJobInformer.Lister()
 
+	cc.quotaManager = quotamanager.NewResourcePlanManager(cc.queueJobLister, serverOption.QuotaRestURL, serverOption.Preemption)
+
 	cc.queueJobSynced = cc.queueJobInformer.Informer().HasSynced
 
 	//create sub-resource reference manager
@@ -397,6 +398,25 @@ func (qjm *XController) PreemptQueueJobs() {
 		if _, err := qjm.arbclients.ArbV1().AppWrappers(q.Namespace).Update(newjob); err != nil {
 			glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
 				q.Namespace, q.Name, err)
+		}
+	}
+}
+func (qjm *XController) preemptAWJobs(preemptAWs []*arbv1.AppWrapper) {
+	if preemptAWs == nil {
+		return
+	}
+
+	for _, aw := range preemptAWs {
+		apiCacheAWJob, e := qjm.queueJobLister.AppWrappers(aw.Namespace).Get(aw.Name)
+		if e != nil {
+			glog.Errorf("[preemptQWJobs] Failed to get AppWrapper to from API Cache %v/%v: %v",
+				aw.Namespace, aw.Name, e)
+			continue
+		}
+		apiCacheAWJob.Status.CanRun = false
+		if _, err := qjm.arbclients.ArbV1().AppWrappers(apiCacheAWJob.Namespace).Update(apiCacheAWJob); err != nil {
+			glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
+				apiCacheAWJob.Namespace, apiCacheAWJob.Name, err)
 		}
 	}
 }
@@ -574,12 +594,18 @@ func (qjm *XController) chooseAgent(qj *arbv1.AppWrapper) string{
 	resources := qjm.agentMap[agentId].AggrResources
 	glog.V(2).Infof("[chooseAgent] Aggr Resources of Agent %s: %v\n", agentId, resources)
 
-	if qjAggrResources.LessEqual(resources) && qjm.quotaManager.Fits(qj, qjAggrResources) {
+	if qjAggrResources.LessEqual(resources)  {
 		glog.V(2).Infof("[chooseAgent] Agent %s has enough resources\n", agentId)
-	return agentId
+		if fits, preemptAWs := qjm.quotaManager.Fits(qj, qjAggrResources); fits {
+			glog.V(2).Infof("[chooseAgent] AppWrapper %s has enough quota.\n", qj.Name)
+			qjm.preemptAWJobs(preemptAWs)
+			return agentId
+		} else {
+			glog.V(2).Infof("[chooseAgent] AppWrapper %s  does not have enough quota\n", qj.Name)
+		}
+	} else {
+		glog.V(2).Infof("[chooseAgent] Agent %s does not have enough resources\n", agentId)
 	}
-	glog.V(2).Infof("[chooseAgent] Agent %s does not have enough resources\n", agentId)
-
 	return ""
 }
 
@@ -615,11 +641,11 @@ func (qjm *XController) ScheduleNext() {
 	if qjm.serverOption.DynamicPriority {
 		//  Create newHeap to temporarily store qjqueue jobs for updating SystemPriority
 		tempQ := newHeap(cache.MetaNamespaceKeyFunc, HigherSystemPriorityQJ)
-		qj.Status.SystemPriority = qj.Spec.Priority + qj.Spec.PrioritySlope * (time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time)).Seconds()
+		qj.Status.SystemPriority = float64(qj.Spec.Priority) + qj.Spec.PrioritySlope * (time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time)).Seconds()
 		tempQ.Add(qj)
 		for qjm.qjqueue.Length() > 0 {
 			qjtemp, _ := qjm.qjqueue.Pop()
-			qjtemp.Status.SystemPriority = qjtemp.Spec.Priority + qjtemp.Spec.PrioritySlope * (time.Now().Sub(qjtemp.Status.ControllerFirstTimestamp.Time)).Seconds()
+			qjtemp.Status.SystemPriority = float64(qjtemp.Spec.Priority) + qjtemp.Spec.PrioritySlope * (time.Now().Sub(qjtemp.Status.ControllerFirstTimestamp.Time)).Seconds()
 			tempQ.Add(qjtemp)
 		}
 		// move AppWrappers back to activeQ and sort based on SystemPriority
@@ -634,7 +660,7 @@ func (qjm *XController) ScheduleNext() {
 				for key, element := range pq.activeQ.data.items {
 					qjtemp := element.obj.(*arbv1.AppWrapper)
 					glog.V(10).Infof("[ScheduleNext] AfterCalc: qjqLength=%d Key=%s index=%d Priority=%.1f SystemPriority=%.1f QueueJobState=%s",
-						qjm.qjqueue.Length(), key, element.index, qjtemp.Spec.Priority, qjtemp.Status.SystemPriority, qjtemp.Status.QueueJobState)
+						qjm.qjqueue.Length(), key, element.index, float64(qjtemp.Spec.Priority), qjtemp.Status.SystemPriority, qjtemp.Status.QueueJobState)
 				}
 			}
 		}
@@ -732,41 +758,47 @@ func (qjm *XController) ScheduleNext() {
 			resources := qjm.getAggregatedAvailableResourcesPriority(priorityindex, qj.Name)
 			glog.V(2).Infof("[ScheduleNext] XQJ %s with resources %v to be scheduled on aggregated idle resources %v", qj.Name, aggqj, resources)
 
-			if aggqj.LessEqual(resources) && qjm.quotaManager.Fits(qj, aggqj) {
-				// qj is ready to go!
-				apiQueueJob, e := qjm.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
-				// apiQueueJob's ControllerFirstTimestamp is only microsecond level instead of nanosecond level
-				if e != nil {
-					glog.Errorf("[ScheduleNext] Unable to get AW %s from API cache &aw=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, err)
-					return
-				}
-				// make sure qj has the latest information
-				if larger(apiQueueJob.ResourceVersion, qj.ResourceVersion) {
-					glog.V(10).Infof("[ScheduleNext] %s found more recent copy from cache          &qj=%p          qj=%+v", qj.Name, qj, qj)
-					glog.V(10).Infof("[ScheduleNext] %s found more recent copy from cache &apiQueueJob=%p apiQueueJob=%+v", apiQueueJob.Name, apiQueueJob, apiQueueJob)
-					apiQueueJob.DeepCopyInto(qj)
-				}
-				desired := int32(0)
-				for i, ar := range qj.Spec.AggrResources.Items {
-					desired += ar.Replicas
-					qj.Spec.AggrResources.Items[i].AllocatedReplicas = ar.Replicas
-				}
-				qj.Status.CanRun = true
-				qj.Status.FilterIgnore = true // update CanRun & Spec.  no need to trigger event
-				// Handle k8s watch race condition
-				if err := qjm.updateEtcd(qj, "ScheduleNext - setCanRun"); err == nil {
-					// add to eventQueue for dispatching to Etcd
-					if err = qjm.eventQueue.Add(qj); err != nil { // unsuccessful add to eventQueue, add back to activeQ
-						glog.Errorf("[ScheduleNext] Fail to add %s to eventQueue, activeQ.Add_toSchedulingQueue &qj=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, err)
-						qjm.qjqueue.MoveToActiveQueueIfExists(qj)
-					} else { // successful add to eventQueue, remove from qjqueue
-						qjm.qjqueue.Delete(qj)
-						forwarded = true
-						glog.V(3).Infof("[ScheduleNext] %s Delay=%.6f seconds eventQueue.Add_afterHeadOfLine activeQ=%t, Unsched=%t &aw=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+			if aggqj.LessEqual(resources) {
+				if fits, preemptAWs := qjm.quotaManager.Fits(qj, aggqj); fits {
+					// Set any jobs that are marked for preemption
+					qjm.preemptAWJobs(preemptAWs)
+					// aw is ready to go!
+					apiQueueJob, e := qjm.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
+					// apiQueueJob's ControllerFirstTimestamp is only microsecond level instead of nanosecond level
+					if e != nil {
+						glog.Errorf("[ScheduleNext] Unable to get AW %s from API cache &aw=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, err)
+						return
 					}
+					// make sure qj has the latest information
+					if larger(apiQueueJob.ResourceVersion, qj.ResourceVersion) {
+						glog.V(10).Infof("[ScheduleNext] %s found more recent copy from cache          &qj=%p          qj=%+v", qj.Name, qj, qj)
+						glog.V(10).Infof("[ScheduleNext] %s found more recent copy from cache &apiQueueJob=%p apiQueueJob=%+v", apiQueueJob.Name, apiQueueJob, apiQueueJob)
+						apiQueueJob.DeepCopyInto(qj)
+					}
+					desired := int32(0)
+					for i, ar := range qj.Spec.AggrResources.Items {
+						desired += ar.Replicas
+						qj.Spec.AggrResources.Items[i].AllocatedReplicas = ar.Replicas
+					}
+					qj.Status.CanRun = true
+					qj.Status.FilterIgnore = true // update CanRun & Spec.  no need to trigger event
+					// Handle k8s watch race condition
+					if err := qjm.updateEtcd(qj, "ScheduleNext - setCanRun"); err == nil {
+						// add to eventQueue for dispatching to Etcd
+						if err = qjm.eventQueue.Add(qj); err != nil { // unsuccessful add to eventQueue, add back to activeQ
+							glog.Errorf("[ScheduleNext] Fail to add %s to eventQueue, activeQ.Add_toSchedulingQueue &qj=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, err)
+							qjm.qjqueue.MoveToActiveQueueIfExists(qj)
+						} else { // successful add to eventQueue, remove from qjqueue
+							qjm.qjqueue.Delete(qj)
+							forwarded = true
+							glog.V(3).Infof("[ScheduleNext] %s Delay=%.6f seconds eventQueue.Add_afterHeadOfLine activeQ=%t, Unsched=%t &aw=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+						}
+					}
+				} else { // Not enough free resources to dispatch HOL
+					glog.V(3).Infof("[ScheduleNext] HOL Blocking by %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				}
 			} else { // Not enough free resources to dispatch HOL
-				glog.V(3).Infof("[ScheduleNext] HOL Blocking by %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+				glog.V(3).Infof("[ScheduleNext] HOL Blocking by %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to resource limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 			}
 			// stop trying to dispatch after HeadOfLineHoldingTime
 			if (forwarded || time.Now().After(HOLStartTime.Add(time.Duration(qjm.serverOption.HeadOfLineHoldingTime)*time.Second))) {
@@ -878,7 +910,7 @@ func (qjm *XController) UpdateQueueJobs() {
 		// UpdateQueueJobs can be the first to see a new AppWrapper job, under heavy load
 		if newjob.Status.QueueJobState == "" {
 			newjob.Status.ControllerFirstTimestamp = firstTime
-			newjob.Status.SystemPriority = newjob.Spec.Priority
+			newjob.Status.SystemPriority = float64(newjob.Spec.Priority)
 			newjob.Status.QueueJobState = arbv1.QueueJobStateInit
 			glog.V(3).Infof("[UpdateQueueJobs] %s 0Delay=%.6f seconds CreationTimestamp=%s ControllerFirstTimestamp=%s",
 				newjob.Name, time.Now().Sub(newjob.Status.ControllerFirstTimestamp.Time).Seconds(), newjob.CreationTimestamp, newjob.Status.ControllerFirstTimestamp)
@@ -906,7 +938,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 	glog.V(6).Infof("[Informer-addQJ] %s &qj=%p  qj=%+v", qj.Name, qj, qj)
 	if qj.Status.QueueJobState == "" {
 		qj.Status.ControllerFirstTimestamp = firstTime
-		qj.Status.SystemPriority = qj.Spec.Priority
+		qj.Status.SystemPriority = float64(qj.Spec.Priority)
 		qj.Status.QueueJobState  = arbv1.QueueJobStateInit
 	} else {
 		glog.Warningf("[Informer-addQJ] Received and add by the informer for AppWrapper job %s which already has been seen and initialized current state %s with timestamp: %s, elapsed time of %.6f",

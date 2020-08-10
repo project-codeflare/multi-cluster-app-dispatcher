@@ -163,7 +163,9 @@ func (qa *JobClusterAgent) Run(stopCh chan struct{}) {
 func (qa *JobClusterAgent) DeleteJob(cqj *arbv1.AppWrapper) {
 	qj_temp:=cqj.DeepCopy()
 	glog.V(2).Infof("[Dispatcher: Agent] Request deletion of XQJ %s to Agent %s\n", qj_temp.Name, qa.AgentId)
-	qa.queuejobclients.ArbV1().AppWrappers(qj_temp.Namespace).Delete(qj_temp.Name,  &metav1.DeleteOptions{})
+	gracePeriod := int64(0)
+	foregroundPolicy := metav1.DeletePropagationForeground
+	qa.queuejobclients.ArbV1().AppWrappers(qj_temp.Namespace).Delete(qj_temp.Name,  &metav1.DeleteOptions{ GracePeriodSeconds: &gracePeriod, PropagationPolicy: &foregroundPolicy})
 	return
 }
 

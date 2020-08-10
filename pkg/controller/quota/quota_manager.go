@@ -30,6 +30,8 @@ package quotamanager
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	listersv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -40,12 +42,18 @@ import (
 	"github.com/golang/glog"
 )
 
+const (
+	// AW Namespace used for building unique name for AW job
+	NamespacePrefix string = "NAMESPACE:"
+
+	// AW Name used for building unique name for AW job
+	AppWrapperNamePrefix string = "_AWNAME:"
+)
 var quotaContext 	    = "quota_context"
-var quotaContextPreemptable = "quota_preemptable"
 
 // QuotaManager is an interface quota management solutions
 type QuotaManager interface {
-	Fits(aw *arbv1.AppWrapper, resources *clusterstateapi.Resource) bool
+	Fits(aw *arbv1.AppWrapper, resources *clusterstateapi.Resource) (bool, []*arbv1.AppWrapper)
 	Release(aw *arbv1.AppWrapper) bool
 }
 
@@ -59,42 +67,92 @@ type QuotaManager interface {
 // atomicity of operations on the two data structures..
 type ResourcePlanManager struct {
 	url string
+	appwrapperLister listersv1.AppWrapperLister
+	preemptionEnabled bool
+
 }
 
 type Request struct {
-	Id          string `json:"id"`
-	Group       string `json:"group"`
-	Demand      []int  `json:"demand"`
-	Priority    int    `json:"priority"`
-	Preemptable bool   `json:"preemptable"`
+	Id          string   `json:"id"`
+	Group       string   `json:"group"`
+	Demand      []int    `json:"demand"`
+	Priority    int      `json:"priority"`
+	Preemptable bool     `json:"preemptable"`
 }
 
+type QuotaResponse struct {
+	Id          string   `json:"id"`
+	Group       string   `json:"group"`
+	Demand      []int    `json:"demand"`
+	Priority    int      `json:"priority"`
+	Preemptable bool     `json:"preemptable"`
+	PreemptIds  []string `json:"preemptedIds"`
+	CreateDate  string   `json:"dateCreated"`
+}
 // NewSchedulingQueue initializes a new scheduling queue. If pod priority is
 // enabled a priority queue is returned. If it is disabled, a FIFO is returned.
 func NewQuotaManager() QuotaManager {
-		return NewResourcePlanManager("")
+		return NewResourcePlanManager( nil,"", false)
 }
 
 // Making sure that PriorityQueue implements SchedulingQueue.
 var _ = QuotaManager(&ResourcePlanManager{})
 
 
-func NewResourcePlanManager(quotaManagerUrl string) *ResourcePlanManager {
+func parseId(id string) (string, string) {
+	ns := ""
+	n := ""
+
+	// Extract the namespace seperator
+	nspSplit := strings.Split(id, NamespacePrefix)
+	if len(nspSplit) == 2 {
+		// Extract the appwrapper seperator
+		awnpSplit := strings.Split(nspSplit[1], AppWrapperNamePrefix)
+		if len(awnpSplit) == 2 {
+			// What is left if the namespace value in the first slice
+			if len(awnpSplit[0]) > 0 {
+				ns = awnpSplit[0]
+			}
+			// And the names value in the second slice
+			if len(awnpSplit[1]) > 0 {
+				n = awnpSplit[1]
+			}
+		}
+	}
+	return ns, n
+}
+
+func createId(ns string, n string) string {
+	id := ""
+	if len(ns) > 0 && len(n) > 0 {
+		id = fmt.Sprintf("%s%s%s%s", NamespacePrefix, ns, AppWrapperNamePrefix, n)
+	}
+	return id
+}
+
+func NewResourcePlanManager(awJobLister listersv1.AppWrapperLister, quotaManagerUrl string, preemptionEnabled bool) *ResourcePlanManager {
 	rpm := &ResourcePlanManager{
+		appwrapperLister: awJobLister,
 		url: quotaManagerUrl,
+		preemptionEnabled: preemptionEnabled,
 	}
 	return rpm
 }
 
-func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource) bool {
+func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource) (bool, []*arbv1.AppWrapper) {
 
 	// Handle uninitialized quota manager
 	if len(rpm.url) <= 0 {
-		return true
+		return true, nil
 	}
-	awId := aw.Namespace + aw.Name
+	awId := createId(aw.Namespace, aw.Name)
+	if len(awId) <= 0 {
+		glog.Errorf("[Fits] Request failed due to invalid AppWrapper due to empty namespace: %s or name:%s.", aw.Namespace, aw.Name)
+		return false, nil
+	}
+
 	group := "default" //Default
-	preemptable := false
+	preemptable := rpm.preemptionEnabled
 	labels := aw.GetLabels()
 	if ( labels!= nil) {
 		qc := labels[quotaContext]
@@ -102,11 +160,6 @@ func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *cluster
 			group = qc
 		} else {
 			glog.V(4).Infof("[Fits] AppWrapper: %s does not have a %s label, using default.", awId, quotaContext)
-		}
-
-		p := labels[quotaContextPreemptable]
-		if (len(p) > 0) && (strings.ToUpper(p) == "TRUE") {
-			preemptable = true
 		}
 	} else {
 		glog.V(4).Infof("[Fits] AppWrapper: %s does not any context quota labels, using default.", awId)
@@ -117,11 +170,12 @@ func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *cluster
 	var demand []int
 	demand = append(demand, awCPU_Demand)
 	demand = append(demand, awMem_Demand)
+	priority := int(aw.Spec.Priority)
 	req := Request{
 		Id:          awId,
 		Group:       group,
 		Demand:      demand,
-		Priority:    0,
+		Priority:    priority,
 		Preemptable: preemptable,
 	}
 
@@ -129,7 +183,7 @@ func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *cluster
 	// If a url does not exists then assume fits quota
 	if len(rpm.url) < 1 {
 		glog.V(4).Infof("[Fits] No quota manager exists, %+v meets quota by default.", awResDemands)
-		return doesFit
+		return doesFit, nil
 	}
 
 	uri := rpm.url + "/quota/alloc"
@@ -137,28 +191,63 @@ func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *cluster
 	err := json.NewEncoder(buf).Encode(req)
 	if err != nil {
 		glog.Errorf("[Fits] Failed encoding of request: %v, err=%#v.", req, err)
-		return doesFit
+		return doesFit, nil
 	}
 
+	var preemptIds []*arbv1.AppWrapper
 	glog.V(4).Infof("[Fits] Sending request: %v in buffer: %v, buffer size: %v, to uri: %s", req, buf, buf.Len(), uri)
 	response, err := http.Post(uri, "application/json; charset=utf-8", buf)
 	defer response.Body.Close()
 	if err != nil {
 		glog.Errorf("[Fits] Fail to add access quotamanager: %s, err=%#v.", uri, err)
-
+		preemptIds = nil
 	} else {
-		data, _ := ioutil.ReadAll(response.Body)
-		glog.V(4).Infof("[Fits] Response from quota mananger body: %s", string(data))
+		body, _ := ioutil.ReadAll(response.Body)
+		var quotaResponse QuotaResponse
+		if err := json.Unmarshal(body, &quotaResponse); err != nil {
+			glog.Errorf("[Fits] Failed to decode preemption Ids from the quota manager body: %s, error=%#v", string(body), err)
+		} else {
+			glog.V(4).Infof("[Fits] Response from quota mananger body: %v", quotaResponse)
+		}
 		glog.V(4).Infof("[Fits] Response from quota mananger status: %s", response.Status)
 		statusCode := response.StatusCode
 		glog.V(4).Infof("[Fits] Response from quota mananger status code: %v", statusCode)
 		if statusCode == 200 {
 			doesFit = true
+			preemptIds = rpm.getAppWrappers(quotaResponse.PreemptIds)
 		}
 	}
-	return doesFit
+	return doesFit, preemptIds
 }
 
+
+func  (rpm *ResourcePlanManager) getAppWrappers(preemptIds []string) []*arbv1.AppWrapper{
+	var aws []*arbv1.AppWrapper
+	if len(preemptIds) <= 0 {
+		return nil
+	}
+
+	for _, preemptId := range preemptIds {
+		awNamespace, awName := parseId(preemptId)
+		if len(awNamespace) <= 0 || len(awName) <= 0 {
+			glog.Errorf("[getAppWrappers] Failed to parse AppWrapper id from quota manager, parse string: %s.  Preemption of this Id will be ignored.", preemptId)
+			continue
+		}
+		aw, e := rpm.appwrapperLister.AppWrappers(awNamespace).Get(awName)
+		if e != nil {
+			glog.Errorf("[getAppWrappers] Failed to get AppWrapper from API Cache %s/%s, err=%v.  Preemption of this Id will be ignored.",
+				awNamespace, awName, e)
+			continue
+		}
+		aws = append(aws, aw)
+	}
+
+	// Final validation check
+	if len(preemptIds) != len(aws) {
+		glog.Warningf("[getAppWrappers] Preemption list size of %d from quota manager does not match size of generated list of AppWrapper: %d", len(preemptIds), len(aws))
+	}
+	return aws
+}
 func (rpm *ResourcePlanManager) Release(aw *arbv1.AppWrapper) bool {
 
 	// Handle uninitialized quota manager
@@ -167,7 +256,12 @@ func (rpm *ResourcePlanManager) Release(aw *arbv1.AppWrapper) bool {
 	}
 
 	released := false
-	awId := aw.Namespace + aw.Name
+	awId := createId(aw.Namespace, aw.Name)
+	if len(awId) <= 0 {
+		glog.Errorf("[Release] Request failed due to invalid AppWrapper due to empty namespace: %s or name:%s.", aw.Namespace, aw.Name)
+		return false
+	}
+
 	uri := rpm.url + "/quota/release/" + awId
 	glog.V(4).Infof("[Release] Sending request to release resources for: %s ", uri)
 
