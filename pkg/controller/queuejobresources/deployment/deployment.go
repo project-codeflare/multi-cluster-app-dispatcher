@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	apps "k8s.io/api/apps/v1beta1"
+	apps "k8s.io/api/apps/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
 	extinformer "k8s.io/client-go/informers/apps/v1beta1"
@@ -220,7 +220,7 @@ func (qjrDeployment *QueueJobResDeployment) createDeploymentWithControllerRef(na
 		deployment.OwnerReferences = append(deployment.OwnerReferences, *controllerRef)
 	}
 
-	if _, err := qjrDeployment.clients.AppsV1beta1().Deployments(namespace).Create(deployment); err != nil {
+	if _, err := qjrDeployment.clients.AppsV1().Deployments(namespace).Create(deployment); err != nil {
 		return err
 	}
 
@@ -319,7 +319,7 @@ func (qjrDeployment *QueueJobResDeployment) getDeploymentForQueueJobRes(qjobRes 
 		_namespace = &queuejob.Namespace
 	}
 
-	deploymentList, err := qjrDeployment.clients.AppsV1beta1().Deployments(*_namespace).List(metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name),})
+	deploymentList, err := qjrDeployment.clients.AppsV1().Deployments(*_namespace).List(metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name),})
 	if err != nil {
 		return nil, nil, nil, err
 	}
