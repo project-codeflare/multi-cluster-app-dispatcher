@@ -200,7 +200,7 @@ spec:
     - replicas: 1
       type: Deployment
       template:
-        apiVersion: apps/v1beta1
+        apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: deployment-2-replicas

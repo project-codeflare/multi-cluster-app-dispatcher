@@ -15,25 +15,23 @@ package deployment
 
 import (
 	"fmt"
-	"github.com/golang/glog"
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
-	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
+	"github.com/golang/glog"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	apps "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	apps "k8s.io/api/apps/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
-	extinformer "k8s.io/client-go/informers/apps/v1beta1"
+	extinformer "k8s.io/client-go/informers/apps/v1"
 	"k8s.io/client-go/kubernetes"
-	extlister "k8s.io/client-go/listers/apps/v1beta1"
+	extlister "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"sync"
@@ -78,7 +76,7 @@ func NewQueueJobResDeployment(config *rest.Config) queuejobresources.Interface {
 		arbclients: clientset.NewForConfigOrDie(config),
 	}
 
-	qjrDeployment.deployInformer = informers.NewSharedInformerFactory(qjrDeployment.clients, 0).Apps().V1beta1().Deployments()
+	qjrDeployment.deployInformer = informers.NewSharedInformerFactory(qjrDeployment.clients, 0).Apps().V1().Deployments()
 	qjrDeployment.deployInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
 			FilterFunc: func(obj interface{}) bool {
@@ -98,7 +96,6 @@ func NewQueueJobResDeployment(config *rest.Config) queuejobresources.Interface {
 
 	qjrDeployment.rtScheme = runtime.NewScheme()
 	v1.AddToScheme(qjrDeployment.rtScheme)
-	v1beta1.AddToScheme(qjrDeployment.rtScheme)
 	apps.AddToScheme(qjrDeployment.rtScheme)
 	qjrDeployment.jsonSerializer = json.NewYAMLSerializer(json.DefaultMetaFactory, qjrDeployment.rtScheme, qjrDeployment.rtScheme)
 
@@ -200,7 +197,7 @@ func (qjrDeployment *QueueJobResDeployment) deleteDeployment(obj interface{}) {
 
 // Parse queue job api object to get Service template
 func (qjrDeployment *QueueJobResDeployment) getDeploymentTemplate(qjobRes *arbv1.AppWrapperResource) (*apps.Deployment, error) {
-	deploymentGVK := schema.GroupVersion{Group: apps.GroupName, Version: "v1beta1"}.WithKind("Deployment")
+	deploymentGVK := schema.GroupVersion{Group: apps.GroupName, Version: "v1"}.WithKind("Deployment")
 	obj, _, err := qjrDeployment.jsonSerializer.Decode(qjobRes.Template.Raw, &deploymentGVK, nil)
 	if err != nil {
 		return nil, err
