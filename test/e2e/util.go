@@ -574,7 +574,7 @@ func createReplicaSet(context *context, name string, rep int32, img string, req 
 }
 
 func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
-	rb := []byte(`{"apiVersion": "apps/v1beta1",
+	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-3",
@@ -647,7 +647,7 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 }
 
 func createDeploymentAWwith900CPU(context *context, name string) *arbv1.AppWrapper {
-	rb := []byte(`{"apiVersion": "apps/v1beta1",
+	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-2-900cpu",
@@ -725,7 +725,7 @@ func createDeploymentAWwith900CPU(context *context, name string) *arbv1.AppWrapp
 }
 
 func createDeploymentAWwith125CPU(context *context, name string) *arbv1.AppWrapper {
-	rb := []byte(`{"apiVersion": "apps/v1beta1",
+	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-2-125cpu",
@@ -803,7 +803,7 @@ func createDeploymentAWwith125CPU(context *context, name string) *arbv1.AppWrapp
 }
 
 func createDeploymentAWwith126CPU(context *context, name string) *arbv1.AppWrapper {
-	rb := []byte(`{"apiVersion": "apps/v1beta1",
+	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-2-126cpu",
