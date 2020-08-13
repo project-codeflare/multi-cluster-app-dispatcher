@@ -19,11 +19,12 @@ package queuejob
 import (
 	"fmt"
 	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter"
 	quotamanager "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota"
 	"github.com/golang/glog"
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter"
 	"math"
 	"math/rand"
+	"reflect"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -44,9 +45,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/genericresource"
 	resconfigmap "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/configmap" // ConfigMap
 	resdeployment "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/deployment"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/genericresource"
 	resnamespace "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/namespace"                         // NP
 	resnetworkpolicy "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/networkpolicy"                 // NetworkPolicy
 	respersistentvolume "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/persistentvolume"           // PV
@@ -66,8 +67,8 @@ import (
 
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobdispatch"
 
-	clusterstatecache "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	clusterstatecache "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
 )
 
 const (
@@ -395,7 +396,7 @@ func (qjm *XController) PreemptQueueJobs() {
 			continue
 		}
 		newjob.Status.CanRun = false
-		if _, err := qjm.arbclients.ArbV1().AppWrappers(q.Namespace).Update(newjob); err != nil {
+		if err := qjm.updateEtcd(newjob, "PreemptQueueJobs - CanRun: false"); err != nil {
 			glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
 				q.Namespace, q.Name, err)
 		}
@@ -414,7 +415,7 @@ func (qjm *XController) preemptAWJobs(preemptAWs []*arbv1.AppWrapper) {
 			continue
 		}
 		apiCacheAWJob.Status.CanRun = false
-		if _, err := qjm.arbclients.ArbV1().AppWrappers(apiCacheAWJob.Namespace).Update(apiCacheAWJob); err != nil {
+		if err := qjm.updateEtcd(apiCacheAWJob, "preemptAWJobs - CanRun: false"); err != nil {
 			glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
 				apiCacheAWJob.Namespace, apiCacheAWJob.Name, err)
 		}
@@ -819,15 +820,15 @@ func (qjm *XController) ScheduleNext() {
 func (cc *XController) updateEtcd(qj *arbv1.AppWrapper, at string) error {
 	qj.Status.Sender = "before "+ at  // set Sender string to indicate code location
 	qj.Status.Local  = false          // for Informer FilterFunc to pickup
-	if qjj, err := cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj); err != nil {
+	if _, err := cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj); err != nil {
 		glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s, namespace: %s at %s err=%v", qj.Name, qj.Namespace, at, err)
 		return err
-	} else {  // qjj should be the same as qj except with newer ResourceVersion
-		qj.ResourceVersion = qjj.ResourceVersion  // update new ResourceVersion from etcd
+//	} else {  // qjj should be the same as qj except with newer ResourceVersion
+//		qj.ResourceVersion = qjj.ResourceVersion  // update new ResourceVersion from etcd
 	}
 	glog.V(10).Infof("[updateEtcd] AppWrapperUpdate success %s at %s &qj=%p qj=%+v", qj.Name, at, qj, qj)
-	qj.Status.Local  = true           // for Informer FilterFunc to ignore duplicate
-	qj.Status.Sender = "after  "+ at  // set Sender string to indicate code location
+	//qj.Status.Local  = true           // for Informer FilterFunc to ignore duplicate
+	//qj.Status.Sender = "after  "+ at  // set Sender string to indicate code location
 	return nil
 }
 
@@ -973,7 +974,7 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 	}
 
 	if equality.Semantic.DeepEqual(newQJ.Status,oldQJ.Status) {
-		glog.V(10).Infof("[Informer-updateQJ] No change to status field of AppWrapper: %s, oldAW=%+v, newAW=%+v ignoring update.", newQJ.Name, oldQJ.Status, newQJ.Status)
+		glog.V(10).Infof("[Informer-updateQJ] No change to status field of AppWrapper: %s, oldAW=%+v, newAW=%+v.", newQJ.Name, oldQJ.Status, newQJ.Status)
 	}
 
 	glog.V(3).Infof("[Informer-updateQJ] %s *Delay=%.6f seconds normal enqueue &newAW=%p Version=%s Status=%+v", newQJ.Name, time.Now().Sub(newQJ.Status.ControllerFirstTimestamp.Time).Seconds(), newQJ, newQJ.ResourceVersion, newQJ.Status)
@@ -1117,9 +1118,8 @@ func (cc *XController) worker() {
 
 func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 	cacheAWJob, err := cc.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
-	// cacheAWJob's ControllerFirstTimestamp is only microsecond level instead of nanosecond level
 	if err != nil {
-		glog.V(10).Infof("[worker-syncQJ] AppWrapper %s not found in cache: info=%+v", qj.Name, err)
+		glog.V(10).Infof("[syncQueueJob] AppWrapper %s not found in cache: info=%+v", qj.Name, err)
 		// Implicit detection of deletion
 		if apierrors.IsNotFound(err) {
 			//if (cc.isDispatcher) {
@@ -1130,40 +1130,46 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 		}
 		return err
 	}
+	glog.V(10).Infof("[syncQueueJob] Cache AW %s &qj=%p Version=%s Status=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status)
+
 	// make sure qj has the latest information
-	if larger(cacheAWJob.ResourceVersion, qj.ResourceVersion) {
-		glog.V(10).Infof("[worker-syncQJ] %s found more recent copy from cache       &qj=%p       qj=%+v", qj.Name, qj, qj)
-		glog.V(10).Infof("[worker-syncQJ] %s found more recent copy from cache &cacheAWJob=%p cacheAWJob=%+v", cacheAWJob.Name, cacheAWJob, cacheAWJob)
+	if larger(qj.ResourceVersion, qj.ResourceVersion) {
+		glog.V(10).Infof("[syncQueueJob] %s found more recent copy from cache       &qj=%p       qj=%+v", qj.Name, qj, qj)
+		glog.V(10).Infof("[syncQueueJobJ] %s found more recent copy from cache &cacheAWJob=%p cacheAWJob=%+v", cacheAWJob.Name, cacheAWJob, cacheAWJob)
 		cacheAWJob.DeepCopyInto(qj)
 	}
 
 	// If it is Agent (not a dispatcher), update pod information
+	podPhaseChanges := false
 	if(!cc.isDispatcher) {
-		// we call sync for each controller
-		// update pods running, pending,...
-		err := cc.qjobResControls[arbv1.ResourceTypePod].UpdateQueueJobStatus(qj)
+		//Make a copy first to not update cache object and to use for comparing
+		awNew := qj.DeepCopy()
+		// we call sync to update pods running, pending,...
+		err := cc.qjobResControls[arbv1.ResourceTypePod].UpdateQueueJobStatus(awNew)
 		if err != nil {
-			glog.Errorf("[worker-syncQJ] Error updating pod status counts for AppWrapper job: %s, err=%+v", qj.Name, err)
+			glog.Errorf("[syncQueueJob] Error updating pod status counts for AppWrapper job: %s, err=%+v", qj.Name, err)
 		}
+		glog.V(10).Infof("[syncQueueJob] AW popped from event queue %s &qj=%p Version=%s Status=%+v", awNew.Name, awNew, awNew.ResourceVersion, awNew.Status)
 
-		if (qj.Status.Running > 0) {  // set QueueJobStateRunning if at least one resource running
-			qj.Status.QueueJobState = arbv1.QueueJobStateRunning
-			qj.Status.FilterIgnore = true  // Update QueueJobStateRunning
-			err := cc.updateEtcd(qj, "syncQueueJob - setRunning")
-			if err != nil {
-				glog.Errorf("[worker-syncQJ] Error updating state for AppWrapper job: %s, err=%+v", qj.Name, err)
-			}
+		if ! reflect.DeepEqual(awNew.Status, qj.Status) {
+			podPhaseChanges = true
+			// Using DeepCopy before DeepCopyInto as it seems that DeepCopyInto does not alloc a new memory object
+			awNewStatus := awNew.Status.DeepCopy()
+			awNewStatus.DeepCopyInto(&qj.Status)
+			//awNew.Status.DeepCopy().DeepCopyInto(&qj.Status)
+			glog.V(10).Infof("[syncQueueJob] AW pod phase change(s) detected %s &eventqueueaw=%p eventqueueawVersion=%s eventqueueawStatus=%+v; &newaw=%p newawVersion=%s newawStatus=%+v",
+				qj.Name, qj, qj.ResourceVersion, qj.Status, awNew, awNew.ResourceVersion, awNew.Status)
 		}
 	}
 
-	return cc.manageQueueJob(qj)
+	return cc.manageQueueJob(qj, podPhaseChanges)
 	//return cc.manageQueueJob(cacheAWJob)
 }
 
 // manageQueueJob is the core method responsible for managing the number of running
 // pods according to what is specified in the job.Spec.
 // Does NOT modify <activePods>.
-func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
+func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool) error {
 	var err error
 	startTime := time.Now()
 	defer func() {
@@ -1200,9 +1206,11 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 		if !qj.Status.CanRun && (qj.Status.State != arbv1.AppWrapperStateEnqueued && qj.Status.State != arbv1.AppWrapperStateDeleted) {
 			// if there are running resources for this job then delete them because the job was put in
 			// pending state...
-			glog.V(2).Infof("[Agent Mode] Deleting resources for XQJ %s because it will be preempted (newjob)\n", qj.Name)
+			glog.V(2).Infof("[manageQueueJob] Deleting resources for AppWrapper Job %s because it was preempted (newjob) status=%+v\n", qj.Name, qj.Status)
 			err = cc.Cleanup(qj)
+			glog.V(8).Infof("[manageQueueJob] Validation after deleting resources for AppWrapper Job %s because it was be preempted (newjob) status=%+v\n", qj.Name, qj.Status)
 			if err != nil {
+				glog.Errorf("[manageQueueJob] Fail to delete resources for AppWrapper Job %s, err=%#v", qj.Name, err)
 				return err
 			}
 
@@ -1211,10 +1219,10 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			if cc.qjqueue.IfExistUnschedulableQ(qj) {
 				glog.V(10).Infof("[worker-manageQJ] leaving %s to qjqueue.UnschedulableQ activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 			} else {
-				glog.V(10).Infof("[worker-manageQJ] before add to activeQ %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				qj.Status.QueueJobState = arbv1.QueueJobStateQueueing
 				qj.Status.FilterIgnore = true // Update Queueing status, add to qjqueue for ScheduleNext
 				cc.updateEtcd(qj, "manageQueueJob - setQueueing")
+				glog.V(10).Infof("[worker-manageQJ] before add to activeQ %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				if err = cc.qjqueue.AddIfNotPresent(qj); err != nil {
 					glog.Errorf("[worker-manageQJ] Fail to add %s to activeQueue. Back to eventQueue activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v err=%#v",
 						qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, err)
@@ -1230,7 +1238,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 		// add qj to Etcd for dispatch
 		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive {
 			qj.Status.State = arbv1.AppWrapperStateActive
-		// Bugfix to eliminate performance problem of overloading the event queue.}
+			// Bugfix to eliminate performance problem of overloading the event queue.}
 
 			if qj.Spec.AggrResources.Items != nil {
 				for i := range qj.Spec.AggrResources.Items {
@@ -1276,11 +1284,19 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			}
 
 			// TODO(k82cn): replaced it with `UpdateStatus`
-			qj.Status.FilterIgnore = true  // update State & QueueJobState after dispatch
+			qj.Status.FilterIgnore = true // update State & QueueJobState after dispatch
 			if err := cc.updateEtcd(qj, "manageQueueJob - afterEtcdDispatching"); err != nil {
+				glog.Errorf("[manageQueueJob] Error updating etc for AW job=%s Status=%+v err=%+v", qj.Name, qj.Status, err)
 				return err
 			}
-		} // Bugfix to eliminate performance problem of overloading the event queue.
+		 // Bugfix to eliminate performance problem of overloading the event queue.
+		} else if podPhaseChanges {  // Continued bug fix
+			// Only update etcd if AW status has changed.  This can happen for periodic
+			// updates of pod phase counts done in caller of this function.
+			if err := cc.updateEtcd(qj, "manageQueueJob - podPhaseChanges"); err != nil {
+				glog.Errorf("[manageQueueJob] Error updating etc for AW job=%s Status=%+v err=%+v", qj.Name, qj.Status, err)
+			}
+		}
 		// Finish adding qj to Etcd for dispatch
 
 	}	else { 				// Dispatcher Mode
@@ -1362,10 +1378,11 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 				glog.Errorf("[Dispatcher Controller] AppWrapper %s not found in dispatcher mapping." , qj.Name)
 			}
 			if glog.V(10) {
-			current_time:=time.Now()
-			glog.V(10).Infof("[Dispatcher Controller] XQJ %s has Overhead After Dispatching: %s", qj.Name,current_time.Sub(qj.CreationTimestamp.Time))
-			glog.V(10).Infof("[TTime] %s, %s: WorkerAfterDispatch", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
+				current_time:=time.Now()
+				glog.V(10).Infof("[Dispatcher Controller] XQJ %s has Overhead After Dispatching: %s", qj.Name,current_time.Sub(qj.CreationTimestamp.Time))
+				glog.V(10).Infof("[TTime] %s, %s: WorkerAfterDispatch", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 			}
+
 			if _, err := cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj); err != nil {
 				glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
 					qj.Namespace, qj.Name, err)
