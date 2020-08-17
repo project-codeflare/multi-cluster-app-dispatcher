@@ -47,3 +47,8 @@ configMap:
 
 volumes:
   hostPath:
+
+quotaManagement:
+  rbac:
+    apiGroup:
+    resource:

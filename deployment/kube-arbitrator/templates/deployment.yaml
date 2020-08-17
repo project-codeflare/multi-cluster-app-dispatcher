@@ -193,6 +193,22 @@ rules:
   - patch
   - update
   - watch
+#{{ if .Values.quotaManagement.rbac.apiGroup }}
+#{{ if .Values.quotaManagement.rbac.resource }}
+- apiGroups:
+    - {{ .Values.quotaManagement.rbac.apiGroup }}
+  resources:
+    - {{ .Values.quotaManagement.rbac.resource }}
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+#{{ end }}
+#{{ end }}
 ---
 #{{ if .Values.serviceAccount }}
 apiVersion: v1
