@@ -26,7 +26,6 @@ limitations under the License.
 
 package quotamanager
 
-
 import (
 	"bytes"
 	"encoding/json"
@@ -35,10 +34,11 @@ import (
 	"io/ioutil"
 	"math"
 	"net/http"
+	"reflect"
 	"strings"
 
-	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	"github.com/golang/glog"
 )
 
@@ -72,12 +72,17 @@ type ResourcePlanManager struct {
 
 }
 
+type QuotaGroup struct {
+	GroupContext string  `json:"groupcontext"`
+	GroupId	     string  `json:"groupid"`
+}
+
 type Request struct {
-	Id          string   `json:"id"`
-	Group       string   `json:"group"`
-	Demand      []int    `json:"demand"`
-	Priority    int      `json:"priority"`
-	Preemptable bool     `json:"preemptable"`
+	Id          string   	  `json:"id"`
+	Groups      []QuotaGroup  `json:"groups"`
+	Demand      []int         `json:"demand"`
+	Priority    int           `json:"priority"`
+	Preemptable bool          `json:"preemptable"`
 }
 
 type QuotaResponse struct {
@@ -151,15 +156,25 @@ func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *cluster
 		return false, nil
 	}
 
-	group := "default" //Default
+	var groups []QuotaGroup
 	preemptable := rpm.preemptionEnabled
 	labels := aw.GetLabels()
-	if ( labels!= nil) {
-		qc := labels[quotaContext]
-		if (len(qc) > 0) {
-			group = qc
+	if ( labels != nil) {
+		keys := reflect.ValueOf(labels).MapKeys()
+		for _,  key := range keys {
+			strkey := key.String()
+			quotaGroup := QuotaGroup{
+				GroupContext: strkey,
+				GroupId: labels[strkey],
+			}
+			groups = append(groups, quotaGroup)
+			glog.V(10).Infof("[Fits] AppWrapper: %s quota label: %v found.", awId, quotaGroup)
+
+		}
+		if len(groups) > 0 {
+			glog.V(6).Infof("[Fits] AppWrapper: %s quota labels: %v.", awId, groups)
 		} else {
-			glog.V(4).Infof("[Fits] AppWrapper: %s does not have a %s label, using default.", awId, quotaContext)
+			glog.V(4).Infof("[Fits] AppWrapper: %s does not have any quota labels.", awId)
 		}
 	} else {
 		glog.V(4).Infof("[Fits] AppWrapper: %s does not any context quota labels, using default.", awId)
@@ -173,7 +188,7 @@ func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *cluster
 	priority := int(aw.Spec.Priority)
 	req := Request{
 		Id:          awId,
-		Group:       group,
+		Groups:      groups,
 		Demand:      demand,
 		Priority:    priority,
 		Preemptable: preemptable,
