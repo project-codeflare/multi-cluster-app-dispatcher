@@ -44,10 +44,10 @@ import (
 
 const (
 	// AW Namespace used for building unique name for AW job
-	NamespacePrefix string = "NAMESPACE:"
+	NamespacePrefix string = "NAMESPACE_"
 
 	// AW Name used for building unique name for AW job
-	AppWrapperNamePrefix string = "_AWNAME:"
+	AppWrapperNamePrefix string = "_AWNAME_"
 )
 var quotaContext 	    = "quota_context"
 
@@ -86,13 +86,13 @@ type Request struct {
 }
 
 type QuotaResponse struct {
-	Id          string   `json:"id"`
-	Group       string   `json:"group"`
-	Demand      []int    `json:"demand"`
-	Priority    int      `json:"priority"`
-	Preemptable bool     `json:"preemptable"`
-	PreemptIds  []string `json:"preemptedIds"`
-	CreateDate  string   `json:"dateCreated"`
+	Id          string   	   `json:"id"`
+	Groups      []QuotaGroup   `json:"groups"`
+	Demand      []int    	   `json:"demand"`
+	Priority    int      	   `json:"priority"`
+	Preemptable bool     	   `json:"preemptable"`
+	PreemptIds  []string 	   `json:"preemptedIds"`
+	CreateDate  string   	   `json:"dateCreated"`
 }
 // NewSchedulingQueue initializes a new scheduling queue. If pod priority is
 // enabled a priority queue is returned. If it is disabled, a FIFO is returned.
@@ -217,12 +217,15 @@ func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *cluster
 		glog.Errorf("[Fits] Fail to add access quotamanager: %s, err=%#v.", uri, err)
 		preemptIds = nil
 	} else {
-		body, _ := ioutil.ReadAll(response.Body)
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			glog.Errorf("[Fits] Failed to read preemption Ids from the quota manager body: %s, error=%#v", string(body), err)
+		}
 		var quotaResponse QuotaResponse
 		if err := json.Unmarshal(body, &quotaResponse); err != nil {
-			glog.Errorf("[Fits] Failed to decode preemption Ids from the quota manager body: %s, error=%#v", string(body), err)
+			glog.Errorf("[Fits] Failed to decode json from quota manager body: %s, error=%#v", string(body), err)
 		} else {
-			glog.V(4).Infof("[Fits] Response from quota mananger body: %v", quotaResponse)
+			glog.V(6).Infof("[Fits] Quota response object from quota mananger body: %v", quotaResponse)
 		}
 		glog.V(4).Infof("[Fits] Response from quota mananger status: %s", response.Status)
 		statusCode := response.StatusCode
