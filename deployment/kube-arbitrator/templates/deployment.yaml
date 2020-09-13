@@ -152,6 +152,8 @@ rules:
   - queuejobs
   - schedulingspecs
   - appwrappers
+  - appwrappers/finalizers
+  - appwrappers/status
   verbs:
   - create
   - delete
