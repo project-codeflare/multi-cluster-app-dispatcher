@@ -295,8 +295,9 @@ metadata:
     app: custom-metrics-apiserver
 spec:
   replicas: {{ .Values.replicaCount }}
-  matchLabels:
-    app: custom-metrics-apiserver
+  selector:
+    matchLabels:
+      app: custom-metrics-apiserver
   template:
     metadata:
       labels:
