@@ -132,7 +132,7 @@ debug_function() {
   kubectl create namespace test
 
 cat <<EOF > aw-ss.0.yaml
-apiVersion: arbitrator.incubator.k8s.io/v1alpha1
+apiVersion: mcad.ibm.com/v1alpha1
 kind: AppWrapper
 metadata:
   name: hellodiana-2-test-0
@@ -282,8 +282,8 @@ function kube-test-env-up {
 
     # start mcad controller
     echo "Starting MCAD Controller..."
-    echo "helm install kube-arbitrator namespace kube-system wait set loglevel=3 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=1000m set resources.limits.memory=1024Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY"
-    helm install kube-arbitrator --namespace kube-system --wait --set loglevel=3 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY
+    echo "helm install mcad.ibm.com namespace kube-system wait set loglevel=3 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=1000m set resources.limits.memory=1024Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY"
+    helm install mcad.ibm.com --namespace kube-system --wait --set loglevel=3 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY
 
     sleep 10
     echo "Listing MCAD Controller Helm Chart and Pod YAML..."

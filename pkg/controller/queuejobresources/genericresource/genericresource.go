@@ -39,7 +39,7 @@ import (
 	"k8s.io/client-go/restmapper"
 )
 
-var appwrapperJobName = "appwrapper.arbitrator.k8s.io"
+var appwrapperJobName = "appwrapper.mcad.ibm.com"
 var resourceName = "resourceName"
 var appWrapperKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
 
