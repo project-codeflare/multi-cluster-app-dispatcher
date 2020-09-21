@@ -303,7 +303,7 @@ func podPhase(ctx *context, namespace string, pods []*v1.Pod, phase []v1.PodPhas
 
 		for _, podFromPodList := range podList.Items {
 			for _, awPod := range pods {
-				if awn, found := podFromPodList.Labels["appwrapper.arbitrator.k8s.io"]; !found || awn != awPod.Name {
+				if awn, found := podFromPodList.Labels["appwrapper.mcad.ibm.com"]; !found || awn != awPod.Name {
 					continue
 				}
 			}
@@ -355,7 +355,7 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 
 		readyTaskNum := 0
 		for _, pod := range pods.Items {
-			if awn, found := pod.Labels["appwrapper.arbitrator.k8s.io"]; !found || awn != aw.Name {
+			if awn, found := pod.Labels["appwrapper.mcad.ibm.com"]; !found || awn != aw.Name {
 				if ! quite {
 					fmt.Fprintf(os.Stdout, "[awPodPhase] Pod %s not part of AppWrapper: %s, labels: %s\n", pod.Name, aw.Name, pod.Labels)
 				}
@@ -466,7 +466,7 @@ func awNamespacePhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.NamespacePh
 
 		readyTaskNum := 0
 		for _, namespace := range namespaces.Items {
-			if awns, found := namespace.Labels["appwrapper.arbitrator.k8s.io"]; !found || awns != aw.Name {
+			if awns, found := namespace.Labels["appwrapper.mcad.ibm.com"]; !found || awns != aw.Name {
 				continue
 			}
 

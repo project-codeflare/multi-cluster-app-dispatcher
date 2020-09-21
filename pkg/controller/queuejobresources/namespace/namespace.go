@@ -40,7 +40,7 @@ import (
 )
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
-var queueJobName = "appwrapper.arbitrator.k8s.io"
+var queueJobName = "appwrapper.mcad.ibm.com"
 
 const (
 	// QueueJobNameLabel label string for queuejob name

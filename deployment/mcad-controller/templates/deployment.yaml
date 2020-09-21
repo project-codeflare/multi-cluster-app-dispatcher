@@ -83,9 +83,9 @@ subjects:
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: schedulingspecs.arbitrator.incubator.k8s.io
+  name: schedulingspecs.mcad.ibm.com
 spec:
-  group: arbitrator.incubator.k8s.io
+  group: mcad.ibm.com
   names:
     kind: SchedulingSpec
     listKind: SchedulingSpecList
@@ -97,9 +97,9 @@ spec:
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: queuejobs.arbitrator.incubator.k8s.io
+  name: queuejobs.mcad.ibm.com
 spec:
-  group: arbitrator.incubator.k8s.io
+  group: mcad.ibm.com
   names:
     kind: QueueJob
     listKind: QueueJobList
@@ -111,9 +111,9 @@ spec:
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: xqueuejobs.arbitrator.incubator.k8s.io
+  name: xqueuejobs.mcad.ibm.com
 spec:
-  group: arbitrator.incubator.k8s.io
+  group: mcad.ibm.com
   names:
     kind: XQueueJob
     listKind: XQueueJobList
@@ -125,9 +125,9 @@ spec:
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: appwrappers.arbitrator.incubator.k8s.io
+  name: appwrappers.mcad.ibm.com
 spec:
-  group: arbitrator.incubator.k8s.io
+  group: mcad.ibm.com
   names:
     kind: AppWrapper
     listKind: AppWrapperList
@@ -146,7 +146,7 @@ metadata:
     kubernetes.io/bootstrapping: rbac-defaults
 rules:
 - apiGroups:
-  - arbitrator.incubator.k8s.io
+  - mcad.ibm.com
   resources:
   - xqueuejobs
   - queuejobs

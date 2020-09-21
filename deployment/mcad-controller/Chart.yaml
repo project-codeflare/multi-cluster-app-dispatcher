@@ -1,0 +1,4 @@
+apiVersion: v1
+description: A Kubernetes Native Holistic Lifecycle Resource Manager for Applications
+name: mcad-controller
+version: 0.1.0

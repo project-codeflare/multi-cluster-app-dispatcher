@@ -18,7 +18,7 @@ Refer to [deployment instructions](../deploy/deployment.md) on how to deploy the
 After successfully deploying the __Multi-Cluster Application Dispatcher__ Controller, create an AppWrapper custom resource in a file named `aw-01.yaml` with the following content:
 
 ```
-apiVersion: arbitrator.incubator.k8s.io/v1alpha1
+apiVersion: mcad.ibm.com/v1alpha1
 kind: AppWrapper
 metadata:
   name: stateful-set-2-replicas
@@ -81,7 +81,7 @@ Name:         stateful-set-2-replicas
 Namespace:    default
 Labels:       <none>
 Annotations:  <none>
-API Version:  arbitrator.incubator.k8s.io/v1alpha1
+API Version:  mcad.ibm.com/v1alpha1
 Kind:         AppWrapper
 . . .
 Status:
@@ -188,7 +188,7 @@ The next step is to create a second `AppWrapper` job that has resource demands t
 Create an `AppWrapper` job in a file named `aw-02.yaml` with the following content:
 
 ```
-apiVersion: arbitrator.incubator.k8s.io/v1alpha1
+apiVersion: mcad.ibm.com/v1alpha1
 kind: AppWrapper
 metadata:
   name: deployment-2-replicas
@@ -250,7 +250,7 @@ Name:         deployment-2-replicas
 Namespace:    default
 Labels:       <none>
 Annotations:  <none>
-API Version:  arbitrator.incubator.k8s.io/v1alpha1
+API Version:  mcad.ibm.com/v1alpha1
 Kind:         AppWrapper
 . . .
 Status:
@@ -274,7 +274,7 @@ Delete the first `AppWrapper` job.
 
 ```
 $ kubectl delete -f aw-01.yaml
-appwrapper.arbitrator.incubator.k8s.io "stateful-set-2-replicas" deleted
+appwrapper.mcad.ibm.com "stateful-set-2-replicas" deleted
 ```
 
 Check the pods status of the `AppWrapper` jobs.  The new pods from the second `AppWrapper` job: `deployment-2-replicas` job should now be deployed and running.  

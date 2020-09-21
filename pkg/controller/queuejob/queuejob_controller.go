@@ -47,7 +47,7 @@ import (
 
 const (
 	// QueueJobLabel label string for queuejob name
-	QueueJobLabel string = "queuejob.kube-arbitrator.k8s.io"
+	QueueJobLabel string = "queuejob.kube-mcad.ibm.com"
 )
 
 // Controller the QueueJob Controller type
