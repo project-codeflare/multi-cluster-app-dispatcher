@@ -1,5 +1,5 @@
 BIN_DIR=_output/bin
-RELEASE_VER=v1.28
+RELEASE_VER=v1.29.0
 CURRENT_DIR=$(shell pwd)
 #MCAD_REGISTRY=$(shell docker ps --filter name=mcad-registry | grep -v NAME)
 #LOCAL_HOST_NAME=localhost
