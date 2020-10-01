@@ -1,0 +1,5 @@
+---
+- group: mcad.ibm.com
+  version: v1beta1
+  kind: MCADHelmConfig
+  chart: helm-charts/mcad-controller
