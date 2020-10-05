@@ -18,10 +18,10 @@ package queuejobdispatch
 
 import (
 	"encoding/json"
-	"github.com/golang/glog"
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	"github.com/golang/glog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
@@ -59,6 +59,7 @@ type JobClusterAgent struct{
 func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterAgent {
 	configStrings:=strings.Split(config, ":")
 	if len(configStrings)<2 {
+		glog.Errorf("[agentEventQueue] Invalid agent configuration: %s.  Agent cluster will not be instantiated.", config)
 		return nil
 	}
 	glog.V(2).Infof("[Dispatcher: Agent] Creation: %s\n", "/root/kubernetes/" + configStrings[0])
@@ -153,7 +154,6 @@ func (cc *JobClusterAgent) deleteQueueJob(obj interface{}) {
 }
 
 
-
 func (qa *JobClusterAgent) Run(stopCh chan struct{}) {
 	go qa.jobInformer.Informer().Run(stopCh)
 	cache.WaitForCacheSync(stopCh, qa.jobSynced)
@@ -163,7 +163,9 @@ func (qa *JobClusterAgent) Run(stopCh chan struct{}) {
 func (qa *JobClusterAgent) DeleteJob(cqj *arbv1.AppWrapper) {
 	qj_temp:=cqj.DeepCopy()
 	glog.V(2).Infof("[Dispatcher: Agent] Request deletion of XQJ %s to Agent %s\n", qj_temp.Name, qa.AgentId)
-	qa.queuejobclients.ArbV1().AppWrappers(qj_temp.Namespace).Delete(qj_temp.Name,  &metav1.DeleteOptions{})
+	gracePeriod := int64(0)
+	foregroundPolicy := metav1.DeletePropagationForeground
+	qa.queuejobclients.ArbV1().AppWrappers(qj_temp.Namespace).Delete(qj_temp.Name,  &metav1.DeleteOptions{ GracePeriodSeconds: &gracePeriod, PropagationPolicy: &foregroundPolicy})
 	return
 }
 
@@ -240,12 +242,17 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 					glog.V(9).Infof("Obtained the metric:%s, label:%v, value: %s, from the Agent: %s  with Agent QueueJob Name: %s.\n",
 						res.Items[i].MetricName, res.Items[i].MetricLabels, res.Items[i].Value, qa.AgentId, qa.DeploymentName)
 					clusterMetricType := res.Items[i].MetricLabels["cluster"]
+
 					if strings.Compare(clusterMetricType, "cpu") == 0  || strings.Compare(clusterMetricType, "memory") == 0 {
-						num, err := strconv.ParseFloat(res.Items[i].Value, 64)
+						val, units, _ := getFloatString(res.Items[i].Value)
+						num, err := strconv.ParseFloat(val, 64)
 						if err !=nil {
 							glog.Warningf("Possible issue converting %s string value of %s due to error: %v\n",
 								clusterMetricType, res.Items[i].Value, err)
 						} else {
+							if units == "k" {
+								num = num * 1000
+							}
 							f_num := math.Float64bits(num)
 							f_zero := math.Float64bits(0.0)
 							if (f_num > f_zero) {
@@ -277,6 +284,26 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 
 	glog.V(4).Infof("[Dispatcher: Agent] Updated Aggr Resources of %s: %v\n", qa.AgentId, qa.AggrResources)
     return nil
+}
+
+func getFloatString(num string) (string, string, error) {
+	var validatedNum string = num
+	var numUnits string = ""
+	_, err := strconv.ParseFloat(validatedNum, 64)
+	if err != nil {
+		if strings.HasSuffix(validatedNum, "k") {
+			validatedNum = validatedNum[:len(validatedNum)-len("k")]
+		}
+		_, err := strconv.ParseFloat(validatedNum, 64)
+		if err == nil {
+			numUnits = "k"
+		} else {
+			validatedNum = num
+		}
+	} else {
+		validatedNum = num
+	}
+	return  validatedNum, numUnits, err
 }
 
 func buildResource(cpu string, memory string) *clusterstateapi.Resource {
