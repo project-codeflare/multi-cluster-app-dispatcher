@@ -53,7 +53,7 @@ var quotaContext 	    = "quota_context"
 
 // QuotaManager is an interface quota management solutions
 type QuotaManager interface {
-	Fits(aw *arbv1.AppWrapper, resources *clusterstateapi.Resource) (bool, []*arbv1.AppWrapper)
+	Fits(aw *arbv1.AppWrapper, resources *clusterstateapi.Resource, proposedPremptions []*arbv1.AppWrapper) (bool, []*arbv1.AppWrapper)
 	Release(aw *arbv1.AppWrapper) bool
 }
 
@@ -144,11 +144,12 @@ func NewResourcePlanManager(awJobLister listersv1.AppWrapperLister, quotaManager
 	return rpm
 }
 
-func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource) (bool, []*arbv1.AppWrapper) {
+func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource,
+					proposedPreemptions []*arbv1.AppWrapper) (bool, []*arbv1.AppWrapper) {
 
 	// Handle uninitialized quota manager
 	if len(rpm.url) <= 0 {
-		return true, nil
+		return true, proposedPreemptions
 	}
 	awId := createId(aw.Namespace, aw.Name)
 	if len(awId) <= 0 {

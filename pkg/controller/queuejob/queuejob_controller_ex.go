@@ -25,6 +25,7 @@ import (
 	"math"
 	"math/rand"
 	"reflect"
+	"sort"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -494,29 +495,111 @@ func (qjm *XController) GetAggregatedResources(cqj *arbv1.AppWrapper) *clusterst
         return allocated
 }
 
+func (qjm *XController) getProposedPreemptions(requestingJob *arbv1.AppWrapper, availableResourcesWithoutPreemption *clusterstateapi.Resource,
+							preemptableAWs map[float64][]string, preemptableAWsMap map[string]*arbv1.AppWrapper) []*arbv1.AppWrapper {
 
-func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64, cqj string) *clusterstateapi.Resource {
-	r := qjm.cache.GetUnallocatedResources()
+	if  requestingJob == nil  {
+		glog.Warning("[getProposedPreemptions] Invalid job to evaluate.  Job is set to nil.")
+		return nil
+	}
+
+	aggJobReq := qjm.GetAggregatedResources(requestingJob)
+	if aggJobReq.LessEqual(availableResourcesWithoutPreemption) {
+		glog.V(10).Infof("[getProposedPreemptions] Job fits without preemption.")
+		return nil
+	}
+
+	if  preemptableAWs == nil || len(preemptableAWs) < 1 {
+		glog.V(10).Infof("[getProposedPreemptions] No preemptable jobs.")
+		return nil
+	} else {
+		glog.V(10).Infof("[getProposedPreemptions] Processing %v candidate jobs for preemption.", len(preemptableAWs))
+	}
+
+	//Sort keys of map
+	priorityKeyValues := make([]float64, len(preemptableAWs))
+	i := 0
+	for key, _ := range preemptableAWs {
+		priorityKeyValues[i] = key
+		i++
+	}
+	sort.Float64s(priorityKeyValues)
+
+	// Get list of proposed preemptions
+	var proposedPreemptions []*arbv1.AppWrapper
+	foundEnoughResources := false
 	preemptable := clusterstateapi.EmptyResource()
+
+	for  _, priorityKey := range priorityKeyValues {
+		if foundEnoughResources {
+			break
+		}
+		appWrapperIds := preemptableAWs[priorityKey]
+		for _, awId := range appWrapperIds {
+			aggaw := qjm.GetAggregatedResources(preemptableAWsMap[awId])
+			preemptable.Add(aggaw)
+			glog.V(4).Infof("[getProposedPreemptions] Adding %s to proposed preemption list on order to dispatch: %s.", awId, requestingJob.Name)
+			proposedPreemptions = append(proposedPreemptions, preemptableAWsMap[awId])
+			if aggJobReq.LessEqual(preemptable) {
+				foundEnoughResources = true
+				break
+			}
+		}
+	}
+
+	if foundEnoughResources == false {
+		glog.V(10).Infof("[getProposedPreemptions] Not enought preemptable jobs to dispatch %s.", requestingJob.Name)
+	}
+
+	return proposedPreemptions
+}
+
+func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClusterResources *clusterstateapi.
+		Resource, targetpr float64, requestingJob *arbv1.AppWrapper, agentId string) (*clusterstateapi.Resource, []*arbv1.AppWrapper) {
+	r := unallocatedClusterResources.Clone()
+	// Track preemption resources
+	preemptable := clusterstateapi.EmptyResource()
+	preemptableAWs := make(map[float64][]string)
+	preemptableAWsMap := make(map[string]*arbv1.AppWrapper)
 	// Resources that can fit but have not dispatched.
 	pending := clusterstateapi.EmptyResource()
-
 	glog.V(3).Infof("[getAggAvaiResPri] Idle cluster resources %+v", r)
 
 	queueJobs, err := qjm.queueJobLister.AppWrappers("").List(labels.Everything())
 	if err != nil {
 		glog.Errorf("[getAggAvaiResPri] Unable to obtain the list of queueJobs %+v", err)
-		return r
+		return r, nil
 	}
 
 	for _, value := range queueJobs {
-		if value.Name == cqj {
-			glog.V(11).Infof("[getAggAvaiResPri] %s: Skipping adjustments for %s since it is the job being processed.", time.Now().String(), value.Name)
+		glog.V(10).Infof("[getAggAvaiResPri] %s: Evaluating job: %s to calculate aggregated resources.", time.Now().String(), value.Name)
+		if value.Name == requestingJob.Name {
+			glog.V(10).Infof("[getAggAvaiResPri] %s: Skipping adjustments for %s since it is the job being processed.", time.Now().String(), value.Name)
 			continue
 		} else if !value.Status.CanRun {
-			glog.V(11).Infof("[getAggAvaiResPri] %s: Skipping adjustments for %s since it can not run.", time.Now().String(), value.Name)
+			glog.V(10).Infof("[getAggAvaiResPri] %s: Skipping adjustments for %s since it can not run.", time.Now().String(), value.Name)
 			continue
 		} else if value.Status.SystemPriority < targetpr {
+			// Dispatcher Mode: Ensure this job is part of the target cluster
+			if qjm.isDispatcher {
+				// Get the job key
+				glog.V(10).Infof("[getAggAvaiResPri] %s: Getting job key for: %s.", time.Now().String(), value.Name)
+				queueJobKey, _ := GetQueueJobKey(value)
+				glog.V(10).Infof("[getAggAvaiResPri] %s: Getting dispatchid for: %s.", time.Now().String(), queueJobKey)
+				dispatchedAgentId := qjm.dispatchMap[queueJobKey]
+
+				// If this is not in the same cluster then skip
+				if strings.Compare(dispatchedAgentId, agentId) != 0 {
+					glog.V(10).Infof("[getAggAvaiResPri] %s: Skipping adjustments for %s since it is in cluster %s which is not in the same cluster under evaluation: %s.",
+							time.Now().String(), value.Name, dispatchedAgentId, agentId)
+					continue
+				}
+
+				preemptableAWs[value.Status.SystemPriority] = append(preemptableAWs[value.Status.SystemPriority], queueJobKey)
+				preemptableAWsMap[queueJobKey] = value
+				glog.V(10).Infof("[getAggAvaiResPri] %s: Added %s to candidate preemptable job with priority %f.", time.Now().String(), value.Name, value.Status.SystemPriority)
+			}
+
 			for _, resctrl := range qjm.qjobResControls {
 				qjv := resctrl.GetAggregatedResources(value)
 				preemptable = preemptable.Add(qjv)
@@ -526,6 +609,13 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64
 				preemptable = preemptable.Add(qjv)
 			}
 
+			continue
+		} else if qjm.isDispatcher {
+			// Dispatcher job does not currently track pod states.  This is
+			// a workaround until implementation of pod state is complete.
+			// Currently calculation for available resources only considers priority.
+			glog.V(10).Infof("[getAggAvaiResPri] %s: Skipping adjustments for %s since priority %f is >= %f of requesting job: %s.", time.Now().String(),
+											value.Name, value.Status.SystemPriority, targetpr, requestingJob.Name)
 			continue
 		} else if value.Status.State == arbv1.AppWrapperStateEnqueued {
 			// Don't count the resources that can run but not yet realized (job orchestration pending or partially running).
@@ -576,13 +666,15 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(targetpr float64
 		}
 	}
 
-	glog.V(6).Infof("[getAggAvaiResPri] Schedulable idle cluster resources: %+v, subtracting dispatched resources: %+v and adding preemptable cluster resources: %+v", r, pending, preemptable)
 
+	proposedPremptions := qjm.getProposedPreemptions(requestingJob, r, preemptableAWs, preemptableAWsMap)
+
+	glog.V(6).Infof("[getAggAvaiResPri] Schedulable idle cluster resources: %+v, subtracting dispatched resources: %+v and adding preemptable cluster resources: %+v", r, pending, preemptable)
 	r = r.Add(preemptable)
 	r = r.NonNegSub(pending)
 
 	glog.V(3).Infof("[getAggAvaiResPri] %+v available resources to schedule", r)
-	return r
+	return r, proposedPremptions
 }
 
 func (qjm *XController) chooseAgent(qj *arbv1.AppWrapper) string{
@@ -592,12 +684,15 @@ func (qjm *XController) chooseAgent(qj *arbv1.AppWrapper) string{
 
 	agentId := qjm.agentList[rand.Int() % len(qjm.agentList)]
 	glog.V(2).Infof("[chooseAgent] Agent %s is chosen randomly\n", agentId)
-	resources := qjm.agentMap[agentId].AggrResources
+	unallocatedResources := qjm.agentMap[agentId].AggrResources
+	priorityindex := qj.Status.SystemPriority
+	resources, proposedPreemptions := qjm.getAggregatedAvailableResourcesPriority(unallocatedResources, priorityindex, qj, agentId)
+
 	glog.V(2).Infof("[chooseAgent] Aggr Resources of Agent %s: %v\n", agentId, resources)
 
 	if qjAggrResources.LessEqual(resources)  {
 		glog.V(2).Infof("[chooseAgent] Agent %s has enough resources\n", agentId)
-		if fits, preemptAWs := qjm.quotaManager.Fits(qj, qjAggrResources); fits {
+		if fits, preemptAWs := qjm.quotaManager.Fits(qj, qjAggrResources, proposedPreemptions); fits {
 			glog.V(2).Infof("[chooseAgent] AppWrapper %s has enough quota.\n", qj.Name)
 			qjm.preemptAWJobs(preemptAWs)
 			return agentId
@@ -756,11 +851,12 @@ func (qjm *XController) ScheduleNext() {
 			if !qjm.serverOption.Preemption     { priorityindex = -math.MaxFloat64 }
 			// Disable Preemption under DynamicPriority.  Comment out if allow DynamicPriority and Preemption at the same time.
 			if qjm.serverOption.DynamicPriority { priorityindex = -math.MaxFloat64 }
-			resources := qjm.getAggregatedAvailableResourcesPriority(priorityindex, qj.Name)
+			resources, proposedPreemptions := qjm.getAggregatedAvailableResourcesPriority(
+								qjm.cache.GetUnallocatedResources(), priorityindex, qj, "")
 			glog.V(2).Infof("[ScheduleNext] XQJ %s with resources %v to be scheduled on aggregated idle resources %v", qj.Name, aggqj, resources)
 
 			if aggqj.LessEqual(resources) {
-				if fits, preemptAWs := qjm.quotaManager.Fits(qj, aggqj); fits {
+				if fits, preemptAWs := qjm.quotaManager.Fits(qj, aggqj,proposedPreemptions); fits {
 					// Set any jobs that are marked for preemption
 					qjm.preemptAWJobs(preemptAWs)
 					// aw is ready to go!
@@ -1407,11 +1503,13 @@ func (cc *XController) Cleanup(queuejob *arbv1.AppWrapper) error {
 		}
 	} else {
 		// glog.Infof("[Dispatcher] Cleanup: State=%s\n", queuejob.Status.State)
-		if queuejob.Status.CanRun && queuejob.Status.IsDispatched {
-			queuejobKey, _:=GetQueueJobKey(queuejob)
-			if obj, ok:=cc.dispatchMap[queuejobKey]; ok {
+		//if ! queuejob.Status.CanRun && queuejob.Status.IsDispatched {
+		if queuejob.Status.IsDispatched {
+			queuejobKey, _:= GetQueueJobKey(queuejob)
+			if obj, ok := cc.dispatchMap[queuejobKey]; ok {
 				cc.agentMap[obj].DeleteJob(queuejob)
 			}
+			queuejob.Status.IsDispatched = false
 		}
 	}
 	cc.quotaManager.Release(queuejob)
@@ -1419,7 +1517,7 @@ func (cc *XController) Cleanup(queuejob *arbv1.AppWrapper) error {
 	queuejob.Status.Running      = 0
 	queuejob.Status.Succeeded    = 0
 	queuejob.Status.Failed       = 0
-	glog.V(3).Infof("[Cleanup] end   AppWrapper %s Version=%s Status=%+v\n", queuejob.Name, queuejob.ResourceVersion, queuejob.Status)
+	glog.V(3).Infof("[Cleanup] end AppWrapper %s Version=%s Status=%+v\n", queuejob.Name, queuejob.ResourceVersion, queuejob.Status)
 
 	return nil
 }
