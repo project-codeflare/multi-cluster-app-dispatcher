@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcad-operator
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: mcad-operator
+  template:
+    metadata:
+      labels:
+        name: mcad-operator
+    spec:
+      serviceAccountName: mcad-operator
+      containers:
+        - name: mcad-operator
+          # Replace this with the built image name
+          image: darroyo/mcad-operator:v0.1.8
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "mcad-operator"

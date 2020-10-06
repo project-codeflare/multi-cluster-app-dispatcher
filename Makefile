@@ -1,5 +1,7 @@
 BIN_DIR=_output/bin
-RELEASE_VER=v1.27
+CAT_CMD=$(if $(filter $(OS),Windows_NT),type,cat)
+VERSION_FILE=./CONTROLLER_VERSION
+RELEASE_VER=v$(shell $(CAT_CMD) $(VERSION_FILE))
 CURRENT_DIR=$(shell pwd)
 #MCAD_REGISTRY=$(shell docker ps --filter name=mcad-registry | grep -v NAME)
 #LOCAL_HOST_NAME=localhost
