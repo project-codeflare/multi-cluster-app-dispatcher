@@ -577,29 +577,29 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "Deployment", 
 	"metadata": {
-		"name": "aw-deployment-1",
+		"name": "aw-deployment-3",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-deployment-3"
 		}
 	},
 	"spec": {
 		"replicas": 3,
 		"selector": {
 			"matchLabels": {
-				"app": "nginx"
+				"app": "aw-deployment-3"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "nginx"
+					"app": "aw-deployment-3"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "nginx",
+						"name": "aw-deployment-3",
 						"image": "k8s.gcr.io/echoserver:1.4",
 						"ports": [
 							{
