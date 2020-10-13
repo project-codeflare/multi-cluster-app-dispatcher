@@ -1,0 +1,30 @@
+apiVersion: mcad.ibm.com/v1alpha1
+kind: AppWrapper
+metadata:
+  name: 0001-aw-generic-deployment-3
+spec:
+  resources:
+    GenericItems:
+    - replicas: 1
+      generictemplate:
+        apiVersion: apps/v1beta1
+        kind: Deployment
+        metadata:
+          name: 0001-aw-generic-deployment-3
+          labels:
+            app: 0001-aw-generic-deployment-3
+        spec:
+          selector:
+            matchLabels:
+              app: 0001-aw-generic-deployment-3
+          replicas: 3
+          template:
+            metadata:
+              labels:
+                app: 0001-aw-generic-deployment-3
+            spec:
+              containers:
+               - name: 0001-aw-generic-deployment-3
+                 image: k8s.gcr.io/echoserver:1.4
+                 ports:
+                 - containerPort: 80
