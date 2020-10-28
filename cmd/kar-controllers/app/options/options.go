@@ -17,6 +17,7 @@ limitations under the License.
 package options
 
 import (
+	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 	"os"
 	"strconv"
@@ -37,6 +38,7 @@ type ServerOption struct {
 	// Head of line job will not be bumped away for at least HeadOfLineHoldingTime seconds by higher priority jobs.
 	// Default setting to 0 disables this mechanism.
 	HeadOfLineHoldingTime	int
+	QuotaRestURL		string
 }
 
 // NewServerOption creates a new CMServer with a default config.
@@ -59,7 +61,10 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&s.Preemption,"preemption", s.Preemption,"Set controller to allow preemption if set to true. Note: when set to true, the Kubernetes Scheduler must be configured to enable preemption.  Default is false.")
 	fs.IntVar(&s.BackoffTime,"backofftime", s.BackoffTime,"Number of seconds a job will go away for, if it can not be scheduled.  Default is 20.")
 	fs.IntVar(&s.HeadOfLineHoldingTime,"headoflineholdingtime", s.HeadOfLineHoldingTime,"Number of seconds a job can stay at the Head Of Line without being bumped.  Default is 0.")
+	fs.StringVar(&s.QuotaRestURL,"quotaURL", s.QuotaRestURL,"URL for ReST quota management.  Default is none.")
 //	fs.IntVar(&s.SecurePort, "secure-port", 6443, "The port on which to serve secured, uthenticated access for metrics.")
+	glog.V(4).Infof("[AddFlags] Controller configuration: %+v", s)
+
 }
 
 func (s *ServerOption) loadDefaultsFromEnvVars() {
@@ -79,9 +84,9 @@ func (s *ServerOption) loadDefaultsFromEnvVars() {
 	}
 
 	preemption, envVarExists := os.LookupEnv("PREEMPTION")
-	s.Preemption = false
-	if envVarExists && strings.EqualFold(preemption, "true") {
-		s.Preemption = true
+	s.Preemption = true
+	if envVarExists && strings.EqualFold(preemption, "false") {
+		s.Preemption = false
 	}
 
 	backoffString, envVarExists := os.LookupEnv("BACKOFFTIME")
@@ -100,6 +105,11 @@ func (s *ServerOption) loadDefaultsFromEnvVars() {
 		if err == nil {
 			s.HeadOfLineHoldingTime = holInt
 		}
+	}
+	quotaRestURLString, envVarExists := os.LookupEnv("QUOTA_REST_URL")
+	s.QuotaRestURL = ""
+	if envVarExists {
+		s.QuotaRestURL = quotaRestURLString
 	}
 }
 
