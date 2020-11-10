@@ -14,6 +14,24 @@ spec:
   selector:
     app: custom-metrics-apiserver
 ---
+#{{ if .Values.configMap.quotaRestUrl }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: quota-http-server
+spec:
+  type: NodePort
+  selector:
+    app: custom-metrics-apiserver
+  ports:
+    # By default and for convenience, the `targetPort` is set to the same value as the `port` field.
+    - port: 8082
+      targetPort: 80
+      # Optional field
+      # By default and for convenience, the Kubernetes control plane will allocate a port from a range (default: 30000-32767)
+      nodePort: 30082
+#{{ end }}
+---
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
 metadata:
@@ -177,6 +195,22 @@ rules:
   - patch
   - update
   - watch
+#{{ if .Values.quotaManagement.rbac.apiGroup }}
+#{{ if .Values.quotaManagement.rbac.resource }}
+- apiGroups:
+    - {{ .Values.quotaManagement.rbac.apiGroup }}
+  resources:
+    - {{ .Values.quotaManagement.rbac.resource }}
+  verbs:
+  - get 
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+#{{ end }}
+#{{ end }}
 ---
 #{{ if .Values.serviceAccount }}
 apiVersion: v1
@@ -320,6 +354,25 @@ spec:
           path: {{ .Values.volumes.hostPath }}
 #{{ end }}
       containers:
+#{{ if .Values.configMap.quotaRestUrl }}
+      - name: "quota-httpserver"
+        image: "{{ .Values.httpServerImage.repository }}:{{ .Values.httpServerImage.tag }}"
+        imagePullPolicy: {{ .Values.httpServerImage.pullPolicy }}
+        ports:
+        - containerPort: 80
+      - name: "quota-management"
+        image: "{{ .Values.httpImage.repository }}:{{ .Values.httpImage.tag }}"
+        imagePullPolicy: {{ .Values.httpImage.pullPolicy }}
+        ports:
+        - containerPort: 8081
+        volumeMounts:
+          - mountPath: /tmp
+            name: temp-vol
+#{{ if .Values.volumes.hostPath }}
+          - name: agent-config-vol
+            mountPath: /root/kubernetes
+#{{ end }}
+#{{ end }}
       - name: {{ .Chart.Name }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -340,8 +393,8 @@ spec:
 #{{ end }}
 #{{ if .Values.configMap.name }}
         envFrom:
-          - configMapRef:
-              name: {{ .Values.configMap.name }}
+        - configMapRef:
+            name: {{ .Values.configMap.name }}
 #{{ end }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}
