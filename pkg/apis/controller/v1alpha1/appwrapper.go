@@ -188,7 +188,7 @@ type AppWrapperStatus struct {
 	SystemPriority float64 `json:"systempriority,omitempty"`
 
 	// State of QueueJob - Init, Queueing, HeadOfLine, Rejoining, ...
-	QueueJobState QueueJobState `json:"queuejobstate,omitempty"`
+	QueueJobState AppWrapperConditionType `json:"queuejobstate,omitempty"`
 
 	// Microsecond level timestamp when controller first sees QueueJob (by Informer)
 	ControllerFirstTimestamp metav1.MicroTime `json:"controllerfirsttimestamp,omitempty"`
@@ -201,6 +201,10 @@ type AppWrapperStatus struct {
 
 	// Indicate if message is a duplicate (for Informer to recognize duplicate messages)
 	Local bool `json:"local,omitempty"`
+
+	// Represents the latest available observations of a appwrapper's current condition.
+	Conditions []AppWrapperCondition `json:"conditions,omitempty"`
+
 }
 
 type AppWrapperState string
@@ -213,15 +217,31 @@ const (
 	AppWrapperStateFailed   AppWrapperState = "Failed"
 )
 
-type QueueJobState string
+type AppWrapperConditionType string
 
 const (
-	QueueJobStateInit       QueueJobState = "Init"
-	QueueJobStateQueueing   QueueJobState = "Queueing"
-	QueueJobStateHeadOfLine QueueJobState = "HeadOfLine"
-	QueueJobStateRejoining  QueueJobState = "Rejoining"
-	QueueJobStateDispatched QueueJobState = "Dispatched"
-	QueueJobStateRunning    QueueJobState = "Running"
-	QueueJobStateDeleted    QueueJobState = "Deleted"
-	QueueJobStateFailed     QueueJobState = "Failed"
+	AppWrapperCondInit       AppWrapperConditionType = "Init"
+	AppWrapperCondQueueing   AppWrapperConditionType = "Queueing"
+	AppWrapperCondHeadOfLine AppWrapperConditionType = "HeadOfLine"
+	AppWrapperCondBackoff    AppWrapperConditionType = "Backoff"
+	AppWrapperCondDispatched AppWrapperConditionType = "Dispatched"
+	AppWrapperCondRunning    AppWrapperConditionType = "Running"
+	AppWrapperCondDeleted    AppWrapperConditionType = "Deleted"
+	AppWrapperCondFailed     AppWrapperConditionType = "Failed"
 )
+
+// DeploymentCondition describes the state of a deployment at a certain point.
+type AppWrapperCondition struct {
+	// Type of appwrapper condition.
+	Type AppWrapperConditionType `json:"type"`
+	// Status of the condition, one of True, False, Unknown.
+	Status v1.ConditionStatus `json:"status"`
+	// The last time this condition was updated.
+	LastUpdateMicroTime metav1.MicroTime `json:"lastUpdateMicroTime,omitempty"`
+	// Last time the condition transitioned from one status to another.
+	LastTransitionMicroTime metav1.MicroTime `json:"lastTransitionMicroTime,omitempty"`
+	// The reason for the condition's last transition.
+	Reason string `json:"reason,omitempty"`
+	// A human readable message indicating details about the transition.
+	Message string `json:"message,omitempty"`
+}
