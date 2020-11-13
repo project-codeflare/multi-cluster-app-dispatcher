@@ -1084,6 +1084,8 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 		glog.V(3).Infof("[worker-syncQJ] %s found more recent copy from event queue       &qj=%p       qj=%+v", qj.Name, qj, qj)
 		glog.V(3).Infof("[worker-syncQJ] %s found more recent copy from cache &queueJob=%p queueJob=%+v", queueJob.Name, queueJob, queueJob)
 		queueJob.DeepCopyInto(qj)
+		glog.V(3).Infof("[worker-syncQJ] %s AFTER found more recent copy from event queue       &qj=%p       qj=%+v", qj.Name, qj, qj)
+		glog.V(3).Infof("[worker-syncQJ] %s AFTER found more recent copy from cache &queueJob=%p queueJob=%+v", queueJob.Name, queueJob, queueJob)
 	}
 
 	// If it is Agent (not a dispatcher), update pod information
