@@ -644,7 +644,7 @@ func (qjm *XController) ScheduleNext() {
 	}
 
 	qj.Status.QueueJobState = arbv1.AppWrapperCondHeadOfLine
-	cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondHeadOfLine, v1.ConditionTrue, "Front of queue.", "")
+	cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondHeadOfLine, v1.ConditionTrue, "FrontOfQueue.", "")
 	qj.Status.Conditions = append(qj.Status.Conditions, cond)
 
 	qj.Status.FilterIgnore = true   // update QueueJobState only
@@ -661,7 +661,7 @@ func (qjm *XController) ScheduleNext() {
 		return
 	}
 
-	dispatchFailedReason := "AppWrapper not runnable."
+	dispatchFailedReason := "AppWrapperNotRunnable."
 	dispatchFailedMessage := ""
 	if qjm.isDispatcher {			// Dispatcher Mode
 		agentId:=qjm.chooseAgent(qj)
@@ -783,7 +783,7 @@ func (qjm *XController) backoff(q *arbv1.AppWrapper, reason string, message stri
 	time.Sleep(time.Duration(qjm.serverOption.BackoffTime) * time.Second)
 	qjm.qjqueue.MoveToActiveQueueIfExists(q)
 	q.Status.QueueJobState = arbv1.AppWrapperCondQueueing
-	returnCond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "Returned from backoff.", "")
+	returnCond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "BackoffTimerExpired.", "")
 	q.Status.Conditions = append(q.Status.Conditions, returnCond)
 	q.Status.FilterIgnore = true  // update QueueJobState only, no work needed
 	qjm.updateEtcd(q, "[backoff] Queueing")
@@ -1088,12 +1088,13 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 		// update pods running, pending,...
 		cc.qjobResControls[arbv1.ResourceTypePod].UpdateQueueJobStatus(qj)
 
-		if (qj.Status.Running > 0) {  // set AppWrapperCondRunning if at least one resource running
+		// Update etcd conditions if AppWrapper Job has at least 1 running pod and transitioning from dispatched to running.
+		if (qj.Status.QueueJobState != arbv1.AppWrapperCondRunning ) && (qj.Status.Running > 0) {
 			qj.Status.QueueJobState = arbv1.AppWrapperCondRunning
-			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunning, v1.ConditionTrue, "", "")
+			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunning, v1.ConditionTrue, "PodsRunning", "")
 			qj.Status.Conditions = append(qj.Status.Conditions, cond)
 			qj.Status.FilterIgnore = true  // Update AppWrapperCondRunning
-			cc.updateEtcd(qj, "[syncQueueJob]setRunning")
+			cc.updateEtcd(qj, "[syncQueueJob] setRunning")
 		}
 	}
 
@@ -1153,7 +1154,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			} else {
 				glog.V(10).Infof("[worker-manageQJ] before add to activeQ %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				qj.Status.QueueJobState = arbv1.AppWrapperCondQueueing
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "", "")
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "AwaitingDispatch", "")
 				qj.Status.Conditions = append(qj.Status.Conditions, cond)
 
 				qj.Status.FilterIgnore = true // Update Queueing status, add to qjqueue for ScheduleNext
@@ -1188,7 +1189,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			glog.V(3).Infof("[worker-manageQJ] %s 3Delay=%.6f seconds BeforeDispatchingToEtcd Version=%s Status=%+v",
 				qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qj.ResourceVersion, qj.Status)
 			dispatched := true
-			dispatchFailureReason := "Item creation failure."
+			dispatchFailureReason := "ItemCreationFailure."
 			dispatchFailureMessage := ""
 			for _, ar := range qj.Spec.AggrResources.Items {
 				glog.V(10).Infof("[worker-manageQJ] before dispatch [%v].SyncQueueJob %s &qj=%p Version=%s Status=%+v", ar.Type, qj.Name, qj, qj.ResourceVersion, qj.Status)
@@ -1214,7 +1215,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 
 			if dispatched { // set AppWrapperCondRunning if all resources are successfully dispatched
 				qj.Status.QueueJobState = arbv1.AppWrapperCondDispatched
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondDispatched, v1.ConditionTrue, "", "")
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondDispatched, v1.ConditionTrue, "AppWrapperRunnable", "")
 				qj.Status.Conditions = append(qj.Status.Conditions, cond)
 
 				glog.V(3).Infof("[worker-manageQJ] %s 4Delay=%.6f seconds AllResourceDispatchedToEtcd Version=%s Status=%+v",
