@@ -928,8 +928,10 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 	}
 	// AppWrappers may come out of order.  Ignore old ones.
 	if (oldQJ.Name == newQJ.Name) && (larger(oldQJ.ResourceVersion, newQJ.ResourceVersion)) {
-		glog.V(10).Infof("[Informer-updateQJ] ignore OutOfOrder arrival &oldQJ=%p oldQJ=%+v", oldQJ, oldQJ)
-		glog.V(10).Infof("[Informer-updateQJ] ignore OutOfOrder arrival &newQJ=%p newQJ=%+v", newQJ, newQJ)
+		glog.V(10).Infof("[Informer-updateQJ]  %s ignored OutOfOrder arrival &oldQJ=%p oldQJ=%+v", oldQJ.Name, oldQJ, oldQJ)
+		glog.V(10).Infof("[Informer-updateQJ] %s ignored OutOfOrder arrival &newQJ=%p newQJ=%+v", newQJ.Name, newQJ, newQJ)
+		glog.V(3).Infof("[Informer-updateQJ] %s ignore OutOfOrder arrival &oldQJ=%p oldQJ=%+v", oldQJ.Name, oldQJ, oldQJ)
+		glog.V(3).Infof("[Informer-updateQJ] i%s gnore OutOfOrder arrival &newQJ=%p newQJ=%+v", newQJ.Name, newQJ, newQJ)
 		return
 	}
 	glog.V(3).Infof("[Informer-updateQJ] %s *Delay=%.6f seconds normal enqueue &newQJ=%p Version=%s Status=%+v", newQJ.Name, time.Now().Sub(newQJ.Status.ControllerFirstTimestamp.Time).Seconds(), newQJ, newQJ.ResourceVersion, newQJ.Status)
