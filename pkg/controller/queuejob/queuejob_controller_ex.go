@@ -1079,6 +1079,8 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 	if larger(queueJob.ResourceVersion, qj.ResourceVersion) {
 		glog.V(10).Infof("[worker-syncQJ] %s found more recent copy from cache       &qj=%p       qj=%+v", qj.Name, qj, qj)
 		glog.V(10).Infof("[worker-syncQJ] %s found more recent copy from cache &queueJob=%p queueJob=%+v", queueJob.Name, queueJob, queueJob)
+		glog.V(3).Infof("[worker-syncQJ] %s found more recent copy from event queue       &qj=%p       qj=%+v", qj.Name, qj, qj)
+		glog.V(3).Infof("[worker-syncQJ] %s found more recent copy from cache &queueJob=%p queueJob=%+v", queueJob.Name, queueJob, queueJob)
 		queueJob.DeepCopyInto(qj)
 	}
 
@@ -1154,7 +1156,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			} else {
 				glog.V(10).Infof("[worker-manageQJ] before add to activeQ %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				qj.Status.QueueJobState = arbv1.AppWrapperCondQueueing
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "AwaitingDispatch", "")
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "AwaitingHeadOfLine", "")
 				qj.Status.Conditions = append(qj.Status.Conditions, cond)
 
 				qj.Status.FilterIgnore = true // Update Queueing status, add to qjqueue for ScheduleNext
