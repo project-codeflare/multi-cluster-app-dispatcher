@@ -920,6 +920,9 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 		return
 	}
 	oldQJ, ok := oldObj.(*arbv1.AppWrapper)
+	if (newQJ.Name == "aw-deployment-2-900cpu") {
+		glog.V(3).Infof("[Informer-updateQJ] %s arrival", newQJ.Name)
+	}
 	if !ok {
 		glog.Errorf("[Informer-updateQJ] old object is not AppWrapper.  enqueue(newQJ).  oldObj=%+v", oldObj)
 		glog.V(4).Infof("[Informer-updateQJ] %s *Delay=%.6f seconds BadOldObject enqueue &newQJ=%p Version=%s Status=%+v", newQJ.Name, time.Now().Sub(newQJ.Status.ControllerFirstTimestamp.Time).Seconds(), newQJ, newQJ.ResourceVersion, newQJ.Status)
@@ -930,8 +933,10 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 	if (oldQJ.Name == newQJ.Name) && (larger(oldQJ.ResourceVersion, newQJ.ResourceVersion)) {
 		glog.V(10).Infof("[Informer-updateQJ]  %s ignored OutOfOrder arrival &oldQJ=%p oldQJ=%+v", oldQJ.Name, oldQJ, oldQJ)
 		glog.V(10).Infof("[Informer-updateQJ] %s ignored OutOfOrder arrival &newQJ=%p newQJ=%+v", newQJ.Name, newQJ, newQJ)
-		glog.V(3).Infof("[Informer-updateQJ] %s ignore OutOfOrder arrival &oldQJ=%p oldQJ=%+v", oldQJ.Name, oldQJ, oldQJ)
-		glog.V(3).Infof("[Informer-updateQJ] i%s gnore OutOfOrder arrival &newQJ=%p newQJ=%+v", newQJ.Name, newQJ, newQJ)
+		if (newQJ.Name == "aw-deployment-2-900cpu") {
+			glog.V(3).Infof("[Informer-updateQJ] %s ignore OutOfOrder arrival &oldQJ=%p oldQJ=%+v", oldQJ.Name, oldQJ, oldQJ)
+			glog.V(3).Infof("[Informer-updateQJ] i%s gnore OutOfOrder arrival &newQJ=%p newQJ=%+v", newQJ.Name, newQJ, newQJ)
+		}
 		return
 	}
 	glog.V(3).Infof("[Informer-updateQJ] %s *Delay=%.6f seconds normal enqueue &newQJ=%p Version=%s Status=%+v", newQJ.Name, time.Now().Sub(newQJ.Status.ControllerFirstTimestamp.Time).Seconds(), newQJ, newQJ.ResourceVersion, newQJ.Status)
@@ -962,6 +967,9 @@ func (cc *XController) enqueue(obj interface{}) {
 		return
 	}
 
+	if (qj.Name == "aw-deployment-2-900cpu") {
+		glog.V(3).Infof("[enqueue] %s eventQueue.Add_byEnqueue &qj=%p Version=%s Status=%+v aw=%v", qj.Name, qj, qj.ResourceVersion, qj.Status, qj)
+	}
 	err := cc.eventQueue.Add(qj)  // add to FIFO queue if not in, update object & keep position if already in FIFO queue
 	if err != nil {
 		glog.Errorf("[enqueue] Fail to enqueue %s to eventQueue, ignore.  *Delay=%.6f seconds &qj=%p Version=%s Status=%+v err=%#v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qj, qj.ResourceVersion, qj.Status, err)
@@ -1168,6 +1176,9 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 				if err = cc.qjqueue.AddIfNotPresent(qj); err != nil {
 					glog.Errorf("[worker-manageQJ] Fail to add %s to activeQueue. Back to eventQueue activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v err=%#v",
 						qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, err)
+					if (qj.Name == "aw-deployment-2-900cpu") {
+						glog.V(3).Infof("[worker-manageQJ] %s eventQueue.Add_byEnqueue &qj=%p Version=%s Status=%+v aw=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status, qj)
+					}
 					cc.enqueue(qj)
 				} else {
 					glog.V(3).Infof("[worker-manageQJ] %s 1Delay=%.6f seconds activeQ.Add_success activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
