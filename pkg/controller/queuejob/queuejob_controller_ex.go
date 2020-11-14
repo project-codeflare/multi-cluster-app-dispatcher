@@ -393,7 +393,7 @@ func (qjm *XController) PreemptQueueJobs() {
 			glog.V(3).Infof("[PreemptQueueJobs] %s PreemptQueue &qj=%p Version=%s Status=%+v aw=%v", q.Name, q, q.ResourceVersion, q.Status, q)
 			glog.V(3).Infof("[PreemptQueueJobs] %s from cache &qj=%p Version=%s Status=%+v aw=%v", newjob.Name, newjob, newjob.ResourceVersion, newjob.Status, newjob)
 		}
-		message := fmt.Sprintf("Insufficient number of Running pods, minimum=%s, running=%s", string(newjob.Spec.SchedSpec.MinAvailable), string(newjob.Status.Running))
+		message := fmt.Sprintf("Insufficient number of Running pods, minimum=%d, running=%v.", q.Spec.SchedSpec.MinAvailable, q.Status.Running)
 		cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
 		newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
 
@@ -423,13 +423,36 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 					continue
 				}
 			}
-			if value.Status.State == arbv1.AppWrapperStateEnqueued {
+
+			// Skip if AW Pending or just entering the system and does not have a state yet.
+			if (value.Status.State == arbv1.AppWrapperStateEnqueued) || (value.Status.State == ""){
+				continue
+			}
+
+			//Check to see if if this AW job has been dispatched for a time window before preempting
+			conditionsLen := len(value.Status.Conditions)
+			var dispatchConditionExists bool
+			dispatchConditionExists = false
+			var condition arbv1.AppWrapperCondition
+			// Get the last time the AppWrapper was dispatched
+			for i := (conditionsLen - 1); i > 0; i-- {
+				condition = value.Status.Conditions[i]
+				if (condition.Type != arbv1.AppWrapperCondDispatched) {
+					continue
+				}
+				dispatchConditionExists = true
+				break
+			}
+			// Now check for the minimum age and skip preempt if current time is not beyond minimum age
+			minAge := condition.LastTransitionMicroTime.Add(60 * time.Second)
+			if dispatchConditionExists && (time.Now().Before(minAge))  {
 				continue
 			}
 
 			if int(value.Status.Running) < replicas {
-				if (replicas>0) {
-					glog.V(3).Infof("XQJ %s is eligible for preemption %v - %v , %v !!! \n", value.Name, value.Status.Running, replicas, value.Status.Succeeded)
+				//Check to see if if this AW job has been dispatched for a time window before preempting
+				if (replicas > 0) {
+					glog.V(3).Infof("AppWrapper %s is eligible for preemption %v - %v , %v !!! \n", value.Name, value.Status.Running, replicas, value.Status.Succeeded)
 					qjobs = append(qjobs, value)
 				}
 			}
