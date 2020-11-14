@@ -220,14 +220,16 @@ const (
 type AppWrapperConditionType string
 
 const (
-	AppWrapperCondInit       AppWrapperConditionType = "Init"
-	AppWrapperCondQueueing   AppWrapperConditionType = "Queueing"
-	AppWrapperCondHeadOfLine AppWrapperConditionType = "HeadOfLine"
-	AppWrapperCondBackoff    AppWrapperConditionType = "Backoff"
-	AppWrapperCondDispatched AppWrapperConditionType = "Dispatched"
-	AppWrapperCondRunning    AppWrapperConditionType = "Running"
-	AppWrapperCondDeleted    AppWrapperConditionType = "Deleted"
-	AppWrapperCondFailed     AppWrapperConditionType = "Failed"
+	AppWrapperCondInit              AppWrapperConditionType = "Init"
+	AppWrapperCondQueueing          AppWrapperConditionType = "Queueing"
+	AppWrapperCondHeadOfLine        AppWrapperConditionType = "HeadOfLine"
+	AppWrapperCondBackoff           AppWrapperConditionType = "Backoff"
+	AppWrapperCondDispatched        AppWrapperConditionType = "Dispatched"
+	AppWrapperCondRunning           AppWrapperConditionType = "Running"
+	AppWrapperCondPreemptCandidate  AppWrapperConditionType = "PreemptCandidate"
+	AppWrapperCondPreempted         AppWrapperConditionType = "Preempted"
+	AppWrapperCondDeleted           AppWrapperConditionType = "Deleted"
+	AppWrapperCondFailed            AppWrapperConditionType = "Failed"
 )
 
 // DeploymentCondition describes the state of a deployment at a certain point.

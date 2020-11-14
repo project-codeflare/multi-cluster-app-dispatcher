@@ -389,6 +389,14 @@ func (qjm *XController) PreemptQueueJobs() {
 			continue
 		}
 		newjob.Status.CanRun = false
+		if (q.Name == "aw-generic-deployment-2-030") {
+			glog.V(3).Infof("[PreemptQueueJobs] %s PreemptQueue &qj=%p Version=%s Status=%+v aw=%v", q.Name, q, q.ResourceVersion, q.Status, q)
+			glog.V(3).Infof("[PreemptQueueJobs] %s from cache &qj=%p Version=%s Status=%+v aw=%v", newjob.Name, newjob, newjob.ResourceVersion, newjob.Status, newjob)
+		}
+		message := fmt.Sprintf("Insufficient number of Running pods, minimum=%s, running=%s", string(newjob.Spec.SchedSpec.MinAvailable), string(newjob.Status.Running))
+		cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
+		newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
+
 		if _, err := qjm.arbclients.ArbV1().AppWrappers(q.Namespace).Update(newjob); err != nil {
 			glog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
 				q.Namespace, q.Name, err)
