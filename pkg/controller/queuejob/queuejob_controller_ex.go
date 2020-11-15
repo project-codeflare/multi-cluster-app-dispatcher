@@ -389,10 +389,7 @@ func (qjm *XController) PreemptQueueJobs() {
 			continue
 		}
 		newjob.Status.CanRun = false
-		if (q.Name == "aw-generic-deployment-2-030") {
-			glog.V(3).Infof("[PreemptQueueJobs] %s PreemptQueue &qj=%p Version=%s Status=%+v aw=%v", q.Name, q, q.ResourceVersion, q.Status, q)
-			glog.V(3).Infof("[PreemptQueueJobs] %s from cache &qj=%p Version=%s Status=%+v aw=%v", newjob.Name, newjob, newjob.ResourceVersion, newjob.Status, newjob)
-		}
+
 		message := fmt.Sprintf("Insufficient number of Running pods, minimum=%d, running=%v.", q.Spec.SchedSpec.MinAvailable, q.Status.Running)
 		cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
 		newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
@@ -905,10 +902,8 @@ func (qjm *XController) UpdateQueueJobs() {
 		// check eventQueue, qjqueue in program sequence to make sure job is not in qjqueue
 		if _, exists, _ := qjm.eventQueue.Get(newjob); exists { continue } // do not enqueue if already in eventQueue
 		if qjm.qjqueue.IfExist(newjob) { continue } // do not enqueue if already in qjqueue
-		if (newjob.Name == "aw-generic-deployment-2-030") {
-			glog.V(3).Infof("[UpdateQueueJobs] %s *Delay=%.6f seconds eventQueue.Add_byUpdateQueueJobs &qj=%p Version=%s Status=%+v", newjob.Name, time.Now().Sub(newjob.Status.ControllerFirstTimestamp.Time).Seconds(), newjob, newjob.ResourceVersion, newjob.Status)
-		}
-			err = qjm.enqueueIfNotPresent(newjob)
+
+		err = qjm.enqueueIfNotPresent(newjob)
 		if err != nil {
 			glog.Errorf("[UpdateQueueJobs] Fail to enqueue %s to eventQueue, ignore.  *Delay=%.6f seconds &qj=%p Version=%s Status=%+v err=%#v", newjob.Name, time.Now().Sub(newjob.Status.ControllerFirstTimestamp.Time).Seconds(), newjob, newjob.ResourceVersion, newjob.Status, err)
 		} else {
@@ -946,9 +941,6 @@ func (cc *XController) addQueueJob(obj interface{}) {
 		qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qj.CreationTimestamp, qj.Status.ControllerFirstTimestamp)
 
 	glog.V(4).Infof("[Informer-addQJ] enqueue %s &qj=%p Version=%s Status=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status)
-	if (qj.Name == "aw-generic-deployment-2-030") {
-		glog.V(3).Infof("[Informer-addQJ] enqueue %s &qj=%p Version=%s Status=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status)
-	}
 	cc.enqueue(qj)
 }
 
@@ -959,9 +951,6 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 		return
 	}
 	oldQJ, ok := oldObj.(*arbv1.AppWrapper)
-	if (newQJ.Name == "aw-generic-deployment-2-030") {
-		glog.V(3).Infof("[Informer-updateQJ] %s arrival", newQJ.Name)
-	}
 	if !ok {
 		glog.Errorf("[Informer-updateQJ] old object is not AppWrapper.  enqueue(newQJ).  oldObj=%+v", oldObj)
 		glog.V(4).Infof("[Informer-updateQJ] %s *Delay=%.6f seconds BadOldObject enqueue &newQJ=%p Version=%s Status=%+v", newQJ.Name, time.Now().Sub(newQJ.Status.ControllerFirstTimestamp.Time).Seconds(), newQJ, newQJ.ResourceVersion, newQJ.Status)
@@ -972,10 +961,6 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 	if (oldQJ.Name == newQJ.Name) && (larger(oldQJ.ResourceVersion, newQJ.ResourceVersion)) {
 		glog.V(10).Infof("[Informer-updateQJ]  %s ignored OutOfOrder arrival &oldQJ=%p oldQJ=%+v", oldQJ.Name, oldQJ, oldQJ)
 		glog.V(10).Infof("[Informer-updateQJ] %s ignored OutOfOrder arrival &newQJ=%p newQJ=%+v", newQJ.Name, newQJ, newQJ)
-		if (newQJ.Name == "aw-generic-deployment-2-030") {
-			glog.V(3).Infof("[Informer-updateQJ] %s ignore OutOfOrder arrival &oldQJ=%p oldQJ=%+v", oldQJ.Name, oldQJ, oldQJ)
-			glog.V(3).Infof("[Informer-updateQJ] i%s gnore OutOfOrder arrival &newQJ=%p newQJ=%+v", newQJ.Name, newQJ, newQJ)
-		}
 		return
 	}
 	glog.V(3).Infof("[Informer-updateQJ] %s *Delay=%.6f seconds normal enqueue &newQJ=%p Version=%s Status=%+v", newQJ.Name, time.Now().Sub(newQJ.Status.ControllerFirstTimestamp.Time).Seconds(), newQJ, newQJ.ResourceVersion, newQJ.Status)
@@ -1005,22 +990,6 @@ func (cc *XController) enqueue(obj interface{}) error {
 		return fmt.Errorf("[enqueue] obj is not AppWrapper. obj=%+v", obj)
 	}
 
-	if (qj.Name == "aw-generic-deployment-2-030") {
-		objKey, err := GetQueueJobKey(obj)
-		if (err != nil) {
-			glog.V(3).Infof("[enqueue] Enqueue failed for %s.  Error getting key from aw object: err=%+v", qj.Name, err)
-		} else {
-			_, exists, err := cc.eventQueue.GetByKey(objKey)
-			if (err != nil) {
-				glog.V(3).Infof("[enqueue] Enqueue failed for %s.  Error getting aw from event queue: err=%+v", qj.Name, err)
-			} else {
-				if exists {
-					glog.V(3).Infof("[enqueue] %s found in event queue.  This will add a duplicate in the following call to eventQueue.Add().", qj.Name)
-				}
-			}
-		}
-		glog.V(3).Infof("[enqueue] %s eventQueue.Add_byEnqueue &qj=%p Version=%s Status=%+v aw=%v", qj.Name, qj, qj.ResourceVersion, qj.Status, qj)
-	}
 	err := cc.eventQueue.Add(qj)  // add to FIFO queue if not in, update object & keep position if already in FIFO queue
 	if err != nil {
 		glog.Errorf("[enqueue] Fail to enqueue %s to eventQueue, ignore.  *Delay=%.6f seconds &qj=%p Version=%s Status=%+v err=%#v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qj, qj.ResourceVersion, qj.Status, err)
@@ -1034,23 +1003,6 @@ func (cc *XController) enqueueIfNotPresent(obj interface{}) error {
 	aw, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
 		return fmt.Errorf("[enqueueIfNotPresent] obj is not AppWrapper. obj=%+v", obj)
-	}
-
-	if (aw.Name == "aw-generic-deployment-2-030") {
-		objKey, err := GetQueueJobKey(obj)
-		if (err != nil) {
-			glog.V(3).Infof("[enqueueIfNotPresent] Enqueue failed for %s.  Error getting key from aw object: err=%+v", aw.Name, err)
-		} else {
-			_, exists, err := cc.eventQueue.GetByKey(objKey)
-			if (err != nil) {
-				glog.V(3).Infof("[enqueueIfNotPresent] Enqueue failed for %s.  Error getting aw from event queue: err=%+v", aw.Name, err)
-			} else {
-				if exists {
-					glog.V(3).Infof("[enqueueIfNotPresent] %s found in event queue.  Should not be added on the following call to AddIfNotPresent().", aw.Name)
-				}
-			}
-		}
-		glog.V(3).Infof("[enqueueIfNotPresent] %s eventQueue.Add_byEnqueue &qj=%p Version=%s Status=%+v aw=%v", aw.Name, aw, aw.ResourceVersion, aw.Status, aw)
 	}
 
 	err := cc.eventQueue.AddIfNotPresent(aw)  // add to FIFO queue if not in, update object & keep position if already in FIFO queue
@@ -1136,9 +1088,6 @@ func (cc *XController) worker() {
 
 			return nil
 		}
-		if (queuejob.Name == "aw-generic-deployment-2-030") {
-			glog.V(3).Infof("[worker] Popped %s from event queue       &queuejob=%p       queuejob=%+v", queuejob.Name, queuejob, queuejob)
-		}
 
 		// sync AppWrapper
 		if err := cc.syncQueueJob(queuejob); err != nil {
@@ -1172,16 +1121,8 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 	if larger(queueJob.ResourceVersion, qj.ResourceVersion) {
 		glog.V(10).Infof("[worker-syncQJ] %s found more recent copy from cache       &qj=%p       qj=%+v", qj.Name, qj, qj)
 		glog.V(10).Infof("[worker-syncQJ] %s found more recent copy from cache &queueJob=%p queueJob=%+v", queueJob.Name, queueJob, queueJob)
-		if (qj.Name == "aw-generic-deployment-2-030") {
-			glog.V(3).Infof("[worker-syncQJ] %s found more recent copy from event queue       &qj=%p       qj=%+v", qj.Name, qj, qj)
-			glog.V(3).Infof("[worker-syncQJ] %s found more recent copy from cache &queueJob=%p queueJob=%+v", queueJob.Name, queueJob, queueJob)
-		}
 
 		queueJob.DeepCopyInto(qj)
-		if (qj.Name == "aw-generic-deployment-2-030") {
-			glog.V(3).Infof("[worker-syncQJ] %s AFTER found more recent copy from event queue       &qj=%p       qj=%+v", qj.Name, qj, qj)
-			glog.V(3).Infof("[worker-syncQJ] %s AFTER found more recent copy from cache &queueJob=%p queueJob=%+v", queueJob.Name, queueJob, queueJob)
-		}
 	}
 
 	// If it is Agent (not a dispatcher), update pod information
@@ -1266,9 +1207,6 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 				if err = cc.qjqueue.AddIfNotPresent(qj); err != nil {
 					glog.Errorf("[worker-manageQJ] Fail to add %s to activeQueue. Back to eventQueue activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v err=%#v",
 						qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, err)
-					if (qj.Name == "aw-generic-deployment-2-030") {
-						glog.V(3).Infof("[worker-manageQJ] %s eventQueue.Add_byEnqueue &qj=%p Version=%s Status=%+v aw=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status, qj)
-					}
 					cc.enqueue(qj)
 				} else {
 					glog.V(3).Infof("[worker-manageQJ] %s 1Delay=%.6f seconds activeQ.Add_success activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
