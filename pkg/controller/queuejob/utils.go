@@ -8,7 +8,7 @@ import (
         "k8s.io/apimachinery/pkg/api/meta"
         metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
         "k8s.io/apimachinery/pkg/util/uuid"
-        "k8s.io/client-go/rest"
+	"k8s.io/client-go/rest"
 
         arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
         "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
@@ -146,4 +146,15 @@ func createAppWrapperKind(config *rest.Config) error {
 	return nil
 }
 
+// AppWrapperCondition returns condition of a AppWrapper condition.
+func GenerateAppWrapperCondition(condType arbv1.AppWrapperConditionType, condStatus corev1.ConditionStatus, condReason string, condMsg string) arbv1.AppWrapperCondition {
+	return arbv1.AppWrapperCondition{
+		Type:    condType,
+		Status:  condStatus,
+		LastUpdateMicroTime:  metav1.NowMicro(),
+		LastTransitionMicroTime: metav1.NowMicro(),
+		Reason:  condReason,
+		Message: condMsg,
+	}
+}
 
