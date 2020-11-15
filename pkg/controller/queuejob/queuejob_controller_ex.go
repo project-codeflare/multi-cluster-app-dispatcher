@@ -429,28 +429,30 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 				continue
 			}
 
-			//Check to see if if this AW job has been dispatched for a time window before preempting
-			conditionsLen := len(value.Status.Conditions)
-			var dispatchConditionExists bool
-			dispatchConditionExists = false
-			var condition arbv1.AppWrapperCondition
-			// Get the last time the AppWrapper was dispatched
-			for i := (conditionsLen - 1); i > 0; i-- {
-				condition = value.Status.Conditions[i]
-				if (condition.Type != arbv1.AppWrapperCondDispatched) {
+			if int(value.Status.Running) < replicas {
+
+				//Check to see if if this AW job has been dispatched for a time window before preempting
+				conditionsLen := len(value.Status.Conditions)
+				var dispatchConditionExists bool
+				dispatchConditionExists = false
+				var condition arbv1.AppWrapperCondition
+				// Get the last time the AppWrapper was dispatched
+				for i := (conditionsLen - 1); i > 0; i-- {
+					condition = value.Status.Conditions[i]
+					if (condition.Type != arbv1.AppWrapperCondDispatched) {
+						continue
+					}
+					dispatchConditionExists = true
+					break
+				}
+
+				// Now check for 0 running pods and for the minimum age and then
+				// skip preempt if current time is not beyond minimum age
+				minAge := condition.LastTransitionMicroTime.Add(60 * time.Second)
+				if (value.Status.Running <= 0) && (dispatchConditionExists && (time.Now().Before(minAge))) {
 					continue
 				}
-				dispatchConditionExists = true
-				break
-			}
-			// Now check for the minimum age and skip preempt if current time is not beyond minimum age
-			minAge := condition.LastTransitionMicroTime.Add(60 * time.Second)
-			if dispatchConditionExists && (time.Now().Before(minAge))  {
-				continue
-			}
 
-			if int(value.Status.Running) < replicas {
-				//Check to see if if this AW job has been dispatched for a time window before preempting
 				if (replicas > 0) {
 					glog.V(3).Infof("AppWrapper %s is eligible for preemption %v - %v , %v !!! \n", value.Name, value.Status.Running, replicas, value.Status.Succeeded)
 					qjobs = append(qjobs, value)
