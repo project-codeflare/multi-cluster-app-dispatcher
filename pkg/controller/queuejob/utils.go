@@ -158,3 +158,25 @@ func GenerateAppWrapperCondition(condType arbv1.AppWrapperConditionType, condSta
 	}
 }
 
+// AppWrapperCondition returns condition of a AppWrapper condition.
+func isLastConditionDuplicate(aw *arbv1.AppWrapper, condType arbv1.AppWrapperConditionType, condStatus corev1.ConditionStatus, condReason string, condMsg string) bool {
+	if (aw.Status.Conditions == nil) {
+		return false
+	}
+
+	lastIndex := len(aw.Status.Conditions) - 1
+
+	if (lastIndex < 0) {
+		return false
+	}
+
+	lastCond := aw.Status.Conditions[lastIndex]
+	if (lastCond.Type == condType) &&
+		(lastCond.Status == condStatus) &&
+		(lastCond.Reason == condReason) &&
+		(lastCond.Message == condMsg) {
+		return true
+	} else {
+		return false
+	}
+}
