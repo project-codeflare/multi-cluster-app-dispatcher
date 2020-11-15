@@ -1,0 +1,54 @@
+# Default values for kube-arbitrator.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+deploymentName: xqueuejob-controller
+namespace: kube-system
+replicaCount: 1
+loglevel: 4
+image:
+  repository: mcad-controller
+  tag: latest
+  pullPolicy: Always
+
+httpImage:
+  repository: restserver
+  tag: latest
+  pullPolicy: Always
+
+httpServerImage:
+  repository: httpserver
+  tag: latest
+  pullPolicy: Always
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2048Mi
+  requests:
+    cpu: 2000m
+    memory: 2048Mi
+
+imagePullSecret:
+  name:
+  username: iamapikey
+  registry: registry.stage1.ng.bluemix.net
+  password: dummyvalue
+
+serviceAccount: xqueuejob-controller
+
+nodeSelector:
+  hostname:
+
+configMap:
+  name:
+  dispatcherMode: '"false"'
+  agentConfigs:
+  quoteRestUrl:
+
+volumes:
+  hostPath:
+
+quotaManagement:
+  rbac:
+    apiGroup:
+    resource:

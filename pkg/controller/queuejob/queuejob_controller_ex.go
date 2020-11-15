@@ -1241,7 +1241,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 				// Call Resource Controller of ar.Type to issue REST call to Etcd for resource creation
 				err00 := cc.qjobResControls[ar.Type].SyncQueueJob(qj, &ar)
 				if err00 != nil {
-					dispatchFailureMessage = fmt.Sprintf("Failed to create item: %s/%s", qj.Namespace, qj.Name)
+					dispatchFailureMessage = fmt.Sprintf("%s/%s creation failure: %+v", qj.Namespace, qj.Name, err00)
 					glog.V(3).Infof("[worker-manageQJ] Error dispatching job=%s type=%v Status=%+v err=%+v", qj.Name, ar.Type, qj.Status, err00)
 					dispatched = false
 					break
@@ -1252,7 +1252,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 				glog.V(10).Infof("[worker-manageQJ] before dispatch Generic.SyncQueueJob %s &qj=%p Version=%s Status=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status)
 				_, err00 := cc.genericresources.SyncQueueJob(qj, &ar)
 				if err00 != nil {
-					dispatchFailureMessage = fmt.Sprintf("Failed to create generic item: %s/%s", qj.Namespace, qj.Name)
+					dispatchFailureMessage = fmt.Sprintf("%s/%s creation failure: %+v", qj.Namespace, qj.Name, err00)
 					glog.Errorf("[worker-manageQJ] Error dispatching job=%s Status=%+v err=%+v", qj.Name, qj.Status, err00)
 					dispatched = false
 				}
@@ -1268,8 +1268,10 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper) error {
 			} else {
 				qj.Status.State = arbv1.AppWrapperStateFailed
 				qj.Status.QueueJobState = arbv1.AppWrapperCondFailed
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondFailed, v1.ConditionTrue, dispatchFailureReason, dispatchFailureMessage)
-				qj.Status.Conditions = append(qj.Status.Conditions, cond)
+				if ( !isLastConditionDuplicate(qj,arbv1.AppWrapperCondFailed, v1.ConditionTrue, dispatchFailureReason, dispatchFailureMessage) ) {
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondFailed, v1.ConditionTrue, dispatchFailureReason, dispatchFailureMessage)
+					qj.Status.Conditions = append(qj.Status.Conditions, cond)
+				}
 				cc.Cleanup(qj)
 			}
 
