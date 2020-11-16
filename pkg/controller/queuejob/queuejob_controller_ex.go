@@ -981,16 +981,7 @@ func (cc *XController) updateEtcd(qj *arbv1.AppWrapper, at string) error {
 }
 
 func (cc *XController) updateStatusInEtcd(qj *arbv1.AppWrapper, at string) error {
-	//apiCacheAWJob, e := cc.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
-	//
-	//if (e != nil) {
-	//	glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s, namespace: %s at %s err=%v",
-	//		apiCacheAWJob.Name, apiCacheAWJob.Namespace, at, e)
-	//	return e
-	//}
-	//TODO: Remove next line
 	var apiCacheAWJob*arbv1.AppWrapper
-	//TODO: Remove next line
 	apiCacheAWJob = qj
 	if _, err := cc.arbclients.ArbV1().AppWrappers(apiCacheAWJob.Namespace).UpdateStatus(apiCacheAWJob); err != nil {
 		glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s, namespace: %s at %s err=%v",
@@ -1025,17 +1016,6 @@ func (qjm *XController) backoff(q *arbv1.AppWrapper, reason string, message stri
 	time.Sleep(time.Duration(qjm.serverOption.BackoffTime) * time.Second)
 	qjm.qjqueue.MoveToActiveQueueIfExists(workingAW)
 
-	//// Update condition after backoff
-	//apiCacheAWJob, e = qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
-	//if (e == nil) {
-	//	workingAW = apiCacheAWJob
-		workingAW.Status.QueueJobState = arbv1.AppWrapperCondQueueing
-		returnCond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "BackoffTimerExpired.", "")
-		workingAW.Status.Conditions = append(workingAW.Status.Conditions, returnCond)
-		workingAW.Status.FilterIgnore = true  // update QueueJobState only, no work needed
-		//qjm.updateEtcd(workingAW, "backoff - Queueing")
-		qjm.updateStatusInEtcd(workingAW, "backoff - Queueing")
-	//}
 	glog.V(3).Infof("[backoff] %s activeQ.Add after sleep for %d seconds. activeQ=%t Unsched=%t &aw=%p Version=%s Status=%+v", workingAW.Name,
 		qjm.serverOption.BackoffTime, qjm.qjqueue.IfExistActiveQ((workingAW)), qjm.qjqueue.IfExistUnschedulableQ((workingAW)), workingAW, workingAW.ResourceVersion, workingAW.Status)
 }
