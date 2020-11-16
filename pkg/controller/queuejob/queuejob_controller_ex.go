@@ -952,14 +952,16 @@ func (qjm *XController) ScheduleNext() {
 // Update AppWrappers in etcd
 // todo: This is a current workaround for duplicate message bug.
 func (cc *XController) updateEtcd(qj *arbv1.AppWrapper, at string) error {
-	apiCacheAWJob, e := cc.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
+	//apiCacheAWJob, e := cc.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
+	//
+	//if (e != nil) {
+	//	glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s, namespace: %s at %s err=%v",
+	//		apiCacheAWJob.Name, apiCacheAWJob.Namespace, at, e)
+	//	return e
+	//}
 
-	if (e != nil) {
-		glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s, namespace: %s at %s err=%v",
-			apiCacheAWJob.Name, apiCacheAWJob.Namespace, at, e)
-		return e
-	}
-
+	//TODO: Remove next line
+	var apiCacheAWJob*arbv1.AppWrapper
 	//TODO: Remove next line
 	apiCacheAWJob = qj
 	apiCacheAWJob.Status.Sender = "before "+ at  // set Sender string to indicate code location
