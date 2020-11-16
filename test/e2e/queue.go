@@ -29,7 +29,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	It("Create AppWrapper - Generic 100 Deployment Only - 2 pods each", func() {
 		context := initTestContext()
-		defer cleanupTestContextExtendedTime(context, (300 * time.Second))
+		defer cleanupTestContextExtendedTime(context, (240 * time.Second))
 
 		const (
 			awCount = 100
@@ -54,7 +54,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		}
 
 		// Give the deployments time to create pods
-		time.Sleep(3 * time.Minute)
+		time.Sleep(2 * time.Minute)
 		for i := 0; i < awCount; i++ {
 			if ((i+1) % modDivisor) == 0 || i ==0 {
 				fmt.Fprintf(os.Stdout, "[e2e] Checking for %d replicas running for AW %s.\n", replicas, aws[i].Name)
