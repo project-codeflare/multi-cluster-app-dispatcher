@@ -1004,23 +1004,21 @@ func (cc *XController) updateStatusInEtcd(qj *arbv1.AppWrapper, at string) error
 
 func (qjm *XController) backoff(q *arbv1.AppWrapper, reason string, message string) {
 	var workingAW *arbv1.AppWrapper
-	//TODO: Remove next line
-	workingAW = q
-	//apiCacheAWJob, e := qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
-	//// Update condition
-	//if (e == nil) {
-	//	workingAW = apiCacheAWJob
-	//	apiCacheAWJob.Status.QueueJobState = arbv1.AppWrapperCondBackoff
+	apiCacheAWJob, e := qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
+	// Update condition
+	if (e == nil) {
+		workingAW = apiCacheAWJob
+		apiCacheAWJob.Status.QueueJobState = arbv1.AppWrapperCondBackoff
 		cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondBackoff, v1.ConditionTrue, reason, message)
 		workingAW.Status.Conditions = append(workingAW.Status.Conditions, cond)
 		workingAW.Status.FilterIgnore = true // update QueueJobState only, no work needed
 		//qjm.updateEtcd(workingAW, "backoff - Rejoining")
 		qjm.updateStatusInEtcd(workingAW, "backoff - Rejoining")
-	//} else {
-	//	workingAW = q
+	} else {
+		workingAW = q
 		glog.Errorf("[backoff] Failed to retrieve cached object for %s/%s.  Continuing with possible stale object without updating conditions.", workingAW.Namespace,workingAW.Name)
 
-	//}
+	}
 	qjm.qjqueue.AddUnschedulableIfNotPresent(workingAW)
 	glog.V(3).Infof("[backoff] %s move to unschedulableQ before sleep for %d seconds. activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", workingAW.Name,
 		qjm.serverOption.BackoffTime, qjm.qjqueue.IfExistActiveQ((workingAW)), qjm.qjqueue.IfExistUnschedulableQ((workingAW)), workingAW, workingAW.ResourceVersion, workingAW.Status)
