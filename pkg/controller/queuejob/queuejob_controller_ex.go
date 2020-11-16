@@ -952,15 +952,25 @@ func (qjm *XController) ScheduleNext() {
 // Update AppWrappers in etcd
 // todo: This is a current workaround for duplicate message bug.
 func (cc *XController) updateEtcd(qj *arbv1.AppWrapper, at string) error {
-	qj.Status.Sender = "before "+ at  // set Sender string to indicate code location
-	qj.Status.Local  = false          // for Informer FilterFunc to pickup
-	if _, err := cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj); err != nil {
-		glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s, namespace: %s at %s err=%v", qj.Name, qj.Namespace, at, err)
+	apiCacheAWJob, e := cc.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
+
+	if (e != nil) {
+		glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s, namespace: %s at %s err=%v",
+			apiCacheAWJob.Name, apiCacheAWJob.Namespace, at, e)
+		return e
+	}
+
+	apiCacheAWJob.Status.Sender = "before "+ at  // set Sender string to indicate code location
+	apiCacheAWJob.Status.Local  = false          // for Informer FilterFunc to pickup
+	if _, err := cc.arbclients.ArbV1().AppWrappers(apiCacheAWJob.Namespace).Update(apiCacheAWJob); err != nil {
+		glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s, namespace: %s at %s err=%v",
+			apiCacheAWJob.Name, apiCacheAWJob.Namespace, at, err)
 		return err
 //	} else {  // qjj should be the same as qj except with newer ResourceVersion
 //		qj.ResourceVersion = qjj.ResourceVersion  // update new ResourceVersion from etcd
 	}
-	glog.V(10).Infof("[updateEtcd] AppWrapperUpdate success %s at %s &qj=%p qj=%+v", qj.Name, at, qj, qj)
+	glog.V(10).Infof("[updateEtcd] AppWrapperUpdate success %s at %s &qj=%p qj=%+v",
+		apiCacheAWJob.Name, at, apiCacheAWJob, apiCacheAWJob)
 	//qj.Status.Local  = true           // for Informer FilterFunc to ignore duplicate
 	//qj.Status.Sender = "after  "+ at  // set Sender string to indicate code location
 	return nil
@@ -1077,7 +1087,7 @@ func (qjm *XController) UpdateQueueJobs() {
 					LastTransitionMicroTime: metav1.NowMicro(),
 				},
 			}
-			glog.V(3).Infof("[UpdateQueueJobs] %s 0Delay=%.6f seconds CreationTimestamp=%s ControllerFirstTimestamp=%s",
+			glog.V(4).Infof("[UpdateQueueJobs] %s 0Delay=%.6f seconds CreationTimestamp=%s ControllerFirstTimestamp=%s",
 				newjob.Name, time.Now().Sub(newjob.Status.ControllerFirstTimestamp.Time).Seconds(), newjob.CreationTimestamp, newjob.Status.ControllerFirstTimestamp)
 		}
 		glog.V(10).Infof("[UpdateQueueJobs] %s: qjqueue=%t &qj=%p Version=%s Status=%+v", newjob.Name, qjm.qjqueue.IfExist(newjob), newjob, newjob.ResourceVersion, newjob.Status)
@@ -1607,7 +1617,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 
 //Cleanup function
 func (cc *XController) Cleanup(queuejob *arbv1.AppWrapper) error {
-	glog.V(3).Infof("[Cleanup] begin AppWrapper %s Version=%s Status=%+v\n", queuejob.Name, queuejob.ResourceVersion, queuejob.Status)
+	glog.V(4).Infof("[Cleanup] begin AppWrapper %s Version=%s Status=%+v\n", queuejob.Name, queuejob.ResourceVersion, queuejob.Status)
 
 	if !cc.isDispatcher {
 		if queuejob.Spec.AggrResources.Items != nil {
@@ -1632,7 +1642,7 @@ func (cc *XController) Cleanup(queuejob *arbv1.AppWrapper) error {
 	queuejob.Status.Running      = 0
 	queuejob.Status.Succeeded    = 0
 	queuejob.Status.Failed       = 0
-	glog.V(3).Infof("[Cleanup] end AppWrapper %s Version=%s Status=%+v\n", queuejob.Name, queuejob.ResourceVersion, queuejob.Status)
+	glog.V(4).Infof("[Cleanup] end AppWrapper %s Version=%s Status=%+v\n", queuejob.Name, queuejob.ResourceVersion, queuejob.Status)
 
 	return nil
 }
