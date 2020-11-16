@@ -1412,12 +1412,17 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 		if !qj.Status.CanRun && (qj.Status.State != arbv1.AppWrapperStateEnqueued && qj.Status.State != arbv1.AppWrapperStateDeleted) {
 			// if there are running resources for this job then delete them because the job was put in
 			// pending state...
-			glog.V(2).Infof("[manageQueueJob] Deleting resources for AppWrapper Job %s because it was preempted (newjob) status=%+v\n", qj.Name, qj.Status)
-			err = cc.Cleanup(qj)
-			glog.V(8).Infof("[manageQueueJob] Validation after deleting resources for AppWrapper Job %s because it was be preempted (newjob) status=%+v\n", qj.Name, qj.Status)
-			if err != nil {
-				glog.Errorf("[manageQueueJob] Fail to delete resources for AppWrapper Job %s, err=%#v", qj.Name, err)
-				return err
+
+			// If this the first time seeing this AW, no need to delete.
+			stateLen := len(qj.Status.State)
+			if (stateLen > 0) {
+				glog.V(2).Infof("[manageQueueJob] Deleting resources for AppWrapper Job %s because it was preempted, status=%+v\n", qj.Name, qj.Status)
+				err = cc.Cleanup(qj)
+				glog.V(8).Infof("[manageQueueJob] Validation after deleting resources for AppWrapper Job %s because it was be preempted, status=%+v\n", qj.Name, qj.Status)
+				if err != nil {
+					glog.Errorf("[manageQueueJob] Fail to delete resources for AppWrapper Job %s, err=%#v", qj.Name, err)
+					return err
+				}
 			}
 
 			qj.Status.State = arbv1.AppWrapperStateEnqueued
