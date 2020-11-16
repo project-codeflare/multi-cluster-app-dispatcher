@@ -960,6 +960,8 @@ func (cc *XController) updateEtcd(qj *arbv1.AppWrapper, at string) error {
 		return e
 	}
 
+	//TODO: Remove next line
+	apiCacheAWJob = qj
 	apiCacheAWJob.Status.Sender = "before "+ at  // set Sender string to indicate code location
 	apiCacheAWJob.Status.Local  = false          // for Informer FilterFunc to pickup
 	if _, err := cc.arbclients.ArbV1().AppWrappers(apiCacheAWJob.Namespace).Update(apiCacheAWJob); err != nil {
@@ -976,38 +978,60 @@ func (cc *XController) updateEtcd(qj *arbv1.AppWrapper, at string) error {
 	return nil
 }
 
+func (cc *XController) updateStatusInEtcd(qj *arbv1.AppWrapper, at string) error {
+	apiCacheAWJob, e := cc.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
+
+	if (e != nil) {
+		glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s, namespace: %s at %s err=%v",
+			apiCacheAWJob.Name, apiCacheAWJob.Namespace, at, e)
+		return e
+	}
+	if _, err := cc.arbclients.ArbV1().AppWrappers(apiCacheAWJob.Namespace).UpdateStatus(apiCacheAWJob); err != nil {
+		glog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s, namespace: %s at %s err=%v",
+			apiCacheAWJob.Name, apiCacheAWJob.Namespace, at, err)
+		return err
+	}
+	glog.V(10).Infof("[updateEtcd] AppWrapperUpdate success %s at %s &qj=%p qj=%+v",
+		apiCacheAWJob.Name, at, apiCacheAWJob, apiCacheAWJob)
+	return nil
+}
+
 func (qjm *XController) backoff(q *arbv1.AppWrapper, reason string, message string) {
 	var workingAW *arbv1.AppWrapper
-	apiCacheAWJob, e := qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
-	// Update condition
-	if (e == nil) {
-		workingAW = apiCacheAWJob
-		apiCacheAWJob.Status.QueueJobState = arbv1.AppWrapperCondBackoff
+	//TODO: Remove next line
+	workingAW = q
+	//apiCacheAWJob, e := qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
+	//// Update condition
+	//if (e == nil) {
+	//	workingAW = apiCacheAWJob
+	//	apiCacheAWJob.Status.QueueJobState = arbv1.AppWrapperCondBackoff
 		cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondBackoff, v1.ConditionTrue, reason, message)
 		workingAW.Status.Conditions = append(workingAW.Status.Conditions, cond)
 		workingAW.Status.FilterIgnore = true // update QueueJobState only, no work needed
 		qjm.updateEtcd(workingAW, "backoff - Rejoining")
-	} else {
-		workingAW = q
+		//qjm.updateStatusInEtcd(workingAW, "backoff - Rejoining")
+	//} else {
+	//	workingAW = q
 		glog.Errorf("[backoff] Failed to retrieve cached object for %s/%s.  Continuing with possible stale object without updating conditions.", workingAW.Namespace,workingAW.Name)
 
-	}
+	//}
 	qjm.qjqueue.AddUnschedulableIfNotPresent(workingAW)
 	glog.V(3).Infof("[backoff] %s move to unschedulableQ before sleep for %d seconds. activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", workingAW.Name,
 		qjm.serverOption.BackoffTime, qjm.qjqueue.IfExistActiveQ((workingAW)), qjm.qjqueue.IfExistUnschedulableQ((workingAW)), workingAW, workingAW.ResourceVersion, workingAW.Status)
 	time.Sleep(time.Duration(qjm.serverOption.BackoffTime) * time.Second)
 	qjm.qjqueue.MoveToActiveQueueIfExists(workingAW)
 
-	// Update condition after backoff
-	apiCacheAWJob, e = qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
-	if (e == nil) {
-		workingAW = apiCacheAWJob
+	//// Update condition after backoff
+	//apiCacheAWJob, e = qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
+	//if (e == nil) {
+	//	workingAW = apiCacheAWJob
 		workingAW.Status.QueueJobState = arbv1.AppWrapperCondQueueing
 		returnCond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "BackoffTimerExpired.", "")
 		workingAW.Status.Conditions = append(workingAW.Status.Conditions, returnCond)
 		workingAW.Status.FilterIgnore = true  // update QueueJobState only, no work needed
 		qjm.updateEtcd(workingAW, "backoff - Queueing")
-	}
+		//qjm.updateStatusInEtcd(workingAW, "backoff - Queueing")
+	//}
 	glog.V(3).Infof("[backoff] %s activeQ.Add after sleep for %d seconds. activeQ=%t Unsched=%t &aw=%p Version=%s Status=%+v", workingAW.Name,
 		qjm.serverOption.BackoffTime, qjm.qjqueue.IfExistActiveQ((workingAW)), qjm.qjqueue.IfExistUnschedulableQ((workingAW)), workingAW, workingAW.ResourceVersion, workingAW.Status)
 }
