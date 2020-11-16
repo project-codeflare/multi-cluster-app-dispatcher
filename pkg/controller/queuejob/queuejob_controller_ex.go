@@ -928,6 +928,7 @@ func (qjm *XController) ScheduleNext() {
 						}
 					}
 				} else { // Not enough free resources to dispatch HOL
+					dispatchFailedMessage = "Insufficient quota to dispatch AppWrapper."
 					glog.V(3).Infof("[ScheduleNext] HOL Blocking by %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				}
 			} else { // Not enough free resources to dispatch HOL
