@@ -3,11 +3,7 @@ CAT_CMD=$(if $(filter $(OS),Windows_NT),type,cat)
 VERSION_FILE=./CONTROLLER_VERSION
 RELEASE_VER=v$(shell $(CAT_CMD) $(VERSION_FILE))
 CURRENT_DIR=$(shell pwd)
-#MCAD_REGISTRY=$(shell docker ps --filter name=mcad-registry | grep -v NAME)
-#LOCAL_HOST_NAME=localhost
-#LOCAL_HOST_NAME=0.0.0.0
-#LOCAL_HOST_NAME=$(shell ifconfig en0 | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*'  | grep -v '127.0.0.1')
-#dockerhub_repository=${LOCAL_HOST_NAME}:5000
+GIT_BRANCH=$(git symbolic-ref --short HEAD 2>&1 | grep -v fatal)
 
 mcad-controller: init generate-code
 	$(info Compiling controller)
@@ -31,7 +27,7 @@ images:
 	$(info List executable directory)
 	ls -l ${CURRENT_DIR}/_output/bin
 	$(info Build the docker image)
-	docker build --quiet --no-cache --tag mcad-controller:${RELEASE_VER} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
+	docker build --quiet --no-cache --tag mcad-controller:${${RELEASE_VER} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
 
 push-images:
 ifeq ($(strip $(dockerhub_repository)),)
