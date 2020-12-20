@@ -16,10 +16,20 @@ ifneq ($(strip $(GIT_BRANCH)),)
 endif
 TAG:=${TAG}${RELEASE_VER}
 
+.PHONY: print-global-variables
 
 mcad-controller: init generate-code
 	$(info Compiling controller)
 	CGO_ENABLED=0 GOARCH=amd64 go build -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
+
+print-global-variables:
+	$(info "---")
+	$(info "MAKE GLOBAL VARIABLES:")
+	$(info "  "BIN_DIR="$(BIN_DIR)")
+	$(info "  "GIT_BRANCH="$(GIT_BRANCH)")
+	$(info "  "RELEASE_VER="$(RELEASE_VER)")
+	$(info "  "TAG="$(TAG)")
+	$(info "---")
 
 verify: generate-code
 #	hack/verify-gofmt.sh
@@ -29,7 +39,7 @@ verify: generate-code
 init:
 	mkdir -p ${BIN_DIR}
 
-verify-tag-name:
+verify-tag-name: print-global-variables
 	# Check for invalid tag name
 	t=${TAG} && [ $${#t} -le 128 ] || { echo "Target name $$t has 128 or more chars"; false; }
 
