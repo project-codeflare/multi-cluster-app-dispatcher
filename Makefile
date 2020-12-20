@@ -3,7 +3,12 @@ CAT_CMD=$(if $(filter $(OS),Windows_NT),type,cat)
 VERSION_FILE=./CONTROLLER_VERSION
 RELEASE_VER=v$(shell $(CAT_CMD) $(VERSION_FILE))
 CURRENT_DIR=$(shell pwd)
-GIT_BRANCH=$(shell git symbolic-ref --short HEAD 2>&1 | grep -v fatal)
+GIT_BRANCH:=$(shell git symbolic-ref --short HEAD 2>&1 | grep -v fatal)
+# Reset branch name if this a Travis CI environment
+ifneq ($(strip $(TRAVIS_BRANCH)),)
+	GIT_BRANCH:=${TRAVIS_BRANCH}
+endif
+
 TAG:=$(shell echo "")
 # Check for git repository id sent by Travis-CI
 ifneq ($(strip $(git_repository_id)),)
