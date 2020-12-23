@@ -259,7 +259,7 @@ function kube-test-env-up {
     echo "Installing Helm Client..."
     curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get > install-helm.sh
     chmod u+x install-helm.sh
-    ./install-helm.sh --version v2.16.3
+    ./install-helm.sh --version v2.17.0
 
     # Start Helm Server
     echo "Installing Helm Server..."
