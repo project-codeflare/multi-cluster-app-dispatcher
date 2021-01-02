@@ -285,7 +285,7 @@ subjects:
   namespace: kube-system
 #{{ end }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Values.deploymentName }}

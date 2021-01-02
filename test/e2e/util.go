@@ -881,7 +881,7 @@ func createDeploymentAWwith126CPU(context *context, name string) *arbv1.AppWrapp
 }
 
 func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper {
-	rb := []byte(`{"apiVersion": "apps/v1beta1",
+	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-generic-deployment-3",
@@ -955,7 +955,7 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 
 func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand string, replicas int) *arbv1.AppWrapper {
 	rb := []byte(fmt.Sprintf(`{
-	"apiVersion": "apps/v1beta1",
+	"apiVersion": "apps/v1",
 	"kind": "Deployment", 
 	"metadata": {
 		"name": "%s",

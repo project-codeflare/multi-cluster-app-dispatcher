@@ -1,25 +1,14 @@
 # this config file contains all config fields with comments
 kind: Cluster
-apiVersion: kind.sigs.k8s.io/v1alpha3
-# 1 control plane node and 3 workers
+apiVersion: kind.x-k8s.io/v1alpha4
+# 1 control plane node and 1 worker
 nodes:
   # the control plane node config
   - role: control-plane
-    # kubernetes version 1.11.10
-    image: kindest/node:v1.11.10@sha256:abd0275ead5ddfd477b7bc491f71957d7dd75408a346834ffe8a9bee5fbdc15b
+    # kubernetes version 1.16.3 from kind v0.6.1
+    image: kindest/node:v1.16.3@sha256:70ce6ce09bee5c34ab14aec2b84d6edb260473a60638b1b095470a3a0f95ebec
   # the three workers
   - role: worker
-    # replicas specifies the number of nodes to create with this configuration
-    replicas: 1
-    # kubernetes version 1.11.10
-    image: kindest/node:v1.11.10@sha256:abd0275ead5ddfd477b7bc491f71957d7dd75408a346834ffe8a9bee5fbdc15b
-#  - role: worker
-#    # replicas specifies the number of nodes to create with this configuration
-#    replicas: 1
-#    # kubernetes version 1.11.10
-#    image: kindest/node:v1.11.10@sha256:abd0275ead5ddfd477b7bc491f71957d7dd75408a346834ffe8a9bee5fbdc15b
-#  - role: worker
-#    # replicas specifies the number of nodes to create with this configuration
-#    replicas: 1
-#    # kubernetes version 1.11.10
-#    image: kindest/node:v1.11.10@sha256:abd0275ead5ddfd477b7bc491f71957d7dd75408a346834ffe8a9bee5fbdc15b
+    # kubernetes version 1.16.3 from kind v0.6.1
+    image: kindest/node:v1.16.3@sha256:70ce6ce09bee5c34ab14aec2b84d6edb260473a60638b1b095470a3a0f95ebec
+
