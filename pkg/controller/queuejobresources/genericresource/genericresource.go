@@ -265,9 +265,12 @@ func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, conta
 	unstruct.Object = blob.(map[string]interface{})
 	spec, isFound, _ := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
 	replicas, isFound, _ := unstructured.NestedFloat64(spec, "replicas")
+
+	// Set default to 1 if no replicas field is found.
 	if !isFound {
-		return false, 0, nil
+		replicas = 1
 	}
+	
 	template, isFound, _ := unstructured.NestedMap(spec, "template")
 	subspec, isFound, _ := unstructured.NestedMap(template, "spec")
 	containerList, isFound, _ := unstructured.NestedSlice(subspec, "containers")
