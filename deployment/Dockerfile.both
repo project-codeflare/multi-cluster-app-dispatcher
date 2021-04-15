@@ -1,11 +1,13 @@
-From ubuntu:18.04
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 
 ADD mcad-controller /usr/local/bin
 
-RUN apt-get update
-RUN apt-get -y upgrade
-
-RUN apt-get install -y curl
+RUN true \
+    && microdnf update \
+    && microdnf --nodocs install \
+        curl \
+    && microdnf clean all \
+    && true
 
 RUN cd /usr/local/bin && curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl
 
