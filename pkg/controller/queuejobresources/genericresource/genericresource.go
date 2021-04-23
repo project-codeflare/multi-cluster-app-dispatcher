@@ -17,6 +17,7 @@ limitations under the License.
 package genericresource
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -24,7 +25,7 @@ import (
 
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	"github.com/golang/glog"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -44,16 +45,16 @@ var resourceName = "resourceName"
 var appWrapperKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
 
 type GenericResources struct {
-	clients    *kubernetes.Clientset
+	clients          *kubernetes.Clientset
 	kubeClientConfig *rest.Config
-	arbclients *clientset.Clientset
+	arbclients       *clientset.Clientset
 }
 
 func NewAppWrapperGenericResource(config *rest.Config) *GenericResources {
 	return &GenericResources{
-		clients:    kubernetes.NewForConfigOrDie(config),
+		clients:          kubernetes.NewForConfigOrDie(config),
 		kubeClientConfig: config,
-		arbclients: clientset.NewForConfigOrDie(config),
+		arbclients:       clientset.NewForConfigOrDie(config),
 	}
 }
 
@@ -164,7 +165,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 
 	// Get the resource  to see if it exists
 	labelSelector := fmt.Sprintf("%s=%s, %s=%s", appwrapperJobName, aw.Name, resourceName, unstruct.GetName())
-	inEtcd, err := dclient.Resource(rsrc).List(metav1.ListOptions{LabelSelector: labelSelector})
+	inEtcd, err := dclient.Resource(rsrc).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		return []*v1.Pod{}, err
 	}
@@ -191,17 +192,16 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	var thisObj *unstructured.Unstructured
 	var err1 error
 	if namespaced {
-		thisObj, err1 = dclient.Resource(rsrc).Namespace(namespace).Get(name, metav1.GetOptions{})
+		thisObj, err1 = dclient.Resource(rsrc).Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	} else {
-		thisObj, err1 = dclient.Resource(rsrc).Get(name, metav1.GetOptions{})
+		thisObj, err1 = dclient.Resource(rsrc).Get(context.Background(), name, metav1.GetOptions{})
 	}
 	if err1 != nil {
 		glog.Errorf("Could not get created resource with error %v", err)
 	}
 	thisOwnerRef := metav1.NewControllerRef(thisObj, thisObj.GroupVersionKind())
 
-
-	podL, _ := gr.clients.CoreV1().Pods("").List(metav1.ListOptions{})
+	podL, _ := gr.clients.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
 	pods := []*v1.Pod{}
 	for _, pod := range (*podL).Items {
 		parent := metav1.GetControllerOf(&pod)
@@ -254,6 +254,7 @@ func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map
 
 	return isFound
 }
+
 //checks if object has replicas and containers field
 func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, containers []v1.Container) {
 	var unstruct unstructured.Unstructured
@@ -268,6 +269,7 @@ func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, conta
 	if !isFound {
 		return false, 0, nil
 	}
+
 	template, isFound, _ := unstructured.NestedMap(spec, "template")
 	subspec, isFound, _ := unstructured.NestedMap(template, "spec")
 	containerList, isFound, _ := unstructured.NestedSlice(subspec, "containers")
@@ -288,7 +290,7 @@ func createObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 	var err error
 	if !namespaced {
 		res := dclient.Resource(rsrc)
-		_, err = res.Create(&unstruct, metav1.CreateOptions{})
+		_, err = res.Create(context.Background(), &unstruct, metav1.CreateOptions{})
 		if err != nil {
 			if errors.IsAlreadyExists(err) {
 				glog.Errorf("%v\n", err.Error())
@@ -303,7 +305,7 @@ func createObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 		}
 	} else {
 		res := dclient.Resource(rsrc).Namespace(namespace)
-		_, err = res.Create(&unstruct, metav1.CreateOptions{})
+		_, err = res.Create(context.Background(), &unstruct, metav1.CreateOptions{})
 		if err != nil {
 			if errors.IsAlreadyExists(err) {
 				glog.Errorf("%v\n", err.Error())

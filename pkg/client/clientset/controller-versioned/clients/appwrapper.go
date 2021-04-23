@@ -17,6 +17,7 @@ limitations under the License.
 package clients
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"time"
@@ -48,7 +49,7 @@ func CreateAppWrapperKind(clientset apiextensionsclient.Interface) (*apiextensio
 			},
 		},
 	}
-	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
+	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(context.Background(), crd, nil)
 
 	if err != nil {
 		return nil, err
@@ -56,7 +57,7 @@ func CreateAppWrapperKind(clientset apiextensionsclient.Interface) (*apiextensio
 
 	// wait for CRD being established
 	err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
-		crd, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(appWrapperKindName, metav1.GetOptions{})
+		crd, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(context.Background(), appWrapperKindName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -75,7 +76,7 @@ func CreateAppWrapperKind(clientset apiextensionsclient.Interface) (*apiextensio
 		return false, err
 	})
 	if err != nil {
-		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(appWrapperKindName, nil)
+		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(context.Background(), appWrapperKindName, nil)
 		if deleteErr != nil {
 			return nil, errors.NewAggregate([]error{err, deleteErr})
 		}

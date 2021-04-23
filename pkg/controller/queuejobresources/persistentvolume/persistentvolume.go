@@ -14,16 +14,23 @@ limitations under the License.
 package persistentvolume
 
 import (
+	"context"
 	"fmt"
-	"github.com/golang/glog"
+
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
+	"github.com/golang/glog"
+
 	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+
 	// "k8s.io/apimachinery/pkg/api/meta"
+	"sync"
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,8 +42,6 @@ import (
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"sync"
-	"time"
 )
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
@@ -52,15 +57,15 @@ const (
 
 //QueueJobResService contains service info
 type QueueJobResPersistentvolume struct {
-	clients    				*kubernetes.Clientset
-	arbclients 				*clientset.Clientset
+	clients    *kubernetes.Clientset
+	arbclients *clientset.Clientset
 	// A store of services, populated by the serviceController
 	persistentvolumeStore    corelisters.PersistentVolumeLister
 	persistentvolumeInformer corev1informer.PersistentVolumeInformer
-	rtScheme        		*runtime.Scheme
-	jsonSerializer  		*json.Serializer
+	rtScheme                 *runtime.Scheme
+	jsonSerializer           *json.Serializer
 	// Reference manager to manage membership of queuejob resource and its members
-	refManager 				queuejobresources.RefManager
+	refManager queuejobresources.RefManager
 }
 
 //Register registers a queue job resource type
@@ -130,12 +135,10 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) deletePersistentVolume(o
 	return
 }
 
-
 func (qjrPersistentvolume *QueueJobResPersistentvolume) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
-        total := clusterstateapi.EmptyResource()
-        return total
+	total := clusterstateapi.EmptyResource()
+	return total
 }
-
 
 // Parse queue job api object to get Service template
 func (qjrPersistentvolume *QueueJobResPersistentvolume) getPersistentVolumeTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.PersistentVolume, error) {
@@ -248,14 +251,14 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) SyncQueueJob(queuejob *a
 }
 
 func (qjrPersistentvolume *QueueJobResPersistentvolume) getPersistentVolumeForQueueJob(j *arbv1.AppWrapper) ([]*v1.PersistentVolume, error) {
-	persistentvolumelist, err := qjrPersistentvolume.clients.CoreV1().PersistentVolumes().List(metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, j.Name),})
+	persistentvolumelist, err := qjrPersistentvolume.clients.CoreV1().PersistentVolumes().List(context.Background(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, j.Name)})
 	if err != nil {
 		return nil, err
 	}
 
 	persistentvolumes := []*v1.PersistentVolume{}
 	for i, _ := range persistentvolumelist.Items {
-				persistentvolumes = append(persistentvolumes, &persistentvolumelist.Items[i])
+		persistentvolumes = append(persistentvolumes, &persistentvolumelist.Items[i])
 	}
 
 	// for i, persistentvolume := range persistentvolumelist.Items {

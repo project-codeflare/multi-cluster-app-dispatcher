@@ -17,6 +17,7 @@ limitations under the License.
 package clients
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"time"
@@ -48,7 +49,7 @@ func CreateQueueJobKind(clientset apiextensionsclient.Interface) (*apiextensions
 			},
 		},
 	}
-	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
+	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(context.Background(), crd)
 
 	if err != nil {
 		return nil, err
@@ -56,7 +57,7 @@ func CreateQueueJobKind(clientset apiextensionsclient.Interface) (*apiextensions
 
 	// wait for CRD being established
 	err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
-		crd, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(queueJobKindName, metav1.GetOptions{})
+		crd, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(context.Background(), queueJobKindName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -75,7 +76,7 @@ func CreateQueueJobKind(clientset apiextensionsclient.Interface) (*apiextensions
 		return false, err
 	})
 	if err != nil {
-		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(queueJobKindName, nil)
+		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(context.Background(), queueJobKindName, nil)
 		if deleteErr != nil {
 			return nil, errors.NewAggregate([]error{err, deleteErr})
 		}

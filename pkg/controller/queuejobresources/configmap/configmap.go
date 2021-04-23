@@ -14,17 +14,24 @@ limitations under the License.
 package configmap
 
 import (
+	"context"
 	"fmt"
-	"github.com/golang/glog"
+
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
+	"github.com/golang/glog"
+
 	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+
 	// "k8s.io/apimachinery/pkg/api/meta"
+	"sync"
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -36,8 +43,6 @@ import (
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"sync"
-	"time"
 )
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
@@ -53,15 +58,15 @@ const (
 
 //QueueJobResService contains service info
 type QueueJobResConfigMap struct {
-	clients    			*kubernetes.Clientset
-	arbclients 			*clientset.Clientset
+	clients    *kubernetes.Clientset
+	arbclients *clientset.Clientset
 	// A store of services, populated by the serviceController
-	configmapStore    	corelisters.ConfigMapLister
-	configmapInformer 	corev1informer.ConfigMapInformer
-	rtScheme        	*runtime.Scheme
-	jsonSerializer  	*json.Serializer
+	configmapStore    corelisters.ConfigMapLister
+	configmapInformer corev1informer.ConfigMapInformer
+	rtScheme          *runtime.Scheme
+	jsonSerializer    *json.Serializer
 	// Reference manager to manage membership of queuejob resource and its members
-	refManager 			queuejobresources.RefManager
+	refManager queuejobresources.RefManager
 }
 
 //Register registers a queue job resource type
@@ -131,12 +136,10 @@ func (qjrConfigMap *QueueJobResConfigMap) deleteConfigMap(obj interface{}) {
 	return
 }
 
-
 func (qjrConfigMap *QueueJobResConfigMap) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
-        total := clusterstateapi.EmptyResource()
-        return total
+	total := clusterstateapi.EmptyResource()
+	return total
 }
-
 
 // Parse queue job api object to get Service template
 func (qjrConfigMap *QueueJobResConfigMap) getConfigMapTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.ConfigMap, error) {
@@ -240,7 +243,6 @@ func (qjrConfigMap *QueueJobResConfigMap) SyncQueueJob(queuejob *arbv1.AppWrappe
 	return nil
 }
 
-
 func (qjrConfigMap *QueueJobResConfigMap) getConfigMapForQueueJobRes(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) (*string, *v1.ConfigMap, []*v1.ConfigMap, error) {
 
 	// Get "a" ConfigMap from AppWrapper Resource
@@ -252,12 +254,12 @@ func (qjrConfigMap *QueueJobResConfigMap) getConfigMapForQueueJobRes(qjobRes *ar
 
 	// Get ConfigMap"s" in Etcd Server
 	var _namespace *string
-	if configMapInQjr.Namespace!=""{
+	if configMapInQjr.Namespace != "" {
 		_namespace = &configMapInQjr.Namespace
 	} else {
 		_namespace = &queuejob.Namespace
 	}
-	configMapList, err := qjrConfigMap.clients.CoreV1().ConfigMaps(*_namespace).List(metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name),})
+	configMapList, err := qjrConfigMap.clients.CoreV1().ConfigMaps(*_namespace).List(context.Background(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name)})
 	// configMapList, err := qjrConfigMap.clients.CoreV1().ConfigMaps(*_namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, nil, nil, err
@@ -265,7 +267,7 @@ func (qjrConfigMap *QueueJobResConfigMap) getConfigMapForQueueJobRes(qjobRes *ar
 
 	configMapsInEtcd := []*v1.ConfigMap{}
 	for i, _ := range configMapList.Items {
-				configMapsInEtcd = append(configMapsInEtcd, &configMapList.Items[i])
+		configMapsInEtcd = append(configMapsInEtcd, &configMapList.Items[i])
 	}
 
 	myConfigMapsInEtcd := []*v1.ConfigMap{}
@@ -277,7 +279,6 @@ func (qjrConfigMap *QueueJobResConfigMap) getConfigMapForQueueJobRes(qjobRes *ar
 
 	return _namespace, configMapInQjr, myConfigMapsInEtcd, nil
 }
-
 
 func (qjrConfigMap *QueueJobResConfigMap) deleteQueueJobResConfigMaps(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) error {
 
