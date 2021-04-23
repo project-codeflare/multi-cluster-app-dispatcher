@@ -14,16 +14,23 @@ limitations under the License.
 package service
 
 import (
+	"context"
 	"fmt"
-	"github.com/golang/glog"
+
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
+	"github.com/golang/glog"
+
 	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+
 	// "k8s.io/apimachinery/pkg/api/meta"
+	"sync"
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,8 +42,6 @@ import (
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"sync"
-	"time"
 )
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
@@ -52,15 +57,15 @@ const (
 
 //QueueJobResService contains service info
 type QueueJobResService struct {
-	clients    		*kubernetes.Clientset
-	arbclients 		*clientset.Clientset
+	clients    *kubernetes.Clientset
+	arbclients *clientset.Clientset
 	// A store of services, populated by the serviceController
 	serviceStore    corelisters.ServiceLister
 	serviceInformer corev1informer.ServiceInformer
 	rtScheme        *runtime.Scheme
 	jsonSerializer  *json.Serializer
 	// Reference manager to manage membership of queuejob resource and its members
-	refManager 		queuejobresources.RefManager
+	refManager queuejobresources.RefManager
 }
 
 //Register registers a queue job resource type
@@ -130,12 +135,10 @@ func (qjrService *QueueJobResService) deleteService(obj interface{}) {
 	return
 }
 
-
 func (qjrService *QueueJobResService) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
-        total := clusterstateapi.EmptyResource()
-        return total
+	total := clusterstateapi.EmptyResource()
+	return total
 }
-
 
 // Parse queue job api object to get Service template
 func (qjrService *QueueJobResService) getServiceTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.Service, error) {
@@ -244,7 +247,6 @@ func (qjrService *QueueJobResService) SyncQueueJob(queuejob *arbv1.AppWrapper, q
 	return nil
 }
 
-
 func (qjrService *QueueJobResService) getServiceForQueueJobRes(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) (*string, *v1.Service, []*v1.Service, error) {
 
 	// Get "a" Service from AppWrapper Resource
@@ -256,18 +258,18 @@ func (qjrService *QueueJobResService) getServiceForQueueJobRes(qjobRes *arbv1.Ap
 
 	// Get Service"s" in Etcd Server
 	var _namespace *string
-	if serviceInQjr.Namespace!=""{
+	if serviceInQjr.Namespace != "" {
 		_namespace = &serviceInQjr.Namespace
 	} else {
 		_namespace = &queuejob.Namespace
 	}
-	serviceList, err := qjrService.clients.CoreV1().Services(*_namespace).List(metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name),})
+	serviceList, err := qjrService.clients.CoreV1().Services(*_namespace).List(context.Background(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name)})
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	servicesInEtcd := []*v1.Service{}
 	for i, _ := range serviceList.Items {
-				servicesInEtcd = append(servicesInEtcd, &serviceList.Items[i])
+		servicesInEtcd = append(servicesInEtcd, &serviceList.Items[i])
 	}
 
 	// for i, service := range serviceList.Items {
@@ -291,7 +293,6 @@ func (qjrService *QueueJobResService) getServiceForQueueJobRes(qjobRes *arbv1.Ap
 
 	return _namespace, serviceInQjr, myServicesInEtcd, nil
 }
-
 
 func (qjrService *QueueJobResService) deleteQueueJobResServices(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) error {
 

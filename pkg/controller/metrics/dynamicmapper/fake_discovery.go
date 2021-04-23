@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	swagger "github.com/emicklei/go-restful-swagger12"
-	openapi_v2 "github.com/googleapis/gnostic/openapiv2" // Nhan edited
+	openapi_v2 "github.com/googleapis/gnostic/openapiv2" // fix case sensitive
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"

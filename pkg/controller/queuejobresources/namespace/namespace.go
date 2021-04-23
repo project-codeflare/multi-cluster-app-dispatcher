@@ -14,16 +14,23 @@ limitations under the License.
 package namespace
 
 import (
+	"context"
 	"fmt"
-	"github.com/golang/glog"
+
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
+	"github.com/golang/glog"
+
 	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+
 	// "k8s.io/apimachinery/pkg/api/meta"
+	"sync"
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,8 +42,6 @@ import (
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"sync"
-	"time"
 )
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
@@ -52,15 +57,15 @@ const (
 
 //QueueJobResService contains service info
 type QueueJobResNamespace struct {
-	clients    			*kubernetes.Clientset
-	arbclients 			*clientset.Clientset
+	clients    *kubernetes.Clientset
+	arbclients *clientset.Clientset
 	// A store of services, populated by the serviceController
-	namespaceStore    	corelisters.NamespaceLister
-	namespaceInformer 	corev1informer.NamespaceInformer
-	rtScheme        	*runtime.Scheme
-	jsonSerializer  	*json.Serializer
+	namespaceStore    corelisters.NamespaceLister
+	namespaceInformer corev1informer.NamespaceInformer
+	rtScheme          *runtime.Scheme
+	jsonSerializer    *json.Serializer
 	// Reference manager to manage membership of queuejob resource and its members
-	refManager 			queuejobresources.RefManager
+	refManager queuejobresources.RefManager
 }
 
 //Register registers a queue job resource type
@@ -130,12 +135,10 @@ func (qjrNamespace *QueueJobResNamespace) deleteNamespace(obj interface{}) {
 	return
 }
 
-
 func (qjrNamespace *QueueJobResNamespace) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
-        total := clusterstateapi.EmptyResource()
-        return total
+	total := clusterstateapi.EmptyResource()
+	return total
 }
-
 
 // Parse queue job api object to get Service template
 func (qjrNamespace *QueueJobResNamespace) getNamespaceTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.Namespace, error) {
@@ -249,14 +252,14 @@ func (qjrNamespace *QueueJobResNamespace) SyncQueueJob(queuejob *arbv1.AppWrappe
 
 func (qjrNamespace *QueueJobResNamespace) getNamespaceForQueueJob(j *arbv1.AppWrapper) ([]*v1.Namespace, error) {
 	// namespacelist, err := qjrNamespace.clients.CoreV1().Namespaces().List(metav1.ListOptions{})
-	namespacelist, err := qjrNamespace.clients.CoreV1().Namespaces().List(metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, j.Name),})
+	namespacelist, err := qjrNamespace.clients.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, j.Name)})
 	if err != nil {
 		return nil, err
 	}
 
 	namespaces := []*v1.Namespace{}
 	for i, _ := range namespacelist.Items {
-				namespaces = append(namespaces, &namespacelist.Items[i])
+		namespaces = append(namespaces, &namespacelist.Items[i])
 	}
 
 	return namespaces, nil

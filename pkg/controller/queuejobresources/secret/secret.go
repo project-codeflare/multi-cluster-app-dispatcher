@@ -14,16 +14,23 @@ limitations under the License.
 package secret
 
 import (
+	"context"
 	"fmt"
-	"github.com/golang/glog"
+
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
+	"github.com/golang/glog"
+
 	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+
 	// "k8s.io/apimachinery/pkg/api/meta"
+	"sync"
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,8 +42,6 @@ import (
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"sync"
-	"time"
 )
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
@@ -52,15 +57,15 @@ const (
 
 //QueueJobResService contains service info
 type QueueJobResSecret struct {
-	clients    		*kubernetes.Clientset
-	arbclients 		*clientset.Clientset
+	clients    *kubernetes.Clientset
+	arbclients *clientset.Clientset
 	// A store of services, populated by the serviceController
-	secretStore    	corelisters.SecretLister
-	secretInformer 	corev1informer.SecretInformer
-	rtScheme        *runtime.Scheme
-	jsonSerializer  *json.Serializer
+	secretStore    corelisters.SecretLister
+	secretInformer corev1informer.SecretInformer
+	rtScheme       *runtime.Scheme
+	jsonSerializer *json.Serializer
 	// Reference manager to manage membership of queuejob resource and its members
-	refManager 		queuejobresources.RefManager
+	refManager queuejobresources.RefManager
 }
 
 //Register registers a queue job resource type
@@ -130,12 +135,10 @@ func (qjrSecret *QueueJobResSecret) deleteSecret(obj interface{}) {
 	return
 }
 
-
 func (qjrSecret *QueueJobResSecret) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
-        total := clusterstateapi.EmptyResource()
-        return total
+	total := clusterstateapi.EmptyResource()
+	return total
 }
-
 
 // Parse queue job api object to get Service template
 func (qjrSecret *QueueJobResSecret) getSecretTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.Secret, error) {
@@ -243,7 +246,6 @@ func (qjrSecret *QueueJobResSecret) SyncQueueJob(queuejob *arbv1.AppWrapper, qjo
 	return nil
 }
 
-
 func (qjrSecret *QueueJobResSecret) getSecretForQueueJobRes(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) (*string, *v1.Secret, []*v1.Secret, error) {
 
 	// Get "a" Secret from AppWrapper Resource
@@ -255,18 +257,18 @@ func (qjrSecret *QueueJobResSecret) getSecretForQueueJobRes(qjobRes *arbv1.AppWr
 
 	// Get Secret"s" in Etcd Server
 	var _namespace *string
-	if secretInQjr.Namespace!=""{
+	if secretInQjr.Namespace != "" {
 		_namespace = &secretInQjr.Namespace
 	} else {
 		_namespace = &queuejob.Namespace
 	}
-	secretList, err := qjrSecret.clients.CoreV1().Secrets(*_namespace).List(metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name),})
+	secretList, err := qjrSecret.clients.CoreV1().Secrets(*_namespace).List(context.Background(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name)})
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	secretsInEtcd := []*v1.Secret{}
 	for i, _ := range secretList.Items {
-				secretsInEtcd = append(secretsInEtcd, &secretList.Items[i])
+		secretsInEtcd = append(secretsInEtcd, &secretList.Items[i])
 	}
 
 	// for i, secret := range secretList.Items {
@@ -290,7 +292,6 @@ func (qjrSecret *QueueJobResSecret) getSecretForQueueJobRes(qjobRes *arbv1.AppWr
 
 	return _namespace, secretInQjr, mySecretsInEtcd, nil
 }
-
 
 func (qjrSecret *QueueJobResSecret) deleteQueueJobResSecrets(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) error {
 

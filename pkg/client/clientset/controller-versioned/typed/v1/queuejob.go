@@ -17,6 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	"context"
+
 	v1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/scheme"
 
@@ -58,7 +60,7 @@ func (c *queuejobs) Create(queuejob *v1.QueueJob) (result *v1.QueueJob, err erro
 		Namespace(c.ns).
 		Resource(v1.QueueJobPlural).
 		Body(queuejob).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -71,7 +73,7 @@ func (c *queuejobs) Update(queuejob *v1.QueueJob) (result *v1.QueueJob, err erro
 		Resource(v1.QueueJobPlural).
 		Name(queuejob.Name).
 		Body(queuejob).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -87,7 +89,7 @@ func (c *queuejobs) UpdateStatus(queuejob *v1.QueueJob) (result *v1.QueueJob, er
 		Name(queuejob.Name).
 		SubResource("status").
 		Body(queuejob).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -99,7 +101,7 @@ func (c *queuejobs) Delete(name string, options *meta_v1.DeleteOptions) error {
 		Resource(v1.QueueJobPlural).
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.Background()).
 		Error()
 }
 
@@ -111,7 +113,7 @@ func (c *queuejobs) Get(name string, options meta_v1.GetOptions) (result *v1.Que
 		Resource(v1.QueueJobPlural).
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -123,7 +125,7 @@ func (c *queuejobs) List(opts meta_v1.ListOptions) (result *v1.QueueJobList, err
 		Namespace(c.ns).
 		Resource(v1.QueueJobPlural).
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }

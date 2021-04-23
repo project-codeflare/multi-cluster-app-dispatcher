@@ -17,6 +17,7 @@ limitations under the License.
 package clients
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"time"
@@ -48,7 +49,7 @@ func CreateSchedulingSpecKind(clientset apiextensionsclient.Interface) (*apiexte
 			},
 		},
 	}
-	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
+	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(context.Background(), crd)
 
 	if err != nil {
 		return nil, err
@@ -56,8 +57,7 @@ func CreateSchedulingSpecKind(clientset apiextensionsclient.Interface) (*apiexte
 
 	// wait for CRD being established
 	err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
-		crd, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(
-			schedulingSpecKindName, metav1.GetOptions{})
+		crd, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(context.Background(), schedulingSpecKindName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -76,8 +76,7 @@ func CreateSchedulingSpecKind(clientset apiextensionsclient.Interface) (*apiexte
 		return false, err
 	})
 	if err != nil {
-		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(
-			schedulingSpecKindName, nil)
+		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(context.Background(), schedulingSpecKindName, nil)
 		if deleteErr != nil {
 			return nil, errors.NewAggregate([]error{err, deleteErr})
 		}
