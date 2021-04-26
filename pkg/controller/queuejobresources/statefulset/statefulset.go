@@ -198,7 +198,7 @@ func (qjrStatefulSet *QueueJobResStatefulSet) createStatefulSetWithControllerRef
 	if controllerRef != nil {
 		statefulSet.OwnerReferences = append(statefulSet.OwnerReferences, *controllerRef)
 	}
-	if _, err := qjrStatefulSet.clients.AppsV1().StatefulSets(namespace).Create(context.Background(), statefulSet); err != nil {
+	if _, err := qjrStatefulSet.clients.AppsV1().StatefulSets(namespace).Create(context.Background(), statefulSet, metav1.CreateOptions{}); err != nil {
 		return err
 	}
 	return nil
@@ -207,7 +207,7 @@ func (qjrStatefulSet *QueueJobResStatefulSet) createStatefulSetWithControllerRef
 func (qjrStatefulSet *QueueJobResStatefulSet) delStatefulSet(namespace string, name string) error {
 
 	glog.V(4).Infof("==========delete statefulSet: %s,  %s \n", namespace, name)
-	if err := qjrStatefulSet.clients.AppsV1().StatefulSets(namespace).Delete(context.Background(), name, nil); err != nil {
+	if err := qjrStatefulSet.clients.AppsV1().StatefulSets(namespace).Delete(context.Background(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 	return nil

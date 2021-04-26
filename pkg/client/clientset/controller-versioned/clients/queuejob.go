@@ -49,7 +49,7 @@ func CreateQueueJobKind(clientset apiextensionsclient.Interface) (*apiextensions
 			},
 		},
 	}
-	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(context.Background(), crd)
+	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(context.Background(), crd, metav1.CreateOptions{})
 
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func CreateQueueJobKind(clientset apiextensionsclient.Interface) (*apiextensions
 		return false, err
 	})
 	if err != nil {
-		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(context.Background(), queueJobKindName, nil)
+		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(context.Background(), queueJobKindName, metav1.DeleteOptions{})
 		if deleteErr != nil {
 			return nil, errors.NewAggregate([]error{err, deleteErr})
 		}

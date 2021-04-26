@@ -166,7 +166,7 @@ func (qjrNamespace *QueueJobResNamespace) createNamespaceWithControllerRef(names
 		namespace.OwnerReferences = append(namespace.OwnerReferences, *controllerRef)
 	}
 
-	if _, err := qjrNamespace.clients.Core().Namespaces().Create(namespace); err != nil {
+	if _, err := qjrNamespace.clients.CoreV1().Namespaces().Create(context.Background(), namespace, metav1.CreateOptions{}); err != nil {
 		return err
 	}
 
@@ -176,7 +176,7 @@ func (qjrNamespace *QueueJobResNamespace) createNamespaceWithControllerRef(names
 func (qjrNamespace *QueueJobResNamespace) delNamespace(name string) error {
 
 	glog.V(4).Infof("==========delete namespace: %s \n", name)
-	if err := qjrNamespace.clients.Core().Namespaces().Delete(name, nil); err != nil {
+	if err := qjrNamespace.clients.CoreV1().Namespaces().Delete(context.Background(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 

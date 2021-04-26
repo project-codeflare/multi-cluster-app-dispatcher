@@ -17,19 +17,21 @@ limitations under the License.
 package queuejobdispatch
 
 import (
+	"context"
 	"encoding/json"
-	"github.com/golang/glog"
-	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
-	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
-	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
-	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 	"math"
 	"strconv"
 	"strings"
 	"time"
+
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
+	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	"github.com/golang/glog"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -42,30 +44,30 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
-type JobClusterAgent struct{
-		AgentId         string
-		DeploymentName  string
-		queuejobclients *clientset.Clientset
-		k8sClients     	*kubernetes.Clientset // for the update of aggr resouces
-		AggrResources  	*clusterstateapi.Resource
+type JobClusterAgent struct {
+	AgentId         string
+	DeploymentName  string
+	queuejobclients *clientset.Clientset
+	k8sClients      *kubernetes.Clientset // for the update of aggr resouces
+	AggrResources   *clusterstateapi.Resource
 
-		jobInformer 	informersv1.AppWrapperInformer
-		jobLister   	listersv1.AppWrapperLister
-		jobSynced   	func() bool
+	jobInformer informersv1.AppWrapperInformer
+	jobLister   listersv1.AppWrapperLister
+	jobSynced   func() bool
 
-		agentEventQueue	*cache.FIFO
+	agentEventQueue *cache.FIFO
 }
 
 func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterAgent {
-	configStrings:=strings.Split(config, ":")
-	if len(configStrings)<2 {
+	configStrings := strings.Split(config, ":")
+	if len(configStrings) < 2 {
 		return nil
 	}
-	glog.V(2).Infof("[Dispatcher: Agent] Creation: %s\n", "/root/kubernetes/" + configStrings[0])
+	glog.V(2).Infof("[Dispatcher: Agent] Creation: %s\n", "/root/kubernetes/"+configStrings[0])
 
-	agent_config, err:=clientcmd.BuildConfigFromFlags("", "/root/kubernetes/" + configStrings[0])
+	agent_config, err := clientcmd.BuildConfigFromFlags("", "/root/kubernetes/"+configStrings[0])
 	// agent_config, err:=clientcmd.BuildConfigFromFlags("", "/root/agent101config")
-	if err!=nil {
+	if err != nil {
 		glog.V(2).Infof("[Dispatcher: Agent] Cannot crate client\n")
 		return nil
 	}
@@ -76,9 +78,9 @@ func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterA
 		k8sClients:      kubernetes.NewForConfigOrDie(agent_config),
 		AggrResources:   clusterstateapi.EmptyResource(),
 	}
-	qa.agentEventQueue=agentEventQueue
+	qa.agentEventQueue = agentEventQueue
 
-	if qa.queuejobclients==nil {
+	if qa.queuejobclients == nil {
 		glog.V(2).Infof("[Dispatcher: Agent] Cannot Create Client\n")
 	} else {
 		glog.V(2).Infof("[Dispatcher: Agent] %s: Create Clients Suceessfully\n", qa.AgentId)
@@ -91,9 +93,9 @@ func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterA
 
 	qa.jobInformer = arbinformers.NewFilteredSharedInformerFactory(queueJobClientForInformer, 0,
 		func(opt *metav1.ListOptions) {
-		opt.LabelSelector = "IsDispatched=true"
- 		},
-		).AppWrapper().AppWrappers()
+			opt.LabelSelector = "IsDispatched=true"
+		},
+	).AppWrapper().AppWrappers()
 	qa.jobInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
 			FilterFunc: func(obj interface{}) bool {
@@ -120,7 +122,6 @@ func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterA
 
 	return qa
 }
-
 
 func (cc *JobClusterAgent) addQueueJob(obj interface{}) {
 	qj, ok := obj.(*arbv1.AppWrapper)
@@ -152,8 +153,6 @@ func (cc *JobClusterAgent) deleteQueueJob(obj interface{}) {
 	cc.agentEventQueue.Add(qj)
 }
 
-
-
 func (qa *JobClusterAgent) Run(stopCh chan struct{}) {
 	go qa.jobInformer.Informer().Run(stopCh)
 	cache.WaitForCacheSync(stopCh, qa.jobSynced)
@@ -161,21 +160,21 @@ func (qa *JobClusterAgent) Run(stopCh chan struct{}) {
 }
 
 func (qa *JobClusterAgent) DeleteJob(cqj *arbv1.AppWrapper) {
-	qj_temp:=cqj.DeepCopy()
+	qj_temp := cqj.DeepCopy()
 	glog.V(2).Infof("[Dispatcher: Agent] Request deletion of XQJ %s to Agent %s\n", qj_temp.Name, qa.AgentId)
-	qa.queuejobclients.ArbV1().AppWrappers(qj_temp.Namespace).Delete(qj_temp.Name,  &metav1.DeleteOptions{})
+	qa.queuejobclients.ArbV1().AppWrappers(qj_temp.Namespace).Delete(qj_temp.Name, &metav1.DeleteOptions{})
 	return
 }
 
 func (qa *JobClusterAgent) CreateJob(cqj *arbv1.AppWrapper) {
-	qj_temp:=cqj.DeepCopy()
-	agent_qj:=&arbv1.AppWrapper{
-		TypeMeta: qj_temp.TypeMeta,
-		ObjectMeta: metav1.ObjectMeta{Name: qj_temp.Name, Namespace: qj_temp.Namespace,},
-		Spec: qj_temp.Spec,
+	qj_temp := cqj.DeepCopy()
+	agent_qj := &arbv1.AppWrapper{
+		TypeMeta:   qj_temp.TypeMeta,
+		ObjectMeta: metav1.ObjectMeta{Name: qj_temp.Name, Namespace: qj_temp.Namespace},
+		Spec:       qj_temp.Spec,
 	}
-	agent_qj.Status.CanRun=qj_temp.Status.CanRun
-	agent_qj.Status.IsDispatched=qj_temp.Status.IsDispatched
+	agent_qj.Status.CanRun = qj_temp.Status.CanRun
+	agent_qj.Status.IsDispatched = qj_temp.Status.IsDispatched
 
 	if agent_qj.Labels == nil {
 		agent_qj.Labels = map[string]string{}
@@ -206,26 +205,26 @@ type ClusterMetricsList struct {
 	Metadata   struct {
 		SelfLink string `json:"selfLink"`
 	} `json:"metadata"`
-	Items [] struct {
-		MetricName	string    `json:"metricName"`
-		MetricLabels map[string]string  `json:"metriclabels"`
-		Timestamp  string `json:"timestamp"`
-		Value string `json:"value"`
+	Items []struct {
+		MetricName   string            `json:"metricName"`
+		MetricLabels map[string]string `json:"metriclabels"`
+		Timestamp    string            `json:"timestamp"`
+		Value        string            `json:"value"`
 	} `json:"items"`
 }
 
 func (qa *JobClusterAgent) UpdateAggrResources() error {
-    glog.V(6).Infof("[Dispatcher: Agent] Getting aggregated resources for Agent ID: %s with Agent QueueJob Name: %s\n", qa.AgentId, qa.DeploymentName)
+	glog.V(6).Infof("[Dispatcher: Agent] Getting aggregated resources for Agent ID: %s with Agent QueueJob Name: %s\n", qa.AgentId, qa.DeploymentName)
 
-    // Read the Agent XQJ Deployment object
-    if(qa.k8sClients ==nil) {
-    	return nil
+	// Read the Agent XQJ Deployment object
+	if qa.k8sClients == nil {
+		return nil
 
 	}
 
-	data, err := qa.k8sClients.RESTClient().Get().AbsPath("apis/external.metrics.k8s.io/v1beta1/namespaces/default/cluster-external-metric").DoRaw()
+	data, err := qa.k8sClients.RESTClient().Get().AbsPath("apis/external.metrics.k8s.io/v1beta1/namespaces/default/cluster-external-metric").DoRaw(context.Background())
 
-    if err != nil {
+	if err != nil {
 		glog.V(2).Infof("Failed to get metrics from deployment Agent ID: %s with Agent QueueJob Name: %s, Error: %v\n", qa.AgentId, qa.DeploymentName, err)
 
 	} else {
@@ -240,15 +239,15 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 					glog.V(9).Infof("Obtained the metric:%s, label:%v, value: %s, from the Agent: %s  with Agent QueueJob Name: %s.\n",
 						res.Items[i].MetricName, res.Items[i].MetricLabels, res.Items[i].Value, qa.AgentId, qa.DeploymentName)
 					clusterMetricType := res.Items[i].MetricLabels["cluster"]
-					if strings.Compare(clusterMetricType, "cpu") == 0  || strings.Compare(clusterMetricType, "memory") == 0 {
+					if strings.Compare(clusterMetricType, "cpu") == 0 || strings.Compare(clusterMetricType, "memory") == 0 {
 						num, err := strconv.ParseFloat(res.Items[i].Value, 64)
-						if err !=nil {
+						if err != nil {
 							glog.Warningf("Possible issue converting %s string value of %s due to error: %v\n",
 								clusterMetricType, res.Items[i].Value, err)
 						} else {
 							f_num := math.Float64bits(num)
 							f_zero := math.Float64bits(0.0)
-							if (f_num > f_zero) {
+							if f_num > f_zero {
 								if strings.Compare(clusterMetricType, "cpu") == 0 {
 									qa.AggrResources.MilliCPU = num
 									glog.V(10).Infof("Updated %s from %f to %f for metrics: %v from deployment Agent ID: %s with Agent QueueJob Name: %s\n",
@@ -261,7 +260,7 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 							} else {
 								glog.Warningf("Possible issue converting %s string value of %s to float type.  Conversion result: %f\n",
 									clusterMetricType, res.Items[i].Value, num)
-							}  // Float value resulted in zero value.
+							} // Float value resulted in zero value.
 						} // Converting string to float success
 					} else {
 						glog.V(9).Infof("Unknown label value: %s for metrics: %v from deployment Agent ID: %s with Agent QueueJob Name: %s\n",
@@ -276,12 +275,12 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 	}
 
 	glog.V(4).Infof("[Dispatcher: Agent] Updated Aggr Resources of %s: %v\n", qa.AgentId, qa.AggrResources)
-    return nil
+	return nil
 }
 
 func buildResource(cpu string, memory string) *clusterstateapi.Resource {
-    return clusterstateapi.NewResource(v1.ResourceList{
-        v1.ResourceCPU:    resource.MustParse(cpu),
-        v1.ResourceMemory: resource.MustParse(memory),
-    })
+	return clusterstateapi.NewResource(v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse(cpu),
+		v1.ResourceMemory: resource.MustParse(memory),
+	})
 }

@@ -164,7 +164,7 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) createPersiste
 		persistentvolumeclaim.OwnerReferences = append(persistentvolumeclaim.OwnerReferences, *controllerRef)
 	}
 
-	if _, err := qjrPersistentVolumeClaim.clients.Core().PersistentVolumeClaims(namespace).Create(persistentvolumeclaim); err != nil {
+	if _, err := qjrPersistentVolumeClaim.clients.CoreV1().PersistentVolumeClaims(namespace).Create(context.Background(), persistentvolumeclaim, metav1.CreateOptions{}); err != nil {
 		return err
 	}
 
@@ -174,7 +174,7 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) createPersiste
 func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) delPersistentVolumeClaim(namespace string, name string) error {
 
 	glog.V(4).Infof("==========delete persistentvolumeclaim: %s \n", name)
-	if err := qjrPersistentVolumeClaim.clients.Core().PersistentVolumeClaims(namespace).Delete(name, nil); err != nil {
+	if err := qjrPersistentVolumeClaim.clients.CoreV1().PersistentVolumeClaims(namespace).Delete(context.Background(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 

@@ -17,13 +17,14 @@ limitations under the License.
 package cache
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/golang/glog"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	clientv1 "k8s.io/client-go/informers/core/v1"
@@ -58,9 +59,9 @@ type ClusterStateCache struct {
 	resourceCapacities *api.Resource
 	deletedJobs        *cache.FIFO
 
-	errTasks    *cache.FIFO
-
+	errTasks *cache.FIFO
 }
+
 func taskKey(obj interface{}) (string, error) {
 	if obj == nil {
 		return "", fmt.Errorf("the object is nil")
@@ -95,7 +96,6 @@ func newClusterStateCache(config *rest.Config) *ClusterStateCache {
 		Nodes:       make(map[string]*api.NodeInfo),
 		errTasks:    cache.NewFIFO(taskKey),
 		deletedJobs: cache.NewFIFO(jobKey),
-
 	}
 
 	sc.kubeclient = kubernetes.NewForConfigOrDie(config)
@@ -184,7 +184,6 @@ func (sc *ClusterStateCache) WaitForCacheSync(stopCh <-chan struct{}) bool {
 		sc.nodeInformer.Informer().HasSynced)
 }
 
-
 // Gets available free resoures.
 func (sc *ClusterStateCache) GetUnallocatedResources() *api.Resource {
 	sc.Mutex.Lock()
@@ -234,7 +233,6 @@ func (sc *ClusterStateCache) updateState() error {
 	err := sc.saveState(idle, total)
 	return err
 }
-
 
 func (sc *ClusterStateCache) deleteJob(job *api.JobInfo) {
 	glog.V(4).Infof("[deleteJob] Attempting to delete Job <%v:%v/%v>", job.UID, job.Namespace, job.Name)
@@ -351,7 +349,7 @@ func (sc *ClusterStateCache) LoadConf(path string) (map[string]string, error) {
 		return nil, err
 	}
 
-	confMap, err := sc.kubeclient.CoreV1().ConfigMaps(ns).Get(name, metav1.GetOptions{})
+	confMap, err := sc.kubeclient.CoreV1().ConfigMaps(ns).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

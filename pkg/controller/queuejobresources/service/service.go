@@ -166,7 +166,7 @@ func (qjrService *QueueJobResService) createServiceWithControllerRef(namespace s
 		service.OwnerReferences = append(service.OwnerReferences, *controllerRef)
 	}
 
-	if _, err := qjrService.clients.Core().Services(namespace).Create(service); err != nil {
+	if _, err := qjrService.clients.CoreV1().Services(namespace).Create(context.Background(), service, metav1.CreateOptions{}); err != nil {
 		return err
 	}
 
@@ -176,7 +176,7 @@ func (qjrService *QueueJobResService) createServiceWithControllerRef(namespace s
 func (qjrService *QueueJobResService) delService(namespace string, name string) error {
 
 	glog.V(4).Infof("==========delete service: %s,  %s \n", namespace, name)
-	if err := qjrService.clients.Core().Services(namespace).Delete(name, nil); err != nil {
+	if err := qjrService.clients.CoreV1().Services(namespace).Delete(context.Background(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 
