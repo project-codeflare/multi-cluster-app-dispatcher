@@ -166,7 +166,7 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) createPersistentVolumeWi
 		persistentvolume.OwnerReferences = append(persistentvolume.OwnerReferences, *controllerRef)
 	}
 
-	if _, err := qjrPersistentvolume.clients.Core().PersistentVolumes().Create(persistentvolume); err != nil {
+	if _, err := qjrPersistentvolume.clients.CoreV1().PersistentVolumes().Create(context.Background(), persistentvolume, metav1.CreateOptions{}); err != nil {
 		return err
 	}
 
@@ -176,7 +176,7 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) createPersistentVolumeWi
 func (qjrPersistentvolume *QueueJobResPersistentvolume) delPersistentVolume(name string) error {
 
 	glog.V(4).Infof("==========delete persistentvolume: %s \n", name)
-	if err := qjrPersistentvolume.clients.Core().PersistentVolumes().Delete(name, nil); err != nil {
+	if err := qjrPersistentvolume.clients.CoreV1().PersistentVolumes().Delete(context.Background(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 

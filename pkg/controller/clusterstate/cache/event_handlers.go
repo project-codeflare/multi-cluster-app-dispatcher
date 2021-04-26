@@ -17,16 +17,16 @@ limitations under the License.
 package cache
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/golang/glog"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1beta1"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/utils"
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
@@ -76,7 +76,6 @@ func (sc *ClusterStateCache) addPod(pod *v1.Pod) error {
 	pi := arbapi.NewTaskInfo(pod)
 	glog.V(10).Infof("New task: %s created for pod %s add with job id: %v", pi.Name, pod.Name, pi.Job)
 
-
 	return sc.addTask(pi)
 }
 
@@ -86,7 +85,7 @@ func (sc *ClusterStateCache) syncTask(oldTask *arbapi.TaskInfo) error {
 
 	glog.V(9).Infof("Attempting to sync task: %s.", oldTask.Name)
 
-	newPod, err := sc.kubeclient.CoreV1().Pods(oldTask.Namespace).Get(oldTask.Name, metav1.GetOptions{})
+	newPod, err := sc.kubeclient.CoreV1().Pods(oldTask.Namespace).Get(context.Background(), oldTask.Name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			sc.deleteTask(oldTask)
@@ -164,8 +163,8 @@ func (sc *ClusterStateCache) deletePod(pod *v1.Pod) error {
 	if job, found := sc.Jobs[pi.Job]; found {
 		glog.V(9).Infof("Found job %v to delete for pod: %s, task: %s.", job.UID, pod.Name, pi.Name)
 		if t, found := job.Tasks[pi.UID]; found {
-				glog.V(10).Infof("Found job task listed in job: %v.", job.UID)
-				task = t
+			glog.V(10).Infof("Found job task listed in job: %v.", job.UID)
+			task = t
 		}
 	}
 	if err := sc.deleteTask(task); err != nil {

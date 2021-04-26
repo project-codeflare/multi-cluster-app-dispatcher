@@ -49,7 +49,7 @@ func CreateAppWrapperKind(clientset apiextensionsclient.Interface) (*apiextensio
 			},
 		},
 	}
-	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(context.Background(), crd, nil)
+	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(context.Background(), crd, metav1.CreateOptions{})
 
 	if err != nil {
 		return nil, err
@@ -68,6 +68,7 @@ func CreateAppWrapperKind(clientset apiextensionsclient.Interface) (*apiextensio
 					return true, err
 				}
 			case apiextensionsv1beta1.NamesAccepted:
+				// clusterstateapi
 				if cond.Status == apiextensionsv1beta1.ConditionFalse {
 					fmt.Printf("Name conflict: %v\n", cond.Reason)
 				}
@@ -76,7 +77,7 @@ func CreateAppWrapperKind(clientset apiextensionsclient.Interface) (*apiextensio
 		return false, err
 	})
 	if err != nil {
-		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(context.Background(), appWrapperKindName, nil)
+		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(context.Background(), appWrapperKindName, metav1.DeleteOptions{})
 		if deleteErr != nil {
 			return nil, errors.NewAggregate([]error{err, deleteErr})
 		}

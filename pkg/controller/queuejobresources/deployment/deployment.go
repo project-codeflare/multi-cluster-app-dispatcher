@@ -217,7 +217,7 @@ func (qjrDeployment *QueueJobResDeployment) createDeploymentWithControllerRef(na
 		deployment.OwnerReferences = append(deployment.OwnerReferences, *controllerRef)
 	}
 
-	if _, err := qjrDeployment.clients.AppsV1().Deployments(namespace).Create(context.Background(), deployment); err != nil {
+	if _, err := qjrDeployment.clients.AppsV1().Deployments(namespace).Create(context.Background(), deployment, metav1.CreateOptions{}); err != nil {
 		return err
 	}
 
@@ -225,7 +225,7 @@ func (qjrDeployment *QueueJobResDeployment) createDeploymentWithControllerRef(na
 }
 
 func (qjrDeployment *QueueJobResDeployment) delDeployment(namespace string, name string) error {
-	if err := qjrDeployment.clients.AppsV1().Deployments(namespace).Delete(context.Background(), name, nil); err != nil {
+	if err := qjrDeployment.clients.AppsV1().Deployments(namespace).Delete(context.Background(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 	return nil

@@ -165,7 +165,7 @@ func (qjrSecret *QueueJobResSecret) createSecretWithControllerRef(namespace stri
 		secret.OwnerReferences = append(secret.OwnerReferences, *controllerRef)
 	}
 
-	if _, err := qjrSecret.clients.Core().Secrets(namespace).Create(secret); err != nil {
+	if _, err := qjrSecret.clients.CoreV1().Secrets(namespace).Create(context.Background(), secret, metav1.CreateOptions{}); err != nil {
 		return err
 	}
 
@@ -175,7 +175,7 @@ func (qjrSecret *QueueJobResSecret) createSecretWithControllerRef(namespace stri
 func (qjrSecret *QueueJobResSecret) delSecret(namespace string, name string) error {
 
 	glog.V(4).Infof("==========delete secret: %s \n", name)
-	if err := qjrSecret.clients.Core().Secrets(namespace).Delete(name, nil); err != nil {
+	if err := qjrSecret.clients.CoreV1().Secrets(namespace).Delete(context.Background(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 

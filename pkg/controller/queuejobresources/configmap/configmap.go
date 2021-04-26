@@ -165,7 +165,7 @@ func (qjrConfigMap *QueueJobResConfigMap) createConfigMapWithControllerRef(names
 		configmap.OwnerReferences = append(configmap.OwnerReferences, *controllerRef)
 	}
 
-	if _, err := qjrConfigMap.clients.Core().ConfigMaps(namespace).Create(configmap); err != nil {
+	if _, err := qjrConfigMap.clients.CoreV1().ConfigMaps(namespace).Create(context.Background(), configmap, metav1.CreateOptions{}); err != nil {
 		return err
 	}
 
@@ -173,7 +173,7 @@ func (qjrConfigMap *QueueJobResConfigMap) createConfigMapWithControllerRef(names
 }
 
 func (qjrConfigMap *QueueJobResConfigMap) delConfigMap(namespace string, name string) error {
-	if err := qjrConfigMap.clients.Core().ConfigMaps(namespace).Delete(name, nil); err != nil {
+	if err := qjrConfigMap.clients.CoreV1().ConfigMaps(namespace).Delete(context.Background(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 

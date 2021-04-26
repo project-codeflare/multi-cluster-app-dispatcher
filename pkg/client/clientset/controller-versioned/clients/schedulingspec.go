@@ -49,7 +49,7 @@ func CreateSchedulingSpecKind(clientset apiextensionsclient.Interface) (*apiexte
 			},
 		},
 	}
-	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(context.Background(), crd)
+	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(context.Background(), crd, metav1.CreateOptions{})
 
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func CreateSchedulingSpecKind(clientset apiextensionsclient.Interface) (*apiexte
 		return false, err
 	})
 	if err != nil {
-		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(context.Background(), schedulingSpecKindName, nil)
+		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(context.Background(), schedulingSpecKindName, metav1.DeleteOptions{})
 		if deleteErr != nil {
 			return nil, errors.NewAggregate([]error{err, deleteErr})
 		}
