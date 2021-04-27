@@ -19,6 +19,7 @@ package apiserver
 import (
 	"context"
 	"fmt"
+
 	"github.com/golang/glog"
 
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
@@ -38,7 +39,8 @@ type REST struct {
 }
 
 var _ rest.Storage = &REST{}
-var _ rest.Lister = &REST{}
+
+// var _ rest.Lister = &REST{}
 
 func NewREST(cmProvider provider.CustomMetricsProvider) *REST {
 	return &REST{

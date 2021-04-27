@@ -17,13 +17,14 @@ limitations under the License.
 package queuejob
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/golang/glog"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -374,7 +375,11 @@ func (cc *Controller) manageQueueJob(qj *arbv1.QueueJob, pods map[string][]*v1.P
 				go func(ix int32) {
 					defer wait.Done()
 					newPod := createQueueJobPod(qj, &ts.Template, ix)
-					_, err := cc.clients.Core().Pods(newPod.Namespace).Create(newPod)
+					_, err := cc.clients.CoreV1().Pods(newPod.Namespace).Create(context.Background(), newPod, metav1.CreateOptions{
+						TypeMeta:     metav1.TypeMeta{},
+						DryRun:       []string{},
+						FieldManager: "",
+					})
 					if err != nil {
 						// Failed to create Pod, wait a moment and then create it again
 						// This is to ensure all pods under the same QueueJob created
