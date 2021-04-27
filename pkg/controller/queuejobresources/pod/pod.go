@@ -299,7 +299,7 @@ func (qjrPod *QueueJobResPod) manageQueueJob(qj *arbv1.AppWrapper, pods []*v1.Po
 					glog.Errorf("Failed to create a pod for Job %s, error: %#v.", qj.Name, err)
 					errs = append(errs, err)
 				} else {
-					_, err := qjrPod.clients.CoreV1().Pods(newPod.Namespace).Create(context.Context, newPod, metav1.CreateOptions{})
+					_, err := qjrPod.clients.CoreV1().Pods(newPod.Namespace).Create(context.Background(), newPod, metav1.CreateOptions{})
 					if err != nil {
 						// Failed to create Pod, wait a moment and then create it again
 						// This is to ensure all pods under the same QueueJob created
@@ -395,7 +395,7 @@ func (qjrPod *QueueJobResPod) manageQueueJobPods(activePods []*v1.Pod, succeeded
 							newPod.Name, qj.Name, err)
 					} else {
 						for {
-							_, err := qjrPod.clients.CoreV1().Pods(newPod.Namespace).Create(context.Context, newPod, metav1.CreateOptions{})
+							_, err := qjrPod.clients.CoreV1().Pods(newPod.Namespace).Create(context.Background(), newPod, metav1.CreateOptions{})
 							if err == nil {
 								// Create Pod successfully
 								break

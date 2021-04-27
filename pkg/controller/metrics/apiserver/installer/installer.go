@@ -18,11 +18,12 @@ package installer
 
 import (
 	"fmt"
-	"github.com/golang/glog"
 	gpath "path"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/golang/glog"
 
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -287,6 +288,6 @@ func restfulListResource(r rest.Lister, rw rest.Watcher, scope handlers.RequestS
 	glog.Infof("Entered restfulListResource()")
 	glog.Infof("restfulListResource(): restLister=%v, scope=%v", r, scope)
 	return func(req *restful.Request, res *restful.Response) {
-		handlers.ListResource(r, rw, scope, forceWatch, minRequestTimeout)(res.ResponseWriter, req.Request)
+		handlers.ListResource(r, rw, &scope, forceWatch, minRequestTimeout)(res.ResponseWriter, req.Request)
 	}
 }

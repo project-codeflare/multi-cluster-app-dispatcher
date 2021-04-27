@@ -70,7 +70,7 @@ func join(strs ...string) string {
 }
 
 func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperGenericResource) (podList []*v1.Pod, err error) {
-
+	var unstruct unstructured.Unstructured
 	startTime := time.Now()
 	defer func() {
 		glog.V(4).Infof("Finished syncing AppWrapper job resource %s (%v)", aw.Name, time.Now().Sub(startTime))
@@ -86,8 +86,8 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	}
 	ext := awr.GenericTemplate
 	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
-	versions := &runtime.VersionedObjects{}
-	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, versions)
+	// versions := &runtime.VersionedObjects{}
+	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, &unstruct)
 	if err != nil {
 		glog.Errorf("Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
 		return []*v1.Pod{}, err
@@ -125,7 +125,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 			}
 		}
 	}
-	var unstruct unstructured.Unstructured
+	// var unstruct unstructured.Unstructured
 	unstruct.Object = make(map[string]interface{})
 	var blob interface{}
 	if err = json.Unmarshal(ext.Raw, &blob); err != nil {

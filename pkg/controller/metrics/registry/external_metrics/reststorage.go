@@ -19,8 +19,9 @@ package apiserver
 import (
 	"context"
 	"fmt"
-	"github.com/golang/glog"
+
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
+	"github.com/golang/glog"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,7 +38,8 @@ type REST struct {
 }
 
 var _ rest.Storage = &REST{}
-var _ rest.Lister = &REST{}
+
+// var _ rest.Lister = &REST{}
 
 // NewREST returns new REST object for provided CustomMetricsProvider.
 func NewREST(emProvider provider.ExternalMetricsProvider) *REST {
