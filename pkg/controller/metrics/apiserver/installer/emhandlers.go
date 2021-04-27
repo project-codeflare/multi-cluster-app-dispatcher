@@ -17,9 +17,10 @@ limitations under the License.
 package installer
 
 import (
-	"github.com/golang/glog"
 	"net/http"
 	gpath "path"
+
+	"github.com/golang/glog"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/endpoints/handlers"
@@ -109,7 +110,7 @@ func (ch *EMHandlers) registerResourceHandlers(a *MetricsAPIInstaller, ws *restf
 		},
 	}
 
-	externalMetricHandler := metrics.InstrumentRouteFunc("LIST", "external-metrics", "", "", restfulListResource(lister, nil, reqScope, false, a.minRequestTimeout))
+	externalMetricHandler := metrics.InstrumentRouteFunc("LIST", "external-metrics", "", "", "", "cluster", "custom-metrics", false, "", restfulListResource(lister, nil, reqScope, false, a.minRequestTimeout))
 
 	externalMetricRoute := ws.GET(externalMetricPath).To(externalMetricHandler).
 		Doc(doc).
