@@ -17,9 +17,10 @@ limitations under the License.
 package installer
 
 import (
-	"github.com/golang/glog"
 	"net/http"
 	gpath "path"
+
+	"github.com/golang/glog"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/endpoints/handlers"
@@ -132,7 +133,7 @@ func (ch *CMHandlers) registerResourceHandlers(a *MetricsAPIInstaller, ws *restf
 		},
 	}
 
-	rootScopedHandler := metrics.InstrumentRouteFunc("LIST", "custom-metrics", "", "cluster", restfulListResource(lister, nil, reqScope, false, a.minRequestTimeout))
+	rootScopedHandler := metrics.InstrumentRouteFunc("LIST", "custom-metrics", "", "cluster", "", "cluster", "custom-metrics", false, "", restfulListResource(lister, nil, reqScope, false, a.minRequestTimeout))
 
 	// install the root-scoped route
 	rootScopedRoute := ws.GET(rootScopedPath).To(rootScopedHandler).
@@ -156,7 +157,7 @@ func (ch *CMHandlers) registerResourceHandlers(a *MetricsAPIInstaller, ws *restf
 			SelfLinkPathPrefix: gpath.Join(a.prefix, "namespaces") + "/",
 		},
 	}
-	namespacedHandler := metrics.InstrumentRouteFunc("LIST", "custom-metrics-namespaced", "", "namespace", restfulListResource(lister, nil, reqScope, false, a.minRequestTimeout))
+	namespacedHandler := metrics.InstrumentRouteFunc("LIST", "custom-metrics-namespaced", "", "namespace", "", "cluster", "custom-metrics", false, "", restfulListResource(lister, nil, reqScope, false, a.minRequestTimeout))
 	namespacedRoute := ws.GET(namespacedPath).To(namespacedHandler).
 		Doc(doc).
 		Param(ws.QueryParameter("pretty", "If 'true', then the output is pretty printed.")).
@@ -178,7 +179,7 @@ func (ch *CMHandlers) registerResourceHandlers(a *MetricsAPIInstaller, ws *restf
 			SelfLinkPathPrefix: gpath.Join(a.prefix, "namespaces") + "/",
 		},
 	}
-	namespaceSpecificHandler := metrics.InstrumentRouteFunc("LIST", "custom-metrics-for-namespace", "", "cluster", restfulListResource(lister, nil, reqScope, false, a.minRequestTimeout))
+	namespaceSpecificHandler := metrics.InstrumentRouteFunc("LIST", "custom-metrics-for-namespace", "", "cluster", "", "cluster", "custom-metrics", false, "", restfulListResource(lister, nil, reqScope, false, a.minRequestTimeout))
 	namespaceSpecificRoute := ws.GET(namespaceSpecificPath).To(namespaceSpecificHandler).
 		Doc(doc).
 		Param(ws.QueryParameter("pretty", "If 'true', then the output is pretty printed.")).
