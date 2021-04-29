@@ -70,7 +70,6 @@ type ResourcePlanManager struct {
 	url 			string
 	appwrapperLister 	listersv1.AppWrapperLister
 	preemptionEnabled 	bool
-	initialized		bool
 }
 
 type QuotaGroup struct {
@@ -105,9 +104,6 @@ type TreeNode struct {
 	Parent 		string 		`json:"parent"`
 }
 
-//type QuotaTreesResponse struct {
-//	Trees 	[]TreeNode
-//}
 
 // NewQuotaManager initializes a new scheduling queue.
 func NewQuotaManager() QuotaManager {
@@ -154,7 +150,6 @@ func NewResourcePlanManager(awJobLister listersv1.AppWrapperLister, quotaManager
 		appwrapperLister: awJobLister,
 		url: quotaManagerUrl,
 		preemptionEnabled: preemptionEnabled,
-		initialized: false,
 	}
 	return rpm
 }
