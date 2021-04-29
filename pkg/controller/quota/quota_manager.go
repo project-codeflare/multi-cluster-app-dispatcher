@@ -30,16 +30,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	listersv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
+	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	"github.com/golang/glog"
 	"io/ioutil"
 	"math"
 	"net/http"
+	"net/http/httputil"
 	"reflect"
 	"strings"
-
-	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
-	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
-	"github.com/golang/glog"
+	"time"
 )
 
 const (
@@ -66,10 +67,10 @@ type QuotaManager interface {
 // Heap is already thread safe, but we need to acquire another lock here to ensure
 // atomicity of operations on the two data structures..
 type ResourcePlanManager struct {
-	url string
-	appwrapperLister listersv1.AppWrapperLister
-	preemptionEnabled bool
-
+	url 			string
+	appwrapperLister 	listersv1.AppWrapperLister
+	preemptionEnabled 	bool
+	initialized		bool
 }
 
 type QuotaGroup struct {
@@ -94,8 +95,21 @@ type QuotaResponse struct {
 	PreemptIds  []string 	   `json:"preemptedIds"`
 	CreateDate  string   	   `json:"dateCreated"`
 }
-// NewSchedulingQueue initializes a new scheduling queue. If pod priority is
-// enabled a priority queue is returned. If it is disabled, a FIFO is returned.
+
+type TreeNode struct {
+	Allocation	string     	`json:"allocation"`
+	Quota		string  	`json:"quota"`
+	Name		string   	`json:"name"`
+	Hard		bool     	`json:"hard"`
+	Children	[]TreeNode   	`json:"children"`
+	Parent 		string 		`json:"parent"`
+}
+
+//type QuotaTreesResponse struct {
+//	Trees 	[]TreeNode
+//}
+
+// NewQuotaManager initializes a new scheduling queue.
 func NewQuotaManager() QuotaManager {
 		return NewResourcePlanManager( nil,"", false)
 }
@@ -140,8 +154,133 @@ func NewResourcePlanManager(awJobLister listersv1.AppWrapperLister, quotaManager
 		appwrapperLister: awJobLister,
 		url: quotaManagerUrl,
 		preemptionEnabled: preemptionEnabled,
+		initialized: false,
 	}
 	return rpm
+}
+
+// Recrusive call to add names of Tree
+func (rpm *ResourcePlanManager) addChildrenNodes(parentNode TreeNode, treeIDs []string) ([]string) {
+	if len(parentNode.Children) > 0 {
+		for _, childNode := range parentNode.Children {
+			glog.V(10).Infof("[getQuotaTreeIDs] Quota tree response child node from quota mananger: %s", childNode.Name)
+			treeIDs = rpm.addChildrenNodes(childNode, treeIDs)
+		}
+	}
+	treeIDs = append(treeIDs, parentNode.Name)
+	return treeIDs
+}
+
+func (rpm *ResourcePlanManager) getQuotaTreeIDs() ([]string) {
+	var treeIDs []string
+	// If a url does not exists then assume fits quota
+	if len(rpm.url) < 1 {
+		return treeIDs
+	}
+
+	uri := rpm.url + "/json"
+
+	glog.V(10).Infof("[getQuotaTreeIDs] Sending GET request to uri: %s", uri)
+	req, err := http.NewRequest(http.MethodGet, uri, nil)
+	if err != nil {
+		glog.Errorf("[getQuotaTreeIDs] Fail to create client to access quota manager: %s, err=%#v.", uri, err)
+		return treeIDs
+	}
+
+	quotaRestClient := http.Client{
+		Timeout: time.Second * 2, // Timeout after 2 seconds
+	}
+	response, err := quotaRestClient.Do(req)
+	if err != nil {
+		glog.Errorf("[getQuotaTreeIDs] Fail to access quota manager: %s, err=%#v.", uri, err)
+		return treeIDs
+	} else {
+
+		defer response.Body.Close()
+
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			glog.Errorf("[getQuotaTreeIDs] Failed to read quota tree from the quota manager body: %s, error=%#v",
+											string(body), err)
+			return treeIDs
+		}
+
+		var quotaTreesResponse []TreeNode
+		if err := json.Unmarshal(body, &quotaTreesResponse); err != nil {
+			glog.Errorf("[getQuotaTreeIDs] Failed to decode json from quota manager body: %s, error=%#v", string(body), err)
+		} else {
+			// Loop over root nodes of trees and add names of each node in tree.
+			for _, treeroot := range quotaTreesResponse {
+				glog.V(6).Infof("[getQuotaTreeIDs] Quota tree response root node from quota mananger: %s", treeroot.Name)
+				treeIDs = rpm.addChildrenNodes(treeroot, treeIDs)
+			}
+		}
+
+		glog.V(10).Infof("[getQuotaTreeIDs] Response from quota mananger status: %s", response.Status)
+		statusCode := response.StatusCode
+		glog.V(8).Infof("[getQuotaTreeIDs] Response from quota mananger status code: %v", statusCode)
+
+	}
+	return treeIDs
+}
+
+func isValidQuota(quotaGroup QuotaGroup, qmTreeIDs []string) bool {
+	for _, treeNodeID := range qmTreeIDs {
+		if treeNodeID == quotaGroup.GroupId {
+			return true
+		}
+	}
+	return false
+}
+
+func (rpm *ResourcePlanManager) getQuotaDesignation(aw *arbv1.AppWrapper) ([]QuotaGroup) {
+	var groups []QuotaGroup
+
+	// Get list of quota management tree IDs
+	qmTreeIDs := rpm.getQuotaTreeIDs()
+	if len(qmTreeIDs) < 1 {
+		glog.Warningf("[getQuotaDesignation] No valid quota management IDs found for AppWrapper Job: %s/%s",
+									aw.Namespace, aw.Name)
+	}
+
+	labels := aw.GetLabels()
+	if ( labels != nil) {
+		keys := reflect.ValueOf(labels).MapKeys()
+		for _,  key := range keys {
+			strkey := key.String()
+			quotaGroup := QuotaGroup{
+				GroupContext: strkey,
+				GroupId: labels[strkey],
+			}
+			if isValidQuota(quotaGroup, qmTreeIDs) {
+				groups = append(groups, quotaGroup)
+				glog.V(8).Infof("[getQuotaDesignation] AppWrapper: %s/%s quota label: %v found.",
+					aw.Namespace, aw.Name, quotaGroup)
+			} else {
+				glog.V(10).Infof("[getQuotaDesignation] AppWrapper: %s/%s label: %v ignored.  Not a valid quota ID.",
+					aw.Namespace, aw.Name, quotaGroup)
+			}
+
+		}
+	} else {
+		glog.V(4).Infof("[getQuotaDesignation] AppWrapper: %s/%s does not any context quota labels.",
+										aw.Namespace, aw.Name)
+	}
+
+	if len(groups) > 0 {
+		glog.V(6).Infof("[getQuotaDesignation] AppWrapper: %s/%s quota labels: %v.", aw.Namespace,
+			aw.Name, groups)
+	} else {
+		glog.V(4).Infof("[getQuotaDesignation] AppWrapper: %s/%s does not have any quota labels, using default.",
+			aw.Namespace, aw.Name)
+		var defaultGroup = QuotaGroup{
+			GroupContext: 	"DEFAULTCONTEXT",
+			GroupId:	"DEFAULT",
+		}
+		groups = append(groups, defaultGroup)
+	}
+
+	return groups
 }
 
 func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource,
@@ -157,30 +296,8 @@ func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *cluster
 		return false, nil
 	}
 
-	var groups []QuotaGroup
+	groups := rpm.getQuotaDesignation(aw)
 	preemptable := rpm.preemptionEnabled
-	labels := aw.GetLabels()
-	if ( labels != nil) {
-		keys := reflect.ValueOf(labels).MapKeys()
-		for _,  key := range keys {
-			strkey := key.String()
-			quotaGroup := QuotaGroup{
-				GroupContext: strkey,
-				GroupId: labels[strkey],
-			}
-			groups = append(groups, quotaGroup)
-			glog.V(10).Infof("[Fits] AppWrapper: %s quota label: %v found.", awId, quotaGroup)
-
-		}
-		if len(groups) > 0 {
-			glog.V(6).Infof("[Fits] AppWrapper: %s quota labels: %v.", awId, groups)
-		} else {
-			glog.V(4).Infof("[Fits] AppWrapper: %s does not have any quota labels.", awId)
-		}
-	} else {
-		glog.V(4).Infof("[Fits] AppWrapper: %s does not any context quota labels, using default.", awId)
-	}
-
 	awCPU_Demand := int(math.Trunc(awResDemands.MilliCPU))
 	awMem_Demand := int(math.Trunc(awResDemands.Memory)/1000000)
 	var demand []int
@@ -214,6 +331,9 @@ func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *cluster
 	glog.V(4).Infof("[Fits] Sending request: %v in buffer: %v, buffer size: %v, to uri: %s", req, buf, buf.Len(), uri)
 	response, err := http.Post(uri, "application/json; charset=utf-8", buf)
 	defer response.Body.Close()
+	dump, err := httputil.DumpResponse(response, true)
+	glog.V(10).Infof("[getQuotaTreeIDs] POST Response dump: %q", dump)
+
 	if err != nil {
 		glog.Errorf("[Fits] Fail to add access quotamanager: %s, err=%#v.", uri, err)
 		preemptIds = nil
