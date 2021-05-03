@@ -16,6 +16,7 @@ require (
 	k8s.io/apimachinery v0.21.0
 	k8s.io/apiserver v0.21.0
 	k8s.io/client-go v0.21.0
+	k8s.io/component-base v0.21.0
 	k8s.io/gengo v0.0.0-20201214224949-b6c5ce23f027
 	k8s.io/metrics v0.21.0
 )
