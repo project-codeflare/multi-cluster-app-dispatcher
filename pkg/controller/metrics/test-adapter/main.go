@@ -24,7 +24,9 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/apiserver/pkg/util/logs"
+	"k8s.io/component-base/logs"
+
+	// "k8s.io/apiserver/pkg/util/logs"
 
 	basecmd "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/cmd"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
