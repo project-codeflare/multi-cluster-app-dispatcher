@@ -121,7 +121,9 @@ function cleanup {
     echo "===================================================================================="
     echo "==========================>>>>> MCAD Controller Logs <<<<<=========================="
     echo "===================================================================================="
-    kubectl logs ${mcad_pod} -n kube-system
+    echo "==========================>>>>>Printing the pod name for logs:  <<<<<=========================="
+    echo "$mcad_pod"
+    kubectl logs pod/${mcad_pod} -n kube-system
 
     kind delete cluster ${CLUSTER_CONTEXT}
 }
@@ -289,6 +291,10 @@ function kube-test-env-up {
     echo "Listing MCAD Controller Helm Chart and Pod YAML..."
     helm list
     mcad_pod=$(kubectl get pods -n kube-system | grep xqueuejob | awk '{print $1}')
+    test_pod=$(kubectl get pods -n kube-system | grep xqueuejob | cut -d' ' -f1)
+    echo "_____________________________ Printing the pod name ______________________"
+    echo "$mcad_pod"
+    echo "$test_pod"
     if [[ "$mcad_pod" != "" ]]
     then
         kubectl get pod ${mcad_pod} -n kube-system -o yaml
