@@ -9,7 +9,7 @@ services:
   - docker
 
 go:
-  - "1.16"
+  - "1.15.11"
 
 go_import_path: github.com/IBM/multi-cluster-app-dispatcher
 
