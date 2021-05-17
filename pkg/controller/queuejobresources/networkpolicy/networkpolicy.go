@@ -20,7 +20,6 @@ import (
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
-	"github.com/golang/glog"
 
 	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
@@ -32,6 +31,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog"
 
 	"sync"
 	"time"
@@ -147,7 +147,7 @@ func (qjrNetworkPolicy *QueueJobResNetworkPolicy) getNetworkPolicyTemplate(qjobR
 	networkpolicyGVK := schema.GroupVersion{Group: networkingv1.GroupName, Version: "v1"}.WithKind("NetworkPolicy")
 	obj, _, err := qjrNetworkPolicy.jsonSerializer.Decode(qjobRes.Template.Raw, &networkpolicyGVK, nil)
 	if err != nil {
-		// glog.Infof("Decoding Error for NetworkPolicy=================================================")
+		// klog.Infof("Decoding Error for NetworkPolicy=================================================")
 		return nil, err
 	}
 
@@ -162,7 +162,7 @@ func (qjrNetworkPolicy *QueueJobResNetworkPolicy) getNetworkPolicyTemplate(qjobR
 
 func (qjrNetworkPolicy *QueueJobResNetworkPolicy) createNetworkPolicyWithControllerRef(namespace string, networkpolicy *networkingv1.NetworkPolicy, controllerRef *metav1.OwnerReference) error {
 
-	// glog.V(4).Infof("==========create NetworkPolicy: %+v \n", networkpolicy)
+	// klog.V(4).Infof("==========create NetworkPolicy: %+v \n", networkpolicy)
 	if controllerRef != nil {
 		networkpolicy.OwnerReferences = append(networkpolicy.OwnerReferences, *controllerRef)
 	}
@@ -176,7 +176,7 @@ func (qjrNetworkPolicy *QueueJobResNetworkPolicy) createNetworkPolicyWithControl
 
 func (qjrNetworkPolicy *QueueJobResNetworkPolicy) delNetworkPolicy(namespace string, name string) error {
 
-	glog.V(4).Infof("==========delete networkpolicy: %s \n", name)
+	klog.V(4).Infof("==========delete networkpolicy: %s \n", name)
 	if err := qjrNetworkPolicy.clients.NetworkingV1().NetworkPolicies(namespace).Delete(context.Background(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
@@ -193,8 +193,8 @@ func (qjrNetworkPolicy *QueueJobResNetworkPolicy) SyncQueueJob(queuejob *arbv1.A
 	startTime := time.Now()
 
 	defer func() {
-		// glog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
-		glog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
+		// klog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
+		klog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
 	}()
 
 	_namespace, networkPolicyInQjr, networkPoliciesInEtcd, err := qjrNetworkPolicy.getNetworkPolicyForQueueJobRes(qjobRes, queuejob)
@@ -207,14 +207,14 @@ func (qjrNetworkPolicy *QueueJobResNetworkPolicy) SyncQueueJob(queuejob *arbv1.A
 
 	diff := int(replicas) - int(networkPolicyLen)
 
-	glog.V(4).Infof("QJob: %s had %d NetworkPolicies and %d desired NetworkPolicies", queuejob.Name, networkPolicyLen, replicas)
+	klog.V(4).Infof("QJob: %s had %d NetworkPolicies and %d desired NetworkPolicies", queuejob.Name, networkPolicyLen, replicas)
 
 	if diff > 0 {
 		//TODO: need set reference after Service has been really added
 		tmpNetworkPolicy := networkingv1.NetworkPolicy{}
 		err = qjrNetworkPolicy.refManager.AddReference(qjobRes, &tmpNetworkPolicy)
 		if err != nil {
-			glog.Errorf("Cannot add reference to configmap resource %+v", err)
+			klog.Errorf("Cannot add reference to configmap resource %+v", err)
 			return err
 		}
 
@@ -253,7 +253,7 @@ func (qjrNetworkPolicy *QueueJobResNetworkPolicy) getNetworkPolicyForQueueJobRes
 	// Get "a" NetworkPolicy from AppWrapper Resource
 	networkPolicyInQjr, err := qjrNetworkPolicy.getNetworkPolicyTemplate(qjobRes)
 	if err != nil {
-		glog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
+		klog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
 		return nil, nil, nil, err
 	}
 
@@ -301,7 +301,7 @@ func (qjrNetworkPolicy *QueueJobResNetworkPolicy) deleteQueueJobResNetworkPolici
 			defer wait.Done()
 			if err := qjrNetworkPolicy.delNetworkPolicy(*_namespace, activeNetworkPolicies[ix].Name); err != nil {
 				defer utilruntime.HandleError(err)
-				glog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeNetworkPolicies[ix].Name, *_namespace, job.Name)
+				klog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeNetworkPolicies[ix].Name, *_namespace, job.Name)
 			}
 		}(i)
 	}

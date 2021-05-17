@@ -27,11 +27,11 @@ import (
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
-	"github.com/golang/glog"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -63,12 +63,12 @@ func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterA
 	if len(configStrings) < 2 {
 		return nil
 	}
-	glog.V(2).Infof("[Dispatcher: Agent] Creation: %s\n", "/root/kubernetes/"+configStrings[0])
+	klog.V(2).Infof("[Dispatcher: Agent] Creation: %s\n", "/root/kubernetes/"+configStrings[0])
 
 	agent_config, err := clientcmd.BuildConfigFromFlags("", "/root/kubernetes/"+configStrings[0])
 	// agent_config, err:=clientcmd.BuildConfigFromFlags("", "/root/agent101config")
 	if err != nil {
-		glog.V(2).Infof("[Dispatcher: Agent] Cannot crate client\n")
+		klog.V(2).Infof("[Dispatcher: Agent] Cannot crate client\n")
 		return nil
 	}
 	qa := &JobClusterAgent{
@@ -81,9 +81,9 @@ func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterA
 	qa.agentEventQueue = agentEventQueue
 
 	if qa.queuejobclients == nil {
-		glog.V(2).Infof("[Dispatcher: Agent] Cannot Create Client\n")
+		klog.V(2).Infof("[Dispatcher: Agent] Cannot Create Client\n")
 	} else {
-		glog.V(2).Infof("[Dispatcher: Agent] %s: Create Clients Suceessfully\n", qa.AgentId)
+		klog.V(2).Infof("[Dispatcher: Agent] %s: Create Clients Suceessfully\n", qa.AgentId)
 	}
 
 	queueJobClientForInformer, _, err := clients.NewClient(agent_config)
@@ -101,7 +101,7 @@ func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterA
 			FilterFunc: func(obj interface{}) bool {
 				switch t := obj.(type) {
 				case *arbv1.AppWrapper:
-					glog.V(4).Infof("Filter AppWrapper name(%s) namespace(%s)\n", t.Name, t.Namespace)
+					klog.V(4).Infof("Filter AppWrapper name(%s) namespace(%s)\n", t.Name, t.Namespace)
 					return true
 				default:
 					return false
@@ -126,30 +126,30 @@ func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterA
 func (cc *JobClusterAgent) addQueueJob(obj interface{}) {
 	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("obj is not AppWrapper")
+		klog.Errorf("obj is not AppWrapper")
 		return
 	}
-	glog.V(10).Infof("[TTime]: %s Adding New Job: %s to EventQ\n", time.Now().String(), qj.Name)
+	klog.V(10).Infof("[TTime]: %s Adding New Job: %s to EventQ\n", time.Now().String(), qj.Name)
 	cc.agentEventQueue.Add(qj)
 }
 
 func (cc *JobClusterAgent) updateQueueJob(oldObj, newObj interface{}) {
 	newQJ, ok := newObj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("newObj is not AppWrapper")
+		klog.Errorf("newObj is not AppWrapper")
 		return
 	}
-	glog.V(10).Infof("[TTime]: %s Adding Update Job: %s to EventQ\n", time.Now().String(), newQJ.Name)
+	klog.V(10).Infof("[TTime]: %s Adding Update Job: %s to EventQ\n", time.Now().String(), newQJ.Name)
 	cc.agentEventQueue.Add(newQJ)
 }
 
 func (cc *JobClusterAgent) deleteQueueJob(obj interface{}) {
 	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
-		glog.Errorf("obj is not AppWrapper")
+		klog.Errorf("obj is not AppWrapper")
 		return
 	}
-	glog.V(10).Infof("[TTime]: %s Adding Delete Job: %s to EventQ\n", time.Now().String(), qj.Name)
+	klog.V(10).Infof("[TTime]: %s Adding Delete Job: %s to EventQ\n", time.Now().String(), qj.Name)
 	cc.agentEventQueue.Add(qj)
 }
 
@@ -161,7 +161,7 @@ func (qa *JobClusterAgent) Run(stopCh chan struct{}) {
 
 func (qa *JobClusterAgent) DeleteJob(cqj *arbv1.AppWrapper) {
 	qj_temp := cqj.DeepCopy()
-	glog.V(2).Infof("[Dispatcher: Agent] Request deletion of XQJ %s to Agent %s\n", qj_temp.Name, qa.AgentId)
+	klog.V(2).Infof("[Dispatcher: Agent] Request deletion of XQJ %s to Agent %s\n", qj_temp.Name, qa.AgentId)
 	qa.queuejobclients.ArbV1().AppWrappers(qj_temp.Namespace).Delete(qj_temp.Name, &metav1.DeleteOptions{})
 	return
 }
@@ -184,16 +184,16 @@ func (qa *JobClusterAgent) CreateJob(cqj *arbv1.AppWrapper) {
 	}
 	agent_qj.Labels["IsDispatched"] = "true"
 
-	// glog.Infof("[Agent] XQJ resourceVersion cleaned--Name:%s, Kind:%s\n", agent_qj.Name, agent_qj.Kind)
-	glog.V(2).Infof("[Dispatcher: Agent] Create XQJ: %s (Status: %+v) in Agent %s\n", agent_qj.Name, agent_qj.Status, qa.AgentId)
+	// klog.Infof("[Agent] XQJ resourceVersion cleaned--Name:%s, Kind:%s\n", agent_qj.Name, agent_qj.Kind)
+	klog.V(2).Infof("[Dispatcher: Agent] Create XQJ: %s (Status: %+v) in Agent %s\n", agent_qj.Name, agent_qj.Status, qa.AgentId)
 	qa.queuejobclients.ArbV1().AppWrappers(agent_qj.Namespace).Create(agent_qj)
 	// pods, err := qa.deploymentclients.CoreV1().Pods("").List(metav1.ListOptions{})
 	// if err != nil {
-	// 	glog.Infof("[Agent] Cannot Access Agent================\n")
+	// 	klog.Infof("[Agent] Cannot Access Agent================\n")
 	// }
-	// glog.Infof("There are %d pods in the cluster\n", len(pods.Items))
+	// klog.Infof("There are %d pods in the cluster\n", len(pods.Items))
 	// // for _, pod := range pods.Items {
-	// 	glog.Infof("[Agent] Pod Name=%s\n",pod.Name)
+	// 	klog.Infof("[Agent] Pod Name=%s\n",pod.Name)
 	// }
 
 	return
@@ -214,7 +214,7 @@ type ClusterMetricsList struct {
 }
 
 func (qa *JobClusterAgent) UpdateAggrResources() error {
-	glog.V(6).Infof("[Dispatcher: Agent] Getting aggregated resources for Agent ID: %s with Agent QueueJob Name: %s\n", qa.AgentId, qa.DeploymentName)
+	klog.V(6).Infof("[Dispatcher: Agent] Getting aggregated resources for Agent ID: %s with Agent QueueJob Name: %s\n", qa.AgentId, qa.DeploymentName)
 
 	// Read the Agent XQJ Deployment object
 	if qa.k8sClients == nil {
@@ -225,24 +225,24 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 	data, err := qa.k8sClients.RESTClient().Get().AbsPath("apis/external.metrics.k8s.io/v1beta1/namespaces/default/cluster-external-metric").DoRaw(context.Background())
 
 	if err != nil {
-		glog.V(2).Infof("Failed to get metrics from deployment Agent ID: %s with Agent QueueJob Name: %s, Error: %v\n", qa.AgentId, qa.DeploymentName, err)
+		klog.V(2).Infof("Failed to get metrics from deployment Agent ID: %s with Agent QueueJob Name: %s, Error: %v\n", qa.AgentId, qa.DeploymentName, err)
 
 	} else {
 		res := &ClusterMetricsList{}
 		unmarshalerr := json.Unmarshal(data, res)
 		if unmarshalerr != nil {
-			glog.V(2).Infof("Failed to unmarshal metrics to struct: %v from deployment Agent ID: %s with Agent QueueJob Name: %s, Error: %v\n",
+			klog.V(2).Infof("Failed to unmarshal metrics to struct: %v from deployment Agent ID: %s with Agent QueueJob Name: %s, Error: %v\n",
 				res, qa.AgentId, qa.DeploymentName, unmarshalerr)
 		} else {
 			if len(res.Items) > 0 {
 				for i := 0; i < len(res.Items); i++ {
-					glog.V(9).Infof("Obtained the metric:%s, label:%v, value: %s, from the Agent: %s  with Agent QueueJob Name: %s.\n",
+					klog.V(9).Infof("Obtained the metric:%s, label:%v, value: %s, from the Agent: %s  with Agent QueueJob Name: %s.\n",
 						res.Items[i].MetricName, res.Items[i].MetricLabels, res.Items[i].Value, qa.AgentId, qa.DeploymentName)
 					clusterMetricType := res.Items[i].MetricLabels["cluster"]
 					if strings.Compare(clusterMetricType, "cpu") == 0 || strings.Compare(clusterMetricType, "memory") == 0 {
 						num, err := strconv.ParseFloat(res.Items[i].Value, 64)
 						if err != nil {
-							glog.Warningf("Possible issue converting %s string value of %s due to error: %v\n",
+							klog.Warningf("Possible issue converting %s string value of %s due to error: %v\n",
 								clusterMetricType, res.Items[i].Value, err)
 						} else {
 							f_num := math.Float64bits(num)
@@ -250,31 +250,31 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 							if f_num > f_zero {
 								if strings.Compare(clusterMetricType, "cpu") == 0 {
 									qa.AggrResources.MilliCPU = num
-									glog.V(10).Infof("Updated %s from %f to %f for metrics: %v from deployment Agent ID: %s with Agent QueueJob Name: %s\n",
+									klog.V(10).Infof("Updated %s from %f to %f for metrics: %v from deployment Agent ID: %s with Agent QueueJob Name: %s\n",
 										clusterMetricType, qa.AggrResources.MilliCPU, num, res, qa.AgentId, qa.DeploymentName)
 								} else {
 									qa.AggrResources.Memory = num
-									glog.V(10).Infof("Updated %s from %f to %f for metrics: %v from deployment Agent ID: %s with Agent QueueJob Name: %s\n",
+									klog.V(10).Infof("Updated %s from %f to %f for metrics: %v from deployment Agent ID: %s with Agent QueueJob Name: %s\n",
 										clusterMetricType, qa.AggrResources.Memory, num, res, qa.AgentId, qa.DeploymentName)
 								}
 							} else {
-								glog.Warningf("Possible issue converting %s string value of %s to float type.  Conversion result: %f\n",
+								klog.Warningf("Possible issue converting %s string value of %s to float type.  Conversion result: %f\n",
 									clusterMetricType, res.Items[i].Value, num)
 							} // Float value resulted in zero value.
 						} // Converting string to float success
 					} else {
-						glog.V(9).Infof("Unknown label value: %s for metrics: %v from deployment Agent ID: %s with Agent QueueJob Name: %s\n",
+						klog.V(9).Infof("Unknown label value: %s for metrics: %v from deployment Agent ID: %s with Agent QueueJob Name: %s\n",
 							clusterMetricType, res, qa.AgentId, qa.DeploymentName)
 					} // Unknown label
 
 				}
 			} else {
-				glog.V(2).Infof("Failed to obtain values for metrics: %v from deployment Agent ID: %s with Agent QueueJob Name: %s, Error: %v\n", res, qa.AgentId, qa.DeploymentName, unmarshalerr)
+				klog.V(2).Infof("Failed to obtain values for metrics: %v from deployment Agent ID: %s with Agent QueueJob Name: %s, Error: %v\n", res, qa.AgentId, qa.DeploymentName, unmarshalerr)
 			}
 		}
 	}
 
-	glog.V(4).Infof("[Dispatcher: Agent] Updated Aggr Resources of %s: %v\n", qa.AgentId, qa.AggrResources)
+	klog.V(4).Infof("[Dispatcher: Agent] Updated Aggr Resources of %s: %v\n", qa.AgentId, qa.AggrResources)
 	return nil
 }
 

@@ -20,7 +20,6 @@ import (
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
-	"github.com/golang/glog"
 
 	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	"sync"
@@ -40,6 +39,7 @@ import (
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog"
 )
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
@@ -159,7 +159,7 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) getPersistentV
 
 func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) createPersistentVolumeClaimWithControllerRef(namespace string, persistentvolumeclaim *v1.PersistentVolumeClaim, controllerRef *metav1.OwnerReference) error {
 
-	// glog.V(4).Infof("==========create PersistentVolumeClaim: %+v \n", persistentvolumeclaim)
+	// klog.V(4).Infof("==========create PersistentVolumeClaim: %+v \n", persistentvolumeclaim)
 	if controllerRef != nil {
 		persistentvolumeclaim.OwnerReferences = append(persistentvolumeclaim.OwnerReferences, *controllerRef)
 	}
@@ -173,7 +173,7 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) createPersiste
 
 func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) delPersistentVolumeClaim(namespace string, name string) error {
 
-	glog.V(4).Infof("==========delete persistentvolumeclaim: %s \n", name)
+	klog.V(4).Infof("==========delete persistentvolumeclaim: %s \n", name)
 	if err := qjrPersistentVolumeClaim.clients.CoreV1().PersistentVolumeClaims(namespace).Delete(context.Background(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
@@ -190,8 +190,8 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) SyncQueueJob(q
 	startTime := time.Now()
 
 	defer func() {
-		// glog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
-		glog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
+		// klog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
+		klog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
 	}()
 
 	_namespace, persistentVolumeClaimInQjr, persistentVolumeClaimsInEtcd, err := qjrPersistentVolumeClaim.getPersistentVolumeClaimForQueueJobRes(qjobRes, queuejob)
@@ -204,14 +204,14 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) SyncQueueJob(q
 
 	diff := int(replicas) - int(persistentVolumeClaimLen)
 
-	glog.V(4).Infof("QJob: %s had %d PersistVolumeClaims and %d desired PersistVolumeClaims", queuejob.Name, persistentVolumeClaimLen, replicas)
+	klog.V(4).Infof("QJob: %s had %d PersistVolumeClaims and %d desired PersistVolumeClaims", queuejob.Name, persistentVolumeClaimLen, replicas)
 
 	if diff > 0 {
 		//TODO: need set reference after Service has been really added
 		tmpPersistentVolumeClaim := v1.PersistentVolumeClaim{}
 		err = qjrPersistentVolumeClaim.refManager.AddReference(qjobRes, &tmpPersistentVolumeClaim)
 		if err != nil {
-			glog.Errorf("Cannot add reference to configmap resource %+v", err)
+			klog.Errorf("Cannot add reference to configmap resource %+v", err)
 			return err
 		}
 
@@ -250,7 +250,7 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) getPersistentV
 	// Get "a" PersistentVolumeClaim from AppWrapper Resource
 	persistentVolumeClaimInQjr, err := qjrPersistentVolumeClaim.getPersistentVolumeClaimTemplate(qjobRes)
 	if err != nil {
-		glog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
+		klog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
 		return nil, nil, nil, err
 	}
 
@@ -298,7 +298,7 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) deleteQueueJob
 			defer wait.Done()
 			if err := qjrPersistentVolumeClaim.delPersistentVolumeClaim(*_namespace, activePersistentVolumeClaims[ix].Name); err != nil {
 				defer utilruntime.HandleError(err)
-				glog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activePersistentVolumeClaims[ix].Name, *_namespace, job.Name)
+				klog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activePersistentVolumeClaims[ix].Name, *_namespace, job.Name)
 			}
 		}(i)
 	}

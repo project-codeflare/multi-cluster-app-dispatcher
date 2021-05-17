@@ -1,0 +1,115 @@
+Log file created at: 2021/05/17 15:18:00
+Running on machine: fa943116a45a
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 15:18:00.298493     347 main.go:68] nice to meet you
+Log file created at: 2021/05/17 15:21:16
+Running on machine: 7c8c1fc29c08
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 15:21:16.629884     337 main.go:68] nice to meet you
+Log file created at: 2021/05/17 15:39:36
+Running on machine: 96a33749df35
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 15:39:36.686065     343 main.go:68] nice to meet you
+Log file created at: 2021/05/17 17:06:49
+Running on machine: f0535c2206f9
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 17:06:49.045787     357 main.go:68] nice to meet you
+Log file created at: 2021/05/17 17:08:44
+Running on machine: caf2115e2e0b
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 17:08:44.064996     338 main.go:68] nice to meet you
+Log file created at: 2021/05/17 18:01:18
+Running on machine: dad3eeaec185
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 18:01:18.520922     357 main.go:68] nice to meet you
+Log file created at: 2021/05/17 18:33:56
+Running on machine: 28da8f3f5c4e
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 18:33:56.009137     337 main.go:68] nice to meet you
+Log file created at: 2021/05/17 19:15:25
+Running on machine: 86fbb95292f5
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 19:15:25.642293     337 main.go:68] nice to meet you
+Log file created at: 2021/05/17 19:23:21
+Running on machine: 7d754b6f418c
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 19:23:21.986945     331 main.go:68] nice to meet you
+Log file created at: 2021/05/17 19:27:42
+Running on machine: ce0278abba06
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 19:27:42.665731     330 main.go:68] nice to meet you
+Log file created at: 2021/05/17 19:38:30
+Running on machine: f8d221cc58a2
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 19:38:30.033549     333 main.go:68] nice to meet you
+Log file created at: 2021/05/17 20:02:34
+Running on machine: 63bd639dc394
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 20:02:34.134186     331 main.go:68] nice to meet you
+Log file created at: 2021/05/17 20:11:17
+Running on machine: 08de010e154f
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 20:11:17.234256     337 main.go:68] nice to meet you
+Log file created at: 2021/05/17 20:17:04
+Running on machine: 086e019d5fea
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 20:17:04.693502     336 main.go:68] nice to meet you
+Log file created at: 2021/05/17 20:28:21
+Running on machine: f76a43c962a2
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 20:28:21.388420     332 main.go:68] nice to meet you
+Log file created at: 2021/05/17 20:33:34
+Running on machine: 6d0ebd594ebb
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 20:33:34.641836     330 main.go:68] nice to meet you
+Log file created at: 2021/05/17 20:40:05
+Running on machine: 5fe089b94e3f
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 20:40:05.537365     335 main.go:68] nice to meet you
+Log file created at: 2021/05/17 20:45:05
+Running on machine: 142f7f9a8d12
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 20:45:05.398553     339 main.go:68] nice to meet you
+Log file created at: 2021/05/17 21:26:33
+Running on machine: e0ae4b3293ca
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 21:26:33.114724     335 main.go:68] nice to meet you
+Log file created at: 2021/05/17 21:29:18
+Running on machine: 9f284585c708
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 21:29:18.825840     329 main.go:68] nice to meet you
+Log file created at: 2021/05/17 21:48:04
+Running on machine: db3cadf5dce3
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 21:48:04.389291     328 main.go:68] nice to meet you
+Log file created at: 2021/05/17 21:51:24
+Running on machine: dbac950bcc89
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 21:51:24.702444     348 main.go:68] nice to meet you
+Log file created at: 2021/05/17 22:01:40
+Running on machine: 8ef0679cfbe5
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 22:01:40.832586     335 main.go:68] nice to meet you

@@ -23,7 +23,6 @@ import (
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
-	"github.com/golang/glog"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -38,6 +37,7 @@ import (
 	extlister "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog"
 )
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
@@ -122,7 +122,7 @@ func (qjrDeployment *QueueJobResDeployment) GetAggregatedResources(job *arbv1.Ap
 			if ar.Type == arbv1.ResourceTypeDeployment {
 				template, replicas, err := qjrDeployment.GetPodTemplate(&ar)
 				if err != nil {
-					glog.Errorf("Pod Template not found in item: %+v error: %+v.  Aggregated resources set to 0.", ar, err)
+					klog.Errorf("Pod Template not found in item: %+v error: %+v.  Aggregated resources set to 0.", ar, err)
 				} else {
 					myres := queuejobresources.GetPodResources(template)
 					myres.MilliCPU = float64(replicas) * myres.MilliCPU
@@ -240,8 +240,8 @@ func (qjrDeployment *QueueJobResDeployment) SyncQueueJob(queuejob *arbv1.AppWrap
 	startTime := time.Now()
 
 	defer func() {
-		// glog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
-		glog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
+		// klog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
+		klog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
 	}()
 
 	_namespace, deploymentInQjr, deploymentsInEtcd, err := qjrDeployment.getDeploymentForQueueJobRes(qjobRes, queuejob)
@@ -254,14 +254,14 @@ func (qjrDeployment *QueueJobResDeployment) SyncQueueJob(queuejob *arbv1.AppWrap
 
 	diff := int(replicas) - int(deploymentLen)
 
-	glog.V(4).Infof("QJob: %s had %d Deployments and %d desired Deployments", queuejob.Name, deploymentLen, replicas)
+	klog.V(4).Infof("QJob: %s had %d Deployments and %d desired Deployments", queuejob.Name, deploymentLen, replicas)
 
 	if diff > 0 {
 		//TODO: need set reference after Service has been really added
 		tmpDeployment := apps.Deployment{}
 		err = qjrDeployment.refManager.AddReference(qjobRes, &tmpDeployment)
 		if err != nil {
-			glog.Errorf("Cannot add reference to configmap resource %+v", err)
+			klog.Errorf("Cannot add reference to configmap resource %+v", err)
 			return err
 		}
 		if deploymentInQjr.Labels == nil {
@@ -303,7 +303,7 @@ func (qjrDeployment *QueueJobResDeployment) getDeploymentForQueueJobRes(qjobRes 
 	// Get "a" Deployment from AppWrapper  Resource
 	deploymentInQjr, err := qjrDeployment.getDeploymentTemplate(qjobRes)
 	if err != nil {
-		glog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
+		klog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
 		return nil, nil, nil, err
 	}
 
@@ -352,7 +352,7 @@ func (qjrDeployment *QueueJobResDeployment) deleteQueueJobResDeployments(qjobRes
 			defer wait.Done()
 			if err := qjrDeployment.delDeployment(*_namespace, activeDeployments[ix].Name); err != nil {
 				defer utilruntime.HandleError(err)
-				glog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeDeployments[ix].Name, *_namespace, job.Name)
+				klog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeDeployments[ix].Name, *_namespace, job.Name)
 			}
 		}(i)
 	}

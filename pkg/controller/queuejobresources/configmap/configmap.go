@@ -20,13 +20,13 @@ import (
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
-	"github.com/golang/glog"
 
 	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/klog"
 
 	// "k8s.io/apimachinery/pkg/api/meta"
 	"sync"
@@ -189,8 +189,8 @@ func (qjrConfigMap *QueueJobResConfigMap) SyncQueueJob(queuejob *arbv1.AppWrappe
 	startTime := time.Now()
 
 	defer func() {
-		// glog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
-		glog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
+		// klog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
+		klog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
 	}()
 
 	_namespace, configMapInQjr, configMapsInEtcd, err := qjrConfigMap.getConfigMapForQueueJobRes(qjobRes, queuejob)
@@ -203,14 +203,14 @@ func (qjrConfigMap *QueueJobResConfigMap) SyncQueueJob(queuejob *arbv1.AppWrappe
 
 	diff := int(replicas) - int(configMapLen)
 
-	glog.V(4).Infof("QJob: %s had %d configMaps and %d desired configMaps", queuejob.Name, configMapLen, replicas)
+	klog.V(4).Infof("QJob: %s had %d configMaps and %d desired configMaps", queuejob.Name, configMapLen, replicas)
 
 	if diff > 0 {
 		//TODO: need set reference after Service has been really added
 		tmpConfigMap := v1.ConfigMap{}
 		err = qjrConfigMap.refManager.AddReference(qjobRes, &tmpConfigMap)
 		if err != nil {
-			glog.Errorf("Cannot add reference to configmap resource %+v", err)
+			klog.Errorf("Cannot add reference to configmap resource %+v", err)
 			return err
 		}
 		if configMapInQjr.Labels == nil {
@@ -248,7 +248,7 @@ func (qjrConfigMap *QueueJobResConfigMap) getConfigMapForQueueJobRes(qjobRes *ar
 	// Get "a" ConfigMap from AppWrapper Resource
 	configMapInQjr, err := qjrConfigMap.getConfigMapTemplate(qjobRes)
 	if err != nil {
-		glog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
+		klog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
 		return nil, nil, nil, err
 	}
 
@@ -298,7 +298,7 @@ func (qjrConfigMap *QueueJobResConfigMap) deleteQueueJobResConfigMaps(qjobRes *a
 			defer wait.Done()
 			if err := qjrConfigMap.delConfigMap(*_namespace, activeConfigMaps[ix].Name); err != nil {
 				defer utilruntime.HandleError(err)
-				glog.V(2).Infof("Failed to delete %v, application wrapper %q/%q deadline exceeded", activeConfigMaps[ix].Name, *_namespace, job.Name)
+				klog.V(2).Infof("Failed to delete %v, application wrapper %q/%q deadline exceeded", activeConfigMaps[ix].Name, *_namespace, job.Name)
 			}
 		}(i)
 	}

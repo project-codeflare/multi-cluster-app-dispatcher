@@ -24,12 +24,12 @@ import (
 
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 
-	"github.com/golang/glog"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog"
 )
 
 const appWrapperKindName = arbv1.AppWrapperPlural + "." + arbv1.GroupName
@@ -84,7 +84,7 @@ func CreateAppWrapperKind(clientset apiextensionsclient.Interface) (*apiextensio
 		return nil, err
 	}
 
-	glog.V(4).Infof("AppWrapper CRD was created.")
+	klog.V(4).Infof("AppWrapper CRD was created.")
 
 	return crd, nil
 }
