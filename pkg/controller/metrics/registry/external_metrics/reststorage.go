@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
-	"github.com/golang/glog"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,16 +34,14 @@ import (
 // interfaces.
 type REST struct {
 	emProvider provider.ExternalMetricsProvider
+	rest.TableConvertor
 }
 
 var _ rest.Storage = &REST{}
-
-// var _ rest.Lister = &REST{}
+var _ rest.Lister = &REST{}
 
 // NewREST returns new REST object for provided CustomMetricsProvider.
 func NewREST(emProvider provider.ExternalMetricsProvider) *REST {
-	glog.V(10).Infof("Entered NewREST()")
-
 	return &REST{
 		emProvider: emProvider,
 	}
@@ -66,16 +63,11 @@ func (r *REST) NewList() runtime.Object {
 
 // List selects resources in the storage which match to the selector.
 func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
-	glog.V(10).Infof("Entered List()")
-
-	glog.V(9).Infof("List(): labels=%v", labels.Everything())
 	// populate the label selector, defaulting to all
 	metricSelector := labels.Everything()
-
 	if options != nil && options.LabelSelector != nil {
 		metricSelector = options.LabelSelector
 	}
-	glog.V(9).Infof("List(): metricSelector=%v", metricSelector)
 
 	namespace := genericapirequest.NamespaceValue(ctx)
 
@@ -85,6 +77,5 @@ func (r *REST) List(ctx context.Context, options *metainternalversion.ListOption
 	}
 	metricName := requestInfo.Resource
 
-	glog.V(9).Infof("List(): namespace=%v, requestInfo=%v, metricName=%v", namespace, requestInfo, metricName)
 	return r.emProvider.GetExternalMetric(namespace, metricSelector, provider.ExternalMetricInfo{Metric: metricName})
 }

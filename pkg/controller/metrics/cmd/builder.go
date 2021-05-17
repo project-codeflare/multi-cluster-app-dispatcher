@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/golang/glog"
 	"sync"
 	"time"
 
@@ -30,6 +29,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	openapicommon "k8s.io/kube-openapi/pkg/common"
 
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/apiserver"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/cmd/server"
@@ -67,6 +67,9 @@ type AdapterBase struct {
 	// if not explicitly set.
 	FlagSet *pflag.FlagSet
 
+	// OpenAPIConfig
+	OpenAPIConfig *openapicommon.Config
+
 	// flagOnce controls initialization of the flags.
 	flagOnce sync.Once
 
@@ -85,12 +88,11 @@ type AdapterBase struct {
 
 // InstallFlags installs the minimum required set of flags into the flagset.
 func (b *AdapterBase) InstallFlags() {
-	glog.Infof("Entered InstallFlags()")
-
 	b.initFlagSet()
 	b.flagOnce.Do(func() {
 		if b.CustomMetricsAdapterServerOptions == nil {
 			b.CustomMetricsAdapterServerOptions = server.NewCustomMetricsAdapterServerOptions()
+			b.CustomMetricsAdapterServerOptions.OpenAPIConfig = b.OpenAPIConfig
 		}
 
 		b.SecureServing.AddFlags(b.FlagSet)
@@ -108,20 +110,9 @@ func (b *AdapterBase) InstallFlags() {
 
 // initFlagSet populates the flagset to the CommandLine flags if it's not already set.
 func (b *AdapterBase) initFlagSet() {
-	glog.Infof("Entered initFlagSet()")
-
 	if b.FlagSet == nil {
 		// default to the normal commandline flags
-		glog.Infof("initFlagSet(): FlagSet was nil.")
 		b.FlagSet = pflag.CommandLine
-	}
-	p, err := b.FlagSet.GetInt("secure-port")
-	if err != nil {
-		glog.Infof("initFlagSet(): Flagset secure-port = %v", p)
-	} else {
-		glog.Infof("initFlagSet(): Error getting secure-port: %v", err)
-		b.FlagSet.Set("secure-port", "6443")
-		glog.Infof("initFlagSet(): Flagset secure-port = %v", p)
 	}
 }
 
@@ -129,7 +120,6 @@ func (b *AdapterBase) initFlagSet() {
 // It will initialize the flagset with the minimum required set
 // of flags as well.
 func (b *AdapterBase) Flags() *pflag.FlagSet {
-	glog.Infof("Entered Flags()")
 	b.initFlagSet()
 	b.InstallFlags()
 
@@ -289,20 +279,10 @@ func (b *AdapterBase) Informers() (informers.SharedInformerFactory, error) {
 
 // Run runs this custom metrics adapter until the given stop channel is closed.
 func (b *AdapterBase) Run(stopCh <-chan struct{}) error {
-	glog.Infof("Entered Run()")
 	server, err := b.Server()
 	if err != nil {
-		glog.Infof("Error creating server: %v", err)
 		return err
 	}
 
-	glog.Infof("Successfully created server.")
-//	return server.GenericAPIServer.PrepareRun().Run(stopCh)
-	runErr := server.GenericAPIServer.PrepareRun().Run(stopCh)
-	if runErr != nil {
-		glog.Infof("Error running API Server: %v", runErr)
-
-	}
-	glog.Infof("Exited Run()")
-	return runErr
+	return server.GenericAPIServer.PrepareRun().Run(stopCh)
 }

@@ -22,9 +22,9 @@ import (
 	"os"
 
 	"github.com/emicklei/go-restful"
-	"github.com/golang/glog"
-	"k8s.io/client-go/rest"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/rest"
+	"k8s.io/klog"
 
 	adapterprov "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter/provider"
 	basecmd "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/cmd"
@@ -46,28 +46,28 @@ type MetricsAdpater struct {
 }
 
 func (a *MetricsAdpater) makeProviderOrDie(clusterStateCache clusterstatecache.Cache) (provider.MetricsProvider, *restful.WebService) {
-	glog.Infof("Entered makeProviderOrDie()")
+	klog.Infof("Entered makeProviderOrDie()")
 	client, err := a.DynamicClient()
 	if err != nil {
-		glog.Fatalf("unable to construct dynamic client: %v", err)
+		klog.Fatalf("unable to construct dynamic client: %v", err)
 	}
 
 	mapper, err := a.RESTMapper()
 	if err != nil {
-		glog.Fatalf("unable to construct discovery REST mapper: %v", err)
+		klog.Fatalf("unable to construct discovery REST mapper: %v", err)
 	}
 
 	return adapterprov.NewFakeProvider(client, mapper, clusterStateCache)
 }
 
 func newMetricsAdpater(config *rest.Config, clusterStateCache clusterstatecache.Cache) *MetricsAdpater {
-	glog.V(10).Infof("Entered main()")
+	klog.V(10).Infof("Entered main()")
 
 	cmd := &MetricsAdpater{}
 	cmd.Flags().StringVar(&cmd.Message, "msg", "starting adapter...", "startup message")
-	glog.Infof("")
+	klog.Infof("")
 	cmd.Flags().AddGoFlagSet(flag.CommandLine) // make sure we get the glog flags
-	glog.V(9).Infof("commandline: %v", flag.CommandLine)
+	klog.V(9).Infof("commandline: %v", flag.CommandLine)
 	cmd.Flags().Args()
 	cmd.Flags().Parse(os.Args)
 
@@ -75,17 +75,16 @@ func newMetricsAdpater(config *rest.Config, clusterStateCache clusterstatecache.
 	cmd.WithCustomMetrics(testProvider)
 	cmd.WithExternalMetrics(testProvider)
 
-	glog.Infof(cmd.Message)
+	klog.Infof(cmd.Message)
 	// Set up POST endpoint for writing fake metric values
 	restful.DefaultContainer.Add(webService)
 	go func() {
 		// Open port for POSTing fake metrics
-		glog.Fatal(http.ListenAndServe(":8080", nil))
+		klog.Fatal(http.ListenAndServe(":8080", nil))
 	}()
-//	if err := cmd.Run(wait.NeverStop); err != nil {
-//		glog.Fatalf("unable to run custom metrics adapter: %v", err)
-//	}
+	//	if err := cmd.Run(wait.NeverStop); err != nil {
+	//		klog.Fatalf("unable to run custom metrics adapter: %v", err)
+	//	}
 	go cmd.Run(wait.NeverStop)
 	return cmd
 }
-

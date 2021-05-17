@@ -20,12 +20,12 @@ import (
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
-	"github.com/golang/glog"
 
 	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/klog"
 
 	// "k8s.io/apimachinery/pkg/api/meta"
 	"sync"
@@ -174,7 +174,7 @@ func (qjrSecret *QueueJobResSecret) createSecretWithControllerRef(namespace stri
 
 func (qjrSecret *QueueJobResSecret) delSecret(namespace string, name string) error {
 
-	glog.V(4).Infof("==========delete secret: %s \n", name)
+	klog.V(4).Infof("==========delete secret: %s \n", name)
 	if err := qjrSecret.clients.CoreV1().Secrets(namespace).Delete(context.Background(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
@@ -191,8 +191,8 @@ func (qjrSecret *QueueJobResSecret) SyncQueueJob(queuejob *arbv1.AppWrapper, qjo
 	startTime := time.Now()
 
 	defer func() {
-		// glog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
-		glog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
+		// klog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
+		klog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
 	}()
 
 	_namespace, secretInQjr, secretsInEtcd, err := qjrSecret.getSecretForQueueJobRes(qjobRes, queuejob)
@@ -205,14 +205,14 @@ func (qjrSecret *QueueJobResSecret) SyncQueueJob(queuejob *arbv1.AppWrapper, qjo
 
 	diff := int(replicas) - int(secretLen)
 
-	glog.V(4).Infof("QJob: %s had %d Secrets and %d desired Secrets", queuejob.Name, secretLen, replicas)
+	klog.V(4).Infof("QJob: %s had %d Secrets and %d desired Secrets", queuejob.Name, secretLen, replicas)
 
 	if diff > 0 {
 		//TODO: need set reference after Service has been really added
 		tmpSecret := v1.Secret{}
 		err = qjrSecret.refManager.AddReference(qjobRes, &tmpSecret)
 		if err != nil {
-			glog.Errorf("Cannot add reference to configmap resource %+v", err)
+			klog.Errorf("Cannot add reference to configmap resource %+v", err)
 			return err
 		}
 
@@ -251,7 +251,7 @@ func (qjrSecret *QueueJobResSecret) getSecretForQueueJobRes(qjobRes *arbv1.AppWr
 	// Get "a" Secret from AppWrapper Resource
 	secretInQjr, err := qjrSecret.getSecretTemplate(qjobRes)
 	if err != nil {
-		glog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
+		klog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
 		return nil, nil, nil, err
 	}
 
@@ -311,7 +311,7 @@ func (qjrSecret *QueueJobResSecret) deleteQueueJobResSecrets(qjobRes *arbv1.AppW
 			defer wait.Done()
 			if err := qjrSecret.delSecret(*_namespace, activeSecrets[ix].Name); err != nil {
 				defer utilruntime.HandleError(err)
-				glog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeSecrets[ix].Name, *_namespace, job.Name)
+				klog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeSecrets[ix].Name, *_namespace, job.Name)
 			}
 		}(i)
 	}

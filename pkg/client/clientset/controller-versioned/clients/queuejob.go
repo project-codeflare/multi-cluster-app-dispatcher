@@ -24,12 +24,12 @@ import (
 
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 
-	"github.com/golang/glog"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog"
 )
 
 const queueJobKindName = arbv1.QueueJobPlural + "." + arbv1.GroupName
@@ -83,7 +83,7 @@ func CreateQueueJobKind(clientset apiextensionsclient.Interface) (*apiextensions
 		return nil, err
 	}
 
-	glog.V(4).Infof("QueueJob CRD was created.")
+	klog.V(4).Infof("QueueJob CRD was created.")
 
 	return crd, nil
 }

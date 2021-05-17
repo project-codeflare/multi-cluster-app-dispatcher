@@ -20,8 +20,6 @@ import (
 	"net/http"
 	gpath "path"
 
-	"github.com/golang/glog"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/endpoints/handlers"
 	"k8s.io/apiserver/pkg/endpoints/handlers/negotiation"
@@ -36,7 +34,6 @@ type EMHandlers struct{}
 // registerResourceHandlers registers the resource handlers for external metrics.
 // The implementation is based on corresponding registerResourceHandlers for Custom Metrics API
 func (ch *EMHandlers) registerResourceHandlers(a *MetricsAPIInstaller, ws *restful.WebService) error {
-	glog.Infof("Entered EMHandlers registerResourceHandlers()")
 	optionsExternalVersion := a.group.GroupVersion
 	if a.group.OptionsExternalVersion != nil {
 		optionsExternalVersion = *a.group.OptionsExternalVersion
@@ -75,7 +72,6 @@ func (ch *EMHandlers) registerResourceHandlers(a *MetricsAPIInstaller, ws *restf
 	}
 	externalMetricPath := "namespaces" + "/{namespace}/{resource}"
 
-	glog.Infof("EMHandlers registerResourceHandlers(): externalMetricPath=%s", externalMetricPath)
 	mediaTypes, streamMediaTypes := negotiation.MediaTypesForSerializer(a.group.Serializer)
 	allMediaTypes := append(mediaTypes, streamMediaTypes...)
 	ws.Produces(allMediaTypes...)
@@ -110,7 +106,18 @@ func (ch *EMHandlers) registerResourceHandlers(a *MetricsAPIInstaller, ws *restf
 		},
 	}
 
-	externalMetricHandler := metrics.InstrumentRouteFunc("LIST", "external-metrics", "", "", "", "cluster", "custom-metrics", false, "", restfulListResource(lister, nil, reqScope, false, a.minRequestTimeout))
+	externalMetricHandler := metrics.InstrumentRouteFunc(
+		"LIST",
+		a.group.GroupVersion.Group,
+		a.group.GroupVersion.Version,
+		reqScope.Resource.Resource,
+		reqScope.Subresource,
+		"cluster",
+		"external-metrics",
+		false,
+		"",
+		restfulListResource(lister, nil, reqScope, false, a.minRequestTimeout),
+	)
 
 	externalMetricRoute := ws.GET(externalMetricPath).To(externalMetricHandler).
 		Doc(doc).

@@ -28,11 +28,12 @@ package queuejob
 
 import (
 	"fmt"
-	qjobv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
-	"github.com/golang/glog"
-	"k8s.io/client-go/tools/cache"
 	"reflect"
 	"sync"
+
+	qjobv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog"
 )
 
 // SchedulingQueue is an interface for a queue to store pods waiting to be scheduled.
@@ -144,7 +145,7 @@ func (p *PriorityQueue) MoveToActiveQueueIfExists(aw *qjobv1.AppWrapper) error {
 		p.unschedulableQ.Delete(aw)
 		err := p.activeQ.AddIfNotPresent(aw)
 		if err != nil {
-			glog.Errorf("[MoveToActiveQueueIfExists] Error adding AW %v to the scheduling queue: %v\n", aw.Name, err)
+			klog.Errorf("[MoveToActiveQueueIfExists] Error adding AW %v to the scheduling queue: %v\n", aw.Name, err)
 		}
 		p.cond.Broadcast()
 		return err
@@ -162,10 +163,10 @@ func (p *PriorityQueue) Add(qj *qjobv1.AppWrapper) error {
 	defer p.lock.Unlock()
 	err := p.activeQ.Add(qj)
 	if err != nil {
-		glog.Errorf("Error adding QJ %v to the scheduling queue: %v", qj.Name, err)
+		klog.Errorf("Error adding QJ %v to the scheduling queue: %v", qj.Name, err)
 	} else {
 		if p.unschedulableQ.Get(qj) != nil {
-			glog.Errorf("Error: QJ %v is already in the unschedulable queue.", qj.Name)
+			klog.Errorf("Error: QJ %v is already in the unschedulable queue.", qj.Name)
 			p.unschedulableQ.Delete(qj)
 		}
 		p.cond.Broadcast()
@@ -186,7 +187,7 @@ func (p *PriorityQueue) AddIfNotPresent(qj *qjobv1.AppWrapper) error {
 	}
 	err := p.activeQ.Add(qj)
 	if err != nil {
-		glog.Errorf("Error adding pod %v to the scheduling queue: %v", qj.Name, err)
+		klog.Errorf("Error adding pod %v to the scheduling queue: %v", qj.Name, err)
 	} else {
 		p.cond.Broadcast()
 	}

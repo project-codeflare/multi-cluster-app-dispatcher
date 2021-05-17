@@ -19,7 +19,10 @@ package dynamicmapper
 import (
 	"fmt"
 
-	openapi_v2 "github.com/googleapis/gnostic/openapiv2" // fix case sensitive
+	swagger "github.com/emicklei/go-restful-swagger12"
+	openapi_v2 "github.com/googleapis/gnostic/openapiv2"
+
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
@@ -31,15 +34,10 @@ import (
 // NB: this is a copy of k8s.io/client-go/discovery/fake.  The original returns `nil, nil`
 // for some methods, which is generally confuses lots of code.
 
-// FakeDiscovery implements discovery.DiscoveryInterface and sometimes calls testing.Fake.Invoke with an action,
-// but doesn't respect the return value if any. There is a way to fake static values like ServerVersion by using the Faked... fields on the struct.
 type FakeDiscovery struct {
 	*testing.Fake
-	FakedServerVersion *version.Info
 }
 
-// ServerResourcesForGroupVersion returns the supported resources for a group
-// and version.
 func (c *FakeDiscovery) ServerResourcesForGroupVersion(groupVersion string) (*metav1.APIResourceList, error) {
 	action := testing.ActionImpl{
 		Verb:     "get",
@@ -54,14 +52,15 @@ func (c *FakeDiscovery) ServerResourcesForGroupVersion(groupVersion string) (*me
 	return nil, fmt.Errorf("GroupVersion %q not found", groupVersion)
 }
 
-// ServerResources returns the supported resources for all groups and versions.
-// Deprecated: use ServerGroupsAndResources instead.
 func (c *FakeDiscovery) ServerResources() ([]*metav1.APIResourceList, error) {
-	_, rs, err := c.ServerGroupsAndResources()
-	return rs, err
+	action := testing.ActionImpl{
+		Verb:     "get",
+		Resource: schema.GroupVersionResource{Resource: "resource"},
+	}
+	c.Invokes(action, nil)
+	return c.Resources, nil
 }
 
-// ServerGroupsAndResources returns the supported groups and resources for all groups and versions.
 func (c *FakeDiscovery) ServerGroupsAndResources() ([]*metav1.APIGroup, []*metav1.APIResourceList, error) {
 	sgs, err := c.ServerGroups()
 	if err != nil {
@@ -80,83 +79,92 @@ func (c *FakeDiscovery) ServerGroupsAndResources() ([]*metav1.APIGroup, []*metav
 	return resultGroups, c.Resources, nil
 }
 
-// ServerPreferredResources returns the supported resources with the version
-// preferred by the server.
 func (c *FakeDiscovery) ServerPreferredResources() ([]*metav1.APIResourceList, error) {
 	return nil, nil
 }
 
-// ServerPreferredNamespacedResources returns the supported namespaced resources
-// with the version preferred by the server.
 func (c *FakeDiscovery) ServerPreferredNamespacedResources() ([]*metav1.APIResourceList, error) {
 	return nil, nil
 }
 
-// ServerGroups returns the supported groups, with information like supported
-// versions and the preferred version.
 func (c *FakeDiscovery) ServerGroups() (*metav1.APIGroupList, error) {
-	action := testing.ActionImpl{
-		Verb:     "get",
-		Resource: schema.GroupVersionResource{Resource: "group"},
-	}
-	c.Invokes(action, nil)
-
 	groups := map[string]*metav1.APIGroup{}
-
-	for _, res := range c.Resources {
-		gv, err := schema.ParseGroupVersion(res.GroupVersion)
+	groupVersions := map[metav1.GroupVersionForDiscovery]struct{}{}
+	for _, resourceList := range c.Resources {
+		groupVer, err := schema.ParseGroupVersion(resourceList.GroupVersion)
 		if err != nil {
 			return nil, err
 		}
-		group := groups[gv.Group]
-		if group == nil {
-			group = &metav1.APIGroup{
-				Name: gv.Group,
-				PreferredVersion: metav1.GroupVersionForDiscovery{
-					GroupVersion: res.GroupVersion,
-					Version:      gv.Version,
-				},
-			}
-			groups[gv.Group] = group
+		groupVerForDisc := metav1.GroupVersionForDiscovery{
+			GroupVersion: resourceList.GroupVersion,
+			Version:      groupVer.Version,
 		}
 
-		group.Versions = append(group.Versions, metav1.GroupVersionForDiscovery{
-			GroupVersion: res.GroupVersion,
-			Version:      gv.Version,
-		})
+		group, groupPresent := groups[groupVer.Group]
+		if !groupPresent {
+			group = &metav1.APIGroup{
+				Name: groupVer.Group,
+				// use the fist seen version as the preferred version
+				PreferredVersion: groupVerForDisc,
+			}
+			groups[groupVer.Group] = group
+		}
+
+		// we'll dedup in the end by deleting the group-versions
+		// from the global map one at a time
+		group.Versions = append(group.Versions, groupVerForDisc)
+		groupVersions[groupVerForDisc] = struct{}{}
 	}
 
-	list := &metav1.APIGroupList{}
-	for _, apiGroup := range groups {
-		list.Groups = append(list.Groups, *apiGroup)
+	groupList := make([]metav1.APIGroup, 0, len(groups))
+	for _, group := range groups {
+		newGroup := metav1.APIGroup{
+			Name:             group.Name,
+			PreferredVersion: group.PreferredVersion,
+		}
+
+		for _, groupVer := range group.Versions {
+			if _, ok := groupVersions[groupVer]; ok {
+				delete(groupVersions, groupVer)
+				newGroup.Versions = append(newGroup.Versions, groupVer)
+			}
+		}
+
+		groupList = append(groupList, newGroup)
 	}
 
-	return list, nil
-
+	return &metav1.APIGroupList{
+		Groups: groupList,
+	}, nil
 }
 
-// ServerVersion retrieves and parses the server's version.
 func (c *FakeDiscovery) ServerVersion() (*version.Info, error) {
 	action := testing.ActionImpl{}
 	action.Verb = "get"
 	action.Resource = schema.GroupVersionResource{Resource: "version"}
+
 	c.Invokes(action, nil)
-
-	if c.FakedServerVersion != nil {
-		return c.FakedServerVersion, nil
-	}
-
 	versionInfo := kubeversion.Get()
 	return &versionInfo, nil
 }
 
-// OpenAPISchema retrieves and parses the swagger API schema the server supports.
+func (c *FakeDiscovery) SwaggerSchema(version schema.GroupVersion) (*swagger.ApiDeclaration, error) {
+	action := testing.ActionImpl{}
+	action.Verb = "get"
+	if version == v1.SchemeGroupVersion {
+		action.Resource = schema.GroupVersionResource{Resource: "/swaggerapi/api/" + version.Version}
+	} else {
+		action.Resource = schema.GroupVersionResource{Resource: "/swaggerapi/apis/" + version.Group + "/" + version.Version}
+	}
+
+	c.Invokes(action, nil)
+	return &swagger.ApiDeclaration{}, nil
+}
+
 func (c *FakeDiscovery) OpenAPISchema() (*openapi_v2.Document, error) {
 	return &openapi_v2.Document{}, nil
 }
 
-// RESTClient returns a RESTClient that is used to communicate with API server
-// by this client implementation.
 func (c *FakeDiscovery) RESTClient() restclient.Interface {
 	return nil
 }
