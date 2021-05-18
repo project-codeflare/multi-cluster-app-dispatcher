@@ -25,7 +25,6 @@ TAG:=${TAG}${RELEASE_VER}
 
 mcad-controller: init generate-code
 	$(info Compiling controller)
-	go mod tidy
 	CGO_ENABLED=0 GOARCH=amd64 go build -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
 
 print-global-variables:

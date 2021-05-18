@@ -32,4 +32,5 @@ replace (
 	k8s.io/client-go => k8s.io/client-go v0.21.0
 	k8s.io/code-generator => k8s.io/code-generator v0.21.0
 	k8s.io/metrics => k8s.io/metrics v0.21.0
+	golang.org/x/tools =>  golang.org/x/tools v0.1.1 // indirect
 )
