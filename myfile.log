@@ -113,3 +113,43 @@ Running on machine: 8ef0679cfbe5
 Binary: Built with gc go1.16.3 for linux/amd64
 Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
 I0517 22:01:40.832586     335 main.go:68] nice to meet you
+Log file created at: 2021/05/17 22:22:08
+Running on machine: 302066bfd4be
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 22:22:08.035434     342 main.go:68] nice to meet you
+Log file created at: 2021/05/18 01:23:01
+Running on machine: bb7e2e997e54
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0518 01:23:01.378752     328 main.go:68] nice to meet you
+Log file created at: 2021/05/18 04:46:16
+Running on machine: fbca53df49d3
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0518 04:46:16.789148     332 main.go:68] nice to meet you
+Log file created at: 2021/05/17 22:18:07
+Running on machine: Saurabhs-MBP-3
+Binary: Built with gc go1.16 for darwin/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0517 22:18:07.018782   30347 main.go:68] nice to meet you
+Log file created at: 2021/05/18 05:19:19
+Running on machine: d02f82d38c5a
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0518 05:19:19.997572     353 main.go:68] nice to meet you
+Log file created at: 2021/05/18 05:33:45
+Running on machine: f83b3a90d8b3
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0518 05:33:45.703644     343 main.go:68] nice to meet you
+Log file created at: 2021/05/18 18:11:40
+Running on machine: 7b1cf3f1464d
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0518 18:11:40.654849     342 main.go:68] nice to meet you
+Log file created at: 2021/05/18 19:13:33
+Running on machine: 6e416c71a827
+Binary: Built with gc go1.16.3 for linux/amd64
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0518 19:13:33.354689     325 main.go:68] nice to meet you
