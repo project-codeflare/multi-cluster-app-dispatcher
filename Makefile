@@ -51,7 +51,7 @@ verify-tag-name: print-global-variables
 generate-code:
 	$(info Compiling deepcopy-gen...)
 	go build -o ${BIN_DIR}/deepcopy-gen ./cmd/deepcopy-gen/
-	$(info Generating deepcopy...)
+	$(info Generating deepcopy...)	
 	${BIN_DIR}/deepcopy-gen  --alsologtostderr ./pkg/apis/controller/v1alpha1/ -O zz_generated.deepcopy 
 
 images: verify-tag-name
