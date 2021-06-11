@@ -12,25 +12,25 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
 	golang.org/x/tools v0.1.1 // indirect
-	k8s.io/api v0.21.0
-	k8s.io/apiextensions-apiserver v0.21.0
-	k8s.io/apimachinery v0.21.0
-	k8s.io/apiserver v0.21.0
-	k8s.io/client-go v0.21.0
-	k8s.io/component-base v0.21.0
+	k8s.io/api v0.20.0
+	k8s.io/apiextensions-apiserver v0.20.0
+	k8s.io/apimachinery v0.20.0
+	k8s.io/apiserver v0.20.0
+	k8s.io/client-go v0.20.0
+	k8s.io/component-base v0.20.0
 	k8s.io/gengo v0.0.0-20210203185629-de9496dff47b
 	k8s.io/klog v1.0.0
-	k8s.io/klog/v2 v2.8.0
+	k8s.io/klog/v2 v2.4.0
 	k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
-	k8s.io/metrics v0.21.0
+	k8s.io/metrics v0.20.0
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 )
 
 replace (
-	k8s.io/api => k8s.io/api v0.21.0
-	k8s.io/apimachinery => k8s.io/apimachinery v0.21.0
-	k8s.io/client-go => k8s.io/client-go v0.21.0
-	k8s.io/code-generator => k8s.io/code-generator v0.21.0
-	k8s.io/metrics => k8s.io/metrics v0.21.0
-	golang.org/x/tools =>  golang.org/x/tools v0.1.1 // indirect
+	golang.org/x/tools => golang.org/x/tools v0.1.1 // indirect
+	k8s.io/api => k8s.io/api v0.20.0
+	k8s.io/apimachinery => k8s.io/apimachinery v0.20.0
+	k8s.io/client-go => k8s.io/client-go v0.20.0
+	k8s.io/code-generator => k8s.io/code-generator v0.20.0
+	k8s.io/metrics => k8s.io/metrics v0.20.0
 )

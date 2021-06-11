@@ -26,13 +26,13 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/klog/v2"
 
 	. "github.com/onsi/gomega"
 
 	appv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
-	schedv1 "k8s.io/api/scheduling/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,8 +56,8 @@ var twoCPU = v1.ResourceList{"cpu": resource.MustParse("2000m")}
 var threeCPU = v1.ResourceList{"cpu": resource.MustParse("3000m")}
 
 const (
-	workerPriority = "worker-pri"
-	masterPriority = "master-pri"
+	workerPriority = "worker-pri7"
+	masterPriority = "master-pri7"
 )
 
 func homeDir() string {
@@ -79,7 +79,7 @@ type context struct {
 func initTestContext() *context {
 	enableNamespaceAsQueue, _ := strconv.ParseBool(os.Getenv("ENABLE_NAMESPACES_AS_QUEUE"))
 	cxt := &context{
-		namespace: "test",
+		namespace: "test7",
 		queues:    []string{"q1", "q2"},
 	}
 
@@ -94,30 +94,30 @@ func initTestContext() *context {
 
 	cxt.enableNamespaceAsQueue = enableNamespaceAsQueue
 
-	_, err = cxt.kubeclient.CoreV1().Namespaces().Create(gcontext.Background(), &v1.Namespace{
+	/* 	_, err = cxt.kubeclient.CoreV1().Namespaces().Create(gcontext.Background(), &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: cxt.namespace,
 		},
-	}, metav1.CreateOptions{})
-	Expect(err).NotTo(HaveOccurred())
+	}, metav1.CreateOptions{}) */
+	//Expect(err).NotTo(HaveOccurred())
 
-	_, err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Create(gcontext.Background(), &schedv1.PriorityClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: masterPriority,
-		},
-		Value:         100,
-		GlobalDefault: false,
-	}, metav1.CreateOptions{})
-	Expect(err).NotTo(HaveOccurred())
+	/* 	_, err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Create(gcontext.Background(), &schedv1.PriorityClass{
+	   		ObjectMeta: metav1.ObjectMeta{
+	   			Name: masterPriority,
+	   		},
+	   		Value:         100,
+	   		GlobalDefault: false,
+	   	}, metav1.CreateOptions{})
+	   	Expect(err).NotTo(HaveOccurred())
 
-	_, err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Create(gcontext.Background(), &schedv1.PriorityClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: workerPriority,
-		},
-		Value:         1,
-		GlobalDefault: false,
-	}, metav1.CreateOptions{})
-	Expect(err).NotTo(HaveOccurred())
+	   	_, err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Create(gcontext.Background(), &schedv1.PriorityClass{
+	   		ObjectMeta: metav1.ObjectMeta{
+	   			Name: workerPriority,
+	   		},
+	   		Value:         1,
+	   		GlobalDefault: false,
+	   	}, metav1.CreateOptions{})
+	   	Expect(err).NotTo(HaveOccurred()) */
 
 	return cxt
 }
@@ -133,29 +133,30 @@ func namespaceNotExist(ctx *context) wait.ConditionFunc {
 }
 
 func cleanupTestContextExtendedTime(cxt *context, seconds time.Duration) {
-	foreground := metav1.DeletePropagationForeground
-
-	err := cxt.kubeclient.CoreV1().Namespaces().Delete(gcontext.Background(), cxt.namespace, metav1.DeleteOptions{
+	//foreground := metav1.DeletePropagationForeground
+	fmt.Println(string(cxt.namespace))
+	/* err := cxt.kubeclient.CoreV1().Namespaces().Delete(gcontext.Background(), cxt.namespace, metav1.DeleteOptions{
 		PropagationPolicy: &foreground,
 	})
-	Expect(err).NotTo(HaveOccurred())
+	fmt.Println(string(cxt.namespace))
+	Expect(err).NotTo(HaveOccurred()) */
 
-	err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(gcontext.Background(), masterPriority, metav1.DeleteOptions{
-		PropagationPolicy: &foreground,
-	})
-	Expect(err).NotTo(HaveOccurred())
+	// err := cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(gcontext.Background(), masterPriority, metav1.DeleteOptions{
+	// 	PropagationPolicy: &foreground,
+	// })
+	// Expect(err).NotTo(HaveOccurred())
 
-	err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(gcontext.Background(), workerPriority, metav1.DeleteOptions{
-		PropagationPolicy: &foreground,
-	})
-	Expect(err).NotTo(HaveOccurred())
+	// err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(gcontext.Background(), workerPriority, metav1.DeleteOptions{
+	// 	PropagationPolicy: &foreground,
+	// })
+	// Expect(err).NotTo(HaveOccurred())
 
 	// Wait for namespace deleted.
-	err = wait.Poll(100*time.Millisecond, seconds, namespaceNotExist(cxt))
-	if err != nil {
-		fmt.Fprintf(os.Stdout, "[cleanupTestContextExtendedTime] Failure check for namespace: %s.\n", cxt.namespace)
-	}
-	Expect(err).NotTo(HaveOccurred())
+	// err = wait.Poll(100*time.Millisecond, seconds, namespaceNotExist(cxt))
+	// if err != nil {
+	// 	fmt.Fprintf(os.Stdout, "[cleanupTestContextExtendedTime] Failure check for namespace: %s.\n", cxt.namespace)
+	// }
+	//Expect(err).NotTo(HaveOccurred())
 
 }
 func cleanupTestContext(cxt *context) {
@@ -578,7 +579,7 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-1",
-		"namespace": "test",
+		"namespace": "test7",
 		"labels": {
 			"app": "nginx"
 		}
@@ -651,7 +652,7 @@ func createDeploymentAWwith900CPU(context *context, name string) *arbv1.AppWrapp
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-2-900cpu",
-		"namespace": "test",
+		"namespace": "test7",
 		"labels": {
 			"app": "nginx"
 		}
@@ -729,7 +730,7 @@ func createDeploymentAWwith125CPU(context *context, name string) *arbv1.AppWrapp
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-2-125cpu",
-		"namespace": "test",
+		"namespace": "test7",
 		"labels": {
 			"app": "nginx"
 		}
@@ -807,7 +808,7 @@ func createDeploymentAWwith126CPU(context *context, name string) *arbv1.AppWrapp
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-2-126cpu",
-		"namespace": "test",
+		"namespace": "test7",
 		"labels": {
 			"app": "nginx"
 		}
@@ -885,7 +886,7 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-generic-deployment-3",
-		"namespace": "test",
+		"namespace": "test7",
 		"labels": {
 			"app": "aw-generic-deployment-3"
 		}
@@ -1113,7 +1114,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 		"kind": "StatefulSet", 
 	"metadata": {
 		"name": "aw-statefulset-2",
-		"namespace": "test",
+		"namespace": "test7",
 		"labels": {
 			"app": "aw-statefulset-2"
 		}
@@ -1152,7 +1153,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 	aw := &arbv1.AppWrapper{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: context.namespace,
+			Namespace: "test7",
 		},
 		Spec: arbv1.AppWrapperSpec{
 			SchedSpec: arbv1.SchedulingSpecTemplate{
@@ -1163,7 +1164,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
-							Namespace: context.namespace,
+							Namespace: "test7",
 						},
 						Replicas: 1,
 						Type:     arbv1.ResourceTypeStatefulSet,
@@ -1187,7 +1188,7 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 		"kind": "StatefulSet", 
 	"metadata": {
 		"name": "aw-generic-statefulset-2",
-		"namespace": "test",
+		"namespace": "test7",
 		"labels": {
 			"app": "aw-generic-statefulset-2"
 		}
@@ -1248,7 +1249,9 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 			},
 		},
 	}
-
+	klog.Info("Printing...")
+	res2B, _ := json.Marshal(aw)
+	fmt.Println(string(res2B))
 	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -1319,7 +1322,7 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"metadata": 
 	{
 		"name": "nginx",
-		"namespace": "test",
+		"namespace": "test7",
 		"labels": {
 			"app": "nginx"
 		}
@@ -1384,7 +1387,7 @@ func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 		"kind": "Pod",
 		"metadata": {
 			"name": "aw-generic-pod-1",
-			"namespace": "test",
+			"namespace": "test7",
 			"labels": {
 				"app": "aw-generic-pod-1"
 			}
@@ -1494,7 +1497,7 @@ func createBadGenericPodTemplateAW(context *context, name string) *arbv1.AppWrap
 	rb := []byte(`{"metadata": 
 	{
 		"name": "nginx",
-		"namespace": "test",
+		"namespace": "test7",
 		"labels": {
 			"app": "nginx"
 		}
