@@ -23,7 +23,7 @@ sudo apt-get update
 sudo apt-get install -y  kubectl=1.16.3-00
 
 # Download kind binary (0.6.1)
-sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.6.1/kind-linux-amd64
+sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.11.0/kind-darwin-amd64
 sudo chmod +x /usr/local/bin/kind
 
 # check if kind installed
