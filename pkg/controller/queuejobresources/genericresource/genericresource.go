@@ -108,7 +108,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 		klog.Fatal(err)
 	}
 
-	apiresourcelist, err := dd.ServerResources()
+	_, apiresourcelist, err := dd.ServerGroupsAndResources()
 	if err != nil {
 		klog.Fatal(err)
 	}

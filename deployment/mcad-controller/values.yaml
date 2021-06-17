@@ -41,7 +41,8 @@ nodeSelector:
 
 configMap:
   name:
-  dispatcherMode: '"false"'
+  multiCluster: false
+  dispatcherMode: "false"
   agentConfigs:
   quoteRestUrl:
 
