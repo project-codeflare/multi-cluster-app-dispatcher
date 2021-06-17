@@ -310,6 +310,8 @@ function kube-test-env-up {
     echo "---"
     echo "kubectl describe nodes"
     kubectl describe nodes
+
+    kubectl create namespace test7
 }
 
 
