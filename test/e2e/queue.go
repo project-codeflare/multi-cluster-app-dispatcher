@@ -17,9 +17,12 @@ limitations under the License.
 package e2e
 
 import (
-	//"time"
 	//"fmt"
-	//"os"
+
+	"fmt"
+	"os"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -63,184 +66,177 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		}
 	}) */
 
-	// It("MCAD CPU Accounting Test", func() {
-	// 	context := initTestContext()
-	// 	defer cleanupTestContextExtendedTime(context, (240 * time.Second))
+	It("MCAD CPU Accounting Test", func() {
+		context := initTestContext()
+		defer cleanupTestContextExtendedTime(context, (240 * time.Second))
 
-	// 	// This should fill up the worker node and most of the master node
-	// 	aw := createDeploymentAWwith900CPU(context, "aw-deployment-2-900cpu")
+		// This should fill up the worker node and most of the master node
+		aw := createDeploymentAWwith550CPU(context, "aw-deployment-3-550cpu")
 
-	// 	err := waitAWPodsReady(context, aw)
-	// 	Expect(err).NotTo(HaveOccurred())
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
 
-	// 	// This should fill up the master node
-	// 	aw2 := createDeploymentAWwith125CPU(context, "aw-deployment-2-125cpu")
+		// This should fill up the master node
+		aw2 := createDeploymentAWwith150CPU(context, "aw-deployment-2-150cpu")
 
-	// 	// Using quite mode due to creating of pods in earlier step.
-	// 	err = waitAWReadyQuiet(context, aw2)
-	// 	Expect(err).NotTo(HaveOccurred())
-	// })
+		// Using quite mode due to creating of pods in earlier step.
+		err = waitAWReadyQuiet(context, aw2)
+		Expect(err).NotTo(HaveOccurred())
+	})
 
-	// It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
-	//    		context := initTestContext()
-	//    		defer cleanupTestContext(context)
+	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
 
-	//    		aw := createStatefulSetAW(context, "aw-statefulset-2")
+		aw := createStatefulSetAW(context, "aw-statefulset-2")
 
-	//    		err := waitAWPodsReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
-	//    		Expect(err).NotTo(HaveOccurred())
-	//    	})
-    
-	// It("Create AppWrapper - Generic StatefulSet Only - 2 Pods", func() {
-	// 	context := initTestContext()
-	// 	defer cleanupTestContext(context)
+		Expect(err).NotTo(HaveOccurred())
+	})
 
-	// 	aw := createGenericStatefulSetAW(context, "aw-generic-statefulset-2")
+	It("Create AppWrapper - Generic StatefulSet Only - 2 Pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
 
-	// 	err := waitAWPodsReady(context, aw)
+		aw := createGenericStatefulSetAW(context, "aw-generic-statefulset-2")
 
-	// 	Expect(err).NotTo(HaveOccurred())
-	// })
+		err := waitAWPodsReady(context, aw)
 
-	   	// It("Create AppWrapper - Deployment Only", func() {
-	   	// 	context := initTestContext()
-	   	// 	defer cleanupTestContext(context)
+		Expect(err).NotTo(HaveOccurred())
+	})
 
-	   	// 	aw := createDeploymentAW(context, "aw-deployment-1")
-	   	// 	fmt.Fprintf(os.Stdout, "[e2e] Awaiting %d pods running for AW %s.\n", aw.Spec.SchedSpec.MinAvailable, aw.Name)
-	   	// 	err := waitAWPodsReady(context, aw)
-	   	// 	Expect(err).NotTo(HaveOccurred())
+	It("Create AppWrapper - Deployment Only", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
 
-	   	// 	// Now delete the appwrapper
-	   	// 	pods := getPodsOfAppWrapper(context, aw)
-	   	// 	fmt.Fprintf(os.Stdout, "[e2e] Deleting AW %s.\n", aw.Name)
-	   	// 	err = deleteAppWrapper(context, "aw-deployment-1")
-	   	// 	Expect(err).NotTo(HaveOccurred())
+		aw := createDeploymentAW(context, "aw-deployment-1")
+		fmt.Fprintf(os.Stdout, "[e2e] Awaiting %d pods running for AW %s.\n", aw.Spec.SchedSpec.MinAvailable, aw.Name)
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
 
-	   	// 	// Wait for the pods of the deleted the appwrapper to be destroyed
-	   	// 	fmt.Fprintf(os.Stdout, "[e2e] Awaiting %d pods to be deleted for AW %s.\n", aw.Spec.SchedSpec.MinAvailable, aw.Name)
-	   	// 	err = waitAWDeleted(context, aw, pods)
-	   	// 	Expect(err).NotTo(HaveOccurred())
-	   	// })
+		// Now delete the appwrapper
+		pods := getPodsOfAppWrapper(context, aw)
+		fmt.Fprintf(os.Stdout, "[e2e] Deleting AW %s.\n", aw.Name)
+		err = deleteAppWrapper(context, "aw-deployment-1")
+		Expect(err).NotTo(HaveOccurred())
 
- 	   	// It("Create AppWrapper - Generic Deployment Only - 3 pods", func() {
-	   	// 	context := initTestContext()
-	   	// 	defer cleanupTestContext(context)
+		// Wait for the pods of the deleted the appwrapper to be destroyed
+		fmt.Fprintf(os.Stdout, "[e2e] Awaiting %d pods to be deleted for AW %s.\n", aw.Spec.SchedSpec.MinAvailable, aw.Name)
+		err = waitAWDeleted(context, aw, pods)
+		Expect(err).NotTo(HaveOccurred())
+	})
 
-	   	// 	aw := createGenericDeploymentAW(context, "aw-generic-deployment-3")
+	It("Create AppWrapper - Generic Deployment Only - 3 pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
 
-	   	// 	err := waitAWPodsReady(context, aw)
-	   	// 	Expect(err).NotTo(HaveOccurred())
+		aw := createGenericDeploymentAW(context, "aw-generic-deployment-3")
 
-	   	// })
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
 
-	   	//NOTE: Recommend this test not to be the last test in the test suite it may pass
-	   	//      the local test but may cause controller to fail which is not
-	   	//      part of this test's validation.
+	})
 
-	   	// It("Create AppWrapper- Bad PodTemplate", func() {
-	   	// 	context := initTestContext()
-	   	// 	defer cleanupTestContext(context)
+	//NOTE: Recommend this test not to be the last test in the test suite it may pass
+	//      the local test but may cause controller to fail which is not
+	//      part of this test's validation.
 
-	   	// 	aw := createBadPodTemplateAW(context, "aw-bad-podtemplate-2")
+	It("Create AppWrapper- Bad PodTemplate", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
 
-	   	// 	err := waitAWPodsReady(context, aw)
+		aw := createBadPodTemplateAW(context, "aw-bad-podtemplate-2")
 
-	   	// 	Expect(err).To(HaveOccurred())
-	   	// })
-		   
+		err := waitAWPodsReady(context, aw)
 
-	   	// It("Create AppWrapper  - Bad Generic PodTemplate Only", func() {
-	   	// 	context := initTestContext()
-	   	// 	defer cleanupTestContext(context)
+		Expect(err).To(HaveOccurred())
+	})
 
-	   	// 	aw := createBadGenericPodTemplateAW(context, "aw-generic-podtemplate-2")
+	It("Create AppWrapper  - Bad Generic PodTemplate Only", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
 
-	   	// 	err := waitAWPodsReady(context, aw)
+		aw := createBadGenericPodTemplateAW(context, "aw-generic-podtemplate-2")
 
-	   	// 	Expect(err).To(HaveOccurred())
-	   	// })
-		  
+		err := waitAWPodsReady(context, aw)
 
-	   	// It("Create AppWrapper  - PodTemplate Only - 2 Pods", func() {
-	   	// 	context := initTestContext()
-	   	// 	defer cleanupTestContext(context)
+		Expect(err).To(HaveOccurred())
+	})
 
-	   	// 	aw := createPodTemplateAW(context, "aw-podtemplate-2")
+	It("Create AppWrapper  - PodTemplate Only - 2 Pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
 
-	   	// 	err := waitAWPodsReady(context, aw)
+		aw := createPodTemplateAW(context, "aw-podtemplate-2")
 
-	   	// 	Expect(err).NotTo(HaveOccurred())
-	   	// })
+		err := waitAWPodsReady(context, aw)
 
-	   	// It("Create AppWrapper  - Generic Pod Only - 1 Pod", func() {
-	   	// 	context := initTestContext()
-	   	// 	defer cleanupTestContext(context)
+		Expect(err).NotTo(HaveOccurred())
+	})
 
-	   	// 	aw := createGenericPodAW(context, "aw-generic-pod-1")
+	It("Create AppWrapper  - Generic Pod Only - 1 Pod", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
 
-	   	// 	err := waitAWPodsReady(context, aw)
+		aw := createGenericPodAW(context, "aw-generic-pod-1")
 
-	   	// 	Expect(err).NotTo(HaveOccurred())
-	   	// })
-		   
+		err := waitAWPodsReady(context, aw)
 
-	   	// It("Create AppWrapper  - Bad Generic Pod Only", func() {
-	   	// 	context := initTestContext()
-	   	// 	defer cleanupTestContext(context)
+		Expect(err).NotTo(HaveOccurred())
+	})
 
-	   	// 	aw := createBadGenericPodAW(context, "aw-bad-generic-pod-1")
+	It("Create AppWrapper  - Bad Generic Pod Only", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
 
-	   	// 	err := waitAWPodsReady(context, aw)
+		aw := createBadGenericPodAW(context, "aw-bad-generic-pod-1")
 
-	   	// 	Expect(err).To(HaveOccurred())
-	   	// })
-		    
+		err := waitAWPodsReady(context, aw)
 
-	   	// It("Create AppWrapper - Namespace Only - 0 Pods", func() {
-	   	// 	context := initTestContext()
-	   	// 	defer cleanupTestContext(context)
+		Expect(err).To(HaveOccurred())
+	})
 
-	   	// 	aw := createNamespaceAW(context, "aw-namespace-0")
+	It("Create AppWrapper - Namespace Only - 0 Pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
 
-	   	// 	err := waitAWNonComputeResourceActive(context, aw)
+		aw := createNamespaceAW(context, "aw-namespace-0")
 
-	   	// 	Expect(err).NotTo(HaveOccurred())
-	   	// })
+		err := waitAWNonComputeResourceActive(context, aw)
 
-		  
+		Expect(err).NotTo(HaveOccurred())
+	})
 
-	   	// It("Create AppWrapper - Generic Namespace Only - 0 Pods", func() {
-	   	// 	context := initTestContext()
-	   	// 	defer cleanupTestContext(context)
+	It("Create AppWrapper - Generic Namespace Only - 0 Pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
 
-	   	// 	aw := createGenericNamespaceAW(context, "aw-generic-namespace-0")
+		aw := createGenericNamespaceAW(context, "aw-generic-namespace-0")
 
-	   	// 	err := waitAWNonComputeResourceActive(context, aw)
+		err := waitAWNonComputeResourceActive(context, aw)
 
-	   	// 	Expect(err).NotTo(HaveOccurred())
-	   	// })
-		   
+		Expect(err).NotTo(HaveOccurred())
+	})
 
-	   	It("MCAD CPU Accounting Fail Test", func() {
-	   		context := initTestContext()
-	   		defer cleanupTestContext(context)
+	It("MCAD CPU Accounting Fail Test", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
 
-	   		// This should fill up the worker node and most of the master node
-	   		aw := createDeploymentAWwith900CPU(context, "aw-deployment-2-900cpu")
+		// This should fill up the worker node and most of the master node
+		aw := createDeploymentAWwith550CPU(context, "aw-deployment-3-550cpu")
 
-	   		err := waitAWPodsReady(context, aw)
-	   		Expect(err).NotTo(HaveOccurred())
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
 
-	   		// This should not fit on cluster
-	   		aw2 := createDeploymentAWwith126CPU(context, "aw-deployment-2-126cpu")
+		// This should not fit on cluster
+		aw2 := createDeploymentAWwith151CPU(context, "aw-deployment-2-151cpu")
 
-	   		err = waitAWReadyQuiet(context, aw2)
-	   		Expect(err).To(HaveOccurred())
+		err = waitAWReadyQuiet(context, aw2)
+		Expect(err).To(HaveOccurred())
 
-	   	}) 
-	
+	})
+
 	/*
 		It("Gang scheduling", func() {
 			context := initTestContext()
