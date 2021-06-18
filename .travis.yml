@@ -17,7 +17,7 @@ install:
   - go get -u golang.org/x/lint/golint
 
 before_script:
-  - export TEST_LOG_LEVEL=1
+  - export TEST_LOG_LEVEL=4
 
 script:
 #  - make
