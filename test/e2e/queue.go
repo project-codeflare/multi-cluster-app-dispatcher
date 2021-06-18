@@ -82,16 +82,16 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	// It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
-	// 	context := initTestContext()
-	// 	defer cleanupTestContext(context)
+	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
+		context := initTestContext()
+		defer cleanupTestContext(context)
 
-	// 	aw := createStatefulSetAW(context, "aw-statefulset-2")
+		aw := createStatefulSetAW(context, "aw-statefulset-2")
 
-	// 	err := waitAWPodsReady(context, aw)
+		err := waitAWPodsReady(context, aw)
 
-	// 	Expect(err).NotTo(HaveOccurred())
-	// })
+		Expect(err).NotTo(HaveOccurred())
+	})
 
 	// It("Create AppWrapper - Generic StatefulSet Only - 2 Pods", func() {
 	// 	context := initTestContext()
