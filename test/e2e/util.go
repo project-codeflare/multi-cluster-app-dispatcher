@@ -394,9 +394,9 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 			}
 		}
 
-		//DEBUGif taskNum <= readyTaskNum && quite {
-		//DEBUG	fmt.Fprintf(os.Stdout, "[awPodPhase] Successfully found %v pods of AppWrapper: %s, state: %s\n", readyTaskNum, aw.Name, aw.Status.State)
-		//DEBUG}
+		if taskNum <= readyTaskNum && quite {
+			fmt.Fprintf(os.Stdout, "[awPodPhase] Successfully found %v pods of AppWrapper: %s, state: %s\n", readyTaskNum, aw.Name, aw.Status.State)
+		}
 
 		return taskNum <= readyTaskNum, nil
 	}
