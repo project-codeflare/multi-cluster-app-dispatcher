@@ -736,14 +736,14 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "Deployment", 
 	"metadata": {
-		"name": "aw-deployment-3-550cpu",
+		"name": "aw-deployment-2-550cpu",
 		"namespace": "test",
 		"labels": {
 			"app": "nginx"
 		}
 	},
 	"spec": {
-		"replicas": 3,
+		"replicas": 2,
 		"selector": {
 			"matchLabels": {
 				"app": "nginx"
@@ -775,7 +775,7 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 			}
 		}
 	}} `)
-	var schedSpecMin int = 3
+	var schedSpecMin int = 2
 
 	aw := &arbv1.AppWrapper{
 		ObjectMeta: metav1.ObjectMeta{
@@ -966,11 +966,11 @@ func createDeploymentAWwith126CPU(context *context, name string) *arbv1.AppWrapp
 	return appwrapper
 }
 
-func createDeploymentAWwith150CPU(context *context, name string) *arbv1.AppWrapper {
+func createDeploymentAWwith350CPU(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "Deployment", 
 	"metadata": {
-		"name": "aw-deployment-2-150cpu",
+		"name": "aw-deployment-2-350cpu",
 		"namespace": "test",
 		"labels": {
 			"app": "nginx"
@@ -996,7 +996,7 @@ func createDeploymentAWwith150CPU(context *context, name string) *arbv1.AppWrapp
 						"image": "k8s.gcr.io/echoserver:1.4",
 						"resources": {
 							"requests": {
-								"cpu": "150m"
+								"cpu": "350m"
 							}
 						},
 						"ports": [
@@ -1044,11 +1044,11 @@ func createDeploymentAWwith150CPU(context *context, name string) *arbv1.AppWrapp
 	return appwrapper
 }
 
-func createDeploymentAWwith151CPU(context *context, name string) *arbv1.AppWrapper {
+func createDeploymentAWwith351CPU(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "Deployment", 
 	"metadata": {
-		"name": "aw-deployment-2-151cpu",
+		"name": "aw-deployment-2-351cpu",
 		"namespace": "test",
 		"labels": {
 			"app": "nginx"
@@ -1074,7 +1074,7 @@ func createDeploymentAWwith151CPU(context *context, name string) *arbv1.AppWrapp
 						"image": "k8s.gcr.io/echoserver:1.4",
 						"resources": {
 							"requests": {
-								"cpu": "151m"
+								"cpu": "351m"
 							}
 						},
 						"ports": [

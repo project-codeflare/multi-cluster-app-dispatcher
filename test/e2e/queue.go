@@ -71,13 +71,13 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		context := initTestContext()
 
 		// This should fill up the worker node and most of the master node
-		aw := createDeploymentAWwith550CPU(context, "aw-deployment-3-550cpu")
+		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
 
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 		// This should fill up the master node
-		aw2 := createDeploymentAWwith150CPU(context, "aw-deployment-2-150cpu")
+		aw2 := createDeploymentAWwith350CPU(context, "aw-deployment-2-350cpu")
 
 		// Using quite mode due to creating of pods in earlier step.
 		err = waitAWReadyQuiet(context, aw2)
@@ -270,13 +270,13 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestContext(context)
 
 		// This should fill up the worker node and most of the master node
-		aw := createDeploymentAWwith550CPU(context, "aw-deployment-3-550cpu")
+		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
 
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 		// This should not fit on cluster
-		aw2 := createDeploymentAWwith151CPU(context, "aw-deployment-2-151cpu")
+		aw2 := createDeploymentAWwith351CPU(context, "aw-deployment-2-351cpu")
 
 		err = waitAWReadyQuiet(context, aw2)
 		Expect(err).To(HaveOccurred())
