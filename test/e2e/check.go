@@ -130,7 +130,7 @@ func launchK8sAppWrapper(context *context, jobName string) (*arbv1.AppWrapper, e
 		"kind": "StatefulSet", 
 	"metadata": {
 		"name": "aw-statefulset-3",
-		"namespace": "test7",
+		"namespace": "test",
 		"labels": {
 			"app": "aw-statefulset-3"
 		}
@@ -169,7 +169,7 @@ func launchK8sAppWrapper(context *context, jobName string) (*arbv1.AppWrapper, e
 	aw := &arbv1.AppWrapper{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      jobName,
-			Namespace: "test7",
+			Namespace: "test",
 		},
 		Spec: arbv1.AppWrapperSpec{
 			SchedSpec: arbv1.SchedulingSpecTemplate{
@@ -180,7 +180,7 @@ func launchK8sAppWrapper(context *context, jobName string) (*arbv1.AppWrapper, e
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", jobName, "item1"),
-							Namespace: "test7",
+							Namespace: "test",
 						},
 						Replicas: 1,
 						Type:     arbv1.ResourceTypeStatefulSet,
