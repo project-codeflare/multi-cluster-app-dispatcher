@@ -311,7 +311,7 @@ function kube-test-env-up {
     echo "kubectl describe nodes"
     kubectl describe nodes
 
-    kubectl create namespace test7
+    kubectl create namespace test
 }
 
 

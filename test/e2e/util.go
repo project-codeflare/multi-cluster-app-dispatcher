@@ -79,7 +79,7 @@ type context struct {
 func initTestContext() *context {
 	enableNamespaceAsQueue, _ := strconv.ParseBool(os.Getenv("ENABLE_NAMESPACES_AS_QUEUE"))
 	cxt := &context{
-		namespace: "test7",
+		namespace: "test",
 		queues:    []string{"q1", "q2"},
 	}
 
@@ -94,11 +94,11 @@ func initTestContext() *context {
 
 	cxt.enableNamespaceAsQueue = enableNamespaceAsQueue
 
-	/* 	_, err = cxt.kubeclient.CoreV1().Namespaces().Create(gcontext.Background(), &v1.Namespace{
+	_, err = cxt.kubeclient.CoreV1().Namespaces().Create(gcontext.Background(), &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: cxt.namespace,
 		},
-	}, metav1.CreateOptions{}) */
+	}, metav1.CreateOptions{})
 	//Expect(err).NotTo(HaveOccurred())
 
 	/* 	_, err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Create(gcontext.Background(), &schedv1.PriorityClass{
@@ -342,6 +342,13 @@ func awStatePhase(ctx *context, aw *arbv1.AppWrapper, phase []arbv1.AppWrapperSt
 	}
 }
 
+func cleanupTestObjects(context *context, appwrappers []*arbv1.AppWrapper) {
+	foreground := metav1.DeletePropagationForeground
+	for _, aw := range appwrappers {
+		context.karclient.ArbV1().AppWrappers(context.namespace).Delete(aw.Name, &metav1.DeleteOptions{PropagationPolicy: &foreground})
+	}
+}
+
 func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum int, quite bool) wait.ConditionFunc {
 	return func() (bool, error) {
 		aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
@@ -579,7 +586,7 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-1",
-		"namespace": "test7",
+		"namespace": "test",
 		"labels": {
 			"app": "nginx"
 		}
@@ -652,7 +659,7 @@ func createDeploymentAWwith900CPU(context *context, name string) *arbv1.AppWrapp
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-2-900cpu",
-		"namespace": "test7",
+		"namespace": "test",
 		"labels": {
 			"app": "nginx"
 		}
@@ -730,7 +737,7 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-3-550cpu",
-		"namespace": "test7",
+		"namespace": "test",
 		"labels": {
 			"app": "nginx"
 		}
@@ -808,7 +815,7 @@ func createDeploymentAWwith125CPU(context *context, name string) *arbv1.AppWrapp
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-2-125cpu",
-		"namespace": "test7",
+		"namespace": "test",
 		"labels": {
 			"app": "nginx"
 		}
@@ -886,7 +893,7 @@ func createDeploymentAWwith126CPU(context *context, name string) *arbv1.AppWrapp
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-2-126cpu",
-		"namespace": "test7",
+		"namespace": "test",
 		"labels": {
 			"app": "nginx"
 		}
@@ -964,7 +971,7 @@ func createDeploymentAWwith150CPU(context *context, name string) *arbv1.AppWrapp
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-2-150cpu",
-		"namespace": "test7",
+		"namespace": "test",
 		"labels": {
 			"app": "nginx"
 		}
@@ -1042,7 +1049,7 @@ func createDeploymentAWwith151CPU(context *context, name string) *arbv1.AppWrapp
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-2-151cpu",
-		"namespace": "test7",
+		"namespace": "test",
 		"labels": {
 			"app": "nginx"
 		}
@@ -1120,7 +1127,7 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-generic-deployment-3",
-		"namespace": "test7",
+		"namespace": "test",
 		"labels": {
 			"app": "aw-generic-deployment-3"
 		}
@@ -1348,7 +1355,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 		"kind": "StatefulSet", 
 	"metadata": {
 		"name": "aw-statefulset-2",
-		"namespace": "test7",
+		"namespace": "test",
 		"labels": {
 			"app": "aw-statefulset-2"
 		}
@@ -1387,7 +1394,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 	aw := &arbv1.AppWrapper{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: "test7",
+			Namespace: "test",
 		},
 		Spec: arbv1.AppWrapperSpec{
 			SchedSpec: arbv1.SchedulingSpecTemplate{
@@ -1398,7 +1405,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
-							Namespace: "test7",
+							Namespace: "test",
 						},
 						Replicas: 1,
 						Type:     arbv1.ResourceTypeStatefulSet,
@@ -1422,7 +1429,7 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 		"kind": "StatefulSet", 
 	"metadata": {
 		"name": "aw-generic-statefulset-2",
-		"namespace": "test7",
+		"namespace": "test",
 		"labels": {
 			"app": "aw-generic-statefulset-2"
 		}
@@ -1556,7 +1563,7 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"metadata": 
 	{
 		"name": "nginx",
-		"namespace": "test7",
+		"namespace": "test",
 		"labels": {
 			"app": "nginx"
 		}
@@ -1621,7 +1628,7 @@ func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 		"kind": "Pod",
 		"metadata": {
 			"name": "aw-generic-pod-1",
-			"namespace": "test7",
+			"namespace": "test",
 			"labels": {
 				"app": "aw-generic-pod-1"
 			}
@@ -1731,7 +1738,7 @@ func createBadGenericPodTemplateAW(context *context, name string) *arbv1.AppWrap
 	rb := []byte(`{"metadata": 
 	{
 		"name": "nginx",
-		"namespace": "test7",
+		"namespace": "test",
 		"labels": {
 			"app": "nginx"
 		}
