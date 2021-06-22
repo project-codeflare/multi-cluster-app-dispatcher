@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/klog/v2"
 
 	. "github.com/onsi/gomega"
 
@@ -1490,9 +1489,6 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 			},
 		},
 	}
-	klog.Info("Printing...")
-	res2B, _ := json.Marshal(aw)
-	fmt.Println(string(res2B))
 	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
 	Expect(err).NotTo(HaveOccurred())
 
