@@ -30,7 +30,7 @@ import (
 
 var _ = Describe("AppWrapper E2E Test", func() {
 
-	It("Create AppWrapper - Generic 100 Deployment Only - 2 pods each", func() {
+	/* 	It("Create AppWrapper - Generic 100 Deployment Only - 2 pods each", func() {
 		context := initTestContext()
 		defer cleanupTestContextExtendedTime(context, (240 * time.Second))
 
@@ -65,7 +65,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			err := waitAWReadyQuiet(context, aws[i])
 			Expect(err).NotTo(HaveOccurred())
 		}
-	})
+	}) */
 
 	It("MCAD CPU Accounting Test", func() {
 		context := initTestContext()
