@@ -23,7 +23,7 @@ sudo apt-get update
 sudo apt-get install -y  kubectl=1.16.3-00
 
 # Download kind binary (0.6.1)
-sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.6.1/kind-linux-amd64
+sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.11.0/kind-linux-amd64
 sudo chmod +x /usr/local/bin/kind
 
 # check if kind installed
@@ -124,7 +124,7 @@ function cleanup {
     echo "==========================>>>>>Printing the pod name for logs:  <<<<<=========================="
     echo "$mcad_pod"
     echo "_____________________________ end printing logs pod name ______________________"
-    kubectl logs pod/${mcad_pod} -n kube-system
+    kubectl logs ${mcad_pod} -n kube-system
 
     kind delete cluster ${CLUSTER_CONTEXT}
 }
@@ -286,12 +286,12 @@ function kube-test-env-up {
     # start mcad controller
     echo "Starting MCAD Controller..."
     echo "helm install mcad-controller namespace kube-system wait set loglevel=3 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=1000m set resources.limits.memory=1024Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY"
-    helm install mcad-controller --namespace kube-system --wait --set loglevel=3 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY --debug
+    helm install mcad-controller --namespace kube-system --wait --set loglevel=3 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY
 
     sleep 10
     echo "Listing MCAD Controller Helm Chart and Pod YAML..."
     helm list
-    mcad_pod=$(kubectl get pods -n kube-system | grep xqueuejob | awk '{print $1}')
+    mcad-controller=$(kubectl get pods -n kube-system | grep xqueuejob | awk '{print $1}')
     test_pod=$(kubectl get pods -n kube-system | grep xqueuejob | cut -d' ' -f1)
     echo "_____________________________ Printing the pod name ______________________"
     echo "$mcad_pod"
@@ -310,6 +310,8 @@ function kube-test-env-up {
     echo "---"
     echo "kubectl describe nodes"
     kubectl describe nodes
+
+    kubectl create namespace test
 }
 
 
