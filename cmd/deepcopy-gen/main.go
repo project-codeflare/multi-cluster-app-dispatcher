@@ -48,7 +48,6 @@ limitations under the License.
 package main
 
 import (
-	"flag"
 	"path/filepath"
 
 	"k8s.io/gengo/args"
@@ -60,11 +59,6 @@ import (
 
 func main() {
 	klog.InitFlags(nil)
-	// By default klog writes to stderr. Setting logtostderr to false makes klog
-	// write to a log file.
-	flag.Set("logtostderr", "false")
-	flag.Parse()
-	klog.Flush()
 	arguments := args.Default()
 
 	// Override defaults.
