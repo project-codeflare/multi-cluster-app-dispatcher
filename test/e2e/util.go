@@ -55,8 +55,8 @@ var twoCPU = v1.ResourceList{"cpu": resource.MustParse("2000m")}
 var threeCPU = v1.ResourceList{"cpu": resource.MustParse("3000m")}
 
 const (
-	workerPriority = "worker-pri7"
-	masterPriority = "master-pri7"
+	workerPriority = "worker-pri"
+	masterPriority = "master-pri"
 )
 
 func homeDir() string {
@@ -133,11 +133,9 @@ func namespaceNotExist(ctx *context) wait.ConditionFunc {
 
 func cleanupTestContextExtendedTime(cxt *context, seconds time.Duration) {
 	//foreground := metav1.DeletePropagationForeground
-	fmt.Println(string(cxt.namespace))
 	/* err := cxt.kubeclient.CoreV1().Namespaces().Delete(gcontext.Background(), cxt.namespace, metav1.DeleteOptions{
 		PropagationPolicy: &foreground,
 	})
-	fmt.Println(string(cxt.namespace))
 	Expect(err).NotTo(HaveOccurred()) */
 
 	// err := cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(gcontext.Background(), masterPriority, metav1.DeleteOptions{
@@ -372,9 +370,9 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 
 			for _, p := range phase {
 				if pod.Status.Phase == p {
-					if quite {
-						fmt.Fprintf(os.Stdout, "[awPodPhase] Found pod %s of AppWrapper: %s, phase: %v\n", pod.Name, aw.Name, p)
-					}
+					//DEBUGif quite {
+					//DEBUG	fmt.Fprintf(os.Stdout, "[awPodPhase] Found pod %s of AppWrapper: %s, phase: %v\n", pod.Name, aw.Name, p)
+					//DEBUG}
 					readyTaskNum++
 					break
 				} else {
@@ -400,9 +398,9 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 			}
 		}
 
-		if taskNum <= readyTaskNum && quite {
-			fmt.Fprintf(os.Stdout, "[awPodPhase] Successfully found %v pods of AppWrapper: %s, state: %s\n", readyTaskNum, aw.Name, aw.Status.State)
-		}
+		//DEBUGif taskNum <= readyTaskNum && quite {
+		//DEBUG	fmt.Fprintf(os.Stdout, "[awPodPhase] Successfully found %v pods of AppWrapper: %s, state: %s\n", readyTaskNum, aw.Name, aw.Status.State)
+		//DEBUG}
 
 		return taskNum <= readyTaskNum, nil
 	}
@@ -1393,7 +1391,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 	aw := &arbv1.AppWrapper{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: "test",
+			Namespace: context.namespace,
 		},
 		Spec: arbv1.AppWrapperSpec{
 			SchedSpec: arbv1.SchedulingSpecTemplate{
@@ -1404,7 +1402,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
-							Namespace: "test",
+							Namespace: context.namespace,
 						},
 						Replicas: 1,
 						Type:     arbv1.ResourceTypeStatefulSet,
