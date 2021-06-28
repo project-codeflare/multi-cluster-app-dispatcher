@@ -8,7 +8,7 @@ spec:
     minAvailable: 2
   resources:
     GenericItems:
-      replicas: 2
+      replicas: 1
       metadata:
         name: aw-generic-statefulset-2
         namespace: test1
