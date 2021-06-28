@@ -68,7 +68,6 @@ func CreateAppWrapperKind(clientset apiextensionsclient.Interface) (*apiextensio
 					return true, err
 				}
 			case apiextensionsv1beta1.NamesAccepted:
-				// clusterstateapi
 				if cond.Status == apiextensionsv1beta1.ConditionFalse {
 					fmt.Printf("Name conflict: %v\n", cond.Reason)
 				}
