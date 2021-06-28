@@ -302,7 +302,7 @@ function kube-test-env-up {
     echo "kubectl describe nodes"
     kubectl describe nodes
 
-    kubectl create namespace test
+    #kubectl create namespace test
 }
 
 
