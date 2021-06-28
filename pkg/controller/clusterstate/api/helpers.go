@@ -19,7 +19,7 @@ package api
 import (
 	"fmt"
 
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	clientcache "k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
 )
