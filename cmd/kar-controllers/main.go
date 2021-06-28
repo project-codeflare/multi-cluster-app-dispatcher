@@ -17,19 +17,19 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app"
 	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	"github.com/spf13/pflag"
-	"k8s.io/apiserver/pkg/util/flag"
+
 	"os"
 )
-
 
 func main() {
 	s := options.NewServerOption()
 	s.AddFlags(pflag.CommandLine)
 
-	flag.InitFlags()
+	//	flag.InitFlags()
 	s.CheckOptionOrDie()
 
 	if err := app.Run(s); err != nil {

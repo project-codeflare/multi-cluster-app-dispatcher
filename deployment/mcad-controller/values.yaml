@@ -1,7 +1,7 @@
 # Default values for MCAD-Controller.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
-deploymentName: xqueuejob-controller
+deploymentName: mcad-controller
 namespace: kube-system
 replicaCount: 1
 loglevel: 4
@@ -34,14 +34,15 @@ imagePullSecret:
   registry: registry.stage1.ng.bluemix.net
   password: dummyvalue
 
-serviceAccount: xqueuejob-controller
+serviceAccount: mcad-controller
 
 nodeSelector:
   hostname:
 
 configMap:
   name:
-  dispatcherMode: '"false"'
+  multiCluster: false
+  dispatcherMode: "false"
   agentConfigs:
   quoteRestUrl:
 

@@ -85,7 +85,7 @@ func setConfigDefaults(config *rest.Config) error {
 	config.GroupVersion = &v1.SchemeGroupVersion
 	config.APIPath = "/apis"
 	config.ContentType = runtime.ContentTypeJSON
-	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: serializer.NewCodecFactory(scheme)}
+	config.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: serializer.NewCodecFactory(scheme)} // serializer.DirectCodecFactory{CodecFactory: serializer.NewCodecFactory(scheme)}
 
 	return nil
 }

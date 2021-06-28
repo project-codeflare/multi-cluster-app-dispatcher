@@ -1,10 +1,10 @@
 package queuejobresources
 
-import(
-    //schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
-    clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
-    "github.com/golang/glog"
-    "k8s.io/api/core/v1"
+import (
+	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
+	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/klog"
 )
 
 // filterPods returns pods based on their phase.
@@ -38,7 +38,7 @@ func GetPodResources(template *v1.PodTemplateSpec) *clusterstateapi.Resource {
         spec := template.Spec
 
         if &spec == nil {
-            glog.Errorf("Pod Spec not found in Pod Template: %+v.  Aggregated resources set to 0.", template)
+            klog.Errorf("Pod Spec not found in Pod Template: %+v.  Aggregated resources set to 0.", template)
             return total
         }
 

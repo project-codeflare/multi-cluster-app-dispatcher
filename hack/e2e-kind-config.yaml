@@ -1,23 +1,13 @@
 # this config file contains all config fields with comments
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
-# 1 control plane node and 3 workers
+# 1 control plane node and 1 worker
 nodes:
   # the control plane node config
   - role: control-plane
-    # kubernetes version 1.17.0
-    image: kindest/node:v1.17.0@sha256:9512edae126da271b66b990b6fff768fbb7cd786c7d39e86bdf55906352fdf62
+    # kubernetes version 1.20.7 from kind v0.11.0
+    image: kindest/node:v1.20.7@sha256:e645428988191fc824529fd0bb5c94244c12401cf5f5ea3bd875eb0a787f0fe9
   # the three workers
   - role: worker
-    # kubernetes version 1.17.0
-    image: kindest/node:v1.17.0@sha256:9512edae126da271b66b990b6fff768fbb7cd786c7d39e86bdf55906352fdf62
-#  - role: worker
-#    # replicas specifies the number of nodes to create with this configuration
-#    replicas: 1
-#    # kubernetes version 1.11.10
-#    image: kindest/node:v1.11.10@sha256:abd0275ead5ddfd477b7bc491f71957d7dd75408a346834ffe8a9bee5fbdc15b
-#  - role: worker
-#    # replicas specifies the number of nodes to create with this configuration
-#    replicas: 1
-#    # kubernetes version 1.11.10
-#    image: kindest/node:v1.11.10@sha256:abd0275ead5ddfd477b7bc491f71957d7dd75408a346834ffe8a9bee5fbdc15b
+    # kubernetes version 1.20.7 from kind v0.11.0
+    image: kindest/node:v1.20.7@sha256:e645428988191fc824529fd0bb5c94244c12401cf5f5ea3bd875eb0a787f0fe9

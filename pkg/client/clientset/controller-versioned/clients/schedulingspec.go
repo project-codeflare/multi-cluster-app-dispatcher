@@ -17,18 +17,19 @@ limitations under the License.
 package clients
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"time"
 
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 
-	"github.com/golang/glog"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog"
 )
 
 const schedulingSpecKindName = arbv1.SchedulingSpecPlural + "." + arbv1.GroupName
@@ -48,7 +49,7 @@ func CreateSchedulingSpecKind(clientset apiextensionsclient.Interface) (*apiexte
 			},
 		},
 	}
-	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
+	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(context.Background(), crd, metav1.CreateOptions{})
 
 	if err != nil {
 		return nil, err
@@ -56,8 +57,7 @@ func CreateSchedulingSpecKind(clientset apiextensionsclient.Interface) (*apiexte
 
 	// wait for CRD being established
 	err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
-		crd, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(
-			schedulingSpecKindName, metav1.GetOptions{})
+		crd, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(context.Background(), schedulingSpecKindName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -76,15 +76,14 @@ func CreateSchedulingSpecKind(clientset apiextensionsclient.Interface) (*apiexte
 		return false, err
 	})
 	if err != nil {
-		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(
-			schedulingSpecKindName, nil)
+		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(context.Background(), schedulingSpecKindName, metav1.DeleteOptions{})
 		if deleteErr != nil {
 			return nil, errors.NewAggregate([]error{err, deleteErr})
 		}
 		return nil, err
 	}
 
-	glog.V(3).Infof("SchedulingSpec CRD was created.")
+	klog.V(3).Infof("SchedulingSpec CRD was created.")
 
 	return crd, nil
 }

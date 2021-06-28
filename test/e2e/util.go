@@ -17,20 +17,21 @@ limitations under the License.
 package e2e
 
 import (
+	gcontext "context"
 	"encoding/json"
 	"fmt"
-	"k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"path/filepath"
 	"strconv"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
 	. "github.com/onsi/gomega"
 
 	appv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	"k8s.io/api/core/v1"
-	schedv1 "k8s.io/api/scheduling/v1beta1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,6 +48,7 @@ import (
 )
 
 var ninetySeconds = 90 * time.Second
+var delaySeconds = 300 * time.Second
 
 var oneCPU = v1.ResourceList{"cpu": resource.MustParse("1000m")}
 var twoCPU = v1.ResourceList{"cpu": resource.MustParse("2000m")}
@@ -65,12 +67,12 @@ func homeDir() string {
 }
 
 type context struct {
-	kubeclient 				*kubernetes.Clientset
-	karclient  				*versioned.Clientset
+	kubeclient *kubernetes.Clientset
+	karclient  *versioned.Clientset
 
-	namespace              	string
-	queues                 	[]string
-	enableNamespaceAsQueue 	bool
+	namespace              string
+	queues                 []string
+	enableNamespaceAsQueue bool
 }
 
 func initTestContext() *context {
@@ -91,37 +93,37 @@ func initTestContext() *context {
 
 	cxt.enableNamespaceAsQueue = enableNamespaceAsQueue
 
-	_, err = cxt.kubeclient.CoreV1().Namespaces().Create(&v1.Namespace{
+	_, err = cxt.kubeclient.CoreV1().Namespaces().Create(gcontext.Background(), &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: cxt.namespace,
 		},
-	})
-	Expect(err).NotTo(HaveOccurred())
+	}, metav1.CreateOptions{})
+	//Expect(err).NotTo(HaveOccurred())
 
-	_, err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Create(&schedv1.PriorityClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: masterPriority,
-		},
-		Value:         100,
-		GlobalDefault: false,
-	})
-	Expect(err).NotTo(HaveOccurred())
+	/* 	_, err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Create(gcontext.Background(), &schedv1.PriorityClass{
+	   		ObjectMeta: metav1.ObjectMeta{
+	   			Name: masterPriority,
+	   		},
+	   		Value:         100,
+	   		GlobalDefault: false,
+	   	}, metav1.CreateOptions{})
+	   	Expect(err).NotTo(HaveOccurred())
 
-	_, err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Create(&schedv1.PriorityClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: workerPriority,
-		},
-		Value:         1,
-		GlobalDefault: false,
-	})
-	Expect(err).NotTo(HaveOccurred())
+	   	_, err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Create(gcontext.Background(), &schedv1.PriorityClass{
+	   		ObjectMeta: metav1.ObjectMeta{
+	   			Name: workerPriority,
+	   		},
+	   		Value:         1,
+	   		GlobalDefault: false,
+	   	}, metav1.CreateOptions{})
+	   	Expect(err).NotTo(HaveOccurred()) */
 
 	return cxt
 }
 
 func namespaceNotExist(ctx *context) wait.ConditionFunc {
 	return func() (bool, error) {
-		_, err := ctx.kubeclient.CoreV1().Namespaces().Get(ctx.namespace, metav1.GetOptions{})
+		_, err := ctx.kubeclient.CoreV1().Namespaces().Get(gcontext.Background(), ctx.namespace, metav1.GetOptions{})
 		if !(err != nil && errors.IsNotFound(err)) {
 			return false, err
 		}
@@ -129,31 +131,29 @@ func namespaceNotExist(ctx *context) wait.ConditionFunc {
 	}
 }
 
-
 func cleanupTestContextExtendedTime(cxt *context, seconds time.Duration) {
-	foreground := metav1.DeletePropagationForeground
-
-	err := cxt.kubeclient.CoreV1().Namespaces().Delete(cxt.namespace, &metav1.DeleteOptions{
+	//foreground := metav1.DeletePropagationForeground
+	/* err := cxt.kubeclient.CoreV1().Namespaces().Delete(gcontext.Background(), cxt.namespace, metav1.DeleteOptions{
 		PropagationPolicy: &foreground,
 	})
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred()) */
 
-	err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(masterPriority, &metav1.DeleteOptions{
-		PropagationPolicy: &foreground,
-	})
-	Expect(err).NotTo(HaveOccurred())
+	// err := cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(gcontext.Background(), masterPriority, metav1.DeleteOptions{
+	// 	PropagationPolicy: &foreground,
+	// })
+	// Expect(err).NotTo(HaveOccurred())
 
-	err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(workerPriority, &metav1.DeleteOptions{
-		PropagationPolicy: &foreground,
-	})
-	Expect(err).NotTo(HaveOccurred())
+	// err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Delete(gcontext.Background(), workerPriority, metav1.DeleteOptions{
+	// 	PropagationPolicy: &foreground,
+	// })
+	// Expect(err).NotTo(HaveOccurred())
 
 	// Wait for namespace deleted.
-	err = wait.Poll(100*time.Millisecond, seconds, namespaceNotExist(cxt))
-	if err != nil {
-		fmt.Fprintf(os.Stdout, "[cleanupTestContextExtendedTime] Failure check for namespace: %s.\n", cxt.namespace)
-	}
-	Expect(err).NotTo(HaveOccurred())
+	// err = wait.Poll(100*time.Millisecond, seconds, namespaceNotExist(cxt))
+	// if err != nil {
+	// 	fmt.Fprintf(os.Stdout, "[cleanupTestContextExtendedTime] Failure check for namespace: %s.\n", cxt.namespace)
+	// }
+	//Expect(err).NotTo(HaveOccurred())
 
 }
 func cleanupTestContext(cxt *context) {
@@ -221,7 +221,7 @@ func createJobEx(context *context, job *jobSpec) ([]*batchv1.Job, *arbv1.AppWrap
 			},
 		}
 
-		job, err := context.kubeclient.BatchV1().Jobs(job.Namespace).Create(job)
+		job, err := context.kubeclient.BatchV1().Jobs(job.Namespace).Create(gcontext.Background(), job, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		jobs = append(jobs, job)
 
@@ -249,7 +249,7 @@ func createJobEx(context *context, job *jobSpec) ([]*batchv1.Job, *arbv1.AppWrap
 							Namespace: ns,
 						},
 						Replicas: 1,
-						Type: arbv1.ResourceTypePod,
+						Type:     arbv1.ResourceTypePod,
 						Template: runtime.RawExtension{
 							Raw: rb,
 						},
@@ -264,7 +264,6 @@ func createJobEx(context *context, job *jobSpec) ([]*batchv1.Job, *arbv1.AppWrap
 
 	return jobs, appwrapper
 }
-
 
 /*
 func taskPhase(ctx *context, pg *arbv1.PodGroup, phase []v1.PodPhase, taskNum int) wait.ConditionFunc {
@@ -296,7 +295,7 @@ func taskPhase(ctx *context, pg *arbv1.PodGroup, phase []v1.PodPhase, taskNum in
 
 func podPhase(ctx *context, namespace string, pods []*v1.Pod, phase []v1.PodPhase, taskNum int) wait.ConditionFunc {
 	return func() (bool, error) {
-		podList, err := ctx.kubeclient.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+		podList, err := ctx.kubeclient.CoreV1().Pods(namespace).List(gcontext.Background(), metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		phaseListTaskNum := 0
@@ -326,7 +325,7 @@ func awStatePhase(ctx *context, aw *arbv1.AppWrapper, phase []arbv1.AppWrapperSt
 		Expect(err).NotTo(HaveOccurred())
 
 		phaseCount := 0
-		if ! quite {
+		if !quite {
 			fmt.Fprintf(os.Stdout, "[awStatePhase] AW %s found with state: %s.\n", aw.Name, aw.Status.State)
 		}
 
@@ -340,12 +339,19 @@ func awStatePhase(ctx *context, aw *arbv1.AppWrapper, phase []arbv1.AppWrapperSt
 	}
 }
 
+func cleanupTestObjects(context *context, appwrappers []*arbv1.AppWrapper) {
+	foreground := metav1.DeletePropagationForeground
+	for _, aw := range appwrappers {
+		context.karclient.ArbV1().AppWrappers(context.namespace).Delete(aw.Name, &metav1.DeleteOptions{PropagationPolicy: &foreground})
+	}
+}
+
 func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum int, quite bool) wait.ConditionFunc {
 	return func() (bool, error) {
 		aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		pods, err := ctx.kubeclient.CoreV1().Pods(aw.Namespace).List(metav1.ListOptions{})
+		pods, err := ctx.kubeclient.CoreV1().Pods(aw.Namespace).List(gcontext.Background(), metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		if pods == nil || pods.Size() < 1 {
@@ -356,12 +362,12 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 		readyTaskNum := 0
 		for _, pod := range pods.Items {
 			if awn, found := pod.Labels["appwrapper.mcad.ibm.com"]; !found || awn != aw.Name {
-				if ! quite {
+				if !quite {
 					fmt.Fprintf(os.Stdout, "[awPodPhase] Pod %s not part of AppWrapper: %s, labels: %s\n", pod.Name, aw.Name, pod.Labels)
 				}
 				continue
 			}
-			
+
 			for _, p := range phase {
 				if pod.Status.Phase == p {
 					//DEBUGif quite {
@@ -371,20 +377,20 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 					break
 				} else {
 					pMsg := pod.Status.Message
-					if len (pMsg) > 0 {
+					if len(pMsg) > 0 {
 						pReason := pod.Status.Reason
-						fmt.Fprintf(os.Stdout, "[awPodPhase] pod: %s, phase: %s, reason: %s, message: %s\n" , pod.Name, p, pReason, pMsg)
+						fmt.Fprintf(os.Stdout, "[awPodPhase] pod: %s, phase: %s, reason: %s, message: %s\n", pod.Name, p, pReason, pMsg)
 					}
 					containerStatuses := pod.Status.ContainerStatuses
 					for _, containerStatus := range containerStatuses {
 						waitingState := containerStatus.State.Waiting
 						if waitingState != nil {
 							wMsg := waitingState.Message
-							if len (wMsg) > 0 {
+							if len(wMsg) > 0 {
 								wReason := waitingState.Reason
 								containerName := containerStatus.Name
-								fmt.Fprintf(os.Stdout, "[awPodPhase] condition for pod: %s, phase: %s, container name: %s, " +
-									"reason: %s, message: %s\n" , pod.Name, p, containerName, wReason, wMsg)
+								fmt.Fprintf(os.Stdout, "[awPodPhase] condition for pod: %s, phase: %s, container name: %s, "+
+									"reason: %s, message: %s\n", pod.Name, p, containerName, wReason, wMsg)
 							}
 						}
 					}
@@ -399,6 +405,7 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 		return taskNum <= readyTaskNum, nil
 	}
 }
+
 /*
 func podGroupUnschedulable(ctx *context, pg *arbv1.PodGroup, time time.Time) wait.ConditionFunc {
 	return func() (bool, error) {
@@ -453,7 +460,7 @@ func waitAWNonComputeResourceActive(ctx *context, aw *arbv1.AppWrapper) error {
 
 func waitAWNamespaceActive(ctx *context, aw *arbv1.AppWrapper) error {
 	return wait.Poll(100*time.Millisecond, ninetySeconds, awNamespacePhase(ctx, aw,
-		[]v1.NamespacePhase{v1.NamespaceActive} ))
+		[]v1.NamespacePhase{v1.NamespaceActive}))
 }
 
 func awNamespacePhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.NamespacePhase) wait.ConditionFunc {
@@ -461,7 +468,7 @@ func awNamespacePhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.NamespacePh
 		aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		namespaces, err := ctx.kubeclient.CoreV1().Namespaces().List(metav1.ListOptions{})
+		namespaces, err := ctx.kubeclient.CoreV1().Namespaces().List(gcontext.Background(), metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		readyTaskNum := 0
@@ -489,9 +496,8 @@ func waitAWReadyQuiet(ctx *context, aw *arbv1.AppWrapper) error {
 	return waitAWPodsReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), true)
 }
 
-
 func waitAWDeleted(ctx *context, aw *arbv1.AppWrapper, pods []*v1.Pod) error {
-	return waitAWPodsTerminatedEx(ctx, aw.Namespace, pods,0)
+	return waitAWPodsTerminatedEx(ctx, aw.Namespace, pods, 0)
 }
 
 func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
@@ -499,14 +505,13 @@ func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
 		[]v1.PodPhase{v1.PodPending}, int(aw.Spec.SchedSpec.MinAvailable), false))
 }
 
-
 func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
-	return wait.Poll(100*time.Millisecond, ninetySeconds, awPodPhase(ctx, aw,
+	return wait.Poll(100*time.Millisecond, delaySeconds, awPodPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite))
 }
 
 func waitAWPodsTerminatedEx(ctx *context, namespace string, pods []*v1.Pod, taskNum int) error {
-	return wait.Poll(100*time.Millisecond, ninetySeconds,podPhase(ctx, namespace, pods,
+	return wait.Poll(100*time.Millisecond, ninetySeconds, podPhase(ctx, namespace, pods,
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded, v1.PodUnknown, v1.PodFailed, v1.PodPending}, taskNum))
 }
 
@@ -567,7 +572,7 @@ func createReplicaSet(context *context, name string, rep int32, img string, req 
 		},
 	}
 
-	deployment, err := context.kubeclient.AppsV1().ReplicaSets(context.namespace).Create(deployment)
+	deployment, err := context.kubeclient.AppsV1().ReplicaSets(context.namespace).Create(gcontext.Background(), deployment, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return deployment
@@ -630,7 +635,7 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 							Namespace: context.namespace,
 						},
 						Replicas: 1,
-						Type: arbv1.ResourceTypeDeployment,
+						Type:     arbv1.ResourceTypeDeployment,
 						Template: runtime.RawExtension{
 							Raw: rb,
 						},
@@ -708,7 +713,85 @@ func createDeploymentAWwith900CPU(context *context, name string) *arbv1.AppWrapp
 							Namespace: context.namespace,
 						},
 						Replicas: 1,
-						Type: arbv1.ResourceTypeDeployment,
+						Type:     arbv1.ResourceTypeDeployment,
+						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "apps/v1",
+		"kind": "Deployment", 
+	"metadata": {
+		"name": "aw-deployment-2-550cpu",
+		"namespace": "test",
+		"labels": {
+			"app": "nginx"
+		}
+	},
+	"spec": {
+		"replicas": 2,
+		"selector": {
+			"matchLabels": {
+				"app": "nginx"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "nginx"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "nginx",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"resources": {
+							"requests": {
+								"cpu": "550m"
+							}
+						},
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `)
+	var schedSpecMin int = 2
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				Items: []arbv1.AppWrapperResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item1"),
+							Namespace: context.namespace,
+						},
+						Replicas: 1,
+						Type:     arbv1.ResourceTypeDeployment,
 						Template: runtime.RawExtension{
 							Raw: rb,
 						},
@@ -786,7 +869,7 @@ func createDeploymentAWwith125CPU(context *context, name string) *arbv1.AppWrapp
 							Namespace: context.namespace,
 						},
 						Replicas: 1,
-						Type: arbv1.ResourceTypeDeployment,
+						Type:     arbv1.ResourceTypeDeployment,
 						Template: runtime.RawExtension{
 							Raw: rb,
 						},
@@ -864,7 +947,163 @@ func createDeploymentAWwith126CPU(context *context, name string) *arbv1.AppWrapp
 							Namespace: context.namespace,
 						},
 						Replicas: 1,
-						Type: arbv1.ResourceTypeDeployment,
+						Type:     arbv1.ResourceTypeDeployment,
+						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createDeploymentAWwith350CPU(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "apps/v1",
+		"kind": "Deployment", 
+	"metadata": {
+		"name": "aw-deployment-2-350cpu",
+		"namespace": "test",
+		"labels": {
+			"app": "nginx"
+		}
+	},
+	"spec": {
+		"replicas": 2,
+		"selector": {
+			"matchLabels": {
+				"app": "nginx"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "nginx"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "nginx",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"resources": {
+							"requests": {
+								"cpu": "350m"
+							}
+						},
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `)
+	var schedSpecMin int = 2
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				Items: []arbv1.AppWrapperResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item1"),
+							Namespace: context.namespace,
+						},
+						Replicas: 1,
+						Type:     arbv1.ResourceTypeDeployment,
+						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createDeploymentAWwith351CPU(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "apps/v1",
+		"kind": "Deployment", 
+	"metadata": {
+		"name": "aw-deployment-2-351cpu",
+		"namespace": "test",
+		"labels": {
+			"app": "nginx"
+		}
+	},
+	"spec": {
+		"replicas": 2,
+		"selector": {
+			"matchLabels": {
+				"app": "nginx"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "nginx"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "nginx",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"resources": {
+							"requests": {
+								"cpu": "351m"
+							}
+						},
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `)
+	var schedSpecMin int = 2
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				Items: []arbv1.AppWrapperResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item1"),
+							Namespace: context.namespace,
+						},
+						Replicas: 1,
+						Type:     arbv1.ResourceTypeDeployment,
 						Template: runtime.RawExtension{
 							Raw: rb,
 						},
@@ -951,7 +1190,6 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 
 	return appwrapper
 }
-
 
 func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand string, replicas int) *arbv1.AppWrapper {
 	rb := []byte(fmt.Sprintf(`{
@@ -1045,7 +1283,7 @@ func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 
 	aw := &arbv1.AppWrapper{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name: name,
 		},
 		Spec: arbv1.AppWrapperSpec{
 			SchedSpec: arbv1.SchedulingSpecTemplate{
@@ -1055,7 +1293,7 @@ func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 				Items: []arbv1.AppWrapperResource{
 					{
 						Replicas: 1,
-						Type: arbv1.ResourceTypeNamespace,
+						Type:     arbv1.ResourceTypeNamespace,
 						Template: runtime.RawExtension{
 							Raw: rb,
 						},
@@ -1084,7 +1322,7 @@ func createGenericNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 
 	aw := &arbv1.AppWrapper{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name: name,
 		},
 		Spec: arbv1.AppWrapperSpec{
 			SchedSpec: arbv1.SchedulingSpecTemplate{
@@ -1167,7 +1405,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 							Namespace: context.namespace,
 						},
 						Replicas: 1,
-						Type: arbv1.ResourceTypeStatefulSet,
+						Type:     arbv1.ResourceTypeStatefulSet,
 						Template: runtime.RawExtension{
 							Raw: rb,
 						},
@@ -1249,7 +1487,6 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 			},
 		},
 	}
-
 	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -1300,7 +1537,7 @@ func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 							Namespace: context.namespace,
 						},
 						Replicas: 2,
-						Type: arbv1.ResourceTypePod,
+						Type:     arbv1.ResourceTypePod,
 						Template: runtime.RawExtension{
 							Raw: rb,
 						},
@@ -1364,7 +1601,7 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 							Namespace: context.namespace,
 						},
 						Replicas: 2,
-						Type: arbv1.ResourceTypePod,
+						Type:     arbv1.ResourceTypePod,
 						Template: runtime.RawExtension{
 							Raw: rb,
 						},
@@ -1556,7 +1793,7 @@ func createBadGenericPodTemplateAW(context *context, name string) *arbv1.AppWrap
 
 func deleteReplicaSet(ctx *context, name string) error {
 	foreground := metav1.DeletePropagationForeground
-	return ctx.kubeclient.AppsV1().ReplicaSets(ctx.namespace).Delete(name, &metav1.DeleteOptions{
+	return ctx.kubeclient.AppsV1().ReplicaSets(ctx.namespace).Delete(gcontext.Background(), name, metav1.DeleteOptions{
 		PropagationPolicy: &foreground,
 	})
 }
@@ -1568,13 +1805,12 @@ func deleteAppWrapper(ctx *context, name string) error {
 	})
 }
 
-
 func replicaSetReady(ctx *context, name string) wait.ConditionFunc {
 	return func() (bool, error) {
-		deployment, err := ctx.kubeclient.ExtensionsV1beta1().ReplicaSets(ctx.namespace).Get(name, metav1.GetOptions{})
+		deployment, err := ctx.kubeclient.ExtensionsV1beta1().ReplicaSets(ctx.namespace).Get(gcontext.Background(), name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		pods, err := ctx.kubeclient.CoreV1().Pods(ctx.namespace).List(metav1.ListOptions{})
+		pods, err := ctx.kubeclient.CoreV1().Pods(ctx.namespace).List(gcontext.Background(), metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		labelSelector := labels.SelectorFromSet(deployment.Spec.Selector.MatchLabels)
@@ -1598,10 +1834,10 @@ func waitReplicaSetReady(ctx *context, name string) error {
 }
 
 func clusterSize(ctx *context, req v1.ResourceList) int32 {
-	nodes, err := ctx.kubeclient.CoreV1().Nodes().List(metav1.ListOptions{})
+	nodes, err := ctx.kubeclient.CoreV1().Nodes().List(gcontext.Background(), metav1.ListOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
-	pods, err := ctx.kubeclient.CoreV1().Pods(metav1.NamespaceAll).List(metav1.ListOptions{})
+	pods, err := ctx.kubeclient.CoreV1().Pods(metav1.NamespaceAll).List(gcontext.Background(), metav1.ListOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	used := map[string]*csapi.Resource{}
@@ -1652,7 +1888,7 @@ func clusterSize(ctx *context, req v1.ResourceList) int32 {
 }
 
 func clusterNodeNumber(ctx *context) int {
-	nodes, err := ctx.kubeclient.CoreV1().Nodes().List(metav1.ListOptions{})
+	nodes, err := ctx.kubeclient.CoreV1().Nodes().List(gcontext.Background(), metav1.ListOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	nn := 0
@@ -1667,10 +1903,10 @@ func clusterNodeNumber(ctx *context) int {
 }
 
 func computeNode(ctx *context, req v1.ResourceList) (string, int32) {
-	nodes, err := ctx.kubeclient.CoreV1().Nodes().List(metav1.ListOptions{})
+	nodes, err := ctx.kubeclient.CoreV1().Nodes().List(gcontext.Background(), metav1.ListOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
-	pods, err := ctx.kubeclient.CoreV1().Pods(metav1.NamespaceAll).List(metav1.ListOptions{})
+	pods, err := ctx.kubeclient.CoreV1().Pods(metav1.NamespaceAll).List(gcontext.Background(), metav1.ListOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	used := map[string]*csapi.Resource{}
@@ -1727,7 +1963,7 @@ func getPodsOfAppWrapper(ctx *context, aw *arbv1.AppWrapper) []*v1.Pod {
 	aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
-	pods, err := ctx.kubeclient.CoreV1().Pods(aw.Namespace).List(metav1.ListOptions{})
+	pods, err := ctx.kubeclient.CoreV1().Pods(aw.Namespace).List(gcontext.Background(), metav1.ListOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	var awpods []*v1.Pod
@@ -1744,7 +1980,7 @@ func getPodsOfAppWrapper(ctx *context, aw *arbv1.AppWrapper) []*v1.Pod {
 }
 
 func taintAllNodes(ctx *context, taints []v1.Taint) error {
-	nodes, err := ctx.kubeclient.CoreV1().Nodes().List(metav1.ListOptions{})
+	nodes, err := ctx.kubeclient.CoreV1().Nodes().List(gcontext.Background(), metav1.ListOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	for _, node := range nodes.Items {
@@ -1770,7 +2006,7 @@ func taintAllNodes(ctx *context, taints []v1.Taint) error {
 		patchBytes, err := preparePatchBytesforNode(node.Name, &node, newNode)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = ctx.kubeclient.CoreV1().Nodes().Patch(node.Name, types.StrategicMergePatchType, patchBytes)
+		_, err = ctx.kubeclient.CoreV1().Nodes().Patch(gcontext.Background(), node.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{})
 		Expect(err).NotTo(HaveOccurred())
 	}
 
@@ -1778,7 +2014,7 @@ func taintAllNodes(ctx *context, taints []v1.Taint) error {
 }
 
 func removeTaintsFromAllNodes(ctx *context, taints []v1.Taint) error {
-	nodes, err := ctx.kubeclient.CoreV1().Nodes().List(metav1.ListOptions{})
+	nodes, err := ctx.kubeclient.CoreV1().Nodes().List(gcontext.Background(), metav1.ListOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	for _, node := range nodes.Items {
@@ -1803,7 +2039,7 @@ func removeTaintsFromAllNodes(ctx *context, taints []v1.Taint) error {
 		patchBytes, err := preparePatchBytesforNode(node.Name, &node, newNode)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = ctx.kubeclient.CoreV1().Nodes().Patch(node.Name, types.StrategicMergePatchType, patchBytes)
+		_, err = ctx.kubeclient.CoreV1().Nodes().Patch(gcontext.Background(), node.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{})
 		Expect(err).NotTo(HaveOccurred())
 	}
 

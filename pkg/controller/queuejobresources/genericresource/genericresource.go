@@ -17,16 +17,17 @@ limitations under the License.
 package genericresource
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"time"
 
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
-	"github.com/golang/glog"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog"
 
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -44,16 +45,16 @@ var resourceName = "resourceName"
 var appWrapperKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
 
 type GenericResources struct {
-	clients    *kubernetes.Clientset
+	clients          *kubernetes.Clientset
 	kubeClientConfig *rest.Config
-	arbclients *clientset.Clientset
+	arbclients       *clientset.Clientset
 }
 
 func NewAppWrapperGenericResource(config *rest.Config) *GenericResources {
 	return &GenericResources{
-		clients:    kubernetes.NewForConfigOrDie(config),
+		clients:          kubernetes.NewForConfigOrDie(config),
 		kubeClientConfig: config,
-		arbclients: clientset.NewForConfigOrDie(config),
+		arbclients:       clientset.NewForConfigOrDie(config),
 	}
 }
 
@@ -69,11 +70,10 @@ func join(strs ...string) string {
 }
 
 func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperGenericResource) (podList []*v1.Pod, err error) {
-
 	startTime := time.Now()
 	defer func() {
-		glog.V(4).Infof("Finished syncing AppWrapper job resource %s (%v)", aw.Name, time.Now().Sub(startTime))
-		// glog.V(4).Infof("Finished syncing AppWrapper job resource %q (%v)", awobRes.Template, time.Now().Sub(startTime))
+		klog.V(4).Infof("Finished syncing AppWrapper job resource %s (%v)", aw.Name, time.Now().Sub(startTime))
+		// klog.V(4).Infof("Finished syncing AppWrapper job resource %q (%v)", awobRes.Template, time.Now().Sub(startTime))
 	}()
 
 	namespaced := true
@@ -81,19 +81,19 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
-		glog.Fatal(err)
+		klog.Fatal(err)
 	}
 	ext := awr.GenericTemplate
 	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
-	versions := &runtime.VersionedObjects{}
+	versions := &unstructured.Unstructured{}
 	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, versions)
 	if err != nil {
-		glog.Errorf("Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
+		klog.Errorf("Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
 		return []*v1.Pod{}, err
 	}
 	mapping, err := restmapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err != nil {
-		glog.Errorf("mapping error from raw object: `%v`", err)
+		klog.Errorf("mapping error from raw object: `%v`", err)
 		return []*v1.Pod{}, err
 	}
 
@@ -105,12 +105,12 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	}
 	dclient, err := dynamic.NewForConfig(restconfig)
 	if err != nil {
-		glog.Fatal(err)
+		klog.Fatal(err)
 	}
 
-	apiresourcelist, err := dd.ServerResources()
+	_, apiresourcelist, err := dd.ServerGroupsAndResources()
 	if err != nil {
-		glog.Fatal(err)
+		klog.Fatal(err)
 	}
 
 	rsrc := mapping.Resource
@@ -128,7 +128,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	unstruct.Object = make(map[string]interface{})
 	var blob interface{}
 	if err = json.Unmarshal(ext.Raw, &blob); err != nil {
-		glog.Fatal(err)
+		klog.Fatal(err)
 	}
 	ownerRef := metav1.NewControllerRef(aw, appWrapperKind)
 	unstruct.Object = blob.(map[string]interface{}) //set object to the content of the blob after Unmarshalling
@@ -142,7 +142,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 			name = objectName.(string)
 		}
 		if objectns, ok := metadata["namespace"]; ok {
-			//glog.V(9).Infof("metadata[namespace] exists")
+			//klog.V(9).Infof("metadata[namespace] exists")
 			namespace = objectns.(string)
 		}
 	}
@@ -159,12 +159,12 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	// Add labels to pod templete if one exists.
 	podTemplateFound := addLabelsToPodTemplateField(&unstruct, labels)
 	if !podTemplateFound {
-		glog.V(4).Infof("[SyncQueueJob] No pod template spec exists for resource: %s to add labels.", name)
+		klog.V(4).Infof("[SyncQueueJob] No pod template spec exists for resource: %s to add labels.", name)
 	}
 
 	// Get the resource  to see if it exists
 	labelSelector := fmt.Sprintf("%s=%s, %s=%s", appwrapperJobName, aw.Name, resourceName, unstruct.GetName())
-	inEtcd, err := dclient.Resource(rsrc).List(metav1.ListOptions{LabelSelector: labelSelector})
+	inEtcd, err := dclient.Resource(rsrc).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		return []*v1.Pod{}, err
 	}
@@ -179,9 +179,9 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 		err = createObject(namespaced, namespace, newName, rsrc, unstruct, dclient)
 		if err != nil {
 			if errors.IsAlreadyExists(err) {
-				glog.V(4).Infof("%v\n", err.Error())
+				klog.V(4).Infof("%v\n", err.Error())
 			} else {
-				glog.Errorf("Error creating the object `%v`, the error is `%v`", newName, errors.ReasonForError(err))
+				klog.Errorf("Error creating the object `%v`, the error is `%v`", newName, errors.ReasonForError(err))
 				return []*v1.Pod{}, err
 			}
 		}
@@ -191,24 +191,23 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	var thisObj *unstructured.Unstructured
 	var err1 error
 	if namespaced {
-		thisObj, err1 = dclient.Resource(rsrc).Namespace(namespace).Get(name, metav1.GetOptions{})
+		thisObj, err1 = dclient.Resource(rsrc).Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	} else {
-		thisObj, err1 = dclient.Resource(rsrc).Get(name, metav1.GetOptions{})
+		thisObj, err1 = dclient.Resource(rsrc).Get(context.Background(), name, metav1.GetOptions{})
 	}
 	if err1 != nil {
-		glog.Errorf("Could not get created resource with error %v", err)
+		klog.Errorf("Could not get created resource with error %v", err)
 	}
 	thisOwnerRef := metav1.NewControllerRef(thisObj, thisObj.GroupVersionKind())
 
-
-	podL, _ := gr.clients.CoreV1().Pods("").List(metav1.ListOptions{})
+	podL, _ := gr.clients.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
 	pods := []*v1.Pod{}
 	for _, pod := range (*podL).Items {
 		parent := metav1.GetControllerOf(&pod)
 		if reflect.DeepEqual(thisOwnerRef, parent) {
 			pods = append(pods, &pod)
 		}
-		glog.V(10).Infof("[SyncQueueJob] pod %s created from a Generic Item\n", pod.Name)
+		klog.V(10).Infof("[SyncQueueJob] pod %s created from a Generic Item\n", pod.Name)
 	}
 	return pods, nil
 }
@@ -217,24 +216,24 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map[string]string) (hasFields bool) {
 	spec, isFound, _ := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
 	if !isFound {
-		glog.V(10).Infof("[addLabelsToPodTemplateField] 'spec' field not found.")
+		klog.V(10).Infof("[addLabelsToPodTemplateField] 'spec' field not found.")
 		return false
 	}
 	template, isFound, _ := unstructured.NestedMap(spec, "template")
 	if !isFound {
-		glog.V(10).Infof("[addLabelsToPodTemplateField] 'spec.template' field not found.")
+		klog.V(10).Infof("[addLabelsToPodTemplateField] 'spec.template' field not found.")
 		return false
 	}
 
 	marshal, _ := json.Marshal(template)
 	unmarshal := v1.PodTemplateSpec{}
 	if err := json.Unmarshal(marshal, &unmarshal); err != nil {
-		glog.Warning(err)
+		klog.Warning(err)
 		return false
 	}
 	existingLabels, isFound, _ := unstructured.NestedStringMap(template, "metadata", "labels")
 	if !isFound {
-		glog.V(10).Infof("[addLabelsToPodTemplateField] 'spec.template.metadata.labels' field not found.")
+		klog.V(10).Infof("[addLabelsToPodTemplateField] 'spec.template.metadata.labels' field not found.")
 		return false
 	}
 	newLength := len(existingLabels) + len(labels)
@@ -248,26 +247,30 @@ func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map
 	}
 
 	if err := unstructured.SetNestedStringMap(unstruct.Object, m, "spec", "template", "metadata", "labels"); err != nil {
-		glog.Warning(err)
+		klog.Warning(err)
 		return false
 	}
 
 	return isFound
 }
+
 //checks if object has replicas and containers field
 func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, containers []v1.Container) {
 	var unstruct unstructured.Unstructured
 	unstruct.Object = make(map[string]interface{})
 	var blob interface{}
 	if err := json.Unmarshal(obj.Raw, &blob); err != nil {
-		glog.Fatal(err)
+		klog.Fatal(err)
 	}
 	unstruct.Object = blob.(map[string]interface{})
 	spec, isFound, _ := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
 	replicas, isFound, _ := unstructured.NestedFloat64(spec, "replicas")
+
+	// Set default to 1 if no replicas field is found.
 	if !isFound {
-		return false, 0, nil
+		replicas = 1
 	}
+
 	template, isFound, _ := unstructured.NestedMap(spec, "template")
 	subspec, isFound, _ := unstructured.NestedMap(template, "spec")
 	containerList, isFound, _ := unstructured.NestedSlice(subspec, "containers")
@@ -288,32 +291,32 @@ func createObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 	var err error
 	if !namespaced {
 		res := dclient.Resource(rsrc)
-		_, err = res.Create(&unstruct, metav1.CreateOptions{})
+		_, err = res.Create(context.Background(), &unstruct, metav1.CreateOptions{})
 		if err != nil {
 			if errors.IsAlreadyExists(err) {
-				glog.Errorf("%v\n", err.Error())
+				klog.Errorf("%v\n", err.Error())
 				return nil
 			} else {
-				glog.Errorf("Error creating the object `%v`, the error is `%v`", name, errors.ReasonForError(err))
+				klog.Errorf("Error creating the object `%v`, the error is `%v`", name, errors.ReasonForError(err))
 				return err
 			}
 		} else {
-			glog.V(4).Infof("Resource `%v` created\n", name)
+			klog.V(4).Infof("Resource `%v` created\n", name)
 			return nil
 		}
 	} else {
 		res := dclient.Resource(rsrc).Namespace(namespace)
-		_, err = res.Create(&unstruct, metav1.CreateOptions{})
+		_, err = res.Create(context.Background(), &unstruct, metav1.CreateOptions{})
 		if err != nil {
 			if errors.IsAlreadyExists(err) {
-				glog.Errorf("%v\n", err.Error())
+				klog.Errorf("%v\n", err.Error())
 				return nil
 			} else {
-				glog.Errorf("Error creating the object `%v`, the error is `%v`", name, errors.ReasonForError(err))
+				klog.Errorf("Error creating the object `%v`, the error is `%v`", name, errors.ReasonForError(err))
 				return err
 			}
 		} else {
-			glog.V(4).Infof("Resource `%v` created\n", name)
+			klog.V(4).Infof("Resource `%v` created\n", name)
 			return nil
 
 		}
@@ -330,14 +333,14 @@ func GetResources(awr *arbv1.AppWrapperGenericResource) (resource *clusterstatea
 				res := getContainerResources(item, replicas)
 				totalresource = totalresource.Add(res)
 			}
-			glog.V(8).Infof("[GetResources] Requested total allocation resource from containers `%v`.\n", totalresource)
+			klog.V(8).Infof("[GetResources] Requested total allocation resource from containers `%v`.\n", totalresource)
 		} else {
 			podresources := awr.CustomPodResources
 			for _, item := range podresources {
 				res := getPodResources(item)
 				totalresource = totalresource.Add(res)
 			}
-			glog.V(8).Infof("[GetResources] Requested total allocation resource from pods `%v`.\n", totalresource)
+			klog.V(8).Infof("[GetResources] Requested total allocation resource from pods `%v`.\n", totalresource)
 		}
 	}
 	return totalresource, nil
