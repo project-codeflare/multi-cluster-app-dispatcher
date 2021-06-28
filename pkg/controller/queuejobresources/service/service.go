@@ -14,16 +14,23 @@ limitations under the License.
 package service
 
 import (
+	"context"
 	"fmt"
-	"github.com/golang/glog"
+
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
+
 	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/klog"
+
 	// "k8s.io/apimachinery/pkg/api/meta"
+	"sync"
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,8 +42,6 @@ import (
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"sync"
-	"time"
 )
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
@@ -52,15 +57,15 @@ const (
 
 //QueueJobResService contains service info
 type QueueJobResService struct {
-	clients    		*kubernetes.Clientset
-	arbclients 		*clientset.Clientset
+	clients    *kubernetes.Clientset
+	arbclients *clientset.Clientset
 	// A store of services, populated by the serviceController
 	serviceStore    corelisters.ServiceLister
 	serviceInformer corev1informer.ServiceInformer
 	rtScheme        *runtime.Scheme
 	jsonSerializer  *json.Serializer
 	// Reference manager to manage membership of queuejob resource and its members
-	refManager 		queuejobresources.RefManager
+	refManager queuejobresources.RefManager
 }
 
 //Register registers a queue job resource type
@@ -130,12 +135,10 @@ func (qjrService *QueueJobResService) deleteService(obj interface{}) {
 	return
 }
 
-
 func (qjrService *QueueJobResService) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
-        total := clusterstateapi.EmptyResource()
-        return total
+	total := clusterstateapi.EmptyResource()
+	return total
 }
-
 
 // Parse queue job api object to get Service template
 func (qjrService *QueueJobResService) getServiceTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.Service, error) {
@@ -158,12 +161,12 @@ func (qjrService *QueueJobResService) getServiceTemplate(qjobRes *arbv1.AppWrapp
 
 func (qjrService *QueueJobResService) createServiceWithControllerRef(namespace string, service *v1.Service, controllerRef *metav1.OwnerReference) error {
 
-	// glog.V(4).Infof("==========create service: %s,  %+v \n", namespace, service)
+	// klog.V(4).Infof("==========create service: %s,  %+v \n", namespace, service)
 	if controllerRef != nil {
 		service.OwnerReferences = append(service.OwnerReferences, *controllerRef)
 	}
 
-	if _, err := qjrService.clients.Core().Services(namespace).Create(service); err != nil {
+	if _, err := qjrService.clients.CoreV1().Services(namespace).Create(context.Background(), service, metav1.CreateOptions{}); err != nil {
 		return err
 	}
 
@@ -172,8 +175,8 @@ func (qjrService *QueueJobResService) createServiceWithControllerRef(namespace s
 
 func (qjrService *QueueJobResService) delService(namespace string, name string) error {
 
-	glog.V(4).Infof("==========delete service: %s,  %s \n", namespace, name)
-	if err := qjrService.clients.Core().Services(namespace).Delete(name, nil); err != nil {
+	klog.V(4).Infof("==========delete service: %s,  %s \n", namespace, name)
+	if err := qjrService.clients.CoreV1().Services(namespace).Delete(context.Background(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 
@@ -189,8 +192,8 @@ func (qjrService *QueueJobResService) SyncQueueJob(queuejob *arbv1.AppWrapper, q
 	startTime := time.Now()
 
 	defer func() {
-		// glog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
-		glog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
+		// klog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
+		klog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
 	}()
 
 	_namespace, serviceInQjr, servicesInEtcd, err := qjrService.getServiceForQueueJobRes(qjobRes, queuejob)
@@ -203,14 +206,14 @@ func (qjrService *QueueJobResService) SyncQueueJob(queuejob *arbv1.AppWrapper, q
 
 	diff := int(replicas) - int(serviceLen)
 
-	glog.V(4).Infof("QJob: %s had %d Services and %d desired Services", queuejob.Name, serviceLen, replicas)
+	klog.V(4).Infof("QJob: %s had %d Services and %d desired Services", queuejob.Name, serviceLen, replicas)
 
 	if diff > 0 {
 		//TODO: need set reference after Service has been really added
 		tmpService := v1.Service{}
 		err = qjrService.refManager.AddReference(qjobRes, &tmpService)
 		if err != nil {
-			glog.Errorf("Cannot add reference to configmap resource %+v", err)
+			klog.Errorf("Cannot add reference to configmap resource %+v", err)
 			return err
 		}
 
@@ -244,30 +247,29 @@ func (qjrService *QueueJobResService) SyncQueueJob(queuejob *arbv1.AppWrapper, q
 	return nil
 }
 
-
 func (qjrService *QueueJobResService) getServiceForQueueJobRes(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) (*string, *v1.Service, []*v1.Service, error) {
 
 	// Get "a" Service from AppWrapper Resource
 	serviceInQjr, err := qjrService.getServiceTemplate(qjobRes)
 	if err != nil {
-		glog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
+		klog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
 		return nil, nil, nil, err
 	}
 
 	// Get Service"s" in Etcd Server
 	var _namespace *string
-	if serviceInQjr.Namespace!=""{
+	if serviceInQjr.Namespace != "" {
 		_namespace = &serviceInQjr.Namespace
 	} else {
 		_namespace = &queuejob.Namespace
 	}
-	serviceList, err := qjrService.clients.CoreV1().Services(*_namespace).List(metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name),})
+	serviceList, err := qjrService.clients.CoreV1().Services(*_namespace).List(context.Background(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name)})
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	servicesInEtcd := []*v1.Service{}
 	for i, _ := range serviceList.Items {
-				servicesInEtcd = append(servicesInEtcd, &serviceList.Items[i])
+		servicesInEtcd = append(servicesInEtcd, &serviceList.Items[i])
 	}
 
 	// for i, service := range serviceList.Items {
@@ -292,7 +294,6 @@ func (qjrService *QueueJobResService) getServiceForQueueJobRes(qjobRes *arbv1.Ap
 	return _namespace, serviceInQjr, myServicesInEtcd, nil
 }
 
-
 func (qjrService *QueueJobResService) deleteQueueJobResServices(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) error {
 
 	job := *queuejob
@@ -311,7 +312,7 @@ func (qjrService *QueueJobResService) deleteQueueJobResServices(qjobRes *arbv1.A
 			defer wait.Done()
 			if err := qjrService.delService(*_namespace, activeServices[ix].Name); err != nil {
 				defer utilruntime.HandleError(err)
-				glog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeServices[ix].Name, *_namespace, job.Name)
+				klog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeServices[ix].Name, *_namespace, job.Name)
 			}
 		}(i)
 	}

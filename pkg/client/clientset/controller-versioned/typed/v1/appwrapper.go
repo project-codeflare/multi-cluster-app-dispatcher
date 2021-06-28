@@ -17,6 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	"context"
+
 	v1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/scheme"
 
@@ -58,7 +60,7 @@ func (c *appwrappers) Create(appwrapper *v1.AppWrapper) (result *v1.AppWrapper, 
 		Namespace(c.ns).
 		Resource(v1.AppWrapperPlural).
 		Body(appwrapper).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -71,7 +73,7 @@ func (c *appwrappers) Update(appwrapper *v1.AppWrapper) (result *v1.AppWrapper, 
 		Resource(v1.AppWrapperPlural).
 		Name(appwrapper.Name).
 		Body(appwrapper).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -87,7 +89,7 @@ func (c *appwrappers) UpdateStatus(appwrapper *v1.AppWrapper) (result *v1.AppWra
 		Name(appwrapper.Name).
 		SubResource("status").
 		Body(appwrapper).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -99,7 +101,7 @@ func (c *appwrappers) Delete(name string, options *meta_v1.DeleteOptions) error 
 		Resource(v1.AppWrapperPlural).
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.Background()).
 		Error()
 }
 
@@ -111,7 +113,7 @@ func (c *appwrappers) Get(name string, options meta_v1.GetOptions) (result *v1.A
 		Resource(v1.AppWrapperPlural).
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -123,7 +125,7 @@ func (c *appwrappers) List(opts meta_v1.ListOptions) (result *v1.AppWrapperList,
 		Namespace(c.ns).
 		Resource(v1.AppWrapperPlural).
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }

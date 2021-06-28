@@ -19,7 +19,8 @@ package util
 import (
 	"container/heap"
 
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	// "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 )
 
 type PriorityQueue struct {

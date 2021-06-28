@@ -17,18 +17,19 @@ limitations under the License.
 package clients
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"time"
 
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 
-	"github.com/golang/glog"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog"
 )
 
 const queueJobKindName = arbv1.QueueJobPlural + "." + arbv1.GroupName
@@ -48,7 +49,7 @@ func CreateQueueJobKind(clientset apiextensionsclient.Interface) (*apiextensions
 			},
 		},
 	}
-	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
+	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(context.Background(), crd, metav1.CreateOptions{})
 
 	if err != nil {
 		return nil, err
@@ -56,7 +57,7 @@ func CreateQueueJobKind(clientset apiextensionsclient.Interface) (*apiextensions
 
 	// wait for CRD being established
 	err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
-		crd, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(queueJobKindName, metav1.GetOptions{})
+		crd, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(context.Background(), queueJobKindName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -75,14 +76,14 @@ func CreateQueueJobKind(clientset apiextensionsclient.Interface) (*apiextensions
 		return false, err
 	})
 	if err != nil {
-		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(queueJobKindName, nil)
+		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(context.Background(), queueJobKindName, metav1.DeleteOptions{})
 		if deleteErr != nil {
 			return nil, errors.NewAggregate([]error{err, deleteErr})
 		}
 		return nil, err
 	}
 
-	glog.V(4).Infof("QueueJob CRD was created.")
+	klog.V(4).Infof("QueueJob CRD was created.")
 
 	return crd, nil
 }

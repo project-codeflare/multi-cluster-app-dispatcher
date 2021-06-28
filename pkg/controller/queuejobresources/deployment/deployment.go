@@ -14,14 +14,17 @@ limitations under the License.
 package deployment
 
 import (
+	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
-	"github.com/golang/glog"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
 	apps "k8s.io/api/apps/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,8 +37,7 @@ import (
 	extlister "k8s.io/client-go/listers/apps/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"sync"
-	"time"
+	"k8s.io/klog"
 )
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
@@ -51,15 +53,15 @@ const (
 
 //QueueJobResDeployment contains the resources of this queuejob
 type QueueJobResDeployment struct {
-	clients    		*kubernetes.Clientset
-	arbclients 		*clientset.Clientset
+	clients    *kubernetes.Clientset
+	arbclients *clientset.Clientset
 	// A store of deployments, populated by the deploymentController
-	deploymentStore	extlister.DeploymentLister
-	deployInformer 	extinformer.DeploymentInformer
-	rtScheme       	*runtime.Scheme
-	jsonSerializer 	*json.Serializer
+	deploymentStore extlister.DeploymentLister
+	deployInformer  extinformer.DeploymentInformer
+	rtScheme        *runtime.Scheme
+	jsonSerializer  *json.Serializer
 	// Reference manager to manage membership of queuejob resource and its members
-	refManager 		queuejobresources.RefManager
+	refManager queuejobresources.RefManager
 }
 
 //Register registers a queue job resource type
@@ -104,11 +106,10 @@ func NewQueueJobResDeployment(config *rest.Config) queuejobresources.Interface {
 	return qjrDeployment
 }
 
-
 func (qjrDeployment *QueueJobResDeployment) GetPodTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.PodTemplateSpec, int32, error) {
 	res, err := qjrDeployment.getDeploymentTemplate(qjobRes)
 	if err != nil {
-	        return nil, -1, err
+		return nil, -1, err
 	}
 	return &res.Spec.Template, *res.Spec.Replicas, nil
 }
@@ -116,44 +117,44 @@ func (qjrDeployment *QueueJobResDeployment) GetPodTemplate(qjobRes *arbv1.AppWra
 func (qjrDeployment *QueueJobResDeployment) GetAggregatedResources(job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	total := clusterstateapi.EmptyResource()
 	if job.Spec.AggrResources.Items != nil {
-	    //calculate scaling
-	    for _, ar := range job.Spec.AggrResources.Items {
-	        if ar.Type == arbv1.ResourceTypeDeployment {
-	                template, replicas, err := qjrDeployment.GetPodTemplate(&ar)
-					if err != nil {
-						glog.Errorf("Pod Template not found in item: %+v error: %+v.  Aggregated resources set to 0.", ar, err)
-					} else {
-						myres := queuejobresources.GetPodResources(template)
-						myres.MilliCPU = float64(replicas) * myres.MilliCPU
-						myres.Memory = float64(replicas) * myres.Memory
-						myres.GPU = int64(replicas) * myres.GPU
-						total = total.Add(myres)
-					}
-	        }
-	    }
+		//calculate scaling
+		for _, ar := range job.Spec.AggrResources.Items {
+			if ar.Type == arbv1.ResourceTypeDeployment {
+				template, replicas, err := qjrDeployment.GetPodTemplate(&ar)
+				if err != nil {
+					klog.Errorf("Pod Template not found in item: %+v error: %+v.  Aggregated resources set to 0.", ar, err)
+				} else {
+					myres := queuejobresources.GetPodResources(template)
+					myres.MilliCPU = float64(replicas) * myres.MilliCPU
+					myres.Memory = float64(replicas) * myres.Memory
+					myres.GPU = int64(replicas) * myres.GPU
+					total = total.Add(myres)
+				}
+			}
+		}
 	}
 	return total
 }
 
 func (qjrDeployment *QueueJobResDeployment) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
-        total := clusterstateapi.EmptyResource()
-        if job.Spec.AggrResources.Items != nil {
-            //calculate scaling
-            for _, ar := range job.Spec.AggrResources.Items {
-                  if ar.Priority < priority {
-                        continue
-                  }
-                  if ar.Type == arbv1.ResourceTypeDeployment {
-                        template, replicas, _ := qjrDeployment.GetPodTemplate(&ar)
-                        myres := queuejobresources.GetPodResources(template)
-                        myres.MilliCPU = float64(replicas) * myres.MilliCPU
-                        myres.Memory = float64(replicas) * myres.Memory
-                        myres.GPU = int64(replicas) * myres.GPU
-                        total = total.Add(myres)
-                }
-            }
-        }
-        return total
+	total := clusterstateapi.EmptyResource()
+	if job.Spec.AggrResources.Items != nil {
+		//calculate scaling
+		for _, ar := range job.Spec.AggrResources.Items {
+			if ar.Priority < priority {
+				continue
+			}
+			if ar.Type == arbv1.ResourceTypeDeployment {
+				template, replicas, _ := qjrDeployment.GetPodTemplate(&ar)
+				myres := queuejobresources.GetPodResources(template)
+				myres.MilliCPU = float64(replicas) * myres.MilliCPU
+				myres.Memory = float64(replicas) * myres.Memory
+				myres.GPU = int64(replicas) * myres.GPU
+				total = total.Add(myres)
+			}
+		}
+	}
+	return total
 }
 
 //func (qjrDeployment *QueueJobResDeployment) GetAggregatedResourcesByPhase(phase v1.PodPhase, job *arbv1.AppWrapper) *clusterstateapi.Resource {
@@ -194,7 +195,6 @@ func (qjrDeployment *QueueJobResDeployment) deleteDeployment(obj interface{}) {
 	return
 }
 
-
 // Parse queue job api object to get Service template
 func (qjrDeployment *QueueJobResDeployment) getDeploymentTemplate(qjobRes *arbv1.AppWrapperResource) (*apps.Deployment, error) {
 	deploymentGVK := schema.GroupVersion{Group: apps.GroupName, Version: "v1"}.WithKind("Deployment")
@@ -217,7 +217,7 @@ func (qjrDeployment *QueueJobResDeployment) createDeploymentWithControllerRef(na
 		deployment.OwnerReferences = append(deployment.OwnerReferences, *controllerRef)
 	}
 
-	if _, err := qjrDeployment.clients.AppsV1().Deployments(namespace).Create(deployment); err != nil {
+	if _, err := qjrDeployment.clients.AppsV1().Deployments(namespace).Create(context.Background(), deployment, metav1.CreateOptions{}); err != nil {
 		return err
 	}
 
@@ -225,7 +225,7 @@ func (qjrDeployment *QueueJobResDeployment) createDeploymentWithControllerRef(na
 }
 
 func (qjrDeployment *QueueJobResDeployment) delDeployment(namespace string, name string) error {
-	if err := qjrDeployment.clients.AppsV1().Deployments(namespace).Delete(name, nil); err != nil {
+	if err := qjrDeployment.clients.AppsV1().Deployments(namespace).Delete(context.Background(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 	return nil
@@ -240,8 +240,8 @@ func (qjrDeployment *QueueJobResDeployment) SyncQueueJob(queuejob *arbv1.AppWrap
 	startTime := time.Now()
 
 	defer func() {
-		// glog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
-		glog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
+		// klog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
+		klog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
 	}()
 
 	_namespace, deploymentInQjr, deploymentsInEtcd, err := qjrDeployment.getDeploymentForQueueJobRes(qjobRes, queuejob)
@@ -254,14 +254,14 @@ func (qjrDeployment *QueueJobResDeployment) SyncQueueJob(queuejob *arbv1.AppWrap
 
 	diff := int(replicas) - int(deploymentLen)
 
-	glog.V(4).Infof("QJob: %s had %d Deployments and %d desired Deployments", queuejob.Name, deploymentLen, replicas)
+	klog.V(4).Infof("QJob: %s had %d Deployments and %d desired Deployments", queuejob.Name, deploymentLen, replicas)
 
 	if diff > 0 {
 		//TODO: need set reference after Service has been really added
 		tmpDeployment := apps.Deployment{}
 		err = qjrDeployment.refManager.AddReference(qjobRes, &tmpDeployment)
 		if err != nil {
-			glog.Errorf("Cannot add reference to configmap resource %+v", err)
+			klog.Errorf("Cannot add reference to configmap resource %+v", err)
 			return err
 		}
 		if deploymentInQjr.Labels == nil {
@@ -298,33 +298,31 @@ func (qjrDeployment *QueueJobResDeployment) SyncQueueJob(queuejob *arbv1.AppWrap
 	return nil
 }
 
-
 func (qjrDeployment *QueueJobResDeployment) getDeploymentForQueueJobRes(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) (*string, *apps.Deployment, []*apps.Deployment, error) {
 
 	// Get "a" Deployment from AppWrapper  Resource
 	deploymentInQjr, err := qjrDeployment.getDeploymentTemplate(qjobRes)
 	if err != nil {
-		glog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
+		klog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
 		return nil, nil, nil, err
 	}
 
 	// Get Deployment"s" in Etcd Server
 	var _namespace *string
-	if deploymentInQjr.Namespace!=""{
+	if deploymentInQjr.Namespace != "" {
 		_namespace = &deploymentInQjr.Namespace
 	} else {
 		_namespace = &queuejob.Namespace
 	}
 
-	deploymentList, err := qjrDeployment.clients.AppsV1().Deployments(*_namespace).List(metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name),})
+	deploymentList, err := qjrDeployment.clients.AppsV1().Deployments(*_namespace).List(context.Background(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name)})
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	deploymentsInEtcd := []*apps.Deployment{}
 	for i, _ := range deploymentList.Items {
-				deploymentsInEtcd = append(deploymentsInEtcd, &deploymentList.Items[i])
+		deploymentsInEtcd = append(deploymentsInEtcd, &deploymentList.Items[i])
 	}
-
 
 	myDeploymentsInEtcd := []*apps.Deployment{}
 	for i, deployment := range deploymentsInEtcd {
@@ -335,7 +333,6 @@ func (qjrDeployment *QueueJobResDeployment) getDeploymentForQueueJobRes(qjobRes 
 
 	return _namespace, deploymentInQjr, myDeploymentsInEtcd, nil
 }
-
 
 func (qjrDeployment *QueueJobResDeployment) deleteQueueJobResDeployments(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) error {
 
@@ -355,7 +352,7 @@ func (qjrDeployment *QueueJobResDeployment) deleteQueueJobResDeployments(qjobRes
 			defer wait.Done()
 			if err := qjrDeployment.delDeployment(*_namespace, activeDeployments[ix].Name); err != nil {
 				defer utilruntime.HandleError(err)
-				glog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeDeployments[ix].Name, *_namespace, job.Name)
+				klog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeDeployments[ix].Name, *_namespace, job.Name)
 			}
 		}(i)
 	}
@@ -368,4 +365,3 @@ func (qjrDeployment *QueueJobResDeployment) deleteQueueJobResDeployments(qjobRes
 func (qjrDeployment *QueueJobResDeployment) Cleanup(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 	return qjrDeployment.deleteQueueJobResDeployments(qjobRes, queuejob)
 }
-

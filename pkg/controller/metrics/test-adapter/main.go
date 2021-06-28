@@ -22,9 +22,11 @@ import (
 	"os"
 
 	"github.com/emicklei/go-restful"
-	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/apiserver/pkg/util/logs"
+	"k8s.io/component-base/logs"
+	"k8s.io/klog"
+
+	// "k8s.io/apiserver/pkg/util/logs"
 
 	basecmd "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/cmd"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
@@ -39,15 +41,15 @@ type SampleAdapter struct {
 }
 
 func (a *SampleAdapter) makeProviderOrDie() (provider.MetricsProvider, *restful.WebService) {
-	glog.Infof("Entered makeProviderOrDie()")
+	klog.Infof("Entered makeProviderOrDie()")
 	client, err := a.DynamicClient()
 	if err != nil {
-		glog.Fatalf("unable to construct dynamic client: %v", err)
+		klog.Fatalf("unable to construct dynamic client: %v", err)
 	}
 
 	mapper, err := a.RESTMapper()
 	if err != nil {
-		glog.Fatalf("unable to construct discovery REST mapper: %v", err)
+		klog.Fatalf("unable to construct discovery REST mapper: %v", err)
 	}
 
 	return fakeprov.NewFakeProvider(client, mapper)
@@ -57,7 +59,7 @@ func main() {
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
-	glog.Infof("Entered main()")
+	klog.Infof("Entered main()")
 	cmd := &SampleAdapter{}
 	cmd.Flags().StringVar(&cmd.Message, "msg", "starting adapter...", "startup message")
 	cmd.Flags().AddGoFlagSet(flag.CommandLine) // make sure we get the glog flags
@@ -67,14 +69,14 @@ func main() {
 	cmd.WithCustomMetrics(testProvider)
 	cmd.WithExternalMetrics(testProvider)
 
-	glog.Infof(cmd.Message)
+	klog.Infof(cmd.Message)
 	// Set up POST endpoint for writing fake metric values
 	restful.DefaultContainer.Add(webService)
 	go func() {
 		// Open port for POSTing fake metrics
-		glog.Fatal(http.ListenAndServe(":8080", nil))
+		klog.Fatal(http.ListenAndServe(":8080", nil))
 	}()
 	if err := cmd.Run(wait.NeverStop); err != nil {
-		glog.Fatalf("unable to run custom metrics adapter: %v", err)
+		klog.Fatalf("unable to run custom metrics adapter: %v", err)
 	}
 }

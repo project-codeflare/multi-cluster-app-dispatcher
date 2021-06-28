@@ -48,20 +48,22 @@ limitations under the License.
 package main
 
 import (
-	"k8s.io/gengo/args"
-	"k8s.io/gengo/examples/deepcopy-gen/generators"
 	"path/filepath"
 
-	"github.com/golang/glog"
+	"k8s.io/gengo/args"
+	"k8s.io/gengo/examples/deepcopy-gen/generators"
+
 	"github.com/spf13/pflag"
+	"k8s.io/klog/v2"
 )
 
 func main() {
+	klog.InitFlags(nil)
 	arguments := args.Default()
 
 	// Override defaults.
 	arguments.OutputFileBaseName = "deepcopy_generated"
-	current_loc, _:= filepath.Abs(".")
+	current_loc, _ := filepath.Abs(".")
 	arguments.GoHeaderFilePath = filepath.Join(current_loc, "hack/boilerplate/boilerplate.go.txt")
 
 	// Custom args.
@@ -76,7 +78,7 @@ func main() {
 		generators.DefaultNameSystem(),
 		generators.Packages,
 	); err != nil {
-		glog.Fatalf("Error: %v", err)
+		klog.Fatalf("Error: %v", err)
 	}
-	glog.V(2).Info("Completed successfully.")
+	klog.V(2).Info("Completed successfully.")
 }

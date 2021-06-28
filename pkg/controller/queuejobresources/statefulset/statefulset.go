@@ -14,14 +14,19 @@ limitations under the License.
 package statefulset
 
 import (
+	"context"
 	"fmt"
-	"github.com/golang/glog"
+
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
+
 	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
+	"sync"
+	"time"
+
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	apps "k8s.io/api/apps/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -30,8 +35,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"sync"
-	"time"
+	"k8s.io/klog"
 
 	ssinformer "k8s.io/client-go/informers/apps/v1"
 	sslister "k8s.io/client-go/listers/apps/v1"
@@ -54,15 +58,15 @@ const (
 
 //QueueJobResStatefulSet - stateful sets
 type QueueJobResStatefulSet struct {
-	clients    			*kubernetes.Clientset
-	arbclients 			*clientset.Clientset
+	clients    *kubernetes.Clientset
+	arbclients *clientset.Clientset
 	// A store of services, populated by the serviceController
-	statefulSetStore   	sslister.StatefulSetLister
-	deployInformer 		ssinformer.StatefulSetInformer
-	rtScheme       		*runtime.Scheme
-	jsonSerializer 		*json.Serializer
+	statefulSetStore sslister.StatefulSetLister
+	deployInformer   ssinformer.StatefulSetInformer
+	rtScheme         *runtime.Scheme
+	jsonSerializer   *json.Serializer
 	// Reference manager to manage membership of queuejob resource and its members
-	refManager 			queuejobresources.RefManager
+	refManager queuejobresources.RefManager
 }
 
 // Register registers a queue job resource type
@@ -119,7 +123,7 @@ func (qjrStatefulSet *QueueJobResStatefulSet) GetPodTemplate(qjobRes *arbv1.AppW
 	if err != nil {
 		return nil, -1, err
 	}
-  return &res.Spec.Template, *res.Spec.Replicas, nil
+	return &res.Spec.Template, *res.Spec.Replicas, nil
 }
 
 func (qjrStatefulSet *QueueJobResStatefulSet) GetAggregatedResources(queueJob *arbv1.AppWrapper) *clusterstateapi.Resource {
@@ -190,11 +194,11 @@ func (qjrStatefulSet *QueueJobResStatefulSet) getStatefulSetTemplate(qjobRes *ar
 }
 
 func (qjrStatefulSet *QueueJobResStatefulSet) createStatefulSetWithControllerRef(namespace string, statefulSet *apps.StatefulSet, controllerRef *metav1.OwnerReference) error {
-	glog.V(4).Infof("==========create statefulSet: %s,  %+v \n", namespace, statefulSet)
+	klog.V(4).Infof("==========create statefulSet: %s,  %+v \n", namespace, statefulSet)
 	if controllerRef != nil {
 		statefulSet.OwnerReferences = append(statefulSet.OwnerReferences, *controllerRef)
 	}
-	if _, err := qjrStatefulSet.clients.AppsV1().StatefulSets(namespace).Create(statefulSet); err != nil {
+	if _, err := qjrStatefulSet.clients.AppsV1().StatefulSets(namespace).Create(context.Background(), statefulSet, metav1.CreateOptions{}); err != nil {
 		return err
 	}
 	return nil
@@ -202,8 +206,8 @@ func (qjrStatefulSet *QueueJobResStatefulSet) createStatefulSetWithControllerRef
 
 func (qjrStatefulSet *QueueJobResStatefulSet) delStatefulSet(namespace string, name string) error {
 
-	glog.V(4).Infof("==========delete statefulSet: %s,  %s \n", namespace, name)
-	if err := qjrStatefulSet.clients.AppsV1().StatefulSets(namespace).Delete(name, nil); err != nil {
+	klog.V(4).Infof("==========delete statefulSet: %s,  %s \n", namespace, name)
+	if err := qjrStatefulSet.clients.AppsV1().StatefulSets(namespace).Delete(context.Background(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 	return nil
@@ -213,15 +217,13 @@ func (qjrStatefulSet *QueueJobResStatefulSet) UpdateQueueJobStatus(queuejob *arb
 	return nil
 }
 
-
-
 func (qjrStatefulSet *QueueJobResStatefulSet) SyncQueueJob(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 
 	startTime := time.Now()
 
 	defer func() {
-		// glog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
-		glog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
+		// klog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
+		klog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
 	}()
 
 	_namespace, statefulSetInQjr, statefulSetsInEtcd, err := qjrStatefulSet.getStatefulSetForQueueJobRes(qjobRes, queuejob)
@@ -234,14 +236,14 @@ func (qjrStatefulSet *QueueJobResStatefulSet) SyncQueueJob(queuejob *arbv1.AppWr
 
 	diff := int(replicas) - int(statefulSetLen)
 
-	glog.V(4).Infof("QJob: %s had %d StatefulSets and %d desired StatefulSets", queuejob.Name, statefulSetLen, replicas)
+	klog.V(4).Infof("QJob: %s had %d StatefulSets and %d desired StatefulSets", queuejob.Name, statefulSetLen, replicas)
 
 	if diff > 0 {
 		//TODO: need set reference after Service has been really added
 		tmpStatefulSet := apps.StatefulSet{}
 		err = qjrStatefulSet.refManager.AddReference(qjobRes, &tmpStatefulSet)
 		if err != nil {
-			glog.Errorf("Cannot add reference to configmap resource %+v", err)
+			klog.Errorf("Cannot add reference to configmap resource %+v", err)
 			return err
 		}
 		if statefulSetInQjr.Labels == nil {
@@ -251,10 +253,10 @@ func (qjrStatefulSet *QueueJobResStatefulSet) SyncQueueJob(queuejob *arbv1.AppWr
 			statefulSetInQjr.Labels[k] = v
 		}
 		statefulSetInQjr.Labels[queueJobName] = queuejob.Name
-    if statefulSetInQjr.Spec.Template.Labels == nil {
-            statefulSetInQjr.Labels = map[string]string{}
-    }
-    statefulSetInQjr.Spec.Template.Labels[queueJobName] = queuejob.Name
+		if statefulSetInQjr.Spec.Template.Labels == nil {
+			statefulSetInQjr.Labels = map[string]string{}
+		}
+		statefulSetInQjr.Spec.Template.Labels[queueJobName] = queuejob.Name
 
 		wait := sync.WaitGroup{}
 		wait.Add(int(diff))
@@ -278,25 +280,24 @@ func (qjrStatefulSet *QueueJobResStatefulSet) SyncQueueJob(queuejob *arbv1.AppWr
 	return nil
 }
 
-
 func (qjrStatefulSet *QueueJobResStatefulSet) getStatefulSetForQueueJobRes(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) (*string, *apps.StatefulSet, []*apps.StatefulSet, error) {
 
 	// Get "a" StatefulSet from AppWrapper Resource
 	statefulSetInQjr, err := qjrStatefulSet.getStatefulSetTemplate(qjobRes)
 	if err != nil {
-		glog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
+		klog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
 		return nil, nil, nil, err
 	}
 
 	// Get StatefulSet"s" in Etcd Server
 	var _namespace *string
-	if statefulSetInQjr.Namespace!=""{
+	if statefulSetInQjr.Namespace != "" {
 		_namespace = &statefulSetInQjr.Namespace
 	} else {
 		_namespace = &queuejob.Namespace
 	}
 	// statefulSetList, err := qjrStatefulSet.clients.CoreV1().StatefulSets(*_namespace).List(metav1.ListOptions{})
-	statefulSetList, err := qjrStatefulSet.clients.AppsV1().StatefulSets(*_namespace).List(metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name),})
+	statefulSetList, err := qjrStatefulSet.clients.AppsV1().StatefulSets(*_namespace).List(context.Background(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name)})
 	// statefulSetList, err := qjrStatefulSet.clients.AppsV1().StatefulSets(*_namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, nil, nil, err
@@ -315,7 +316,7 @@ func (qjrStatefulSet *QueueJobResStatefulSet) getStatefulSetForQueueJobRes(qjobR
 	// 	}
 	// }
 	for i, _ := range statefulSetList.Items {
-				statefulSetsInEtcd = append(statefulSetsInEtcd, &statefulSetList.Items[i])
+		statefulSetsInEtcd = append(statefulSetsInEtcd, &statefulSetList.Items[i])
 	}
 
 	myStatefulSetsInEtcd := []*apps.StatefulSet{}
@@ -327,7 +328,6 @@ func (qjrStatefulSet *QueueJobResStatefulSet) getStatefulSetForQueueJobRes(qjobR
 
 	return _namespace, statefulSetInQjr, myStatefulSetsInEtcd, nil
 }
-
 
 func (qjrStatefulSet *QueueJobResStatefulSet) deleteQueueJobResStatefulSets(qjobRes *arbv1.AppWrapperResource, queuejob *arbv1.AppWrapper) error {
 
@@ -347,7 +347,7 @@ func (qjrStatefulSet *QueueJobResStatefulSet) deleteQueueJobResStatefulSets(qjob
 			defer wait.Done()
 			if err := qjrStatefulSet.delStatefulSet(*_namespace, activeStatefulSets[ix].Name); err != nil {
 				defer utilruntime.HandleError(err)
-				glog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeStatefulSets[ix].Name, *_namespace, job.Name)
+				klog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeStatefulSets[ix].Name, *_namespace, job.Name)
 			}
 		}(i)
 	}

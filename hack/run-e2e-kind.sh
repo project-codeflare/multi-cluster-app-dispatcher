@@ -23,7 +23,7 @@ sudo apt-get update
 sudo apt-get install -y  kubectl=1.16.3-00
 
 # Download kind binary (0.6.1)
-sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.6.1/kind-linux-amd64
+sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.11.0/kind-linux-amd64
 sudo chmod +x /usr/local/bin/kind
 
 # check if kind installed
@@ -121,6 +121,9 @@ function cleanup {
     echo "===================================================================================="
     echo "==========================>>>>> MCAD Controller Logs <<<<<=========================="
     echo "===================================================================================="
+    echo "==========================>>>>>Printing the pod name for logs:  <<<<<=========================="
+    echo "$mcad_pod"
+    echo "_____________________________ end printing logs pod name ______________________"
     kubectl logs ${mcad_pod} -n kube-system
 
     kind delete cluster ${CLUSTER_CONTEXT}
@@ -288,7 +291,13 @@ function kube-test-env-up {
     sleep 10
     echo "Listing MCAD Controller Helm Chart and Pod YAML..."
     helm list
-    mcad_pod=$(kubectl get pods -n kube-system | grep xqueuejob | awk '{print $1}')
+    mcad-controller=$(kubectl get pods -n kube-system | grep xqueuejob | awk '{print $1}')
+    test_pod=$(kubectl get pods -n kube-system | grep xqueuejob | cut -d' ' -f1)
+    echo "_____________________________ Printing the pod name ______________________"
+    echo "$mcad_pod"
+    echo "_____________________________ end printing mcad pod name ______________________"
+    echo "$test_pod"
+    echo "_____________________________ end printing test pod name ______________________"
     if [[ "$mcad_pod" != "" ]]
     then
         kubectl get pod ${mcad_pod} -n kube-system -o yaml
@@ -301,6 +310,8 @@ function kube-test-env-up {
     echo "---"
     echo "kubectl describe nodes"
     kubectl describe nodes
+
+    kubectl create namespace test
 }
 
 

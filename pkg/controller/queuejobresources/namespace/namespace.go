@@ -14,16 +14,23 @@ limitations under the License.
 package namespace
 
 import (
+	"context"
 	"fmt"
-	"github.com/golang/glog"
+
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
+
 	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/klog"
+
 	// "k8s.io/apimachinery/pkg/api/meta"
+	"sync"
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,8 +42,6 @@ import (
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"sync"
-	"time"
 )
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
@@ -52,15 +57,15 @@ const (
 
 //QueueJobResService contains service info
 type QueueJobResNamespace struct {
-	clients    			*kubernetes.Clientset
-	arbclients 			*clientset.Clientset
+	clients    *kubernetes.Clientset
+	arbclients *clientset.Clientset
 	// A store of services, populated by the serviceController
-	namespaceStore    	corelisters.NamespaceLister
-	namespaceInformer 	corev1informer.NamespaceInformer
-	rtScheme        	*runtime.Scheme
-	jsonSerializer  	*json.Serializer
+	namespaceStore    corelisters.NamespaceLister
+	namespaceInformer corev1informer.NamespaceInformer
+	rtScheme          *runtime.Scheme
+	jsonSerializer    *json.Serializer
 	// Reference manager to manage membership of queuejob resource and its members
-	refManager 			queuejobresources.RefManager
+	refManager queuejobresources.RefManager
 }
 
 //Register registers a queue job resource type
@@ -130,12 +135,10 @@ func (qjrNamespace *QueueJobResNamespace) deleteNamespace(obj interface{}) {
 	return
 }
 
-
 func (qjrNamespace *QueueJobResNamespace) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
-        total := clusterstateapi.EmptyResource()
-        return total
+	total := clusterstateapi.EmptyResource()
+	return total
 }
-
 
 // Parse queue job api object to get Service template
 func (qjrNamespace *QueueJobResNamespace) getNamespaceTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.Namespace, error) {
@@ -158,12 +161,12 @@ func (qjrNamespace *QueueJobResNamespace) getNamespaceTemplate(qjobRes *arbv1.Ap
 
 func (qjrNamespace *QueueJobResNamespace) createNamespaceWithControllerRef(namespace *v1.Namespace, controllerRef *metav1.OwnerReference) error {
 
-	// glog.V(4).Infof("==========create Namespace: %+v \n", namespace)
+	// klog.V(4).Infof("==========create Namespace: %+v \n", namespace)
 	if controllerRef != nil {
 		namespace.OwnerReferences = append(namespace.OwnerReferences, *controllerRef)
 	}
 
-	if _, err := qjrNamespace.clients.Core().Namespaces().Create(namespace); err != nil {
+	if _, err := qjrNamespace.clients.CoreV1().Namespaces().Create(context.Background(), namespace, metav1.CreateOptions{}); err != nil {
 		return err
 	}
 
@@ -172,8 +175,8 @@ func (qjrNamespace *QueueJobResNamespace) createNamespaceWithControllerRef(names
 
 func (qjrNamespace *QueueJobResNamespace) delNamespace(name string) error {
 
-	glog.V(4).Infof("==========delete namespace: %s \n", name)
-	if err := qjrNamespace.clients.Core().Namespaces().Delete(name, nil); err != nil {
+	klog.V(4).Infof("==========delete namespace: %s \n", name)
+	if err := qjrNamespace.clients.CoreV1().Namespaces().Delete(context.Background(), name, metav1.DeleteOptions{}); err != nil {
 		return err
 	}
 
@@ -189,8 +192,8 @@ func (qjrNamespace *QueueJobResNamespace) SyncQueueJob(queuejob *arbv1.AppWrappe
 
 	startTime := time.Now()
 	defer func() {
-		glog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
-		// glog.V(4).Infof("Finished syncing queue job resource %s (%v)", qjobRes.Template, time.Now().Sub(startTime))
+		klog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
+		// klog.V(4).Infof("Finished syncing queue job resource %s (%v)", qjobRes.Template, time.Now().Sub(startTime))
 	}()
 
 	namespaces, err := qjrNamespace.getNamespaceForQueueJobRes(qjobRes, queuejob)
@@ -203,19 +206,19 @@ func (qjrNamespace *QueueJobResNamespace) SyncQueueJob(queuejob *arbv1.AppWrappe
 
 	diff := int(replicas) - int(namespaceLen)
 
-	glog.V(4).Infof("QJob: %s had %d namespaces and %d desired namespaces", queuejob.Name, namespaceLen, replicas)
+	klog.V(4).Infof("QJob: %s had %d namespaces and %d desired namespaces", queuejob.Name, namespaceLen, replicas)
 
 	if diff > 0 {
 		template, err := qjrNamespace.getNamespaceTemplate(qjobRes)
 		if err != nil {
-			glog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
+			klog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
 			return err
 		}
 		//TODO: need set reference after Service has been really added
 		tmpNamespace := v1.Namespace{}
 		err = qjrNamespace.refManager.AddReference(qjobRes, &tmpNamespace)
 		if err != nil {
-			glog.Errorf("Cannot add reference to namespace resource %+v", err)
+			klog.Errorf("Cannot add reference to namespace resource %+v", err)
 			return err
 		}
 
@@ -249,14 +252,14 @@ func (qjrNamespace *QueueJobResNamespace) SyncQueueJob(queuejob *arbv1.AppWrappe
 
 func (qjrNamespace *QueueJobResNamespace) getNamespaceForQueueJob(j *arbv1.AppWrapper) ([]*v1.Namespace, error) {
 	// namespacelist, err := qjrNamespace.clients.CoreV1().Namespaces().List(metav1.ListOptions{})
-	namespacelist, err := qjrNamespace.clients.CoreV1().Namespaces().List(metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, j.Name),})
+	namespacelist, err := qjrNamespace.clients.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, j.Name)})
 	if err != nil {
 		return nil, err
 	}
 
 	namespaces := []*v1.Namespace{}
 	for i, _ := range namespacelist.Items {
-				namespaces = append(namespaces, &namespacelist.Items[i])
+		namespaces = append(namespaces, &namespacelist.Items[i])
 	}
 
 	return namespaces, nil
@@ -299,7 +302,7 @@ func (qjrNamespace *QueueJobResNamespace) deleteQueueJobResNamespaces(qjobRes *a
 			defer wait.Done()
 			if err := qjrNamespace.delNamespace(activeNamespaces[ix].Name); err != nil {
 				defer utilruntime.HandleError(err)
-				glog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeNamespaces[ix].Name, job.Namespace, job.Name)
+				klog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activeNamespaces[ix].Name, job.Namespace, job.Name)
 			}
 		}(i)
 	}

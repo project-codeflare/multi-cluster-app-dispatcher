@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/emicklei/go-restful"
-	"github.com/golang/glog"
 
 	apierr "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -32,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/klog"
 	"k8s.io/metrics/pkg/apis/custom_metrics"
 	"k8s.io/metrics/pkg/apis/external_metrics"
 
@@ -96,23 +96,27 @@ var (
 	}
 )
 
+type metricValue struct {
+	labels labels.Set
+	value  resource.Quantity
+}
+
 // testingProvider is a sample implementation of provider.MetricsProvider which stores a map of fake metrics
 type testingProvider struct {
 	client dynamic.Interface
 	mapper apimeta.RESTMapper
 
 	valuesLock      sync.RWMutex
-	values          map[CustomMetricResource]resource.Quantity
+	values          map[CustomMetricResource]metricValue
 	externalMetrics []externalMetric
 }
 
 // NewFakeProvider returns an instance of testingProvider, along with its restful.WebService that opens endpoints to post new fake metrics
 func NewFakeProvider(client dynamic.Interface, mapper apimeta.RESTMapper) (provider.MetricsProvider, *restful.WebService) {
-	glog.Infof("Entered NewFakeProvider()")
 	provider := &testingProvider{
 		client:          client,
 		mapper:          mapper,
-		values:          make(map[CustomMetricResource]resource.Quantity),
+		values:          make(map[CustomMetricResource]metricValue),
 		externalMetrics: testingExternalMetrics,
 	}
 	return provider, provider.webService()
@@ -123,7 +127,6 @@ func NewFakeProvider(client dynamic.Interface, mapper apimeta.RESTMapper) (provi
 // There are 3 metric types available: namespaced, root-scoped, and namespaces.
 // (Note: Namespaces, we're assuming, are themselves namespaced resources, but for consistency with how metrics are retreived they have a separate route)
 func (p *testingProvider) webService() *restful.WebService {
-	glog.Infof("Entered webService()")
 	ws := new(restful.WebService)
 
 	ws.Path("/write-metrics")
@@ -144,34 +147,36 @@ func (p *testingProvider) webService() *restful.WebService {
 
 // updateMetric writes the metric provided by a restful request and stores it in memory
 func (p *testingProvider) updateMetric(request *restful.Request, response *restful.Response) {
-	glog.Infof("Entered updateMetric()")
 	p.valuesLock.Lock()
 	defer p.valuesLock.Unlock()
 
 	namespace := request.PathParameter("namespace")
-	glog.Infof("updateMetric() namespace=%s", namespace)
 	resourceType := request.PathParameter("resourceType")
-	glog.Infof("updateMetric() resourceType=%s", resourceType)
 	namespaced := false
 	if len(namespace) > 0 || resourceType == "namespaces" {
 		namespaced = true
-		glog.Infof("updateMetric() namespaced=true")
 	}
 	name := request.PathParameter("name")
-	glog.Infof("updateMetric() name=%s", name)
 	metricName := request.PathParameter("metric")
-	glog.Infof("updateMetric() metricName=%s", metricName)
 
 	value := new(resource.Quantity)
 	err := request.ReadEntity(value)
-	glog.Infof("updateMetric() value=%v", value)
 	if err != nil {
 		response.WriteErrorString(http.StatusBadRequest, err.Error())
-		glog.Infof("updateMetric() bad value: %v", value)
 		return
 	}
 
 	groupResource := schema.ParseGroupResource(resourceType)
+
+	metricLabels := labels.Set{}
+	sel := request.QueryParameter("labels")
+	if len(sel) > 0 {
+		metricLabels, err = labels.ConvertSelectorToLabelsMap(sel)
+		if err != nil {
+			response.WriteErrorString(http.StatusBadRequest, err.Error())
+			return
+		}
+	}
 
 	info := provider.CustomMetricInfo{
 		GroupResource: groupResource,
@@ -181,7 +186,7 @@ func (p *testingProvider) updateMetric(request *restful.Request, response *restf
 
 	info, _, err = info.Normalized(p.mapper)
 	if err != nil {
-		glog.Errorf("Error normalizing info: %s", err)
+		klog.Errorf("Error normalizing info: %s", err)
 	}
 	namespacedName := types.NamespacedName{
 		Name:      name,
@@ -192,12 +197,14 @@ func (p *testingProvider) updateMetric(request *restful.Request, response *restf
 		CustomMetricInfo: info,
 		NamespacedName:   namespacedName,
 	}
-	p.values[metricInfo] = *value
+	p.values[metricInfo] = metricValue{
+		labels: metricLabels,
+		value:  *value,
+	}
 }
 
 // valueFor is a helper function to get just the value of a specific metric
-func (p *testingProvider) valueFor(info provider.CustomMetricInfo, name types.NamespacedName) (resource.Quantity, error) {
-	glog.Infof("Entered valueFor(4)")
+func (p *testingProvider) valueFor(info provider.CustomMetricInfo, name types.NamespacedName, metricSelector labels.Selector) (resource.Quantity, error) {
 	info, _, err := info.Normalized(p.mapper)
 	if err != nil {
 		return resource.Quantity{}, err
@@ -212,13 +219,15 @@ func (p *testingProvider) valueFor(info provider.CustomMetricInfo, name types.Na
 		return resource.Quantity{}, provider.NewMetricNotFoundForError(info.GroupResource, info.Metric, name.Name)
 	}
 
-	glog.Infof("valueFor(): metricInfo=%v, value=%v", metricInfo, value)
-	return value, nil
+	if !metricSelector.Matches(value.labels) {
+		return resource.Quantity{}, provider.NewMetricNotFoundForSelectorError(info.GroupResource, info.Metric, name.Name, metricSelector)
+	}
+
+	return value.value, nil
 }
 
 // metricFor is a helper function which formats a value, metric, and object info into a MetricValue which can be returned by the metrics API
-func (p *testingProvider) metricFor(value resource.Quantity, name types.NamespacedName, selector labels.Selector, info provider.CustomMetricInfo) (*custom_metrics.MetricValue, error) {
-	glog.Infof("Entered metricFor(4)")
+func (p *testingProvider) metricFor(value resource.Quantity, name types.NamespacedName, selector labels.Selector, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValue, error) {
 	objRef, err := helpers.ReferenceFor(p.mapper, name, info)
 	if err != nil {
 		return nil, err
@@ -233,20 +242,19 @@ func (p *testingProvider) metricFor(value resource.Quantity, name types.Namespac
 		Value:     value,
 	}
 
-	if len(selector.String()) > 0 {
-		labelSelector, err := metav1.ParseToLabelSelector(selector.String())
+	if len(metricSelector.String()) > 0 {
+		sel, err := metav1.ParseToLabelSelector(metricSelector.String())
 		if err != nil {
 			return nil, err
 		}
-		metric.Metric.Selector = labelSelector
+		metric.Metric.Selector = sel
 	}
-	glog.Infof("metricFor(4): metric=%v", metric)
+
 	return metric, nil
 }
 
 // metricsFor is a wrapper used by GetMetricBySelector to format several metrics which match a resource selector
-func (p *testingProvider) metricsFor(namespace string, selector labels.Selector, info provider.CustomMetricInfo) (*custom_metrics.MetricValueList, error) {
-	glog.Infof("Entered metricFor(3)")
+func (p *testingProvider) metricsFor(namespace string, selector labels.Selector, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValueList, error) {
 	names, err := helpers.ListObjectNames(p.mapper, p.client, namespace, selector, info)
 	if err != nil {
 		return nil, err
@@ -255,7 +263,7 @@ func (p *testingProvider) metricsFor(namespace string, selector labels.Selector,
 	res := make([]custom_metrics.MetricValue, 0, len(names))
 	for _, name := range names {
 		namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
-		value, err := p.valueFor(info, namespacedName)
+		value, err := p.valueFor(info, namespacedName, metricSelector)
 		if err != nil {
 			if apierr.IsNotFound(err) {
 				continue
@@ -263,41 +271,34 @@ func (p *testingProvider) metricsFor(namespace string, selector labels.Selector,
 			return nil, err
 		}
 
-		metric, err := p.metricFor(value, namespacedName, selector, info)
+		metric, err := p.metricFor(value, namespacedName, selector, info, metricSelector)
 		if err != nil {
 			return nil, err
 		}
 		res = append(res, *metric)
 	}
-	glog.Infof("metricFor(3): res=%v", res)
 
 	return &custom_metrics.MetricValueList{
 		Items: res,
 	}, nil
 }
 
-func (p *testingProvider) GetMetricByName(name types.NamespacedName, info provider.CustomMetricInfo) (*custom_metrics.MetricValue, error) {
-	glog.Infof("Entered GetMetricByName()")
-	//debug.PrintStack()
+func (p *testingProvider) GetMetricByName(name types.NamespacedName, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValue, error) {
 	p.valuesLock.RLock()
 	defer p.valuesLock.RUnlock()
 
-	value, err := p.valueFor(info, name)
-	glog.Infof("GetMetricByName(): info=%v, name=%v, value=%v", info, name, value)
-
+	value, err := p.valueFor(info, name, metricSelector)
 	if err != nil {
 		return nil, err
 	}
-	return p.metricFor(value, name, labels.Everything(), info)
+	return p.metricFor(value, name, labels.Everything(), info, metricSelector)
 }
 
-func (p *testingProvider) GetMetricBySelector(namespace string, selector labels.Selector, info provider.CustomMetricInfo) (*custom_metrics.MetricValueList, error) {
-	glog.Infof("Entered GetMetricBySelector()")
-	//debug.PrintStack()
+func (p *testingProvider) GetMetricBySelector(namespace string, selector labels.Selector, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValueList, error) {
 	p.valuesLock.RLock()
 	defer p.valuesLock.RUnlock()
 
-	return p.metricsFor(namespace, selector, info)
+	return p.metricsFor(namespace, selector, info, metricSelector)
 }
 
 func (p *testingProvider) ListAllMetrics() []provider.CustomMetricInfo {
@@ -320,8 +321,6 @@ func (p *testingProvider) ListAllMetrics() []provider.CustomMetricInfo {
 }
 
 func (p *testingProvider) GetExternalMetric(namespace string, metricSelector labels.Selector, info provider.ExternalMetricInfo) (*external_metrics.ExternalMetricValueList, error) {
-	glog.Infof("Entered GetExternalMetric()")
-	//debug.PrintStack()
 	p.valuesLock.RLock()
 	defer p.valuesLock.RUnlock()
 
@@ -340,16 +339,12 @@ func (p *testingProvider) GetExternalMetric(namespace string, metricSelector lab
 }
 
 func (p *testingProvider) ListAllExternalMetrics() []provider.ExternalMetricInfo {
-	glog.Infof("Entered ListAllExternalMetrics()")
-	//debug.PrintStack()
 	p.valuesLock.RLock()
 	defer p.valuesLock.RUnlock()
 
 	externalMetricsInfo := []provider.ExternalMetricInfo{}
 	for _, metric := range p.externalMetrics {
 		externalMetricsInfo = append(externalMetricsInfo, metric.info)
-		glog.Infof("ListAllExternalMetrics(): add metric=%v to externalMetricsInfo", metric)
 	}
-	glog.Infof("ListAllExternalMetrics(): externalMetricsInfo=%v", externalMetricsInfo)
 	return externalMetricsInfo
 }

@@ -18,12 +18,14 @@ package installer
 
 import (
 	"fmt"
-	"github.com/golang/glog"
 	gpath "path"
 	"reflect"
 	"strings"
 	"time"
 
+	cm_rest "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/apiserver/registry/rest"
+	"github.com/emicklei/go-restful"
+	cm_handlers "github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/apiserver/endpoints/handlers"
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -34,8 +36,6 @@ import (
 	"k8s.io/apiserver/pkg/endpoints/handlers/negotiation"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
-
-	"github.com/emicklei/go-restful"
 )
 
 // NB: the contents of this file should mostly be a subset of the functionality
@@ -220,7 +220,10 @@ func addObjectParams(ws *restful.WebService, route *restful.RouteBuilder, obj in
 				if docable, ok := obj.(documentable); ok {
 					desc = docable.SwaggerDoc()[jsonName]
 				}
-				route.Param(ws.QueryParameter(jsonName, desc).DataType(typeToJSON(sf.Type.String())))
+
+				if route.ParameterNamed(jsonName) == nil {
+					route.Param(ws.QueryParameter(jsonName, desc).DataType(typeToJSON(sf.Type.String())))
+				}
 			}
 		}
 	}
@@ -241,7 +244,7 @@ func typeToJSON(typeName string) string {
 		return "string"
 	case "byte", "*byte":
 		return "string"
-	case "v1.DeletionPropagation", "*v1.DeletionPropagation":
+	case "v1.DeletionPropagation", "*v1.DeletionPropagation", "v1.ResourceVersionMatch":
 		return "string"
 
 	// TODO: Fix these when go-restful supports a way to specify an array query param:
@@ -268,11 +271,10 @@ type MetricsNaming struct {
 }
 
 func (n MetricsNaming) GenerateLink(requestInfo *request.RequestInfo, obj runtime.Object) (uri string, err error) {
-	glog.Infof("Entered GenerateLink()")
 	if requestInfo.Resource != "metrics" {
 		n.SelfLinkPathSuffix += "/" + requestInfo.Subresource
 	}
-	glog.Infof("GenerateLink(): SelfLinkPathSuffix=%v, requestInfo=%v", n.SelfLinkPathSuffix, requestInfo)
+
 	// since this is not a pointer receiver, it's ok to modify it here
 	// (since we copy around every method call)
 	if n.ClusterScoped {
@@ -284,9 +286,13 @@ func (n MetricsNaming) GenerateLink(requestInfo *request.RequestInfo, obj runtim
 }
 
 func restfulListResource(r rest.Lister, rw rest.Watcher, scope handlers.RequestScope, forceWatch bool, minRequestTimeout time.Duration) restful.RouteFunction {
-	glog.Infof("Entered restfulListResource()")
-	glog.Infof("restfulListResource(): restLister=%v, scope=%v", r, scope)
 	return func(req *restful.Request, res *restful.Response) {
-		handlers.ListResource(r, rw, scope, forceWatch, minRequestTimeout)(res.ResponseWriter, req.Request)
+		handlers.ListResource(r, rw, &scope, forceWatch, minRequestTimeout)(res.ResponseWriter, req.Request)
+	}
+}
+
+func restfulListResourceWithOptions(r cm_rest.ListerWithOptions, scope handlers.RequestScope) restful.RouteFunction {
+	return func(req *restful.Request, res *restful.Response) {
+		cm_handlers.ListResourceWithOptions(r, scope)(res.ResponseWriter, req.Request)
 	}
 }
