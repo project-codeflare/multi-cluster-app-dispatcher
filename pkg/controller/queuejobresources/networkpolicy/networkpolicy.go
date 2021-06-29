@@ -21,7 +21,6 @@ import (
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
 
-	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -147,7 +146,6 @@ func (qjrNetworkPolicy *QueueJobResNetworkPolicy) getNetworkPolicyTemplate(qjobR
 	networkpolicyGVK := schema.GroupVersion{Group: networkingv1.GroupName, Version: "v1"}.WithKind("NetworkPolicy")
 	obj, _, err := qjrNetworkPolicy.jsonSerializer.Decode(qjobRes.Template.Raw, &networkpolicyGVK, nil)
 	if err != nil {
-		// klog.Infof("Decoding Error for NetworkPolicy=================================================")
 		return nil, err
 	}
 
@@ -162,7 +160,6 @@ func (qjrNetworkPolicy *QueueJobResNetworkPolicy) getNetworkPolicyTemplate(qjobR
 
 func (qjrNetworkPolicy *QueueJobResNetworkPolicy) createNetworkPolicyWithControllerRef(namespace string, networkpolicy *networkingv1.NetworkPolicy, controllerRef *metav1.OwnerReference) error {
 
-	// klog.V(4).Infof("==========create NetworkPolicy: %+v \n", networkpolicy)
 	if controllerRef != nil {
 		networkpolicy.OwnerReferences = append(networkpolicy.OwnerReferences, *controllerRef)
 	}
@@ -193,7 +190,6 @@ func (qjrNetworkPolicy *QueueJobResNetworkPolicy) SyncQueueJob(queuejob *arbv1.A
 	startTime := time.Now()
 
 	defer func() {
-		// klog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
 		klog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
 	}()
 
@@ -264,7 +260,6 @@ func (qjrNetworkPolicy *QueueJobResNetworkPolicy) getNetworkPolicyForQueueJobRes
 	} else {
 		_namespace = &queuejob.Namespace
 	}
-	// networkPolicyList, err := qjrNetworkPolicy.clients.Networking().NetworkPolicies(*_namespace).List(metav1.ListOptions{})
 	networkPolicyList, err := qjrNetworkPolicy.clients.NetworkingV1().NetworkPolicies(*_namespace).List(context.Background(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name)})
 	if err != nil {
 		return nil, nil, nil, err
