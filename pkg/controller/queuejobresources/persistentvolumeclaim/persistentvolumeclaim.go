@@ -21,7 +21,6 @@ import (
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
 
-	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	"sync"
 	"time"
 
@@ -159,7 +158,6 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) getPersistentV
 
 func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) createPersistentVolumeClaimWithControllerRef(namespace string, persistentvolumeclaim *v1.PersistentVolumeClaim, controllerRef *metav1.OwnerReference) error {
 
-	// klog.V(4).Infof("==========create PersistentVolumeClaim: %+v \n", persistentvolumeclaim)
 	if controllerRef != nil {
 		persistentvolumeclaim.OwnerReferences = append(persistentvolumeclaim.OwnerReferences, *controllerRef)
 	}
@@ -190,7 +188,6 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) SyncQueueJob(q
 	startTime := time.Now()
 
 	defer func() {
-		// klog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
 		klog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
 	}()
 

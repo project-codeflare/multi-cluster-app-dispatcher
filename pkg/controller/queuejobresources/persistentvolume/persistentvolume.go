@@ -21,13 +21,11 @@ import (
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
 
-	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog"
 
-	// "k8s.io/apimachinery/pkg/api/meta"
 	"sync"
 	"time"
 
@@ -161,7 +159,6 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) getPersistentVolumeTempl
 
 func (qjrPersistentvolume *QueueJobResPersistentvolume) createPersistentVolumeWithControllerRef(persistentvolume *v1.PersistentVolume, controllerRef *metav1.OwnerReference) error {
 
-	// klog.V(4).Infof("==========create PersistentVolume: %+v \n", persistentvolume)
 	if controllerRef != nil {
 		persistentvolume.OwnerReferences = append(persistentvolume.OwnerReferences, *controllerRef)
 	}
@@ -193,7 +190,6 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) SyncQueueJob(queuejob *a
 	startTime := time.Now()
 	defer func() {
 		klog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
-		// klog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
 	}()
 
 	persistentvolumes, err := qjrPersistentvolume.getPersistentVolumeForQueueJobRes(qjobRes, queuejob)

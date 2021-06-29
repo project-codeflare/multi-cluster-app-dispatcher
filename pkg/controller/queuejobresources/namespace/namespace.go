@@ -21,15 +21,13 @@ import (
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
 
-	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
+	"sync"
+	"time"
+
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog"
-
-	// "k8s.io/apimachinery/pkg/api/meta"
-	"sync"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -193,7 +191,6 @@ func (qjrNamespace *QueueJobResNamespace) SyncQueueJob(queuejob *arbv1.AppWrappe
 	startTime := time.Now()
 	defer func() {
 		klog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
-		// klog.V(4).Infof("Finished syncing queue job resource %s (%v)", qjobRes.Template, time.Now().Sub(startTime))
 	}()
 
 	namespaces, err := qjrNamespace.getNamespaceForQueueJobRes(qjobRes, queuejob)
@@ -251,7 +248,6 @@ func (qjrNamespace *QueueJobResNamespace) SyncQueueJob(queuejob *arbv1.AppWrappe
 }
 
 func (qjrNamespace *QueueJobResNamespace) getNamespaceForQueueJob(j *arbv1.AppWrapper) ([]*v1.Namespace, error) {
-	// namespacelist, err := qjrNamespace.clients.CoreV1().Namespaces().List(metav1.ListOptions{})
 	namespacelist, err := qjrNamespace.clients.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, j.Name)})
 	if err != nil {
 		return nil, err

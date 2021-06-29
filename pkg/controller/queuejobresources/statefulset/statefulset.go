@@ -20,7 +20,6 @@ import (
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
 
-	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	"sync"
 	"time"
 
@@ -222,7 +221,6 @@ func (qjrStatefulSet *QueueJobResStatefulSet) SyncQueueJob(queuejob *arbv1.AppWr
 	startTime := time.Now()
 
 	defer func() {
-		// klog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
 		klog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
 	}()
 
@@ -296,9 +294,7 @@ func (qjrStatefulSet *QueueJobResStatefulSet) getStatefulSetForQueueJobRes(qjobR
 	} else {
 		_namespace = &queuejob.Namespace
 	}
-	// statefulSetList, err := qjrStatefulSet.clients.CoreV1().StatefulSets(*_namespace).List(metav1.ListOptions{})
 	statefulSetList, err := qjrStatefulSet.clients.AppsV1().StatefulSets(*_namespace).List(context.Background(), metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", queueJobName, queuejob.Name)})
-	// statefulSetList, err := qjrStatefulSet.clients.AppsV1().StatefulSets(*_namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, nil, nil, err
 	}

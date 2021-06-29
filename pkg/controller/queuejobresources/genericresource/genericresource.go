@@ -142,7 +142,6 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 			name = objectName.(string)
 		}
 		if objectns, ok := metadata["namespace"]; ok {
-			//klog.V(9).Infof("metadata[namespace] exists")
 			namespace = objectns.(string)
 		}
 	}

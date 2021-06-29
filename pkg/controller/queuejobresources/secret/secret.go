@@ -21,13 +21,11 @@ import (
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
 
-	//schedulerapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog"
 
-	// "k8s.io/apimachinery/pkg/api/meta"
 	"sync"
 	"time"
 
@@ -191,7 +189,6 @@ func (qjrSecret *QueueJobResSecret) SyncQueueJob(queuejob *arbv1.AppWrapper, qjo
 	startTime := time.Now()
 
 	defer func() {
-		// klog.V(4).Infof("Finished syncing queue job resource %q (%v)", qjobRes.Template, time.Now().Sub(startTime))
 		klog.V(4).Infof("Finished syncing queue job resource %s (%v)", queuejob.Name, time.Now().Sub(startTime))
 	}()
 
