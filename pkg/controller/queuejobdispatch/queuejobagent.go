@@ -61,7 +61,7 @@ type JobClusterAgent struct {
 func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterAgent {
 	configStrings := strings.Split(config, ":")
 	if len(configStrings) < 2 {
-		glog.Errorf("[agentEventQueue] Invalid agent configuration: %s.  Agent cluster will not be instantiated.", config)
+		klog.Errorf("[agentEventQueue] Invalid agent configuration: %s.  Agent cluster will not be instantiated.", config)
 		return nil
 	}
 	klog.V(2).Infof("[Dispatcher: Agent] Creation: %s\n", "/root/kubernetes/"+configStrings[0])

@@ -62,7 +62,7 @@ func main() {
 	klog.Infof("Entered main()")
 	cmd := &SampleAdapter{}
 	cmd.Flags().StringVar(&cmd.Message, "msg", "starting adapter...", "startup message")
-	cmd.Flags().AddGoFlagSet(flag.CommandLine) // make sure we get the glog flags
+	cmd.Flags().AddGoFlagSet(flag.CommandLine) // make sure we get the klog flags
 	cmd.Flags().Parse(os.Args)
 
 	testProvider, webService := cmd.makeProviderOrDie()

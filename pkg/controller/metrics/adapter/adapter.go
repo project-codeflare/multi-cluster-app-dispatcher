@@ -66,7 +66,7 @@ func newMetricsAdpater(config *rest.Config, clusterStateCache clusterstatecache.
 	cmd := &MetricsAdpater{}
 	cmd.Flags().StringVar(&cmd.Message, "msg", "starting adapter...", "startup message")
 	klog.Infof("")
-	cmd.Flags().AddGoFlagSet(flag.CommandLine) // make sure we get the glog flags
+	cmd.Flags().AddGoFlagSet(flag.CommandLine) // make sure we get the klog flags
 	klog.V(9).Infof("commandline: %v", flag.CommandLine)
 	cmd.Flags().Args()
 	cmd.Flags().Parse(os.Args)
