@@ -28,43 +28,6 @@ import (
 
 var _ = Describe("AppWrapper E2E Test", func() {
 
-	It("Create AppWrapper - Generic 100 Deployment Only - 2 pods each", func() {
-		context := initTestContext()
-		defer cleanupTestContextExtendedTime(context, (240 * time.Second))
-
-		const (
-			awCount = 100
-		)
-		modDivisor := int(awCount / 10)
-		replicas := 2
-		var aws [awCount]*arbv1.AppWrapper
-		for i := 0; i < awCount; i++ {
-			name := fmt.Sprintf("%s%d-", "aw-generic-deployment-", replicas)
-			if i < 99 {
-				name = fmt.Sprintf("%s%s", name, "0")
-			}
-			if i < 9 {
-				name = fmt.Sprintf("%s%s", name, "0")
-			}
-			name = fmt.Sprintf("%s%d", name, i+1)
-			cpuDemand := "5m"
-			if ((i+1)%modDivisor) == 0 || i == 0 {
-				fmt.Fprintf(os.Stdout, "[e2e] Creating AW %s with %s cpu and %d replica(s).\n", name, cpuDemand, replicas)
-			}
-			aws[i] = createGenericDeploymentWithCPUAW(context, name, cpuDemand, replicas)
-		}
-
-		// Give the deployments time to create pods
-		time.Sleep(2 * time.Minute)
-		for i := 0; i < awCount; i++ {
-			if ((i+1)%modDivisor) == 0 || i == 0 {
-				fmt.Fprintf(os.Stdout, "[e2e] Checking for %d replicas running for AW %s.\n", replicas, aws[i].Name)
-			}
-			err := waitAWReadyQuiet(context, aws[i])
-			Expect(err).NotTo(HaveOccurred())
-		}
-	})
-
 	It("MCAD CPU Accounting Test", func() {
 		context := initTestContext()
 
@@ -284,6 +247,43 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappers = append(appwrappers, aw2)
 		cleanupTestObjects(context, appwrappers)
 
+	})
+
+	It("Create AppWrapper - Generic 100 Deployment Only - 2 pods each", func() {
+		context := initTestContext()
+		defer cleanupTestContextExtendedTime(context, (240 * time.Second))
+
+		const (
+			awCount = 100
+		)
+		modDivisor := int(awCount / 10)
+		replicas := 2
+		var aws [awCount]*arbv1.AppWrapper
+		for i := 0; i < awCount; i++ {
+			name := fmt.Sprintf("%s%d-", "aw-generic-deployment-", replicas)
+			if i < 99 {
+				name = fmt.Sprintf("%s%s", name, "0")
+			}
+			if i < 9 {
+				name = fmt.Sprintf("%s%s", name, "0")
+			}
+			name = fmt.Sprintf("%s%d", name, i+1)
+			cpuDemand := "5m"
+			if ((i+1)%modDivisor) == 0 || i == 0 {
+				fmt.Fprintf(os.Stdout, "[e2e] Creating AW %s with %s cpu and %d replica(s).\n", name, cpuDemand, replicas)
+			}
+			aws[i] = createGenericDeploymentWithCPUAW(context, name, cpuDemand, replicas)
+		}
+
+		// Give the deployments time to create pods
+		time.Sleep(2 * time.Minute)
+		for i := 0; i < awCount; i++ {
+			if ((i+1)%modDivisor) == 0 || i == 0 {
+				fmt.Fprintf(os.Stdout, "[e2e] Checking for %d replicas running for AW %s.\n", replicas, aws[i].Name)
+			}
+			err := waitAWReadyQuiet(context, aws[i])
+			Expect(err).NotTo(HaveOccurred())
+		}
 	})
 	/*
 		It("Gang scheduling", func() {
