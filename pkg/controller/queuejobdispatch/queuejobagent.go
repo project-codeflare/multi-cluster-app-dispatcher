@@ -66,7 +66,6 @@ func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterA
 	klog.V(2).Infof("[Dispatcher: Agent] Creation: %s\n", "/root/kubernetes/"+configStrings[0])
 
 	agent_config, err := clientcmd.BuildConfigFromFlags("", "/root/kubernetes/"+configStrings[0])
-	// agent_config, err:=clientcmd.BuildConfigFromFlags("", "/root/agent101config")
 	if err != nil {
 		klog.V(2).Infof("[Dispatcher: Agent] Cannot crate client\n")
 		return nil
@@ -156,7 +155,6 @@ func (cc *JobClusterAgent) deleteQueueJob(obj interface{}) {
 func (qa *JobClusterAgent) Run(stopCh chan struct{}) {
 	go qa.jobInformer.Informer().Run(stopCh)
 	cache.WaitForCacheSync(stopCh, qa.jobSynced)
-	// go wait.Until(qa.UpdateAgent, 2*time.Second, stopCh)
 }
 
 func (qa *JobClusterAgent) DeleteJob(cqj *arbv1.AppWrapper) {
@@ -184,18 +182,8 @@ func (qa *JobClusterAgent) CreateJob(cqj *arbv1.AppWrapper) {
 	}
 	agent_qj.Labels["IsDispatched"] = "true"
 
-	// klog.Infof("[Agent] XQJ resourceVersion cleaned--Name:%s, Kind:%s\n", agent_qj.Name, agent_qj.Kind)
 	klog.V(2).Infof("[Dispatcher: Agent] Create XQJ: %s (Status: %+v) in Agent %s\n", agent_qj.Name, agent_qj.Status, qa.AgentId)
 	qa.queuejobclients.ArbV1().AppWrappers(agent_qj.Namespace).Create(agent_qj)
-	// pods, err := qa.deploymentclients.CoreV1().Pods("").List(metav1.ListOptions{})
-	// if err != nil {
-	// 	klog.Infof("[Agent] Cannot Access Agent================\n")
-	// }
-	// klog.Infof("There are %d pods in the cluster\n", len(pods.Items))
-	// // for _, pod := range pods.Items {
-	// 	klog.Infof("[Agent] Pod Name=%s\n",pod.Name)
-	// }
-
 	return
 }
 

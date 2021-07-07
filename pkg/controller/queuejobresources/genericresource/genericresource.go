@@ -73,7 +73,6 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	startTime := time.Now()
 	defer func() {
 		klog.V(4).Infof("Finished syncing AppWrapper job resource %s (%v)", aw.Name, time.Now().Sub(startTime))
-		// klog.V(4).Infof("Finished syncing AppWrapper job resource %q (%v)", awobRes.Template, time.Now().Sub(startTime))
 	}()
 
 	namespaced := true
@@ -85,8 +84,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	}
 	ext := awr.GenericTemplate
 	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
-	versions := &unstructured.Unstructured{}
-	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, versions)
+	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, nil)
 	if err != nil {
 		klog.Errorf("Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
 		return []*v1.Pod{}, err
