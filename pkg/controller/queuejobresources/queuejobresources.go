@@ -19,9 +19,9 @@ package queuejobresources
 import (
 	"sync"
 
-	"github.com/golang/glog"
 	qjobv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog"
 )
 
 // Factory is a function that returns an Interface for queue job resources.
@@ -52,13 +52,13 @@ func (rres *RegisteredResources) Register(t qjobv1.ResourceType, factory Factory
 	if rres.registry != nil {
 		_, found := rres.registry[t]
 		if found {
-			glog.Fatalf("Queue job resource type %s was registered twice", t)
+			klog.Fatalf("Queue job resource type %s was registered twice", t)
 		}
 	} else {
 		rres.registry = map[qjobv1.ResourceType]Factory{}
 	}
 
-	glog.V(1).Infof("Registered queue job resource type %s", t)
+	klog.V(1).Infof("Registered queue job resource type %s", t)
 	rres.registry[t] = factory
 
 }

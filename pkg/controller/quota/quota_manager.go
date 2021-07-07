@@ -33,7 +33,7 @@ import (
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	listersv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
-	"github.com/golang/glog"
+	"k8s.io/klog"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -158,7 +158,7 @@ func NewResourcePlanManager(awJobLister listersv1.AppWrapperLister, quotaManager
 func (rpm *ResourcePlanManager) addChildrenNodes(parentNode TreeNode, treeIDs []string) ([]string) {
 	if len(parentNode.Children) > 0 {
 		for _, childNode := range parentNode.Children {
-			glog.V(10).Infof("[getQuotaTreeIDs] Quota tree response child node from quota mananger: %s", childNode.Name)
+			klog.V(10).Infof("[getQuotaTreeIDs] Quota tree response child node from quota mananger: %s", childNode.Name)
 			treeIDs = rpm.addChildrenNodes(childNode, treeIDs)
 		}
 	}
@@ -175,10 +175,10 @@ func (rpm *ResourcePlanManager) getQuotaTreeIDs() ([]string) {
 
 	uri := rpm.url + "/json"
 
-	glog.V(10).Infof("[getQuotaTreeIDs] Sending GET request to uri: %s", uri)
+	klog.V(10).Infof("[getQuotaTreeIDs] Sending GET request to uri: %s", uri)
 	req, err := http.NewRequest(http.MethodGet, uri, nil)
 	if err != nil {
-		glog.Errorf("[getQuotaTreeIDs] Fail to create client to access quota manager: %s, err=%#v.", uri, err)
+		klog.Errorf("[getQuotaTreeIDs] Fail to create client to access quota manager: %s, err=%#v.", uri, err)
 		return treeIDs
 	}
 
@@ -187,7 +187,7 @@ func (rpm *ResourcePlanManager) getQuotaTreeIDs() ([]string) {
 	}
 	response, err := quotaRestClient.Do(req)
 	if err != nil {
-		glog.Errorf("[getQuotaTreeIDs] Fail to access quota manager: %s, err=%#v.", uri, err)
+		klog.Errorf("[getQuotaTreeIDs] Fail to access quota manager: %s, err=%#v.", uri, err)
 		return treeIDs
 	} else {
 
@@ -195,25 +195,25 @@ func (rpm *ResourcePlanManager) getQuotaTreeIDs() ([]string) {
 
 		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			glog.Errorf("[getQuotaTreeIDs] Failed to read quota tree from the quota manager body: %s, error=%#v",
+			klog.Errorf("[getQuotaTreeIDs] Failed to read quota tree from the quota manager body: %s, error=%#v",
 											string(body), err)
 			return treeIDs
 		}
 
 		var quotaTreesResponse []TreeNode
 		if err := json.Unmarshal(body, &quotaTreesResponse); err != nil {
-			glog.Errorf("[getQuotaTreeIDs] Failed to decode json from quota manager body: %s, error=%#v", string(body), err)
+			klog.Errorf("[getQuotaTreeIDs] Failed to decode json from quota manager body: %s, error=%#v", string(body), err)
 		} else {
 			// Loop over root nodes of trees and add names of each node in tree.
 			for _, treeroot := range quotaTreesResponse {
-				glog.V(6).Infof("[getQuotaTreeIDs] Quota tree response root node from quota mananger: %s", treeroot.Name)
+				klog.V(6).Infof("[getQuotaTreeIDs] Quota tree response root node from quota mananger: %s", treeroot.Name)
 				treeIDs = rpm.addChildrenNodes(treeroot, treeIDs)
 			}
 		}
 
-		glog.V(10).Infof("[getQuotaTreeIDs] Response from quota mananger status: %s", response.Status)
+		klog.V(10).Infof("[getQuotaTreeIDs] Response from quota mananger status: %s", response.Status)
 		statusCode := response.StatusCode
-		glog.V(8).Infof("[getQuotaTreeIDs] Response from quota mananger status code: %v", statusCode)
+		klog.V(8).Infof("[getQuotaTreeIDs] Response from quota mananger status code: %v", statusCode)
 
 	}
 	return treeIDs
@@ -234,7 +234,7 @@ func (rpm *ResourcePlanManager) getQuotaDesignation(aw *arbv1.AppWrapper) ([]Quo
 	// Get list of quota management tree IDs
 	qmTreeIDs := rpm.getQuotaTreeIDs()
 	if len(qmTreeIDs) < 1 {
-		glog.Warningf("[getQuotaDesignation] No valid quota management IDs found for AppWrapper Job: %s/%s",
+		klog.Warningf("[getQuotaDesignation] No valid quota management IDs found for AppWrapper Job: %s/%s",
 									aw.Namespace, aw.Name)
 	}
 
@@ -249,24 +249,24 @@ func (rpm *ResourcePlanManager) getQuotaDesignation(aw *arbv1.AppWrapper) ([]Quo
 			}
 			if isValidQuota(quotaGroup, qmTreeIDs) {
 				groups = append(groups, quotaGroup)
-				glog.V(8).Infof("[getQuotaDesignation] AppWrapper: %s/%s quota label: %v found.",
+				klog.V(8).Infof("[getQuotaDesignation] AppWrapper: %s/%s quota label: %v found.",
 					aw.Namespace, aw.Name, quotaGroup)
 			} else {
-				glog.V(10).Infof("[getQuotaDesignation] AppWrapper: %s/%s label: %v ignored.  Not a valid quota ID.",
+				klog.V(10).Infof("[getQuotaDesignation] AppWrapper: %s/%s label: %v ignored.  Not a valid quota ID.",
 					aw.Namespace, aw.Name, quotaGroup)
 			}
 
 		}
 	} else {
-		glog.V(4).Infof("[getQuotaDesignation] AppWrapper: %s/%s does not any context quota labels.",
+		klog.V(4).Infof("[getQuotaDesignation] AppWrapper: %s/%s does not any context quota labels.",
 										aw.Namespace, aw.Name)
 	}
 
 	if len(groups) > 0 {
-		glog.V(6).Infof("[getQuotaDesignation] AppWrapper: %s/%s quota labels: %v.", aw.Namespace,
+		klog.V(6).Infof("[getQuotaDesignation] AppWrapper: %s/%s quota labels: %v.", aw.Namespace,
 			aw.Name, groups)
 	} else {
-		glog.V(4).Infof("[getQuotaDesignation] AppWrapper: %s/%s does not have any quota labels, using default.",
+		klog.V(4).Infof("[getQuotaDesignation] AppWrapper: %s/%s does not have any quota labels, using default.",
 			aw.Namespace, aw.Name)
 		var defaultGroup = QuotaGroup{
 			GroupContext: 	"DEFAULTCONTEXT",
@@ -287,7 +287,7 @@ func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *cluster
 	}
 	awId := createId(aw.Namespace, aw.Name)
 	if len(awId) <= 0 {
-		glog.Errorf("[Fits] Request failed due to invalid AppWrapper due to empty namespace: %s or name:%s.", aw.Namespace, aw.Name)
+		klog.Errorf("[Fits] Request failed due to invalid AppWrapper due to empty namespace: %s or name:%s.", aw.Namespace, aw.Name)
 		return false, nil
 	}
 
@@ -310,7 +310,7 @@ func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *cluster
 	doesFit := false
 	// If a url does not exists then assume fits quota
 	if len(rpm.url) < 1 {
-		glog.V(4).Infof("[Fits] No quota manager exists, %+v meets quota by default.", awResDemands)
+		klog.V(4).Infof("[Fits] No quota manager exists, %+v meets quota by default.", awResDemands)
 		return doesFit, nil
 	}
 
@@ -318,34 +318,34 @@ func (rpm *ResourcePlanManager) Fits(aw *arbv1.AppWrapper, awResDemands *cluster
 	buf := new(bytes.Buffer)
 	err := json.NewEncoder(buf).Encode(req)
 	if err != nil {
-		glog.Errorf("[Fits] Failed encoding of request: %v, err=%#v.", req, err)
+		klog.Errorf("[Fits] Failed encoding of request: %v, err=%#v.", req, err)
 		return doesFit, nil
 	}
 
 	var preemptIds []*arbv1.AppWrapper
-	glog.V(4).Infof("[Fits] Sending request: %v in buffer: %v, buffer size: %v, to uri: %s", req, buf, buf.Len(), uri)
+	klog.V(4).Infof("[Fits] Sending request: %v in buffer: %v, buffer size: %v, to uri: %s", req, buf, buf.Len(), uri)
 	response, err := http.Post(uri, "application/json; charset=utf-8", buf)
 	defer response.Body.Close()
 	dump, err := httputil.DumpResponse(response, true)
-	glog.V(10).Infof("[getQuotaTreeIDs] POST Response dump: %q", dump)
+	klog.V(10).Infof("[getQuotaTreeIDs] POST Response dump: %q", dump)
 
 	if err != nil {
-		glog.Errorf("[Fits] Fail to add access quotamanager: %s, err=%#v.", uri, err)
+		klog.Errorf("[Fits] Fail to add access quotamanager: %s, err=%#v.", uri, err)
 		preemptIds = nil
 	} else {
 		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			glog.Errorf("[Fits] Failed to read preemption Ids from the quota manager body: %s, error=%#v", string(body), err)
+			klog.Errorf("[Fits] Failed to read preemption Ids from the quota manager body: %s, error=%#v", string(body), err)
 		}
 		var quotaResponse QuotaResponse
 		if err := json.Unmarshal(body, &quotaResponse); err != nil {
-			glog.Errorf("[Fits] Failed to decode json from quota manager body: %s, error=%#v", string(body), err)
+			klog.Errorf("[Fits] Failed to decode json from quota manager body: %s, error=%#v", string(body), err)
 		} else {
-			glog.V(6).Infof("[Fits] Quota response object from quota mananger body: %v", quotaResponse)
+			klog.V(6).Infof("[Fits] Quota response object from quota mananger body: %v", quotaResponse)
 		}
-		glog.V(4).Infof("[Fits] Response from quota mananger status: %s", response.Status)
+		klog.V(4).Infof("[Fits] Response from quota mananger status: %s", response.Status)
 		statusCode := response.StatusCode
-		glog.V(4).Infof("[Fits] Response from quota mananger status code: %v", statusCode)
+		klog.V(4).Infof("[Fits] Response from quota mananger status code: %v", statusCode)
 		if statusCode == 200 {
 			doesFit = true
 			preemptIds = rpm.getAppWrappers(quotaResponse.PreemptIds)
@@ -364,12 +364,12 @@ func  (rpm *ResourcePlanManager) getAppWrappers(preemptIds []string) []*arbv1.Ap
 	for _, preemptId := range preemptIds {
 		awNamespace, awName := parseId(preemptId)
 		if len(awNamespace) <= 0 || len(awName) <= 0 {
-			glog.Errorf("[getAppWrappers] Failed to parse AppWrapper id from quota manager, parse string: %s.  Preemption of this Id will be ignored.", preemptId)
+			klog.Errorf("[getAppWrappers] Failed to parse AppWrapper id from quota manager, parse string: %s.  Preemption of this Id will be ignored.", preemptId)
 			continue
 		}
 		aw, e := rpm.appwrapperLister.AppWrappers(awNamespace).Get(awName)
 		if e != nil {
-			glog.Errorf("[getAppWrappers] Failed to get AppWrapper from API Cache %s/%s, err=%v.  Preemption of this Id will be ignored.",
+			klog.Errorf("[getAppWrappers] Failed to get AppWrapper from API Cache %s/%s, err=%v.  Preemption of this Id will be ignored.",
 				awNamespace, awName, e)
 			continue
 		}
@@ -378,7 +378,7 @@ func  (rpm *ResourcePlanManager) getAppWrappers(preemptIds []string) []*arbv1.Ap
 
 	// Final validation check
 	if len(preemptIds) != len(aws) {
-		glog.Warningf("[getAppWrappers] Preemption list size of %d from quota manager does not match size of generated list of AppWrapper: %d", len(preemptIds), len(aws))
+		klog.Warningf("[getAppWrappers] Preemption list size of %d from quota manager does not match size of generated list of AppWrapper: %d", len(preemptIds), len(aws))
 	}
 	return aws
 }
@@ -392,12 +392,12 @@ func (rpm *ResourcePlanManager) Release(aw *arbv1.AppWrapper) bool {
 	released := false
 	awId := createId(aw.Namespace, aw.Name)
 	if len(awId) <= 0 {
-		glog.Errorf("[Release] Request failed due to invalid AppWrapper due to empty namespace: %s or name:%s.", aw.Namespace, aw.Name)
+		klog.Errorf("[Release] Request failed due to invalid AppWrapper due to empty namespace: %s or name:%s.", aw.Namespace, aw.Name)
 		return false
 	}
 
 	uri := rpm.url + "/quota/release/" + awId
-	glog.V(4).Infof("[Release] Sending request to release resources for: %s ", uri)
+	klog.V(4).Infof("[Release] Sending request to release resources for: %s ", uri)
 
 	// Create client
 	client := &http.Client{}
@@ -405,14 +405,14 @@ func (rpm *ResourcePlanManager) Release(aw *arbv1.AppWrapper) bool {
 	// Create request
 	req, err := http.NewRequest("DELETE", uri, nil)
 	if err != nil {
-		glog.Errorf("[Release] Failed to create http delete request for : %s, err=%#v.", awId, err)
+		klog.Errorf("[Release] Failed to create http delete request for : %s, err=%#v.", awId, err)
 		return released
 	}
 
 	// Fetch Request
 	resp, err := client.Do(req)
 	if err != nil {
-		glog.Errorf("[Release] Failed http delete request for: %s, err=%#v.", awId, err)
+		klog.Errorf("[Release] Failed http delete request for: %s, err=%#v.", awId, err)
 		return released
 	}
 	defer resp.Body.Close()
@@ -420,14 +420,14 @@ func (rpm *ResourcePlanManager) Release(aw *arbv1.AppWrapper) bool {
 	// Read Response Body
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		glog.V(4).Infof("[Release] Failed to aquire response from http delete request id: %s, err=%#v.", awId, err)
+		klog.V(4).Infof("[Release] Failed to aquire response from http delete request id: %s, err=%#v.", awId, err)
 	} else {
-		glog.V(4).Infof("[Release] Response from quota mananger body: %s", string(respBody))
+		klog.V(4).Infof("[Release] Response from quota mananger body: %s", string(respBody))
 	}
 
-	glog.V(4).Infof("[Release] Response from quota mananger status: %s", resp.Status)
+	klog.V(4).Infof("[Release] Response from quota mananger status: %s", resp.Status)
 	statusCode := resp.StatusCode
-	glog.V(4).Infof("[Release] Response from quota mananger status code: %v", statusCode)
+	klog.V(4).Infof("[Release] Response from quota mananger status code: %v", statusCode)
 	if statusCode == 204 {
 		released = true
 	}

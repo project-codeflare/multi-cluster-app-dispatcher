@@ -17,7 +17,7 @@ limitations under the License.
 package options
 
 import (
-	"github.com/golang/glog"
+	"k8s.io/klog"
 	"github.com/spf13/pflag"
 	"os"
 	"strconv"
@@ -63,7 +63,7 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&s.HeadOfLineHoldingTime,"headoflineholdingtime", s.HeadOfLineHoldingTime,"Number of seconds a job can stay at the Head Of Line without being bumped.  Default is 0.")
 	fs.StringVar(&s.QuotaRestURL,"quotaURL", s.QuotaRestURL,"URL for ReST quota management.  Default is none.")
 //	fs.IntVar(&s.SecurePort, "secure-port", 6443, "The port on which to serve secured, uthenticated access for metrics.")
-	glog.V(4).Infof("[AddFlags] Controller configuration: %+v", s)
+	klog.V(4).Infof("[AddFlags] Controller configuration: %+v", s)
 
 }
 

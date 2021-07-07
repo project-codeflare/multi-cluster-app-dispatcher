@@ -18,10 +18,10 @@ package api
 
 import (
 	"fmt"
-	"github.com/golang/glog"
 
 	"k8s.io/api/core/v1"
 	clientcache "k8s.io/client-go/tools/cache"
+	"k8s.io/klog"
 )
 
 // PodKey returns the string key of a pod.
@@ -100,10 +100,10 @@ func MergeErrors(errs ...error) error {
 // JobTerminated checkes whether job was terminated.
 func JobTerminated(job *JobInfo) bool {
 	if job.SchedSpec == nil && job.PDB == nil && len(job.Tasks) == 0 {
-		glog.V(9).Infof("Job: %v is terminated.", job.UID)
+		klog.V(9).Infof("Job: %v is terminated.", job.UID)
 		return true
 	} else {
-		glog.V(10).Infof("Job: %v not terminated, scheduleSpec: %v, PDB; %v, tasks: %v.",
+		klog.V(10).Infof("Job: %v not terminated, scheduleSpec: %v, PDB; %v, tasks: %v.",
 			job.UID, job.SchedSpec, job.PDB, job.Tasks)
 		return false
 	}

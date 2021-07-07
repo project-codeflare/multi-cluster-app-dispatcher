@@ -18,9 +18,9 @@ package api
 
 import (
 	"fmt"
-	"github.com/golang/glog"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/klog"
 )
 
 // NodeInfo is node level aggregated information.
@@ -145,7 +145,7 @@ func (ni *NodeInfo) AddTask(task *TaskInfo) error {
 }
 
 func (ni *NodeInfo) RemoveTask(ti *TaskInfo) error {
-	glog.V(10).Infof("Attempting to remove task: %s on node: %s", ti.Name,  ni.Name)
+	klog.V(10).Infof("Attempting to remove task: %s on node: %s", ti.Name,  ni.Name)
 
 	key := PodKey(ti.Pod)
 
@@ -156,7 +156,7 @@ func (ni *NodeInfo) RemoveTask(ti *TaskInfo) error {
 	}
 
 	if ni.Node != nil {
-		glog.V(10).Infof("Found node for task: %s, node: %s, task status: %v", task.Name,  ni.Name, task.Status)
+		klog.V(10).Infof("Found node for task: %s, node: %s, task status: %v", task.Name,  ni.Name, task.Status)
 		if task.Status == Releasing {
 			ni.Releasing.Sub(task.Resreq)
 		}
@@ -164,7 +164,7 @@ func (ni *NodeInfo) RemoveTask(ti *TaskInfo) error {
 		ni.Idle.Add(task.Resreq)
 		ni.Used.Sub(task.Resreq)
 	} else {
-		glog.V(10).Infof("No node info found for task: %s, node: %s", task.Name,  ni.Name)
+		klog.V(10).Infof("No node info found for task: %s, node: %s", task.Name,  ni.Name)
 	}
 
 	delete(ni.Tasks, key)
@@ -173,7 +173,7 @@ func (ni *NodeInfo) RemoveTask(ti *TaskInfo) error {
 }
 
 func (ni *NodeInfo) UpdateTask(ti *TaskInfo) error {
-	glog.V(10).Infof("Attempting to update task: %s on node: %s", ti.Name,  ni.Name)
+	klog.V(10).Infof("Attempting to update task: %s on node: %s", ti.Name,  ni.Name)
 	if err := ni.RemoveTask(ti); err != nil {
 		return err
 	}

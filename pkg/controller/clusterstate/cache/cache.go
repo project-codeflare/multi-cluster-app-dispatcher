@@ -17,19 +17,19 @@ limitations under the License.
 package cache
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/golang/glog"
-
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	clientv1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog"
 
 	client "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
 	informerfactory "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion"
@@ -58,9 +58,9 @@ type ClusterStateCache struct {
 	resourceCapacities *api.Resource
 	deletedJobs        *cache.FIFO
 
-	errTasks    *cache.FIFO
-
+	errTasks *cache.FIFO
 }
+
 func taskKey(obj interface{}) (string, error) {
 	if obj == nil {
 		return "", fmt.Errorf("the object is nil")
@@ -95,7 +95,6 @@ func newClusterStateCache(config *rest.Config) *ClusterStateCache {
 		Nodes:       make(map[string]*api.NodeInfo),
 		errTasks:    cache.NewFIFO(taskKey),
 		deletedJobs: cache.NewFIFO(jobKey),
-
 	}
 
 	sc.kubeclient = kubernetes.NewForConfigOrDie(config)
@@ -160,7 +159,7 @@ func newClusterStateCache(config *rest.Config) *ClusterStateCache {
 }
 
 func (sc *ClusterStateCache) Run(stopCh <-chan struct{}) {
-	glog.V(8).Infof("Cluster State Cache started.")
+	klog.V(8).Infof("Cluster State Cache started.")
 
 	go sc.podInformer.Informer().Run(stopCh)
 	go sc.nodeInformer.Informer().Run(stopCh)
@@ -184,7 +183,6 @@ func (sc *ClusterStateCache) WaitForCacheSync(stopCh <-chan struct{}) bool {
 		sc.nodeInformer.Informer().HasSynced)
 }
 
-
 // Gets available free resoures.
 func (sc *ClusterStateCache) GetUnallocatedResources() *api.Resource {
 	sc.Mutex.Lock()
@@ -205,19 +203,19 @@ func (sc *ClusterStateCache) GetResourceCapacities() *api.Resource {
 
 // Save the cluster state.
 func (sc *ClusterStateCache) saveState(available *api.Resource, capacity *api.Resource) error {
-	glog.V(12).Infof("Saving Cluster State")
+	klog.V(12).Infof("Saving Cluster State")
 
 	sc.Mutex.Lock()
 	defer sc.Mutex.Unlock()
 	sc.availableResources.Replace(available)
 	sc.resourceCapacities.Replace(capacity)
-	glog.V(12).Infof("Updated Cluster State completed.")
+	klog.V(12).Infof("Updated Cluster State completed.")
 	return nil
 }
 
 // Gets available free resoures.
 func (sc *ClusterStateCache) updateState() error {
-	glog.V(11).Infof("Calculating Cluster State")
+	klog.V(11).Infof("Calculating Cluster State")
 
 	cluster := sc.Snapshot()
 	total := api.EmptyResource()
@@ -229,15 +227,14 @@ func (sc *ClusterStateCache) updateState() error {
 		used = used.Add(value.Used)
 		idle = idle.Add(value.Idle)
 	}
-	glog.V(8).Infof("Total capacity %+v, used %+v, free space %+v", total, used, idle)
+	klog.V(8).Infof("Total capacity %+v, used %+v, free space %+v", total, used, idle)
 
 	err := sc.saveState(idle, total)
 	return err
 }
 
-
 func (sc *ClusterStateCache) deleteJob(job *api.JobInfo) {
-	glog.V(4).Infof("[deleteJob] Attempting to delete Job <%v:%v/%v>", job.UID, job.Namespace, job.Name)
+	klog.V(4).Infof("[deleteJob] Attempting to delete Job <%v:%v/%v>", job.UID, job.Namespace, job.Name)
 
 	time.AfterFunc(5*time.Second, func() {
 		sc.deletedJobs.AddIfNotPresent(job)
@@ -257,7 +254,7 @@ func (sc *ClusterStateCache) processCleanupJob() error {
 
 			if api.JobTerminated(job) {
 				delete(sc.Jobs, job.UID)
-				glog.V(3).Infof("[processCleanupJob] Job <%v:%v/%v> was deleted.", job.UID, job.Namespace, job.Name)
+				klog.V(3).Infof("[processCleanupJob] Job <%v:%v/%v> was deleted.", job.UID, job.Namespace, job.Name)
 			} else {
 				// Retry
 				sc.deleteJob(job)
@@ -274,18 +271,18 @@ func (sc *ClusterStateCache) cleanupJobs() {
 	for {
 		err := sc.processCleanupJob()
 		if err != nil {
-			glog.Errorf("Failed to process job clean up: %v", err)
+			klog.Errorf("Failed to process job clean up: %v", err)
 		}
 	}
 }
 
 func (sc *ClusterStateCache) updateCache() {
-	glog.V(9).Infof("Starting to update Cluster State Cache")
+	klog.V(9).Infof("Starting to update Cluster State Cache")
 
 	for {
 		err := sc.updateState()
 		if err != nil {
-			glog.Errorf("Failed update state: %v", err)
+			klog.Errorf("Failed update state: %v", err)
 		}
 
 		time.Sleep(1 * time.Second)
@@ -296,7 +293,7 @@ func (sc *ClusterStateCache) resync() {
 	for {
 		err := sc.processResyncTask()
 		if err != nil {
-			glog.Errorf("Failed to process resync: %v", err)
+			klog.Errorf("Failed to process resync: %v", err)
 		}
 	}
 }
@@ -309,7 +306,7 @@ func (sc *ClusterStateCache) processResyncTask() error {
 		}
 
 		if err := sc.syncTask(task); err != nil {
-			glog.Errorf("Failed to sync pod <%v/%v>", task.Namespace, task.Name)
+			klog.Errorf("Failed to sync pod <%v/%v>", task.Namespace, task.Name)
 			return err
 		}
 		return nil
@@ -335,7 +332,7 @@ func (sc *ClusterStateCache) Snapshot() *api.ClusterInfo {
 		// If no scheduling spec, does not handle it.
 		if value.SchedSpec == nil && value.PDB == nil {
 			// Jobs.Tasks are more recognizable than Jobs.UID
-			glog.V(5).Infof("The scheduling spec of Job <%v> with tasks <%+v> is nil, ignore it.", value.UID, value.Tasks)
+			klog.V(5).Infof("The scheduling spec of Job <%v> with tasks <%+v> is nil, ignore it.", value.UID, value.Tasks)
 			continue
 		}
 
@@ -351,7 +348,7 @@ func (sc *ClusterStateCache) LoadConf(path string) (map[string]string, error) {
 		return nil, err
 	}
 
-	confMap, err := sc.kubeclient.CoreV1().ConfigMaps(ns).Get(name, metav1.GetOptions{})
+	confMap, err := sc.kubeclient.CoreV1().ConfigMaps(ns).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
