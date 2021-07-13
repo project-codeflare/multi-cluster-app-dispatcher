@@ -18,6 +18,7 @@ package options
 
 import (
 	"github.com/spf13/pflag"
+	"k8s.io/klog"
 	"os"
 	"strconv"
 	"strings"
@@ -25,18 +26,19 @@ import (
 
 // ServerOption is the main context object for the controller manager.
 type ServerOption struct {
-	Master			string
-	Kubeconfig		string
-	SchedulerName 		string
-	Dispatcher		bool
-	AgentConfigs 		string
-	SecurePort		int
-	DynamicPriority		bool  // If DynamicPriority=true then no preemption is allowed by program logic
-	Preemption 		bool  // Preemption is not allowed under DynamicPriority
-	BackoffTime		int   // Number of seconds a job will go away for, if it can not be scheduled.  Default is 20.
+	Master          string
+	Kubeconfig      string
+	SchedulerName   string
+	Dispatcher      bool
+	AgentConfigs    string
+	SecurePort      int
+	DynamicPriority bool // If DynamicPriority=true then no preemption is allowed by program logic
+	Preemption      bool // Preemption is not allowed under DynamicPriority
+	BackoffTime     int  // Number of seconds a job will go away for, if it can not be scheduled.  Default is 20.
 	// Head of line job will not be bumped away for at least HeadOfLineHoldingTime seconds by higher priority jobs.
 	// Default setting to 0 disables this mechanism.
-	HeadOfLineHoldingTime	int
+	HeadOfLineHoldingTime int
+	HealthProbeListenAddr string
 }
 
 // NewServerOption creates a new CMServer with a default config.
@@ -53,13 +55,14 @@ func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.Master, "scheduler", s.SchedulerName, "scheduler name for placing pods")
 	fs.StringVar(&s.Master, "master", s.Master, "The address of the Kubernetes API server (overrides any value in kubeconfig)")
 	fs.StringVar(&s.Kubeconfig, "kubeconfig", s.Kubeconfig, "Path to kubeconfig file with authorization and master location information.")
-	fs.BoolVar(&s.Dispatcher,"dispatcher",s.Dispatcher,"set dispather mode(true) or agent mode(false)")
+	fs.BoolVar(&s.Dispatcher, "dispatcher", s.Dispatcher, "set dispather mode(true) or agent mode(false)")
 	fs.StringVar(&s.AgentConfigs, "agentconfigs", s.AgentConfigs, "Paths to agent config file:deploymentName separted by commas(,)")
-	fs.BoolVar(&s.DynamicPriority,"dynamicpriority", s.DynamicPriority,"If true, set controller to use dynamic priority. If false, set controller to use static priority.  Default is false.")
-	fs.BoolVar(&s.Preemption,"preemption", s.Preemption,"Set controller to allow preemption if set to true. Note: when set to true, the Kubernetes Scheduler must be configured to enable preemption.  Default is false.")
-	fs.IntVar(&s.BackoffTime,"backofftime", s.BackoffTime,"Number of seconds a job will go away for, if it can not be scheduled.  Default is 20.")
-	fs.IntVar(&s.HeadOfLineHoldingTime,"headoflineholdingtime", s.HeadOfLineHoldingTime,"Number of seconds a job can stay at the Head Of Line without being bumped.  Default is 0.")
-//	fs.IntVar(&s.SecurePort, "secure-port", 6443, "The port on which to serve secured, uthenticated access for metrics.")
+	fs.BoolVar(&s.DynamicPriority, "dynamicpriority", s.DynamicPriority, "If true, set controller to use dynamic priority. If false, set controller to use static priority.  Default is false.")
+	fs.BoolVar(&s.Preemption, "preemption", s.Preemption, "Set controller to allow preemption if set to true. Note: when set to true, the Kubernetes Scheduler must be configured to enable preemption.  Default is false.")
+	fs.IntVar(&s.BackoffTime, "backofftime", s.BackoffTime, "Number of seconds a job will go away for, if it can not be scheduled.  Default is 20.")
+	fs.IntVar(&s.HeadOfLineHoldingTime, "headoflineholdingtime", s.HeadOfLineHoldingTime, "Number of seconds a job can stay at the Head Of Line without being bumped.  Default is 0.")
+	fs.StringVar(&s.HealthProbeListenAddr, "healthProbeListenAddr", ":8081", "Listen address for health probes. Defaults to ':8081'")
+	klog.V(4).Infof("[AddFlags] Controller configuration: %+v", s)
 }
 
 func (s *ServerOption) loadDefaultsFromEnvVars() {
