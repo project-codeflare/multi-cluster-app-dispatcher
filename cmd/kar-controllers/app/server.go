@@ -19,9 +19,11 @@ package app
 import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"net/http"
 
 	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejob"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/health"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
@@ -41,16 +43,32 @@ func Run(opt *options.ServerOption) error {
 
 	neverStop := make(chan struct{})
 
-	config.QPS   = 100.0
+	config.QPS = 100.0
 	config.Burst = 200.0
 
 	jobctrl := queuejob.NewJobController(config, opt)
-	if jobctrl ==nil {
+	if jobctrl == nil {
 		return nil
 	}
 	jobctrl.Run(neverStop)
 
-	<-neverStop
+	// This call is blocking (unless an error occurs) which equates to <-neverStop
+	err = listenHealthProbe(opt)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Starts the health probe listener
+func listenHealthProbe(opt *options.ServerOption) error {
+	handler := http.NewServeMux()
+	handler.Handle("/healthz", &health.Handler{})
+	err := http.ListenAndServe(opt.HealthProbeListenAddr, handler)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
