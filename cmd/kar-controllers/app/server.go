@@ -52,6 +52,7 @@ func Run(opt *options.ServerOption) error {
 	}
 	jobctrl.Run(neverStop)
 
+	// This call is blocking (unless an error occurs) which equates to <-neverStop
 	err = listenHealthProbe(opt)
 	if err != nil {
 		return err
