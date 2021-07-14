@@ -16,6 +16,7 @@ limitations under the License.
 package main
 
 import (
+	"flag"
 	"fmt"
 
 	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app"
@@ -26,6 +27,8 @@ import (
 )
 
 func main() {
+	flag.Parse()
+	
 	s := options.NewServerOption()
 	s.AddFlags(pflag.CommandLine)
 
