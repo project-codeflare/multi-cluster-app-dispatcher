@@ -49,7 +49,7 @@ func NewServerOption() *ServerOption {
 }
 
 // AddFlags adds flags for a specific CMServer to the specified FlagSet
-func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
+func (s *ServerOption) AddFlags(fs *flag.FlagSet) {
 	// Set defaults via environment variables
 	s.loadDefaultsFromEnvVars()
 
