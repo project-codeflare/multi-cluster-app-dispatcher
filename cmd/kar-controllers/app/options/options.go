@@ -17,8 +17,8 @@ limitations under the License.
 package options
 
 import (
-	"github.com/spf13/pflag"
-	"k8s.io/klog"
+	"flag"
+	klog "k8s.io/klog/v2"
 	"os"
 	"strconv"
 	"strings"
