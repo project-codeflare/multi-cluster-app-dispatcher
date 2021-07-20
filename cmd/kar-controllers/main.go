@@ -21,16 +21,15 @@ import (
 
 	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app"
 	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
-	"github.com/spf13/pflag"
 
 	"os"
 )
 
 func main() {
 	flag.Parse()
-	
+
 	s := options.NewServerOption()
-	s.AddFlags(pflag.CommandLine)
+	s.AddFlags(flag.CommandLine)
 
 	//	flag.InitFlags()
 	s.CheckOptionOrDie()

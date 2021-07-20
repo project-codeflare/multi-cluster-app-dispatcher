@@ -17,8 +17,8 @@ limitations under the License.
 package options
 
 import (
-	"github.com/spf13/pflag"
-	"k8s.io/klog"
+	"flag"
+	klog "k8s.io/klog/v2"
 	"os"
 	"strconv"
 	"strings"
@@ -49,7 +49,7 @@ func NewServerOption() *ServerOption {
 }
 
 // AddFlags adds flags for a specific CMServer to the specified FlagSet
-func (s *ServerOption) AddFlags(fs *pflag.FlagSet) {
+func (s *ServerOption) AddFlags(fs *flag.FlagSet) {
 	// Set defaults via environment variables
 	s.loadDefaultsFromEnvVars()
 
