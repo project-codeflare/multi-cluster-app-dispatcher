@@ -14,6 +14,7 @@ spec:
   selector:
     app: custom-metrics-apiserver
 ---
+#{{ if .Values.configMap.multiCluster }}
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
 metadata:
@@ -41,6 +42,7 @@ spec:
   insecureSkipTLSVerify: true
   groupPriorityMinimum: 100
   versionPriority: 100
+ #{{ end }} 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole

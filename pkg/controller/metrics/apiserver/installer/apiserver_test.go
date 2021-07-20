@@ -71,6 +71,9 @@ func init() {
 	installcm.Install(Scheme)
 	installem.Install(Scheme)
 
+	// we need custom conversion functions to list resources with options
+	RegisterConversions(Scheme)
+
 	// we need to add the options to empty v1
 	// TODO fix the server code to avoid this
 	metav1.AddToGroupVersion(Scheme, schema.GroupVersion{Version: "v1"})
@@ -85,9 +88,9 @@ func init() {
 		&metav1.APIResourceList{},
 	)
 
-	customMetricsGroupInfo = genericapiserver.NewDefaultAPIGroupInfo(custom_metrics.GroupName, Scheme, metav1.ParameterCodec, Codecs)
+	customMetricsGroupInfo = genericapiserver.NewDefaultAPIGroupInfo(custom_metrics.GroupName, Scheme, runtime.NewParameterCodec(Scheme), Codecs)
 	customMetricsGroupVersion = customMetricsGroupInfo.PrioritizedVersions[0]
-	externalMetricsGroupInfo = genericapiserver.NewDefaultAPIGroupInfo(external_metrics.GroupName, Scheme, metav1.ParameterCodec, Codecs)
+	externalMetricsGroupInfo = genericapiserver.NewDefaultAPIGroupInfo(external_metrics.GroupName, Scheme, runtime.NewParameterCodec(Scheme), Codecs)
 	externalMetricsGroupVersion = externalMetricsGroupInfo.PrioritizedVersions[0]
 }
 
@@ -165,7 +168,7 @@ func handleExternalMetrics(prov provider.ExternalMetricsProvider) http.Handler {
 			Linker:          runtime.SelfLinker(meta.NewAccessor()),
 		},
 		ResourceLister: provider.NewExternalMetricResourceLister(prov),
-		Handlers:       &CMHandlers{},
+		Handlers:       &EMHandlers{},
 	}
 
 	if err := group.InstallREST(container); err != nil {
@@ -186,7 +189,7 @@ type fakeCMProvider struct {
 	metrics                []provider.CustomMetricInfo
 }
 
-func (p *fakeCMProvider) valuesFor(name types.NamespacedName, info provider.CustomMetricInfo) (string, []custom_metrics.MetricValue, bool) {
+func (p *fakeCMProvider) valuesFor(name types.NamespacedName, info provider.CustomMetricInfo, metricSelector labels.Selector) (string, []custom_metrics.MetricValue, bool) {
 	if info.Namespaced {
 		metricId := name.Namespace + "/" + info.GroupResource.String() + "/" + name.Name + "/" + info.Metric
 		values, ok := p.namespacedValues[metricId]
@@ -198,8 +201,8 @@ func (p *fakeCMProvider) valuesFor(name types.NamespacedName, info provider.Cust
 	}
 }
 
-func (p *fakeCMProvider) GetMetricByName(name types.NamespacedName, info provider.CustomMetricInfo) (*custom_metrics.MetricValue, error) {
-	metricId, values, ok := p.valuesFor(name, info)
+func (p *fakeCMProvider) GetMetricByName(name types.NamespacedName, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValue, error) {
+	metricId, values, ok := p.valuesFor(name, info, metricSelector)
 	if !ok {
 		return nil, fmt.Errorf("non-existent metric requested (id: %s)", metricId)
 	}
@@ -207,8 +210,8 @@ func (p *fakeCMProvider) GetMetricByName(name types.NamespacedName, info provide
 	return &values[0], nil
 }
 
-func (p *fakeCMProvider) GetMetricBySelector(namespace string, selector labels.Selector, info provider.CustomMetricInfo) (*custom_metrics.MetricValueList, error) {
-	metricId, values, ok := p.valuesFor(types.NamespacedName{Namespace: namespace, Name: "*"}, info)
+func (p *fakeCMProvider) GetMetricBySelector(namespace string, selector labels.Selector, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValueList, error) {
+	metricId, values, ok := p.valuesFor(types.NamespacedName{Namespace: namespace, Name: "*"}, info, metricSelector)
 	if !ok {
 		return nil, fmt.Errorf("non-existent metric requested (id: %s)", metricId)
 	}

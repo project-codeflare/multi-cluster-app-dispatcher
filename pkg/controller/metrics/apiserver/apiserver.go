@@ -25,6 +25,7 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/client-go/informers"
 
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/apiserver/installer"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
 	cminstall "k8s.io/metrics/pkg/apis/custom_metrics/install"
 	eminstall "k8s.io/metrics/pkg/apis/external_metrics/install"
@@ -38,6 +39,9 @@ var (
 func init() {
 	cminstall.Install(Scheme)
 	eminstall.Install(Scheme)
+
+	// we need custom conversion functions to list resources with options
+	installer.RegisterConversions(Scheme)
 
 	// we need to add the options to empty v1
 	// TODO fix the server code to avoid this

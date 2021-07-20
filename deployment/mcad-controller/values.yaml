@@ -30,6 +30,7 @@ nodeSelector:
 
 configMap:
   name:
+  multiCluster: false
   dispatcherMode: "false"
   agentConfigs:
 

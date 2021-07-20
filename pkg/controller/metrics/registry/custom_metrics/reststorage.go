@@ -19,8 +19,8 @@ package apiserver
 import (
 	"context"
 	"fmt"
-	"github.com/golang/glog"
 
+	cm_rest "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/apiserver/registry/rest"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	"k8s.io/apimachinery/pkg/labels"
@@ -38,7 +38,7 @@ type REST struct {
 }
 
 var _ rest.Storage = &REST{}
-var _ rest.Lister = &REST{}
+var _ cm_rest.ListerWithOptions = &REST{}
 
 func NewREST(cmProvider provider.CustomMetricsProvider) *REST {
 	return &REST{
@@ -52,23 +52,37 @@ func (r *REST) New() runtime.Object {
 	return &custom_metrics.MetricValue{}
 }
 
-// Implement Lister
+// Implement ListerWithOptions
 
 func (r *REST) NewList() runtime.Object {
 	return &custom_metrics.MetricValueList{}
 }
 
-func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
-	glog.Infof("Entered List()")
+func (r *REST) NewListOptions() (runtime.Object, bool, string) {
+	return &custom_metrics.MetricListOptions{}, true, "metricName"
+}
+
+func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions, metricOpts runtime.Object) (runtime.Object, error) {
+	metricOptions, ok := metricOpts.(*custom_metrics.MetricListOptions)
+	if !ok {
+		return nil, fmt.Errorf("invalid options object: %#v", options)
+	}
 
 	// populate the label selector, defaulting to all
 	selector := labels.Everything()
-	glog.Infof("List(): labels=%v", labels.Everything())
 	if options != nil && options.LabelSelector != nil {
 		selector = options.LabelSelector
 	}
 
-	glog.Infof("List(): selector=%v", selector)
+	metricLabelSelector := labels.Everything()
+	if metricOptions != nil && len(metricOptions.MetricLabelSelector) > 0 {
+		sel, err := labels.Parse(metricOptions.MetricLabelSelector)
+		if err != nil {
+			return nil, err
+		}
+		metricLabelSelector = sel
+	}
+
 	// grab the name, if present, from the field selector list options
 	// (this is how the list handler logic injects it)
 	// (otherwise we'd have to write a custom list handler)
@@ -78,13 +92,10 @@ func (r *REST) List(ctx context.Context, options *metainternalversion.ListOption
 			name = nameMatch
 		}
 	}
-	glog.Infof("List(): name=%s", name)
 
 	namespace := genericapirequest.NamespaceValue(ctx)
-	glog.Infof("List(): namespace=%s", namespace)
 
 	requestInfo, ok := request.RequestInfoFrom(ctx)
-	glog.Infof("List(): requestInfo=%v", requestInfo)
 	if !ok {
 		return nil, fmt.Errorf("unable to get resource and metric name from request")
 	}
@@ -94,7 +105,6 @@ func (r *REST) List(ctx context.Context, options *metainternalversion.ListOption
 
 	groupResource := schema.ParseGroupResource(resourceRaw)
 
-	glog.Infof("List(): resourceRaw=%v, metricName=%v, groupResource=%v", resourceRaw, metricName, groupResource)
 	// handle metrics describing namespaces
 	if namespace != "" && resourceRaw == "metrics" {
 		// namespace-describing metrics have a path of /namespaces/$NS/metrics/$metric,
@@ -106,19 +116,18 @@ func (r *REST) List(ctx context.Context, options *metainternalversion.ListOption
 
 	// handle namespaced and root metrics
 	if name == "*" {
-		return r.handleWildcardOp(namespace, groupResource, selector, metricName)
+		return r.handleWildcardOp(namespace, groupResource, selector, metricName, metricLabelSelector)
 	} else {
-		return r.handleIndividualOp(namespace, groupResource, name, metricName)
+		return r.handleIndividualOp(namespace, groupResource, name, metricName, metricLabelSelector)
 	}
 }
 
-func (r *REST) handleIndividualOp(namespace string, groupResource schema.GroupResource, name string, metricName string) (*custom_metrics.MetricValueList, error) {
+func (r *REST) handleIndividualOp(namespace string, groupResource schema.GroupResource, name string, metricName string, metricLabelSelector labels.Selector) (*custom_metrics.MetricValueList, error) {
 	singleRes, err := r.cmProvider.GetMetricByName(types.NamespacedName{Namespace: namespace, Name: name}, provider.CustomMetricInfo{
 		GroupResource: groupResource,
 		Metric:        metricName,
 		Namespaced:    namespace != "",
-	})
-	glog.Infof("Entered handleIndividualOp()")
+	}, metricLabelSelector)
 	if err != nil {
 		return nil, err
 	}
@@ -128,11 +137,10 @@ func (r *REST) handleIndividualOp(namespace string, groupResource schema.GroupRe
 	}, nil
 }
 
-func (r *REST) handleWildcardOp(namespace string, groupResource schema.GroupResource, selector labels.Selector, metricName string) (*custom_metrics.MetricValueList, error) {
-	glog.Infof("Entered handleWildcardOp()")
+func (r *REST) handleWildcardOp(namespace string, groupResource schema.GroupResource, selector labels.Selector, metricName string, metricLabelSelector labels.Selector) (*custom_metrics.MetricValueList, error) {
 	return r.cmProvider.GetMetricBySelector(namespace, selector, provider.CustomMetricInfo{
 		GroupResource: groupResource,
 		Metric:        metricName,
 		Namespaced:    namespace != "",
-	})
+	}, metricLabelSelector)
 }

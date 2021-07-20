@@ -23,7 +23,7 @@ sudo apt-get update
 sudo apt-get install -y  kubectl=1.16.3-00
 
 # Download kind binary (0.6.1)
-sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.6.1/kind-linux-amd64
+sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.11.0/kind-linux-amd64
 sudo chmod +x /usr/local/bin/kind
 
 # check if kind installed
@@ -288,7 +288,7 @@ function kube-test-env-up {
     sleep 10
     echo "Listing MCAD Controller Helm Chart and Pod YAML..."
     helm list
-    mcad_pod=$(kubectl get pods -n kube-system | grep xqueuejob | awk '{print $1}')
+    mcad-controller=$(kubectl get pods -n kube-system | grep mcad-controller | awk '{print $1}')
     if [[ "$mcad_pod" != "" ]]
     then
         kubectl get pod ${mcad_pod} -n kube-system -o yaml

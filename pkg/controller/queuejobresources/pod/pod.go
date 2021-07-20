@@ -17,17 +17,20 @@ limitations under the License.
 package pod
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/golang/glog"
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/maputils"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
+
 	// "github.com/IBM/multi-cluster-app-dispatcher/pkg/scheduler/api"
+	"sync"
+	"time"
+
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
-	"k8s.io/api/core/v1"
-	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -40,8 +43,7 @@ import (
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"sync"
-	"time"
+	"k8s.io/klog"
 )
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
@@ -107,7 +109,7 @@ func NewQueueJobResPod(config *rest.Config) queuejobresources.Interface {
 			FilterFunc: func(obj interface{}) bool {
 				switch t := obj.(type) {
 				case *v1.Pod:
-					glog.V(6).Infof("[QueueJobResPod-FilterFunc] Filter pod name(%s) namespace(%s) status(%s)\n", t.Name, t.Namespace, t.Status.Phase)
+					klog.V(6).Infof("[QueueJobResPod-FilterFunc] Filter pod name(%s) namespace(%s) status(%s)\n", t.Name, t.Namespace, t.Status.Phase)
 					return true
 				default:
 					return false
@@ -156,11 +158,11 @@ func (qjrPod *QueueJobResPod) deletePod(obj interface{}) {
 		var ok bool
 		pod, ok = t.Obj.(*v1.Pod)
 		if !ok {
-			glog.Errorf("Cannot convert to *v1.Pod: %v", t.Obj)
+			klog.Errorf("Cannot convert to *v1.Pod: %v", t.Obj)
 			return
 		}
 	default:
-		glog.Errorf("Cannot convert to *v1.Pod: %v", t)
+		klog.Errorf("Cannot convert to *v1.Pod: %v", t)
 		return
 	}
 
@@ -170,7 +172,6 @@ func (qjrPod *QueueJobResPod) deletePod(obj interface{}) {
 	}
 }
 
-
 // filterActivePods returns pods that have not terminated.
 func filterActivePods(pods []*v1.Pod) []*v1.Pod {
 	var result []*v1.Pod
@@ -178,7 +179,7 @@ func filterActivePods(pods []*v1.Pod) []*v1.Pod {
 		if isPodActive(p) {
 			result = append(result, p)
 		} else {
-			glog.V(4).Infof("Ignoring inactive pod %v/%v in state %v, deletion time %v",
+			klog.V(4).Infof("Ignoring inactive pod %v/%v in state %v, deletion time %v",
 				p.Namespace, p.Name, p.Status.Phase, p.DeletionTimestamp)
 		}
 	}
@@ -225,7 +226,7 @@ func (qjrPod *QueueJobResPod) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) e
 	pods, errt := qjrPod.podStore.Pods("").List(selector)
 
 	if errt != nil {
-		return  errt
+		return errt
 	}
 
 	running := int32(queuejobresources.FilterPods(pods, v1.PodRunning))
@@ -233,17 +234,16 @@ func (qjrPod *QueueJobResPod) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) e
 	succeeded := int32(queuejobresources.FilterPods(pods, v1.PodSucceeded))
 	failed := int32(queuejobresources.FilterPods(pods, v1.PodFailed))
 
-	glog.Infof("[UpdateQueueJobStatus] There are %d pods of QueueJob %s:  pending %d, running %d, succeeded %d, failed %d",
-		len(pods), queuejob.Name,  pending, running, succeeded, failed)
+	klog.Infof("[UpdateQueueJobStatus] There are %d pods of QueueJob %s:  pending %d, running %d, succeeded %d, failed %d",
+		len(pods), queuejob.Name, pending, running, succeeded, failed)
 
-	queuejob.Status.Pending      = pending
-	queuejob.Status.Running      = running
-	queuejob.Status.Succeeded    = succeeded
-	queuejob.Status.Failed       = failed
+	queuejob.Status.Pending = pending
+	queuejob.Status.Running = running
+	queuejob.Status.Succeeded = succeeded
+	queuejob.Status.Failed = failed
 
 	return nil
 }
-
 
 // manageQueueJob is the core method responsible for managing the number of running
 // pods according to what is specified in the job.Spec.
@@ -264,7 +264,7 @@ func (qjrPod *QueueJobResPod) manageQueueJob(qj *arbv1.AppWrapper, pods []*v1.Po
 	succeeded := int32(queuejobresources.FilterPods(pods, v1.PodSucceeded))
 	failed := int32(queuejobresources.FilterPods(pods, v1.PodFailed))
 
-	glog.Infof("[manageQueueJob] There are %d pods of QueueJob %s:  replicas: %d pending %d, running %d, succeeded %d, failed %d",
+	klog.Infof("[manageQueueJob] There are %d pods of QueueJob %s:  replicas: %d pending %d, running %d, succeeded %d, failed %d",
 		len(pods), qj.Name, replicas, pending, running, succeeded, failed)
 
 	ss, err := qjrPod.arbclients.ArbV1().SchedulingSpecs(qj.Namespace).List(metav1.ListOptions{
@@ -275,17 +275,17 @@ func (qjrPod *QueueJobResPod) manageQueueJob(qj *arbv1.AppWrapper, pods []*v1.Po
 		schedSpc := createQueueJobSchedulingSpec(qj)
 		_, err := qjrPod.arbclients.ArbV1().SchedulingSpecs(qj.Namespace).Create(schedSpc)
 		if err != nil {
-			glog.Errorf("Failed to create SchedulingSpec for QueueJob %v/%v: %v",
+			klog.Errorf("Failed to create SchedulingSpec for QueueJob %v/%v: %v",
 				qj.Namespace, qj.Name, err)
 		}
 	} else {
-		glog.V(3).Infof("There's %v SchedulingSpec for QueueJob %v/%v",
+		klog.V(3).Infof("There's %v SchedulingSpec for QueueJob %v/%v",
 			len(ss.Items), qj.Namespace, qj.Name)
 	}
 
 	// Create pod if necessary
 	if diff := int32(replicas) - pending - running - succeeded; diff > 0 {
-		glog.V(3).Infof("[manageQueueJob] Try to create %v Pods for QueueJob %v/%v", diff, qj.Namespace, qj.Name)
+		klog.V(3).Infof("[manageQueueJob] Try to create %v Pods for QueueJob %v/%v", diff, qj.Namespace, qj.Name)
 		var errs []error
 		wait := sync.WaitGroup{}
 		wait.Add(int(diff))
@@ -296,15 +296,15 @@ func (qjrPod *QueueJobResPod) manageQueueJob(qj *arbv1.AppWrapper, pods []*v1.Po
 
 				if newPod == nil {
 					err := fmt.Errorf("Job resource template item not define as a PodTemplate")
-					glog.Errorf("Failed to create a pod for Job %s, error: %#v.", qj.Name, err)
+					klog.Errorf("Failed to create a pod for Job %s, error: %#v.", qj.Name, err)
 					errs = append(errs, err)
 				} else {
-					_, err := qjrPod.clients.Core().Pods(newPod.Namespace).Create(newPod)
+					_, err := qjrPod.clients.CoreV1().Pods(newPod.Namespace).Create(context.Background(), newPod, metav1.CreateOptions{})
 					if err != nil {
 						// Failed to create Pod, wait a moment and then create it again
 						// This is to ensure all pods under the same QueueJob created
 						// So gang-scheduling could schedule the QueueJob successfully
-						glog.Errorf("Failed to create pod %s for QueueJob %s, err %#v",
+						klog.Errorf("Failed to create pod %s for QueueJob %s, err %#v",
 							newPod.Name, qj.Name, err)
 						errs = append(errs, err)
 					}
@@ -318,10 +318,10 @@ func (qjrPod *QueueJobResPod) manageQueueJob(qj *arbv1.AppWrapper, pods []*v1.Po
 		}
 	}
 
-	qj.Status.Pending   = pending
-	qj.Status.Running   = running
+	qj.Status.Pending = pending
+	qj.Status.Running = running
 	qj.Status.Succeeded = succeeded
-	qj.Status.Failed    = failed
+	qj.Status.Failed = failed
 	return err
 }
 
@@ -391,11 +391,11 @@ func (qjrPod *QueueJobResPod) manageQueueJobPods(activePods []*v1.Pod, succeeded
 					newPod := qjrPod.createQueueJobPod(qj, ix, ar)
 					if newPod == nil {
 						err = fmt.Errorf("Job resource template item not define as a PodTemplate")
-						glog.Errorf("Failed to create pod %s for Job %s, err %#v",
+						klog.Errorf("Failed to create pod %s for Job %s, err %#v",
 							newPod.Name, qj.Name, err)
 					} else {
 						for {
-							_, err := qjrPod.clients.Core().Pods(newPod.Namespace).Create(newPod)
+							_, err := qjrPod.clients.CoreV1().Pods(newPod.Namespace).Create(context.Background(), newPod, metav1.CreateOptions{})
 							if err == nil {
 								// Create Pod successfully
 								break
@@ -403,7 +403,7 @@ func (qjrPod *QueueJobResPod) manageQueueJobPods(activePods []*v1.Pod, succeeded
 								// Failed to create Pod, wait a moment and then create it again
 								// This is to ensure all pods under the same QueueJob created
 								// So gang-scheduling could schedule the QueueJob successfully
-								glog.Warningf("Failed to create pod %s for Job %s, err %#v, wait 2 seconds and re-create it", newPod.Name, qj.Name, err)
+								klog.Warningf("Failed to create pod %s for Job %s, err %#v, wait 2 seconds and re-create it", newPod.Name, qj.Name, err)
 								time.Sleep(2 * time.Second)
 							}
 						}
@@ -438,9 +438,9 @@ func (qjrPod *QueueJobResPod) terminatePodsForQueueJob(qj *arbv1.AppWrapper) err
 	for _, pod := range pods {
 		go func(p *v1.Pod) {
 			defer wait.Done()
-			err := qjrPod.clients.Core().Pods(p.Namespace).Delete(p.Name, &metav1.DeleteOptions{})
+			err := qjrPod.clients.CoreV1().Pods(p.Namespace).Delete(context.Background(), p.Name, metav1.DeleteOptions{})
 			if err != nil {
-				glog.Warning("Fail to delete pod %s for QueueJob %s/%s", p.Name, qj.Namespace, qj.Name)
+				klog.Warning("Fail to delete pod %s for QueueJob %s/%s", p.Name, qj.Namespace, qj.Name)
 				qjrPod.deletedPodsCounter.DecreaseCounter(fmt.Sprintf("%s/%s", qj.Namespace, qj.Name))
 			}
 		}(pod)
@@ -483,7 +483,7 @@ func (qjrPod *QueueJobResPod) deleteQueueJobResPods(qjobRes *arbv1.AppWrapperRes
 		return err
 	}
 
-	glog.Infof("I have found pods for QueueJob: %v \n", len(pods))
+	klog.Infof("I have found pods for QueueJob: %v \n", len(pods))
 
 	activePods := filterActivePods(pods)
 	active := int32(len(activePods))
@@ -493,9 +493,9 @@ func (qjrPod *QueueJobResPod) deleteQueueJobResPods(qjobRes *arbv1.AppWrapperRes
 	for i := int32(0); i < active; i++ {
 		go func(ix int32) {
 			defer wait.Done()
-			if err := qjrPod.clients.Core().Pods(queuejob.Namespace).Delete(activePods[ix].Name, &metav1.DeleteOptions{}); err != nil {
+			if err := qjrPod.clients.CoreV1().Pods(queuejob.Namespace).Delete(context.Background(), activePods[ix].Name, metav1.DeleteOptions{}); err != nil {
 				defer utilruntime.HandleError(err)
-				glog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activePods[ix].Name, job.Namespace, job.Name)
+				klog.V(2).Infof("Failed to delete %v, queue job %q/%q deadline exceeded", activePods[ix].Name, job.Namespace, job.Name)
 			}
 		}(i)
 	}
@@ -517,7 +517,6 @@ func createQueueJobSchedulingSpec(qj *arbv1.AppWrapper) *arbv1.SchedulingSpec {
 	}
 }
 
-
 //GetPodTemplate Parse queue job api object to get Pod template
 func (qjrPod *QueueJobResPod) GetPodTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.PodTemplateSpec, error) {
 
@@ -537,30 +536,28 @@ func (qjrPod *QueueJobResPod) GetPodTemplate(qjobRes *arbv1.AppWrapperResource) 
 
 }
 
-
-
 func (qjrPod *QueueJobResPod) GetAggregatedResources(job *arbv1.AppWrapper) *clusterstateapi.Resource {
-        total := clusterstateapi.EmptyResource()
-    	if job.Spec.AggrResources.Items != nil {
-            //calculate scaling
-            for _, ar := range job.Spec.AggrResources.Items {
-                if ar.Type == arbv1.ResourceTypePod {
-					template, err := qjrPod.GetPodTemplate(&ar)
-					if err != nil {
-						glog.Errorf("Can not parse pod template in item: %+v error: %+v.  Aggregated resources set to 0.", ar, err)
-					} else {
-						replicas := ar.Replicas
-						myres := queuejobresources.GetPodResources(template)
+	total := clusterstateapi.EmptyResource()
+	if job.Spec.AggrResources.Items != nil {
+		//calculate scaling
+		for _, ar := range job.Spec.AggrResources.Items {
+			if ar.Type == arbv1.ResourceTypePod {
+				template, err := qjrPod.GetPodTemplate(&ar)
+				if err != nil {
+					klog.Errorf("Can not parse pod template in item: %+v error: %+v.  Aggregated resources set to 0.", ar, err)
+				} else {
+					replicas := ar.Replicas
+					myres := queuejobresources.GetPodResources(template)
 
-						myres.MilliCPU = float64(replicas) * myres.MilliCPU
-						myres.Memory = float64(replicas) * myres.Memory
-						myres.GPU = int64(replicas) * myres.GPU
-						total = total.Add(myres)
-					}
+					myres.MilliCPU = float64(replicas) * myres.MilliCPU
+					myres.Memory = float64(replicas) * myres.Memory
+					myres.GPU = int64(replicas) * myres.GPU
+					total = total.Add(myres)
 				}
-            }
-        }
-        return total
+			}
+		}
+	}
+	return total
 }
 
 func (qjrPod *QueueJobResPod) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
@@ -569,39 +566,38 @@ func (qjrPod *QueueJobResPod) GetAggregatedResourcesByPriority(priority float64,
 		//calculate scaling
 		for _, ar := range job.Spec.AggrResources.Items {
 			if ar.Priority < priority {
-		  		continue
-		  	}
+				continue
+			}
 
-		  	if ar.Type == arbv1.ResourceTypePod {
-		  		template, err := qjrPod.GetPodTemplate(&ar)
-		  		if err != nil {
-		  			glog.Errorf("Cannot parse pod template in item: %+v error: %+v.  Aggregated resources set to 0.", ar, err)
-		  		} else {
+			if ar.Type == arbv1.ResourceTypePod {
+				template, err := qjrPod.GetPodTemplate(&ar)
+				if err != nil {
+					klog.Errorf("Cannot parse pod template in item: %+v error: %+v.  Aggregated resources set to 0.", ar, err)
+				} else {
 					total = total.Add(queuejobresources.GetPodResources(template))
-		  		}
-		  	}
+				}
+			}
 		}
 	}
 	return total
 }
 
-func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, qjobRes *arbv1.AppWrapperResource) *corev1.Pod {
+func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, qjobRes *arbv1.AppWrapperResource) *v1.Pod {
 	templateCopy, err := qjrPod.GetPodTemplate(qjobRes)
 
 	if err != nil {
-		glog.Errorf("[createQueueJobPod] Cannot parse PodTemplate in job: %s, namespace: %s, item: %+v error: %+v.",
-			qj.Name, qj.Namespace,qjobRes, err)
+		klog.Errorf("[createQueueJobPod] Cannot parse PodTemplate in job: %s, namespace: %s, item: %+v error: %+v.",
+			qj.Name, qj.Namespace, qjobRes, err)
 		return nil
 	}
 	podName := fmt.Sprintf("%s-%d-%s", qj.Name, ix, generateUUID())
 
-	glog.Infof("Template copy for the pod %+v", templateCopy)
+	klog.Infof("Template copy for the pod %+v", templateCopy)
 
 	tmpl := templateCopy.Labels
 
-
 	tmpl[queueJobName] = qj.Name
-	return &corev1.Pod{
+	return &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName,
 			Namespace: qj.Namespace,

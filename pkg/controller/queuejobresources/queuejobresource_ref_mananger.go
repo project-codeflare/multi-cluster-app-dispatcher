@@ -18,10 +18,10 @@ package queuejobresources
 
 import (
 	"fmt"
+
 	qjobv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	// "github.com/golang/glog"
 )
 
 //RefManager : Define reference manager commont interface
@@ -81,8 +81,6 @@ func (rm *RefByLabel) BelongTo(owner *qjobv1.AppWrapperResource, ownee runtime.O
 
 	labels := accessor.GetLabels()
 	labelsOwner := accessorOwner.GetLabels()
-
-	// glog.Infof("Compare: %s, %s\n", labels[rm.qjobResLabel], labelsOwner[rm.qjobResLabel])
 
 	return labels != nil && labelsOwner != nil && labels[rm.qjobResLabel] == labelsOwner[rm.qjobResLabel]
 }

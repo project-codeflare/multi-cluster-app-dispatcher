@@ -17,6 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	"context"
+
 	v1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/scheme"
 
@@ -58,7 +60,7 @@ func (c *schedulingSpecs) Create(queue *v1.SchedulingSpec) (result *v1.Schedulin
 		Namespace(c.ns).
 		Resource(v1.SchedulingSpecPlural).
 		Body(queue).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -71,7 +73,7 @@ func (c *schedulingSpecs) Update(queue *v1.SchedulingSpec) (result *v1.Schedulin
 		Resource(v1.SchedulingSpecPlural).
 		Name(queue.Name).
 		Body(queue).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -87,7 +89,7 @@ func (c *schedulingSpecs) UpdateStatus(queue *v1.SchedulingSpec) (result *v1.Sch
 		Name(queue.Name).
 		SubResource("status").
 		Body(queue).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -99,7 +101,7 @@ func (c *schedulingSpecs) Delete(name string, options *meta_v1.DeleteOptions) er
 		Resource(v1.SchedulingSpecPlural).
 		Name(name).
 		Body(options).
-		Do().
+		Do(context.Background()).
 		Error()
 }
 
@@ -111,7 +113,7 @@ func (c *schedulingSpecs) Get(name string, options meta_v1.GetOptions) (result *
 		Resource(v1.SchedulingSpecPlural).
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
@@ -123,7 +125,7 @@ func (c *schedulingSpecs) List(opts meta_v1.ListOptions) (result *v1.SchedulingS
 		Namespace(c.ns).
 		Resource(v1.SchedulingSpecPlural).
 		VersionedParams(&opts, scheme.ParameterCodec).
-		Do().
+		Do(context.Background()).
 		Into(result)
 	return
 }
