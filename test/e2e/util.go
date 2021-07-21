@@ -78,7 +78,7 @@ type context struct {
 func initTestContext() *context {
 	enableNamespaceAsQueue, _ := strconv.ParseBool(os.Getenv("ENABLE_NAMESPACES_AS_QUEUE"))
 	cxt := &context{
-		namespace: "test",
+		namespace: "urm",
 		queues:    []string{"q1", "q2"},
 	}
 
@@ -583,7 +583,7 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-deployment-1",
-		"namespace": "test",
+		"namespace": "urm",
 		"labels": {
 			"app": "nginx"
 		}
@@ -605,7 +605,9 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 				"containers": [
 					{
 						"name": "nginx",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "registry.access.redhat.com/ubi8/ubi:latest",
+						"command": ["/bin/sh", "-c", "while true; do sleep 10; done"],
+						"imagePullPolicy": "IfNotPresent",
 						"ports": [
 							{
 								"containerPort": 80
@@ -1124,7 +1126,7 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 		"kind": "Deployment", 
 	"metadata": {
 		"name": "aw-generic-deployment-3",
-		"namespace": "test",
+		"namespace": "urm",
 		"labels": {
 			"app": "aw-generic-deployment-3"
 		}
@@ -1146,7 +1148,9 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 				"containers": [
 					{
 						"name": "aw-generic-deployment-3",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "registry.access.redhat.com/ubi8/ubi:latest",
+						"command": ["/bin/sh", "-c", "while true; do sleep 10; done"],
+						"imagePullPolicy": "IfNotPresent",
 						"ports": [
 							{
 								"containerPort": 80
@@ -1352,7 +1356,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 		"kind": "StatefulSet", 
 	"metadata": {
 		"name": "aw-statefulset-2",
-		"namespace": "test",
+		"namespace": "urm",
 		"labels": {
 			"app": "aw-statefulset-2"
 		}
@@ -1374,8 +1378,9 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 				"containers": [
 					{
 						"name": "aw-statefulset-2",
-						"image": "k8s.gcr.io/echoserver:1.4",
-						"imagePullPolicy": "Never",
+						"image": "registry.access.redhat.com/ubi8/ubi:latest",
+						"command": ["/bin/sh", "-c", "while true; do sleep 10; done"],
+						"imagePullPolicy": "IfNotPresent",
 						"ports": [
 							{
 								"containerPort": 80
@@ -1391,7 +1396,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 	aw := &arbv1.AppWrapper{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: context.namespace,
+			Namespace: "urm",
 		},
 		Spec: arbv1.AppWrapperSpec{
 			SchedSpec: arbv1.SchedulingSpecTemplate{
@@ -1402,7 +1407,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
-							Namespace: context.namespace,
+							Namespace: "urm",
 						},
 						Replicas: 1,
 						Type:     arbv1.ResourceTypeStatefulSet,
@@ -1426,7 +1431,7 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 		"kind": "StatefulSet", 
 	"metadata": {
 		"name": "aw-generic-statefulset-2",
-		"namespace": "test",
+		"namespace": "urm",
 		"labels": {
 			"app": "aw-generic-statefulset-2"
 		}
@@ -1448,8 +1453,9 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 				"containers": [
 					{
 						"name": "aw-generic-statefulset-2",
-						"image": "k8s.gcr.io/echoserver:1.4",
-						"imagePullPolicy": "Never",
+						"image": "registry.access.redhat.com/ubi8/ubi:latest",
+						"command": ["/bin/sh", "-c", "while true; do sleep 10; done"],
+						"imagePullPolicy": "IfNotPresent",
 						"ports": [
 							{
 								"containerPort": 80
@@ -1476,7 +1482,7 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
-							Namespace: context.namespace,
+							Namespace: "urm",
 						},
 						DesiredAvailable: 2,
 						GenericTemplate: runtime.RawExtension{
@@ -1508,7 +1514,9 @@ func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "nginx",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "registry.access.redhat.com/ubi8/ubi:latest",
+					"command": ["/bin/sh", "-c", "while true; do sleep 10; done"],
+					"imagePullPolicy": "IfNotPresent",
 					"ports": [
 						{
 							"containerPort": 80
@@ -1557,7 +1565,7 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"metadata": 
 	{
 		"name": "nginx",
-		"namespace": "test",
+		"namespace": "urm",
 		"labels": {
 			"app": "nginx"
 		}
@@ -1572,7 +1580,9 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "nginx",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "registry.access.redhat.com/ubi8/ubi:latest",
+					"command": ["/bin/sh", "-c", "while true; do sleep 10; done"],
+					"imagePullPolicy": "IfNotPresent",
 					"ports": [
 						{
 							"containerPort": 80
@@ -1622,7 +1632,7 @@ func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 		"kind": "Pod",
 		"metadata": {
 			"name": "aw-generic-pod-1",
-			"namespace": "test",
+			"namespace": "urm",
 			"labels": {
 				"app": "aw-generic-pod-1"
 			}
@@ -1631,7 +1641,9 @@ func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "aw-generic-pod-1",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "registry.access.redhat.com/ubi8/ubi:latest",
+					"command": ["/bin/sh", "-c", "while true; do sleep 10; done"],
+					"imagePullPolicy": "IfNotPresent",
 					"ports": [
 						{
 							"containerPort": 80
@@ -1686,7 +1698,9 @@ func createBadGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "aw-bad-generic-pod-1",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "registry.access.redhat.com/ubi8/ubi:latest",
+					"command": ["/bin/sh", "-c", "while true; do sleep 10; done"],
+					"imagePullPolicy": "IfNotPresent",
 					"ports": [
 						{
 							"containerPort": 80
@@ -1732,7 +1746,7 @@ func createBadGenericPodTemplateAW(context *context, name string) *arbv1.AppWrap
 	rb := []byte(`{"metadata": 
 	{
 		"name": "nginx",
-		"namespace": "test",
+		"namespace": "urm",
 		"labels": {
 			"app": "nginx"
 		}
@@ -1747,7 +1761,9 @@ func createBadGenericPodTemplateAW(context *context, name string) *arbv1.AppWrap
 			"containers": [
 				{
 					"name": "nginx",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "registry.access.redhat.com/ubi8/ubi:latest",
+					"command": ["/bin/sh", "-c", "while true; do sleep 10; done"],
+					"imagePullPolicy": "IfNotPresent",
 					"ports": [
 						{
 							"containerPort": 80
