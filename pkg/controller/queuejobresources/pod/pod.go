@@ -595,8 +595,12 @@ func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, 
 	klog.Infof("Template copy for the pod %+v", templateCopy)
 
 	tmpl := templateCopy.Labels
-
+	if tmpl == nil {
+		tmpl = make(map[string]string)
+	}
+	
 	tmpl[queueJobName] = qj.Name
+
 	return &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName,

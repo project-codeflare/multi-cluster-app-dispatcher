@@ -1728,7 +1728,7 @@ func createBadGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 
 	return appwrapper
 }
-func createBadGenericPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
+func createBadGenericPodTemplateAW(context *context, name string) (*arbv1.AppWrapper, error) {
 	rb := []byte(`{"metadata": 
 	{
 		"name": "nginx",
@@ -1786,9 +1786,9 @@ func createBadGenericPodTemplateAW(context *context, name string) *arbv1.AppWrap
 	}
 
 	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
-	Expect(err).NotTo(HaveOccurred())
+	Expect(err).To(HaveOccurred())
 
-	return appwrapper
+	return appwrapper, err
 }
 
 func deleteReplicaSet(ctx *context, name string) error {

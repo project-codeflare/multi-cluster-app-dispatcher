@@ -19,56 +19,54 @@ package clients
 import (
 	"context"
 	"fmt"
-	"reflect"
+	"os"
 	"time"
 
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
 
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
+	"sigs.k8s.io/yaml"
 )
 
+const QueueJobCrdPath = "config/crd/bases/mcad.ibm.com_queuejobs.yaml"
 const queueJobKindName = arbv1.QueueJobPlural + "." + arbv1.GroupName
 
-func CreateQueueJobKind(clientset apiextensionsclient.Interface) (*apiextensionsv1beta1.CustomResourceDefinition, error) {
-	crd := &apiextensionsv1beta1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: queueJobKindName,
-		},
-		Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
-			Group:   arbv1.GroupName,
-			Version: arbv1.SchemeGroupVersion.Version,
-			Scope:   apiextensionsv1beta1.NamespaceScoped,
-			Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
-				Plural: arbv1.QueueJobPlural,
-				Kind:   reflect.TypeOf(arbv1.QueueJob{}).Name(),
-			},
-		},
+func CreateQueueJobKind(clientset apiextensionsclient.Interface) (*apiextensionsv1.CustomResourceDefinition, error) {
+	f, err := os.ReadFile(QueueJobCrdPath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot load the CRD from file %s: %v", QueueJobCrdPath, err)
 	}
-	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(context.Background(), crd, metav1.CreateOptions{})
 
+	crd := &apiextensionsv1.CustomResourceDefinition{}
+	err = yaml.Unmarshal(f, crd)
+	if err != nil {
+		return nil, fmt.Errorf("cannot unmarshal the CRD: %v", err)
+	}
+
+	_, err = clientset.ApiextensionsV1().CustomResourceDefinitions().Create(context.Background(), crd, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	// wait for CRD being established
 	err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
-		crd, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(context.Background(), queueJobKindName, metav1.GetOptions{})
+		crd, err = clientset.ApiextensionsV1().CustomResourceDefinitions().Get(context.Background(), queueJobKindName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
 		for _, cond := range crd.Status.Conditions {
 			switch cond.Type {
-			case apiextensionsv1beta1.Established:
-				if cond.Status == apiextensionsv1beta1.ConditionTrue {
+			case apiextensionsv1.Established:
+				if cond.Status == apiextensionsv1.ConditionTrue {
 					return true, err
 				}
-			case apiextensionsv1beta1.NamesAccepted:
-				if cond.Status == apiextensionsv1beta1.ConditionFalse {
+			case apiextensionsv1.NamesAccepted:
+				if cond.Status == apiextensionsv1.ConditionFalse {
 					fmt.Printf("Name conflict: %v\n", cond.Reason)
 				}
 			}
@@ -76,7 +74,7 @@ func CreateQueueJobKind(clientset apiextensionsclient.Interface) (*apiextensions
 		return false, err
 	})
 	if err != nil {
-		deleteErr := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(context.Background(), queueJobKindName, metav1.DeleteOptions{})
+		deleteErr := clientset.ApiextensionsV1().CustomResourceDefinitions().Delete(context.Background(), queueJobKindName, metav1.DeleteOptions{})
 		if deleteErr != nil {
 			return nil, errors.NewAggregate([]error{err, deleteErr})
 		}

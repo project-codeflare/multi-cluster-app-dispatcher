@@ -140,15 +140,9 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
-		aw := createBadGenericPodTemplateAW(context, "aw-generic-podtemplate-2")
-
-		err := waitAWPodsReady(context, aw)
+		_, err := createBadGenericPodTemplateAW(context, "aw-generic-podtemplate-2")
 
 		Expect(err).To(HaveOccurred())
-
-		var appwrappers []*arbv1.AppWrapper
-		appwrappers = append(appwrappers, aw)
-		cleanupTestObjects(context, appwrappers)
 	})
 
 	It("Create AppWrapper  - PodTemplate Only - 2 Pods", func() {
