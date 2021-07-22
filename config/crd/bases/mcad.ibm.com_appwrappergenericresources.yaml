@@ -1,0 +1,115 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: appwrappergenericresources.mcad.ibm.com
+spec:
+  group: mcad.ibm.com
+  names:
+    kind: AppWrapperGenericResource
+    listKind: AppWrapperGenericResourceList
+    plural: appwrappergenericresources
+    singular: appwrappergenericresource
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AppWrapperResource is App Wrapper aggregation resource
+        properties:
+          allocated:
+            description: The number of allocated replicas from this resource type
+            format: int32
+            type: integer
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          custompodresources:
+            description: Optional section that specifies resource requirements for
+              non-standard k8s resources, follows same format as that of standard
+              k8s resources
+            items:
+              properties:
+                limits:
+                  additionalProperties:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  description: ResourceList is a set of (resource name, quantity)
+                    pairs.
+                  type: object
+                replicas:
+                  type: integer
+                requests:
+                  additionalProperties:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  description: 'todo: replace with Containers []Container Contain
+                    v1.ResourceRequirements'
+                  type: object
+              required:
+              - limits
+              - replicas
+              - requests
+              type: object
+            type: array
+          generictemplate:
+            description: The template for the resource; it is now a raw text because
+              we don't know for what resource it should be instantiated
+            type: object
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          minavailable:
+            description: The minimal available pods to run for this AppWrapper; the
+              default value is nil
+            format: int32
+            type: integer
+          priority:
+            anyOf:
+            - type: integer
+            - type: string
+            description: The priority of this resource
+            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+            x-kubernetes-int-or-string: true
+          priorityslope:
+            anyOf:
+            - type: integer
+            - type: string
+            description: The increasing rate of priority value for this resource
+            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+            x-kubernetes-int-or-string: true
+          replicas:
+            description: Replicas is the number of desired replicas
+            format: int32
+            type: integer
+        required:
+        - allocated
+        - generictemplate
+        - metadata
+        - priority
+        - priorityslope
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
