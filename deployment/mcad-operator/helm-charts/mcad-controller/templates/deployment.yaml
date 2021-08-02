@@ -14,24 +14,7 @@ spec:
   selector:
     app: custom-metrics-apiserver
 ---
-#{{ if .Values.configMap.quotaRestUrl }}
-apiVersion: v1
-kind: Service
-metadata:
-  name: quota-http-server
-spec:
-  type: NodePort
-  selector:
-    app: custom-metrics-apiserver
-  ports:
-    # By default and for convenience, the `targetPort` is set to the same value as the `port` field.
-    - port: 8082
-      targetPort: 80
-      # Optional field
-      # By default and for convenience, the Kubernetes control plane will allocate a port from a range (default: 30000-32767)
-      nodePort: 30082
-#{{ end }}
----
+#{{ if .Values.configMap.multiCluster }}
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
 metadata:
@@ -59,6 +42,7 @@ spec:
   insecureSkipTLSVerify: true
   groupPriorityMinimum: 100
   versionPriority: 100
+#{{ end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -6965,20 +6949,6 @@ spec:
     served: true
     storage: true
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
-metadata:
-  name: xqueuejobs.mcad.ibm.com
-spec:
-  group: mcad.ibm.com
-  names:
-    kind: XQueueJob
-    listKind: XQueueJobList
-    plural: xqueuejobs
-    singular: xqueuejob
-  scope: Namespaced
-  version: v1alpha1
----
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -7018,7 +6988,9 @@ spec:
               priority:
                 format: int32
                 type: integer
-              priorityslope: {}
+              priorityslope:
+                format: float
+                type: number
               resources:
                 description: a collection of AppWrapperResource
                 properties:
@@ -7066,7 +7038,6 @@ spec:
                                   Contain v1.ResourceRequirements'
                                 type: object
                             required:
-                            - limits
                             - replicas
                             - requests
                             type: object
@@ -7076,6 +7047,8 @@ spec:
                             raw text because we don't know for what resource it should
                             be instantiated
                           type: object
+                          x-kubernetes-embedded-resource: true
+                          x-kubernetes-preserve-unknown-fields: true
                         kind:
                           description: 'Kind is a string value representing the REST
                             resource this object represents. Servers may infer this
@@ -7091,19 +7064,19 @@ spec:
                           type: integer
                         priority:
                           description: The priority of this resource
+                          format: int32
+                          type: integer
                         priorityslope:
                           description: The increasing rate of priority value for this
                             resource
+                          format: float
+                          type: number
                         replicas:
                           description: Replicas is the number of desired replicas
                           format: int32
                           type: integer
                       required:
-                      - allocated
-                      - generictemplate
                       - metadata
-                      - priority
-                      - priorityslope
                       type: object
                     type: array
                   Items:
@@ -7137,9 +7110,13 @@ spec:
                           type: integer
                         priority:
                           description: The priority of this resource
+                          format: int32
+                          type: integer
                         priorityslope:
                           description: The increasing rate of priority value for this
                             resource
+                          format: float
+                          type: number
                         replicas:
                           description: Replicas is the number of desired replicas
                           format: int32
@@ -7149,17 +7126,14 @@ spec:
                             raw text because we don't know for what resource it should
                             be instantiated
                           type: object
+                          x-kubernetes-preserve-unknown-fields: true
                         type:
                           description: The type of the resource (is the resource a
                             Pod, a ReplicaSet, a ... ?)
                           type: string
                       required:
-                      - allocatedreplicas
                       - metadata
-                      - priority
-                      - priorityslope
                       - template
-                      - type
                       type: object
                     type: array
                   apiVersion:
@@ -7222,8 +7196,6 @@ spec:
                         type: string
                     type: object
                 required:
-                - GenericItems
-                - Items
                 - metadata
                 type: object
               schedulingSpec:
@@ -7695,6 +7667,8 @@ spec:
                 type: string
               systempriority:
                 description: System defined Priority
+                format: float
+                type: number
               template:
                 description: The minimal available resources to run for this AppWrapper
                   (is this different from the MinAvailable from JobStatus)
@@ -7872,7 +7846,7 @@ subjects:
   namespace: kube-system
 #{{ end }}
 ---
-apiVersion: extensions/v1beta1
+apiVersion: extensions/v1
 kind: Deployment
 metadata:
   name: {{ .Values.deploymentName }}
