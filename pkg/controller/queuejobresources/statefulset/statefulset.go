@@ -102,7 +102,6 @@ func NewQueueJobResStatefulSet(config *rest.Config) queuejobresources.Interface 
 
 	qjrd.rtScheme = runtime.NewScheme()
 	v1.AddToScheme(qjrd.rtScheme)
-	// v1beta1.AddToScheme(qjrd.rtScheme)
 	apps.AddToScheme(qjrd.rtScheme)
 	qjrd.jsonSerializer = json.NewYAMLSerializer(json.DefaultMetaFactory, qjrd.rtScheme, qjrd.rtScheme)
 

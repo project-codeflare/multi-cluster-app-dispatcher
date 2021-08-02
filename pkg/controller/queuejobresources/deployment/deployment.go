@@ -111,6 +111,11 @@ func (qjrDeployment *QueueJobResDeployment) GetPodTemplate(qjobRes *arbv1.AppWra
 	if err != nil {
 		return nil, -1, err
 	}
+
+        // Validate template field
+	if res.Spec.Replicas == nil {
+		return nil, 0, fmt.Errorf("spec.replicas field not defined in resource object: %#v", qjobRes)
+	}
 	return &res.Spec.Template, *res.Spec.Replicas, nil
 }
 
@@ -122,7 +127,7 @@ func (qjrDeployment *QueueJobResDeployment) GetAggregatedResources(job *arbv1.Ap
 			if ar.Type == arbv1.ResourceTypeDeployment {
 				template, replicas, err := qjrDeployment.GetPodTemplate(&ar)
 				if err != nil {
-					klog.Errorf("Pod Template not found in item: %+v error: %+v.  Aggregated resources set to 0.", ar, err)
+					klog.Errorf("Pod Template not found in item: %#v error: %#v.  Aggregated resources set to 0.", ar, err)
 				} else {
 					myres := queuejobresources.GetPodResources(template)
 					myres.MilliCPU = float64(replicas) * myres.MilliCPU
