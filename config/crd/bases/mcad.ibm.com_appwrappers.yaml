@@ -40,11 +40,8 @@ spec:
                 format: int32
                 type: integer
               priorityslope:
-                anyOf:
-                - type: integer
-                - type: string
-                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                x-kubernetes-int-or-string: true
+                format: float
+                type: number
               resources:
                 description: a collection of AppWrapperResource
                 properties:
@@ -92,7 +89,6 @@ spec:
                                   Contain v1.ResourceRequirements'
                                 type: object
                             required:
-                            - limits
                             - replicas
                             - requests
                             type: object
@@ -102,6 +98,8 @@ spec:
                             raw text because we don't know for what resource it should
                             be instantiated
                           type: object
+                          x-kubernetes-embedded-resource: true
+                          x-kubernetes-preserve-unknown-fields: true
                         kind:
                           description: 'Kind is a string value representing the REST
                             resource this object represents. Servers may infer this
@@ -116,30 +114,20 @@ spec:
                           format: int32
                           type: integer
                         priority:
-                          anyOf:
-                          - type: integer
-                          - type: string
                           description: The priority of this resource
-                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                          x-kubernetes-int-or-string: true
+                          format: int32
+                          type: integer
                         priorityslope:
-                          anyOf:
-                          - type: integer
-                          - type: string
                           description: The increasing rate of priority value for this
                             resource
-                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                          x-kubernetes-int-or-string: true
+                          format: float
+                          type: number
                         replicas:
                           description: Replicas is the number of desired replicas
                           format: int32
                           type: integer
                       required:
-                      - allocated
-                      - generictemplate
                       - metadata
-                      - priority
-                      - priorityslope
                       type: object
                     type: array
                   Items:
@@ -172,20 +160,14 @@ spec:
                           format: int32
                           type: integer
                         priority:
-                          anyOf:
-                          - type: integer
-                          - type: string
                           description: The priority of this resource
-                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                          x-kubernetes-int-or-string: true
+                          format: int32
+                          type: integer
                         priorityslope:
-                          anyOf:
-                          - type: integer
-                          - type: string
                           description: The increasing rate of priority value for this
                             resource
-                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                          x-kubernetes-int-or-string: true
+                          format: float
+                          type: number
                         replicas:
                           description: Replicas is the number of desired replicas
                           format: int32
@@ -195,13 +177,14 @@ spec:
                             raw text because we don't know for what resource it should
                             be instantiated
                           type: object
+                          x-kubernetes-preserve-unknown-fields: true
                         type:
                           description: The type of the resource (is the resource a
                             Pod, a ReplicaSet, a ... ?)
                           type: string
                       required:
+                      - metadata
                       - template
-                      - type
                       type: object
                     type: array
                   apiVersion:
@@ -263,6 +246,8 @@ spec:
                           field is planned to be removed in 1.21 release."
                         type: string
                     type: object
+                required:
+                - metadata
                 type: object
               schedulingSpec:
                 description: SchedSpec specifies the parameters for scheduling.
@@ -643,6 +628,8 @@ spec:
                 required:
                 - spec
                 type: object
+            required:
+            - resources
             type: object
           status:
             description: AppWrapperStatus represents the current state of a AppWrapper
@@ -729,12 +716,9 @@ spec:
                 description: State - Running, Queued, Deleted ?
                 type: string
               systempriority:
-                anyOf:
-                - type: integer
-                - type: string
                 description: System defined Priority
-                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                x-kubernetes-int-or-string: true
+                format: float
+                type: number
               template:
                 description: The minimal available resources to run for this AppWrapper
                   (is this different from the MinAvailable from JobStatus)
