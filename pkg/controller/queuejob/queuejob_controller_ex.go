@@ -24,10 +24,12 @@ import (
 	"sort"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/api/equality"
 	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter"
-	quotamanager "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager"
+	qmutils "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/util"
+	"k8s.io/apimachinery/pkg/api/equality"
 
 	"strconv"
 	"time"
@@ -142,7 +144,7 @@ type XController struct {
 	agentEventQueue *cache.FIFO
 
 	// Quota Manager
-	quotaManager quotamanager.QuotaManager
+	quotaManager quota.QuotaManagerInterface
 }
 
 type JobAndClusterAgent struct{
@@ -356,7 +358,14 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		})
 	cc.queueJobLister = cc.queueJobInformer.Lister()
 
-	cc.quotaManager = quotamanager.NewResourcePlanManager(cc.queueJobLister, serverOption.QuotaRestURL, serverOption.Preemption)
+	// Setup Quota
+	if serverOption.QuotaEnabled {
+		dispatchedAWDemands := cc.getDispatchedAppWrappers(cc.queueJobLister)
+		cc.quotaManager, _ = quotamanager.NewQuotaManager(cc.queueJobLister, dispatchedAWDemands, config, serverOption)
+	} else {
+		cc.quotaManager = nil
+	}
+
 
 	cc.queueJobSynced = cc.queueJobInformer.Informer().HasSynced
 
@@ -584,6 +593,26 @@ func (qjm *XController) getProposedPreemptions(requestingJob *arbv1.AppWrapper, 
 	}
 
 	return proposedPreemptions
+}
+
+func (qjm *XController)  getDispatchedAppWrappers(awJobLister listersv1.AppWrapperLister) map[string]*clusterstateapi.Resource {
+	retval := make(map[string]*clusterstateapi.Resource)
+
+	appwrappers, err := awJobLister.AppWrappers("").List(labels.Everything())
+	if err != nil {
+		klog.Errorf("[getDispatchedAppWrappers] List of AppWrappers err=%+v", err)
+		return retval
+	}
+
+	for _, aw := range appwrappers {
+		// Get dispatched jobs
+		if aw.Status.CanRun == true {
+			id := qmutils.CreateId(aw.Namespace, aw.Name)
+			retval[id] = qjm.GetAggregatedResources(aw)
+		}
+	}
+	klog.V(10).Infof("[getDispatchedAppWrappers] List of runnable AppWrappers dispatched or to be dispatched: %+v", retval)
+	return retval
 }
 
 func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClusterResources *clusterstateapi.
