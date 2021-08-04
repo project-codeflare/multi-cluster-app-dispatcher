@@ -66,7 +66,10 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	}) */
 
 	It("MCAD CPU Accounting Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Accounting Test - Started.\n")
+
 		context := initTestContext()
+		defer cleanupTestContext(context)
 
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
@@ -85,11 +88,13 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappers = append(appwrappers, aw)
 		appwrappers = append(appwrappers, aw2)
 		cleanupTestObjects(context, appwrappers)
-		defer cleanupTestContextExtendedTime(context, (240 * time.Second))
 	})
 
 	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - StatefulSet Only - 2 Pods - Started.\n")
+
 		context := initTestContext()
+		defer cleanupTestContext(context)
 
 		aw := createStatefulSetAW(context, "aw-statefulset-2")
 
@@ -100,10 +105,11 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		var appwrappers []*arbv1.AppWrapper
 		appwrappers = append(appwrappers, aw)
 		cleanupTestObjects(context, appwrappers)
-		defer cleanupTestContext(context)
 	})
 
 	It("Create AppWrapper - Generic StatefulSet Only - 2 Pods", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Generic StatefulSet Only - 2 Pods - Started.\n")
+
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
@@ -118,11 +124,12 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		cleanupTestObjects(context, appwrappers)
 	})
 
-	It("Create AppWrapper - Deployment Only", func() {
+	It("Create AppWrapper - Deployment Only - 3 Pods", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Deployment Only 3 Pods - Started.\n")
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
-		aw := createDeploymentAW(context, "aw-deployment-1")
+		aw := createDeploymentAW(context, "aw-deployment-3")
 		fmt.Fprintf(os.Stdout, "[e2e] Awaiting %d pods running for AW %s.\n", aw.Spec.SchedSpec.MinAvailable, aw.Name)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
@@ -130,7 +137,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// Now delete the appwrapper
 		pods := getPodsOfAppWrapper(context, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] Deleting AW %s.\n", aw.Name)
-		err = deleteAppWrapper(context, "aw-deployment-1")
+		err = deleteAppWrapper(context, "aw-deployment-3")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for the pods of the deleted the appwrapper to be destroyed
@@ -140,6 +147,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	})
 
 	It("Create AppWrapper - Generic Deployment Only - 3 pods", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Generic Deployment Only - 3 pods - Started.\n")
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
@@ -159,6 +167,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	//      part of this test's validation.
 
 	It("Create AppWrapper- Bad PodTemplate", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper- Bad PodTemplate - Started.\n")
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
@@ -174,6 +183,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	})
 
 	It("Create AppWrapper  - Bad Generic PodTemplate Only", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper  - Bad Generic PodTemplate Only - Started.\n")
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
@@ -183,6 +193,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	})
 
 	It("Create AppWrapper  - PodTemplate Only - 2 Pods", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper  - PodTemplate Only - 2 Pods - Started.\n")
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
@@ -198,6 +209,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	})
 
 	It("Create AppWrapper  - Generic Pod Only - 1 Pod", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper  - Generic Pod Only - 1 Pod - Started.\n")
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
@@ -213,6 +225,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	})
 
 	It("Create AppWrapper  - Bad Generic Pod Only", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper  - Bad Generic Pod Only - Started.\n")
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
@@ -228,6 +241,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	})
 
 	It("Create AppWrapper - Namespace Only - 0 Pods", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - Started.\n")
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
@@ -243,6 +257,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	})
 
 	It("Create AppWrapper - Generic Namespace Only - 0 Pods", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Generic Namespace Only - 0 Pods - Started.\n")
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
@@ -258,6 +273,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	})
 
 	It("MCAD CPU Accounting Fail Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Accounting Fail Test - Started.\n")
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
@@ -278,6 +294,44 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappers = append(appwrappers, aw2)
 		cleanupTestObjects(context, appwrappers)
 
+	})
+
+	It("Create AppWrapper - Generic 100 Deployment Only - 2 pods each", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Generic 100 Deployment Only - 2 pods each - Started.\n")
+		context := initTestContext()
+		defer cleanupTestContextExtendedTime(context, (240 * time.Second))
+
+		const (
+			awCount = 100
+		)
+		modDivisor := int(awCount / 10)
+		replicas := 2
+		var aws [awCount]*arbv1.AppWrapper
+		for i := 0; i < awCount; i++ {
+			name := fmt.Sprintf("%s%d-", "aw-generic-deployment-", replicas)
+			if i < 99 {
+				name = fmt.Sprintf("%s%s", name, "0")
+			}
+			if i < 9 {
+				name = fmt.Sprintf("%s%s", name, "0")
+			}
+			name = fmt.Sprintf("%s%d", name, i+1)
+			cpuDemand := "5m"
+			if ((i+1)%modDivisor) == 0 || i == 0 {
+				fmt.Fprintf(os.Stdout, "[e2e] Creating AW %s with %s cpu and %d replica(s).\n", name, cpuDemand, replicas)
+			}
+			aws[i] = createGenericDeploymentWithCPUAW(context, name, cpuDemand, replicas)
+		}
+
+		// Give the deployments time to create pods
+		time.Sleep(2 * time.Minute)
+		for i := 0; i < awCount; i++ {
+			if ((i+1)%modDivisor) == 0 || i == 0 {
+				fmt.Fprintf(os.Stdout, "[e2e] Checking for %d replicas running for AW %s.\n", replicas, aws[i].Name)
+			}
+			err := waitAWReadyQuiet(context, aws[i])
+			Expect(err).NotTo(HaveOccurred())
+		}
 	})
 	/*
 		It("Gang scheduling", func() {
