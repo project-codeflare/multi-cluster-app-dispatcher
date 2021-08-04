@@ -28,7 +28,7 @@ import (
 	"k8s.io/klog"
 
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/utils"
-	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	arbapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 )
 

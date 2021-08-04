@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1beta1
 
 import (
 	"k8s.io/api/core/v1"
@@ -57,12 +57,13 @@ type AppWrapperSpec struct {
 	// SchedSpec specifies the parameters for scheduling.
 	SchedSpec SchedulingSpecTemplate `json:"schedulingSpec,omitempty" protobuf:"bytes,2,opt,name=schedulingSpec"`
 }
+
 // a collection of AppWrapperResource
 type AppWrapperResourceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 	Items           []AppWrapperResource
-	GenericItems	[]AppWrapperGenericResource
+	GenericItems    []AppWrapperGenericResource
 }
 
 // AppWrapperService is App Wrapper service definition
@@ -96,7 +97,6 @@ type AppWrapperResource struct {
 	//The template for the resource; it is now a raw text because we don't know for what resource
 	//it should be instantiated
 	Template runtime.RawExtension `json:"template"`
-
 }
 
 // AppWrapperResource is App Wrapper aggregation resource
@@ -128,7 +128,7 @@ type AppWrapperGenericResource struct {
 }
 
 type CustomPodResourceTemplate struct {
-	Replicas int             `json:"replicas"`
+	Replicas int `json:"replicas"`
 	//todo: replace with
 	//Containers []Container Contain v1.ResourceRequirements
 	Requests v1.ResourceList `json:"requests"`
@@ -139,17 +139,17 @@ type CustomPodResourceTemplate struct {
 type ResourceType string
 
 const (
-	ResourceTypePod         			ResourceType = "Pod"
-	ResourceTypeService     			ResourceType = "Service"
-	ResourceTypeSecret      			ResourceType = "Secret"
-	ResourceTypeStatefulSet 			ResourceType = "StatefulSet"
-	ResourceTypeDeployment  			ResourceType = "Deployment"
-	ResourceTypeReplicaSet  			ResourceType = "ReplicaSet"
-	ResourceTypePersistentVolume			ResourceType = "PersistentVolume"
-	ResourceTypePersistentVolumeClaim		ResourceType = "PersistentVolumeClaim"
-	ResourceTypeNamespace				ResourceType = "Namespace"
-	ResourceTypeConfigMap				ResourceType = "ConfigMap"
-	ResourceTypeNetworkPolicy			ResourceType = "NetworkPolicy"
+	ResourceTypePod                   ResourceType = "Pod"
+	ResourceTypeService               ResourceType = "Service"
+	ResourceTypeSecret                ResourceType = "Secret"
+	ResourceTypeStatefulSet           ResourceType = "StatefulSet"
+	ResourceTypeDeployment            ResourceType = "Deployment"
+	ResourceTypeReplicaSet            ResourceType = "ReplicaSet"
+	ResourceTypePersistentVolume      ResourceType = "PersistentVolume"
+	ResourceTypePersistentVolumeClaim ResourceType = "PersistentVolumeClaim"
+	ResourceTypeNamespace             ResourceType = "Namespace"
+	ResourceTypeConfigMap             ResourceType = "ConfigMap"
+	ResourceTypeNetworkPolicy         ResourceType = "NetworkPolicy"
 )
 
 // AppWrapperStatus represents the current state of a AppWrapper
@@ -172,7 +172,7 @@ type AppWrapperStatus struct {
 	// The minimal available resources to run for this AppWrapper (is this different from the MinAvailable from JobStatus)
 	// +optional
 	MinAvailable int32 `json:"template,omitempty" protobuf:"bytes,4,opt,name=template"`
-	
+
 	//Can run?
 	CanRun bool `json:"canrun,omitempty" protobuf:"bytes,1,opt,name=canrun"`
 
@@ -204,7 +204,6 @@ type AppWrapperStatus struct {
 
 	// Represents the latest available observations of a appwrapper's current condition.
 	Conditions []AppWrapperCondition `json:"conditions,omitempty"`
-
 }
 
 type AppWrapperState string
@@ -220,16 +219,16 @@ const (
 type AppWrapperConditionType string
 
 const (
-	AppWrapperCondInit              AppWrapperConditionType = "Init"
-	AppWrapperCondQueueing          AppWrapperConditionType = "Queueing"
-	AppWrapperCondHeadOfLine        AppWrapperConditionType = "HeadOfLine"
-	AppWrapperCondBackoff           AppWrapperConditionType = "Backoff"
-	AppWrapperCondDispatched        AppWrapperConditionType = "Dispatched"
-	AppWrapperCondRunning           AppWrapperConditionType = "Running"
-	AppWrapperCondPreemptCandidate  AppWrapperConditionType = "PreemptCandidate"
-	AppWrapperCondPreempted         AppWrapperConditionType = "Preempted"
-	AppWrapperCondDeleted           AppWrapperConditionType = "Deleted"
-	AppWrapperCondFailed            AppWrapperConditionType = "Failed"
+	AppWrapperCondInit             AppWrapperConditionType = "Init"
+	AppWrapperCondQueueing         AppWrapperConditionType = "Queueing"
+	AppWrapperCondHeadOfLine       AppWrapperConditionType = "HeadOfLine"
+	AppWrapperCondBackoff          AppWrapperConditionType = "Backoff"
+	AppWrapperCondDispatched       AppWrapperConditionType = "Dispatched"
+	AppWrapperCondRunning          AppWrapperConditionType = "Running"
+	AppWrapperCondPreemptCandidate AppWrapperConditionType = "PreemptCandidate"
+	AppWrapperCondPreempted        AppWrapperConditionType = "Preempted"
+	AppWrapperCondDeleted          AppWrapperConditionType = "Deleted"
+	AppWrapperCondFailed           AppWrapperConditionType = "Failed"
 )
 
 // DeploymentCondition describes the state of a deployment at a certain point.
