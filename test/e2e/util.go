@@ -340,9 +340,19 @@ func awStatePhase(ctx *context, aw *arbv1.AppWrapper, phase []arbv1.AppWrapperSt
 }
 
 func cleanupTestObjects(context *context, appwrappers []*arbv1.AppWrapper) {
-	foreground := metav1.DeletePropagationForeground
 	for _, aw := range appwrappers {
-		context.karclient.ArbV1().AppWrappers(context.namespace).Delete(aw.Name, &metav1.DeleteOptions{PropagationPolicy: &foreground})
+		//context.karclient.ArbV1().AppWrappers(context.namespace).Delete(aw.Name, &metav1.DeleteOptions{PropagationPolicy: &foreground})
+
+		pods := getPodsOfAppWrapper(context, aw)
+		fmt.Fprintf(os.Stdout, "[e2e] Deleting AW %s.\n", aw.Name)
+		err := deleteAppWrapper(context, aw.Name)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Wait for the pods of the deleted the appwrapper to be destroyed
+		fmt.Fprintf(os.Stdout, "[e2e] Awaiting %d pods to be deleted for AW %s.\n", aw.Spec.SchedSpec.MinAvailable, aw.Name)
+		err = waitAWDeleted(context, aw, pods)
+		Expect(err).NotTo(HaveOccurred())
+
 	}
 }
 
