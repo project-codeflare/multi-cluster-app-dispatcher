@@ -1713,7 +1713,11 @@ func (cc *XController) Cleanup(queuejob *arbv1.AppWrapper) error {
 			queuejob.Status.IsDispatched = false
 		}
 	}
-	cc.quotaManager.Release(queuejob)
+
+	// Release quota if quota is enabled and quota manager instance exists
+	if cc.serverOption.QuotaEnabled && cc.quotaManager != nil {
+		cc.quotaManager.Release(queuejob)
+	}
 	queuejob.Status.Pending      = 0
 	queuejob.Status.Running      = 0
 	queuejob.Status.Succeeded    = 0
