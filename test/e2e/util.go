@@ -154,8 +154,8 @@ func cleanupTestContextExtendedTime(cxt *context, seconds time.Duration) {
 	// 	fmt.Fprintf(os.Stdout, "[cleanupTestContextExtendedTime] Failure check for namespace: %s.\n", cxt.namespace)
 	// }
 	//Expect(err).NotTo(HaveOccurred())
-
 }
+
 func cleanupTestContext(cxt *context) {
 	cleanupTestContextExtendedTime(cxt, ninetySeconds)
 }
@@ -300,17 +300,23 @@ func podPhase(ctx *context, namespace string, pods []*v1.Pod, phase []v1.PodPhas
 
 		phaseListTaskNum := 0
 
-		for _, podFromPodList := range podList.Items {
-			for _, awPod := range pods {
+		for _, awPod := range pods {
+			var podFromList *v1.Pod
+			podFromList = nil
+			for _, podFromPodList := range podList.Items {
 				if awn, found := podFromPodList.Labels["appwrapper.mcad.ibm.com"]; !found || awn != awPod.Name {
 					continue
 				}
+				podFromList = &podFromPodList
+				break
 			}
 
-			for _, p := range phase {
-				if podFromPodList.Status.Phase == p {
-					phaseListTaskNum++
-					break
+			if podFromList != nil {
+				for _, p := range phase {
+					if podFromList.Status.Phase == p {
+						phaseListTaskNum++
+						break
+					}
 				}
 			}
 		}
@@ -340,9 +346,34 @@ func awStatePhase(ctx *context, aw *arbv1.AppWrapper, phase []arbv1.AppWrapperSt
 }
 
 func cleanupTestObjects(context *context, appwrappers []*arbv1.AppWrapper) {
-	foreground := metav1.DeletePropagationForeground
 	for _, aw := range appwrappers {
-		context.karclient.ArbV1().AppWrappers(context.namespace).Delete(aw.Name, &metav1.DeleteOptions{PropagationPolicy: &foreground})
+		//context.karclient.ArbV1().AppWrappers(context.namespace).Delete(aw.Name, &metav1.DeleteOptions{PropagationPolicy: &foreground})
+
+		pods := getPodsOfAppWrapper(context, aw)
+		awNamespace := aw.Namespace
+		fmt.Fprintf(os.Stdout, "[cleanupTestObjects] Deleting AW %s.\n", aw.Name)
+		err := deleteAppWrapper(context, aw.Name)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Wait for the pods of the deleted the appwrapper to be destroyed
+		fmt.Fprintf(os.Stdout, "[cleanupTestObjects] Awaiting %d pods to be deleted for AW %s.\n", len(pods), aw.Name)
+		err = waitAWPodsDeleted(context, awNamespace, pods)
+
+		// Final check to see if pod exists
+		if err != nil {
+			var podsStillExisting []*v1.Pod
+			for _, pod := range pods {
+				podExist, _ := context.kubeclient.CoreV1().Pods(pod.Namespace).Get(gcontext.Background(), pod.Name,metav1.GetOptions{})
+				if podExist != nil {
+					fmt.Fprintf(os.Stdout, "[cleanupTestObjects] Found pod %s/%s %s, not completedly deleted for AW %s.\n", podExist.Namespace, podExist.Name, podExist.Status.Phase, aw.Name)
+					podsStillExisting = append(podsStillExisting, podExist)
+				}
+			}
+			if len(podsStillExisting) > 0 {
+				err = waitAWPodsDeleted(context, awNamespace, podsStillExisting)
+			}
+		}
+		Expect(err).NotTo(HaveOccurred())
 	}
 }
 
@@ -500,6 +531,10 @@ func waitAWDeleted(ctx *context, aw *arbv1.AppWrapper, pods []*v1.Pod) error {
 	return waitAWPodsTerminatedEx(ctx, aw.Namespace, pods, 0)
 }
 
+func waitAWPodsDeleted(ctx *context, awNamespace string, pods []*v1.Pod) error {
+	return waitAWPodsTerminatedEx(ctx, awNamespace, pods, 0)
+}
+
 func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
 	return wait.Poll(100*time.Millisecond, ninetySeconds, awPodPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodPending}, int(aw.Spec.SchedSpec.MinAvailable), false))
@@ -599,6 +634,9 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 			"metadata": {
 				"labels": {
 					"app": "aw-deployment-1"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-1"
 				}
 			},
 			"spec": {
@@ -672,6 +710,9 @@ func createDeploymentAWwith900CPU(context *context, name string) *arbv1.AppWrapp
 			"metadata": {
 				"labels": {
 					"app": "aw-deployment-2-900cpu"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-900cpu"
 				}
 			},
 			"spec": {
@@ -750,6 +791,9 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 			"metadata": {
 				"labels": {
 					"app": "aw-deployment-2-550cpu"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-550cpu"
 				}
 			},
 			"spec": {
@@ -828,6 +872,9 @@ func createDeploymentAWwith125CPU(context *context, name string) *arbv1.AppWrapp
 			"metadata": {
 				"labels": {
 					"app": "aw-deployment-2-125cpu"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-125cpu"
 				}
 			},
 			"spec": {
@@ -906,6 +953,9 @@ func createDeploymentAWwith126CPU(context *context, name string) *arbv1.AppWrapp
 			"metadata": {
 				"labels": {
 					"app": "aw-deployment-2-126cpu"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-126cpu"
 				}
 			},
 			"spec": {
@@ -984,6 +1034,9 @@ func createDeploymentAWwith350CPU(context *context, name string) *arbv1.AppWrapp
 			"metadata": {
 				"labels": {
 					"app": "aw-deployment-2-350cpu"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-350cpu"
 				}
 			},
 			"spec": {
@@ -1062,6 +1115,9 @@ func createDeploymentAWwith351CPU(context *context, name string) *arbv1.AppWrapp
 			"metadata": {
 				"labels": {
 					"app": "aw-deployment-2-351cpu"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-351cpu"
 				}
 			},
 			"spec": {
@@ -1140,6 +1196,9 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 			"metadata": {
 				"labels": {
 					"app": "aw-generic-deployment-3"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-generic-deployment-3"
 				}
 			},
 			"spec": {
@@ -1213,6 +1272,9 @@ func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand s
 			"metadata": {
 				"labels": {
 					"app": "%s"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "%s"
 				}
 			},
 			"spec": {
@@ -1234,7 +1296,7 @@ func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand s
 				]
 			}
 		}
-	}} `, name, name, replicas, name, name, name, cpuDemand))
+	}} `, name, name, replicas, name, name, name, name, cpuDemand))
 
 	var schedSpecMin int = replicas
 
@@ -1368,6 +1430,9 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 			"metadata": {
 				"labels": {
 					"app": "aw-statefulset-2"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-statefulset-2"
 				}
 			},
 			"spec": {
@@ -1442,6 +1507,9 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 			"metadata": {
 				"labels": {
 					"app": "aw-generic-statefulset-2"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-generic-statefulset-2"
 				}
 			},
 			"spec": {
@@ -1502,6 +1570,9 @@ func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 		"metadata": {
 			"labels": {
 				"app": "nginx"
+			},
+			"annotations": {
+				"appwrapper.mcad.ibm.com/appwrapper-name": "nginx"
 			}
 		},
 		"spec": {
@@ -1566,6 +1637,9 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 		"metadata": {
 			"labels": {
 				"app": "nginx"
+			},
+			"annotations": {
+				"appwrapper.mcad.ibm.com/appwrapper-name": "nginx"
 			}
 		},
 		"spec": {
@@ -1625,6 +1699,9 @@ func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 			"namespace": "test",
 			"labels": {
 				"app": "aw-generic-pod-1"
+			},
+			"annotations": {
+				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-generic-pod-1"
 			}
 		},
 		"spec": {
@@ -1680,6 +1757,9 @@ func createBadGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 		"metadata": {
 			"labels": {
 				"app": "aw-bad-generic-pod-1"
+			},
+			"annotations": {
+				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-bad-generic-pod-1"
 			}
 		},
 		"spec": {
