@@ -344,15 +344,27 @@ func cleanupTestObjects(context *context, appwrappers []*arbv1.AppWrapper) {
 		//context.karclient.ArbV1().AppWrappers(context.namespace).Delete(aw.Name, &metav1.DeleteOptions{PropagationPolicy: &foreground})
 
 		pods := getPodsOfAppWrapper(context, aw)
-		fmt.Fprintf(os.Stdout, "[e2e] Deleting AW %s.\n", aw.Name)
+		fmt.Fprintf(os.Stdout, "[cleanupTestObjects] Deleting AW %s.\n", aw.Name)
 		err := deleteAppWrapper(context, aw.Name)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for the pods of the deleted the appwrapper to be destroyed
-		fmt.Fprintf(os.Stdout, "[e2e] Awaiting %d pods to be deleted for AW %s.\n", aw.Spec.SchedSpec.MinAvailable, aw.Name)
+		fmt.Fprintf(os.Stdout, "[cleanupTestObjects] Awaiting %d pods to be deleted for AW %s.\n", len(pods), aw.Name)
 		err = waitAWDeleted(context, aw, pods)
-		Expect(err).NotTo(HaveOccurred())
 
+		// Final check to see if pod exists
+		if err != nil {
+			for _, pod := range pods {
+				podExists, _ := context.kubeclient.CoreV1().Pods(pod.Namespace).Get(gcontext.Background(), pod.Name,metav1.GetOptions{})
+				if podExists != nil {
+					fmt.Fprintf(os.Stdout, "[cleanupTestObjects] Found pod %s/%s %s,not completedly deleted for AW %s.\n", pod.Namespace, pod.Name, pod.Status.Phase, aw.Name)
+					break
+				}
+			}
+			// If we get here, all pods have been deleted so clear err
+			err = nil
+		}
+		Expect(err).NotTo(HaveOccurred())
 	}
 }
 
