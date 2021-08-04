@@ -585,26 +585,26 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 		"name": "aw-deployment-1",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-deployment-1"
 		}
 	},
 	"spec": {
 		"replicas": 3,
 		"selector": {
 			"matchLabels": {
-				"app": "nginx"
+				"app": "aw-deployment-1"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "nginx"
+					"app": "aw-deployment-1"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "nginx",
+						"name": "aw-deployment-1",
 						"image": "k8s.gcr.io/echoserver:1.4",
 						"ports": [
 							{
@@ -658,26 +658,26 @@ func createDeploymentAWwith900CPU(context *context, name string) *arbv1.AppWrapp
 		"name": "aw-deployment-2-900cpu",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-deployment-2-900cpu"
 		}
 	},
 	"spec": {
 		"replicas": 2,
 		"selector": {
 			"matchLabels": {
-				"app": "nginx"
+				"app": "aw-deployment-2-900cpu"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "nginx"
+					"app": "aw-deployment-2-900cpu"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "nginx",
+						"name": "aw-deployment-2-900cpu",
 						"image": "k8s.gcr.io/echoserver:1.4",
 						"resources": {
 							"requests": {
@@ -736,26 +736,26 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 		"name": "aw-deployment-2-550cpu",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-deployment-2-550cpu"
 		}
 	},
 	"spec": {
 		"replicas": 2,
 		"selector": {
 			"matchLabels": {
-				"app": "nginx"
+				"app": "aw-deployment-2-550cpu"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "nginx"
+					"app": "aw-deployment-2-550cpu"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "nginx",
+						"name": "aw-deployment-2-550cpu",
 						"image": "k8s.gcr.io/echoserver:1.4",
 						"resources": {
 							"requests": {
@@ -814,26 +814,26 @@ func createDeploymentAWwith125CPU(context *context, name string) *arbv1.AppWrapp
 		"name": "aw-deployment-2-125cpu",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-deployment-2-125cpu"
 		}
 	},
 	"spec": {
 		"replicas": 2,
 		"selector": {
 			"matchLabels": {
-				"app": "nginx"
+				"app": "aw-deployment-2-125cpu"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "nginx"
+					"app": "aw-deployment-2-125cpu"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "nginx",
+						"name": "aw-deployment-2-125cpu",
 						"image": "k8s.gcr.io/echoserver:1.4",
 						"resources": {
 							"requests": {
@@ -892,26 +892,26 @@ func createDeploymentAWwith126CPU(context *context, name string) *arbv1.AppWrapp
 		"name": "aw-deployment-2-126cpu",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-deployment-2-126cpu"
 		}
 	},
 	"spec": {
 		"replicas": 2,
 		"selector": {
 			"matchLabels": {
-				"app": "nginx"
+				"app": "aw-deployment-2-126cpu"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "nginx"
+					"app": "aw-deployment-2-126cpu"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "nginx",
+						"name": "aw-deployment-2-126cpu",
 						"image": "k8s.gcr.io/echoserver:1.4",
 						"resources": {
 							"requests": {
@@ -970,26 +970,26 @@ func createDeploymentAWwith350CPU(context *context, name string) *arbv1.AppWrapp
 		"name": "aw-deployment-2-350cpu",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-deployment-2-350cpu"
 		}
 	},
 	"spec": {
 		"replicas": 2,
 		"selector": {
 			"matchLabels": {
-				"app": "nginx"
+				"app": "aw-deployment-2-350cpu"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "nginx"
+					"app": "aw-deployment-2-350cpu"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "nginx",
+						"name": "aw-deployment-2-350cpu",
 						"image": "k8s.gcr.io/echoserver:1.4",
 						"resources": {
 							"requests": {
@@ -1048,26 +1048,26 @@ func createDeploymentAWwith351CPU(context *context, name string) *arbv1.AppWrapp
 		"name": "aw-deployment-2-351cpu",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-deployment-2-351cpu"
 		}
 	},
 	"spec": {
 		"replicas": 2,
 		"selector": {
 			"matchLabels": {
-				"app": "nginx"
+				"app": "aw-deployment-2-351cpu"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "nginx"
+					"app": "aw-deployment-2-351cpu"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "nginx",
+						"name": "aw-deployment-2-351cpu",
 						"image": "k8s.gcr.io/echoserver:1.4",
 						"resources": {
 							"requests": {
