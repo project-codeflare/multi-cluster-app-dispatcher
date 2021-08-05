@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
@@ -462,113 +461,6 @@ func (sc *ClusterStateCache) DeleteSchedulingSpec(obj interface{}) {
 	err := sc.deleteSchedulingSpec(ss)
 	if err != nil {
 		klog.Errorf("Failed to delete SchedulingSpec %s from cache: %v", ss.Name, err)
-		return
-	}
-	return
-}
-
-// Assumes that lock is already acquired.
-func (sc *ClusterStateCache) setPDB(pdb *policyv1.PodDisruptionBudget) error {
-	job := arbapi.JobID(utils.GetController(pdb))
-
-	if len(job) == 0 {
-		return fmt.Errorf("the controller of PodDisruptionBudget is empty")
-	}
-
-	if _, found := sc.Jobs[job]; !found {
-		sc.Jobs[job] = arbapi.NewJobInfo(job)
-	}
-
-	sc.Jobs[job].SetPDB(pdb)
-
-	return nil
-}
-
-// Assumes that lock is already acquired.
-func (sc *ClusterStateCache) updatePDB(oldPDB, newPDB *policyv1.PodDisruptionBudget) error {
-	return sc.setPDB(newPDB)
-}
-
-// Assumes that lock is already acquired.
-func (sc *ClusterStateCache) deletePDB(pdb *policyv1.PodDisruptionBudget) error {
-	jobID := arbapi.JobID(utils.GetController(pdb))
-
-	job, found := sc.Jobs[jobID]
-	if !found {
-		return fmt.Errorf("can not found job %v:%v/%v", jobID, pdb.Namespace, pdb.Name)
-	}
-
-	// Unset SchedulingSpec
-	job.UnsetPDB()
-	sc.deleteJob(job)
-
-	return nil
-}
-
-func (sc *ClusterStateCache) AddPDB(obj interface{}) {
-	pdb, ok := obj.(*policyv1.PodDisruptionBudget)
-	if !ok {
-		klog.Errorf("Cannot convert to *policyv1.PodDisruptionBudget: %v", obj)
-		return
-	}
-
-	sc.Mutex.Lock()
-	defer sc.Mutex.Unlock()
-
-	err := sc.setPDB(pdb)
-	if err != nil {
-		klog.Errorf("Failed to add PodDisruptionBudget %s into cache: %v", pdb.Name, err)
-		return
-	}
-	return
-}
-
-func (sc *ClusterStateCache) UpdatePDB(oldObj, newObj interface{}) {
-	oldPDB, ok := oldObj.(*policyv1.PodDisruptionBudget)
-	if !ok {
-		klog.Errorf("Cannot convert oldObj to *policyv1.PodDisruptionBudget: %v", oldObj)
-		return
-	}
-	newPDB, ok := newObj.(*policyv1.PodDisruptionBudget)
-	if !ok {
-		klog.Errorf("Cannot convert newObj to *policyv1.PodDisruptionBudget: %v", newObj)
-		return
-	}
-
-	sc.Mutex.Lock()
-	defer sc.Mutex.Unlock()
-
-	err := sc.updatePDB(oldPDB, newPDB)
-	if err != nil {
-		klog.Errorf("Failed to update PodDisruptionBudget %s into cache: %v", oldPDB.Name, err)
-		return
-	}
-	return
-}
-
-func (sc *ClusterStateCache) DeletePDB(obj interface{}) {
-	var pdb *policyv1.PodDisruptionBudget
-	switch t := obj.(type) {
-	case *policyv1.PodDisruptionBudget:
-		pdb = t
-	case cache.DeletedFinalStateUnknown:
-		var ok bool
-		pdb, ok = t.Obj.(*policyv1.PodDisruptionBudget)
-		if !ok {
-			klog.Errorf("Cannot convert to *policyv1.PodDisruptionBudget: %v", t.Obj)
-			return
-		}
-	default:
-		klog.Errorf("Cannot convert to *policyv1.PodDisruptionBudget: %v", t)
-		return
-	}
-
-	sc.Mutex.Lock()
-	defer sc.Mutex.Unlock()
-
-	err := sc.deletePDB(pdb)
-	if err != nil {
-		klog.Errorf("Failed to delete PodDisruptionBudget %s from cache: %v", pdb.Name, err)
 		return
 	}
 	return
