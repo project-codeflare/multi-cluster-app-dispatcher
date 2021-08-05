@@ -19,7 +19,7 @@ package queuejobresources
 import (
 	"fmt"
 
-	qjobv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	qjobv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 )

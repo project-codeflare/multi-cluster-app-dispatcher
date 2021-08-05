@@ -17,7 +17,7 @@ limitations under the License.
 package queuejobresources
 
 import (
-	qjobv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	qjobv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 )
 

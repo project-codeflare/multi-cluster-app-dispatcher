@@ -133,7 +133,7 @@ debug_function() {
   kubectl create namespace test
 
 cat <<EOF > aw-ss.0.yaml
-apiVersion: mcad.ibm.com/v1alpha1
+apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
   name: hellodiana-2-test-0

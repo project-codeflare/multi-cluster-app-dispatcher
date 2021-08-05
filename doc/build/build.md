@@ -45,7 +45,7 @@ $ ./build.sh
 Compiling deepcopy-gen
 Generating deepcopy
 go build -o _output/bin/deepcopy-gen ./cmd/deepcopy-gen/
-_output/bin/deepcopy-gen -i ./pkg/apis/controller/v1alpha1/ -O zz_generated.deepcopy
+_output/bin/deepcopy-gen -i ./pkg/apis/controller/v1beta1/ -O zz_generated.deepcopy
 + make kar-controller
 mkdir -p _output/bin
 CGO_ENABLED=0 GOARCH=amd64 go build -o _output/bin/kar-controllers ./cmd/kar-controllers/

@@ -99,12 +99,14 @@ func MergeErrors(errs ...error) error {
 
 // JobTerminated checkes whether job was terminated.
 func JobTerminated(job *JobInfo) bool {
-	if job.SchedSpec == nil && job.PDB == nil && len(job.Tasks) == 0 {
+	if job.SchedSpec == nil && len(job.Tasks) == 0 {
 		klog.V(9).Infof("Job: %v is terminated.", job.UID)
 		return true
 	} else {
-		klog.V(10).Infof("Job: %v not terminated, scheduleSpec: %v, PDB; %v, tasks: %v.",
-			job.UID, job.SchedSpec, job.PDB, job.Tasks)
+		klog.V(10).Infof("Job: %v not terminated, scheduleSpec: %v, tasks: %v.",
+			job.UID, job.SchedSpec, job.Tasks)
 		return false
 	}
+
+	return false
 }
