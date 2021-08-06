@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -293,30 +294,49 @@ func taskPhase(ctx *context, pg *arbv1.PodGroup, phase []v1.PodPhase, taskNum in
 }
 */
 
-func podPhase(ctx *context, namespace string, pods []*v1.Pod, phase []v1.PodPhase, taskNum int) wait.ConditionFunc {
+func podPhase(ctx *context, awNamespace string, awName string, pods []*v1.Pod, phase []v1.PodPhase, taskNum int) wait.ConditionFunc {
 	return func() (bool, error) {
-		podList, err := ctx.kubeclient.CoreV1().Pods(namespace).List(gcontext.Background(), metav1.ListOptions{})
+		podList, err := ctx.kubeclient.CoreV1().Pods(awNamespace).List(gcontext.Background(), metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
+
+		if podList == nil || podList.Size() < 1 {
+			fmt.Fprintf(os.Stdout, "[podPhase] Listing podList found for Namespace: %s/%s resulting in no podList found that could match AppWrapper with pod count: %d\n",
+				awNamespace, awName, len(pods))
+		}
 
 		phaseListTaskNum := 0
 
-		for _, awPod := range pods {
-			var podFromList *v1.Pod
-			podFromList = nil
-			for _, podFromPodList := range podList.Items {
-				if awn, found := podFromPodList.Labels["appwrapper.mcad.ibm.com"]; !found || awn != awPod.Name {
-					continue
-				}
-				podFromList = &podFromPodList
-				break
+		for _, podFromPodList := range podList.Items {
+
+			// First find a pod from the list that is part of the AW
+			if awn, found := podFromPodList.Labels["appwrapper.mcad.ibm.com"]; !found || awn != awName {
+				fmt.Fprintf(os.Stdout, "[podPhase] Pod %s in phase: %s not part of AppWrapper: %s, labels: %#v\n",
+					podFromPodList.Name, podFromPodList.Status.Phase, awName, podFromPodList.Labels)
+				continue
 			}
 
-			if podFromList != nil {
-				for _, p := range phase {
-					if podFromList.Status.Phase == p {
-						phaseListTaskNum++
-						break
+			// Next check to see if it is a phase we are looking for
+			for _, p := range phase {
+
+				// If we found the phase make sure it is part of the list of pod provided in the input
+				if podFromPodList.Status.Phase == p {
+					matchToPodsFromInput := false
+					var inputPodIDs []string
+					for _, inputPod := range pods {
+						inputPodIDs = append(inputPodIDs, fmt.Sprintf("%s.%s", inputPod.Namespace, inputPod.Name))
+						if strings.Compare(podFromPodList.Namespace, inputPod.Namespace) == 0 &&
+							strings.Compare(podFromPodList.Name, inputPod.Name) == 0 {
+							phaseListTaskNum++
+							matchToPodsFromInput = true
+							break
+						}
+
 					}
+					if matchToPodsFromInput == false {
+						fmt.Fprintf(os.Stdout, "[podPhase] Pod %s in phase: %s does not match any input pods: %#v \n",
+							podFromPodList.Name, podFromPodList.Status.Phase, inputPodIDs)
+					}
+					break
 				}
 			}
 		}
@@ -351,13 +371,17 @@ func cleanupTestObjects(context *context, appwrappers []*arbv1.AppWrapper) {
 
 		pods := getPodsOfAppWrapper(context, aw)
 		awNamespace := aw.Namespace
+		awName := aw.Name
 		fmt.Fprintf(os.Stdout, "[cleanupTestObjects] Deleting AW %s.\n", aw.Name)
 		err := deleteAppWrapper(context, aw.Name)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for the pods of the deleted the appwrapper to be destroyed
-		fmt.Fprintf(os.Stdout, "[cleanupTestObjects] Awaiting %d pods to be deleted for AW %s.\n", len(pods), aw.Name)
-		err = waitAWPodsDeleted(context, awNamespace, pods)
+		for _, pod := range pods {
+			fmt.Fprintf(os.Stdout, "[cleanupTestObjects] Awaiting pod %s/%s to be deleted for AW %s.\n",
+				pod.Namespace, pod.Name, aw.Name)
+		}
+		err = waitAWPodsDeleted(context, awNamespace, awName, pods)
 
 		// Final check to see if pod exists
 		if err != nil {
@@ -370,7 +394,7 @@ func cleanupTestObjects(context *context, appwrappers []*arbv1.AppWrapper) {
 				}
 			}
 			if len(podsStillExisting) > 0 {
-				err = waitAWPodsDeleted(context, awNamespace, podsStillExisting)
+				err = waitAWPodsDeleted(context, awNamespace, awName, podsStillExisting)
 			}
 		}
 		Expect(err).NotTo(HaveOccurred())
@@ -528,11 +552,11 @@ func waitAWReadyQuiet(ctx *context, aw *arbv1.AppWrapper) error {
 }
 
 func waitAWDeleted(ctx *context, aw *arbv1.AppWrapper, pods []*v1.Pod) error {
-	return waitAWPodsTerminatedEx(ctx, aw.Namespace, pods, 0)
+	return waitAWPodsTerminatedEx(ctx, aw.Namespace, aw.Name, pods, 0)
 }
 
-func waitAWPodsDeleted(ctx *context, awNamespace string, pods []*v1.Pod) error {
-	return waitAWPodsTerminatedEx(ctx, awNamespace, pods, 0)
+func waitAWPodsDeleted(ctx *context, awNamespace string, awName string, pods []*v1.Pod) error {
+	return waitAWPodsTerminatedEx(ctx, awNamespace, awName, pods, 0)
 }
 
 func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
@@ -545,8 +569,8 @@ func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bo
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite))
 }
 
-func waitAWPodsTerminatedEx(ctx *context, namespace string, pods []*v1.Pod, taskNum int) error {
-	return wait.Poll(100*time.Millisecond, ninetySeconds, podPhase(ctx, namespace, pods,
+func waitAWPodsTerminatedEx(ctx *context, namespace string, name string, pods []*v1.Pod, taskNum int) error {
+	return wait.Poll(100*time.Millisecond, ninetySeconds, podPhase(ctx, namespace, name, pods,
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded, v1.PodUnknown, v1.PodFailed, v1.PodPending}, taskNum))
 }
 
@@ -617,26 +641,26 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "Deployment", 
 	"metadata": {
-		"name": "aw-deployment-1",
+		"name": "aw-deployment-3",
 		"namespace": "test",
 		"labels": {
-			"app": "aw-deployment-1"
+			"app": "aw-deployment-3"
 		}
 	},
 	"spec": {
 		"replicas": 3,
 		"selector": {
 			"matchLabels": {
-				"app": "aw-deployment-1"
+				"app": "aw-deployment-3"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "aw-deployment-1"
+					"app": "aw-deployment-3"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-1"
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-3"
 				}
 			},
 			"spec": {
@@ -1569,16 +1593,16 @@ func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 		"kind": "Pod",
 		"metadata": {
 			"labels": {
-				"app": "nginx"
+				"app": "aw-bad-podtemplate-2"
 			},
 			"annotations": {
-				"appwrapper.mcad.ibm.com/appwrapper-name": "nginx"
+				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-bad-podtemplate-2"
 			}
 		},
 		"spec": {
 			"containers": [
 				{
-					"name": "nginx",
+					"name": "aw-bad-podtemplate-2",
 					"image": "k8s.gcr.io/echoserver:1.4",
 					"ports": [
 						{
@@ -1627,25 +1651,25 @@ func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"metadata": 
 	{
-		"name": "nginx",
+		"name": "aw-podtemplate-2",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-podtemplate-2"
 		}
 	},
 	"template": {
 		"metadata": {
 			"labels": {
-				"app": "nginx"
+				"app": "aw-podtemplate-2"
 			},
 			"annotations": {
-				"appwrapper.mcad.ibm.com/appwrapper-name": "nginx"
+				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-podtemplate-2"
 			}
 		},
 		"spec": {
 			"containers": [
 				{
-					"name": "nginx",
+					"name": "aw-podtemplate-2",
 					"image": "k8s.gcr.io/echoserver:1.4",
 					"ports": [
 						{
@@ -1811,22 +1835,25 @@ func createBadGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 func createBadGenericPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"metadata": 
 	{
-		"name": "nginx",
+		"name": "aw-generic-podtemplate-2",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-generic-podtemplate-2"
 		}
 	},
 	"template": {
 		"metadata": {
 			"labels": {
-				"app": "nginx"
+				"app": "aw-generic-podtemplate-2"
+			},
+			"annotations": {
+				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-generic-podtemplate-2"
 			}
 		},
 		"spec": {
 			"containers": [
 				{
-					"name": "nginx",
+					"name": "aw-generic-podtemplate-2",
 					"image": "k8s.gcr.io/echoserver:1.4",
 					"ports": [
 						{
@@ -2048,12 +2075,14 @@ func getPodsOfAppWrapper(ctx *context, aw *arbv1.AppWrapper) []*v1.Pod {
 
 	var awpods []*v1.Pod
 
-	for _, pod := range pods.Items {
+	for index, _ := range pods.Items {
+		// Get a pointer to the pod in the list not a pointer to the podCopy
+		pod := &pods.Items[index]
+
 		if gn, found := pod.Annotations[arbv1.AppWrapperAnnotationKey]; !found || gn != aw.Name {
 			continue
 		}
-		awpods = append(awpods, &pod)
-
+		awpods = append(awpods, pod)
 	}
 
 	return awpods

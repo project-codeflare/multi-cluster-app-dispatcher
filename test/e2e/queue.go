@@ -87,12 +87,12 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		cleanupTestObjects(context, appwrappers)
 	})
 
-	It("Create AppWrapper - Deployment Only", func() {
-		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Deployment Only - Started.\n")
+	It("Create AppWrapper - Deployment Only - 3 Pods", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Deployment Only 3 Pods - Started.\n")
 		context := initTestContext()
 		defer cleanupTestContext(context)
 
-		aw := createDeploymentAW(context, "aw-deployment-1")
+		aw := createDeploymentAW(context, "aw-deployment-3")
 		fmt.Fprintf(os.Stdout, "[e2e] Awaiting %d pods running for AW %s.\n", aw.Spec.SchedSpec.MinAvailable, aw.Name)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
@@ -100,7 +100,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// Now delete the appwrapper
 		pods := getPodsOfAppWrapper(context, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] Deleting AW %s.\n", aw.Name)
-		err = deleteAppWrapper(context, "aw-deployment-1")
+		err = deleteAppWrapper(context, "aw-deployment-3")
 		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for the pods of the deleted the appwrapper to be destroyed
