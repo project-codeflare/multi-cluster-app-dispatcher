@@ -52,8 +52,10 @@ type AppWrapperList struct {
 
 // AppWrapperSpec describes how the App Wrapper will look like.
 type AppWrapperSpec struct {
+	// +kubebuilder:validation:Type=number
+	// +kubebuilder:validation:Format=int
 	// +optional
-	Priority int32 `json:"priority,omitempty"`
+	Priority float64 `json:"priority,omitempty"`
 
 	// +kubebuilder:validation:Type=number
 	// +kubebuilder:validation:Format=float
@@ -101,9 +103,10 @@ type AppWrapperResource struct {
 	// +optional
 	AllocatedReplicas int32 `json:"allocatedreplicas"`
 
-	// The priority of this resource
+	// +kubebuilder:validation:Type=number
+	// +kubebuilder:validation:Format=int
 	// +optional
-	Priority int32 `json:"priority"`
+	Priority float64 `json:"priority,omitempty"`
 
 	// The increasing rate of priority value for this resource
 	// +optional
@@ -279,8 +282,4 @@ type AppWrapperCondition struct {
 	Reason string `json:"reason,omitempty"`
 	// A human readable message indicating details about the transition.
 	Message string `json:"message,omitempty"`
-}
-
-func init() {
-	SchemeBuilder.Register(&AppWrapper{}, &AppWrapperList{})
 }
