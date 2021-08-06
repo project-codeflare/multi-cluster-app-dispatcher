@@ -52,10 +52,8 @@ type AppWrapperList struct {
 
 // AppWrapperSpec describes how the App Wrapper will look like.
 type AppWrapperSpec struct {
-	// +kubebuilder:validation:Type=number
-	// +kubebuilder:validation:Format=int
 	// +optional
-	Priority float64 `json:"priority,omitempty"`
+	Priority int32 `json:"priority,omitempty"`
 
 	// +kubebuilder:validation:Type=number
 	// +kubebuilder:validation:Format=float
@@ -104,12 +102,11 @@ type AppWrapperResource struct {
 	AllocatedReplicas int32 `json:"allocatedreplicas"`
 
 	// +kubebuilder:validation:Type=number
-	// +kubebuilder:validation:Format=int
+	// +kubebuilder:validation:Format=float
 	// +optional
 	Priority float64 `json:"priority,omitempty"`
 
 	// The increasing rate of priority value for this resource
-	// +optional
 	// +kubebuilder:validation:Type=number
 	// +kubebuilder:validation:Format=float
 	PrioritySlope float64 `json:"priorityslope"`
@@ -140,7 +137,9 @@ type AppWrapperGenericResource struct {
 
 	// The priority of this resource
 	// +optional
-	Priority int32 `json:"priority"`
+	// +kubebuilder:validation:Type=number
+	// +kubebuilder:validation:Format=float
+	Priority float64 `json:"priority"`
 
 	// The increasing rate of priority value for this resource
 	// +optional
