@@ -84,11 +84,8 @@ function cleanup {
 
 
     echo "Custom Resource Definitions..."
-    echo "kubectl get crds -o yaml"
-    kubectl get crds -o yaml
-    echo "---"
-    echo "kubectl describe crds"
-    kubectl describe crds
+    echo "kubectl get crds"
+    kubectl get crds
 
     echo "---"
     echo "Get All AppWrappers..."
