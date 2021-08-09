@@ -330,7 +330,7 @@ func (sc *ClusterStateCache) Snapshot() *api.ClusterInfo {
 
 	for _, value := range sc.Jobs {
 		// If no scheduling spec, does not handle it.
-		if value.SchedSpec == nil && value.PDB == nil {
+		if value.SchedSpec == nil {
 			// Jobs.Tasks are more recognizable than Jobs.UID
 			klog.V(5).Infof("The scheduling spec of Job <%v> with tasks <%+v> is nil, ignore it.", value.UID, value.Tasks)
 			continue

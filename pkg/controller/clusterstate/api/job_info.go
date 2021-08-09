@@ -19,11 +19,10 @@ package api
 import (
 	"fmt"
 	"k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/utils"
-	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 )
 
 type TaskID types.UID
@@ -68,7 +67,6 @@ func NewTaskInfo(pod *v1.Pod) *TaskInfo {
 	if pod.Spec.Priority != nil {
 		pi.Priority = *pod.Spec.Priority
 	}
-
 
 	return pi
 }
@@ -119,9 +117,6 @@ type JobInfo struct {
 	Candidates []*NodeInfo
 
 	SchedSpec *arbv1.SchedulingSpec
-
-	// TODO(k82cn): keep backward compatbility, removed it when v1alpha1 finalized.
-	PDB *policyv1.PodDisruptionBudget
 }
 
 func NewJobInfo(uid JobID) *JobInfo {
@@ -153,17 +148,6 @@ func (ps *JobInfo) SetSchedulingSpec(spec *arbv1.SchedulingSpec) {
 	}
 
 	ps.SchedSpec = spec
-}
-
-func (ps *JobInfo) SetPDB(pbd *policyv1.PodDisruptionBudget) {
-	ps.Name = pbd.Name
-	ps.MinAvailable = int(pbd.Spec.MinAvailable.IntVal)
-
-	ps.PDB = pbd
-}
-
-func (ps *JobInfo) UnsetPDB() {
-	ps.PDB = nil
 }
 
 func (ps *JobInfo) GetTasks(statuses ...TaskStatus) []*TaskInfo {

@@ -19,7 +19,7 @@ package v1
 import (
 	"context"
 
-	v1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	v1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/scheme"
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

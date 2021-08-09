@@ -23,7 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
-	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	listersv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota"
@@ -361,7 +361,7 @@ func  (qm *QuotaManager) getAppWrappers(preemptIds []string) []*arbv1.AppWrapper
 func (qm *QuotaManager) Release(aw *arbv1.AppWrapper) bool {
 
 	// Handle uninitialized quota manager
-	if len(qm.url) < 0 {
+	if len(qm.url) <= 0 {
 		return true
 	}
 

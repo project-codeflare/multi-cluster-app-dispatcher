@@ -84,11 +84,8 @@ function cleanup {
 
 
     echo "Custom Resource Definitions..."
-    echo "kubectl get crds -o yaml"
-    kubectl get crds -o yaml
-    echo "---"
-    echo "kubectl describe crds"
-    kubectl describe crds
+    echo "kubectl get crds"
+    kubectl get crds
 
     echo "---"
     echo "Get All AppWrappers..."
@@ -133,7 +130,7 @@ debug_function() {
   kubectl create namespace test
 
 cat <<EOF > aw-ss.0.yaml
-apiVersion: mcad.ibm.com/v1alpha1
+apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
   name: hellodiana-2-test-0
@@ -283,8 +280,8 @@ function kube-test-env-up {
 
     # start mcad controller
     echo "Starting MCAD Controller..."
-    echo "helm install mcad-controller namespace kube-system wait set loglevel=3 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=1000m set resources.limits.memory=1024Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY"
-    helm install mcad-controller --namespace kube-system --wait --set loglevel=3 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY
+    echo "helm install mcad-controller namespace kube-system wait set loglevel=2 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=4000m set resources.limits.memory=4096Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY"
+    helm install mcad-controller --namespace kube-system --wait --set loglevel=3 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY
 
     sleep 10
     echo "Listing MCAD Controller Helm Chart and Pod YAML..."

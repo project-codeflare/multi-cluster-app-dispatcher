@@ -24,7 +24,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 
-	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1alpha1"
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/internalinterfaces"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
 )
