@@ -385,7 +385,7 @@ func  (rpm *ResourcePlanManager) getAppWrappers(preemptIds []string) []*arbv1.Ap
 func (rpm *ResourcePlanManager) Release(aw *arbv1.AppWrapper) bool {
 
 	// Handle uninitialized quota manager
-	if len(rpm.url) < 0 {
+	if len(rpm.url) <= 0 {
 		return true
 	}
 
