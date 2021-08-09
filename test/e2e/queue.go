@@ -69,97 +69,84 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Accounting Test - Started.\n")
 
 		context := initTestContext()
-		defer cleanupTestContext(context)
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 		// This should fill up the master node
 		aw2 := createDeploymentAWwith350CPU(context, "aw-deployment-2-350cpu")
+		appwrappers = append(appwrappers, aw2)
 
 		// Using quite mode due to creating of pods in earlier step.
 		err = waitAWReadyQuiet(context, aw2)
 		Expect(err).NotTo(HaveOccurred())
 
-		var appwrappers []*arbv1.AppWrapper
-		appwrappers = append(appwrappers, aw)
-		appwrappers = append(appwrappers, aw2)
-		cleanupTestObjects(context, appwrappers)
 	})
 
 	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - StatefulSet Only - 2 Pods - Started.\n")
 
 		context := initTestContext()
-		defer cleanupTestContext(context)
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		aw := createStatefulSetAW(context, "aw-statefulset-2")
+		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
-
 		Expect(err).NotTo(HaveOccurred())
-
-		var appwrappers []*arbv1.AppWrapper
-		appwrappers = append(appwrappers, aw)
-		cleanupTestObjects(context, appwrappers)
 	})
 
 	It("Create AppWrapper - Generic StatefulSet Only - 2 Pods", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Generic StatefulSet Only - 2 Pods - Started.\n")
 
 		context := initTestContext()
-		defer cleanupTestContext(context)
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		aw := createGenericStatefulSetAW(context, "aw-generic-statefulset-2")
+		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
-
 		Expect(err).NotTo(HaveOccurred())
-
-		var appwrappers []*arbv1.AppWrapper
-		appwrappers = append(appwrappers, aw)
-		cleanupTestObjects(context, appwrappers)
 	})
 
 	It("Create AppWrapper - Deployment Only - 3 Pods", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Deployment Only 3 Pods - Started.\n")
 		context := initTestContext()
-		defer cleanupTestContext(context)
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		aw := createDeploymentAW(context, "aw-deployment-3")
+		appwrappers = append(appwrappers, aw)
+
 		fmt.Fprintf(os.Stdout, "[e2e] Awaiting %d pods running for AW %s.\n", aw.Spec.SchedSpec.MinAvailable, aw.Name)
 		err := waitAWPodsReady(context, aw)
-		Expect(err).NotTo(HaveOccurred())
-
-		// Now delete the appwrapper
-		pods := getPodsOfAppWrapper(context, aw)
-		fmt.Fprintf(os.Stdout, "[e2e] Deleting AW %s.\n", aw.Name)
-		err = deleteAppWrapper(context, "aw-deployment-3")
-		Expect(err).NotTo(HaveOccurred())
-
-		// Wait for the pods of the deleted the appwrapper to be destroyed
-		fmt.Fprintf(os.Stdout, "[e2e] Awaiting %d pods to be deleted for AW %s.\n", aw.Spec.SchedSpec.MinAvailable, aw.Name)
-		err = waitAWDeleted(context, aw, pods)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("Create AppWrapper - Generic Deployment Only - 3 pods", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Generic Deployment Only - 3 pods - Started.\n")
 		context := initTestContext()
-		defer cleanupTestContext(context)
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		aw := createGenericDeploymentAW(context, "aw-generic-deployment-3")
+		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
-
-		var appwrappers []*arbv1.AppWrapper
-		appwrappers = append(appwrappers, aw)
-		cleanupTestObjects(context, appwrappers)
-
 	})
 
 	//NOTE: Recommend this test not to be the last test in the test suite it may pass
@@ -169,131 +156,123 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	It("Create AppWrapper- Bad PodTemplate", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper- Bad PodTemplate - Started.\n")
 		context := initTestContext()
-		defer cleanupTestContext(context)
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		aw := createBadPodTemplateAW(context, "aw-bad-podtemplate-2")
+		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
-
 		Expect(err).To(HaveOccurred())
-
-		var appwrappers []*arbv1.AppWrapper
-		appwrappers = append(appwrappers, aw)
-		cleanupTestObjects(context, appwrappers)
 	})
 
 	It("Create AppWrapper  - Bad Generic PodTemplate Only", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper  - Bad Generic PodTemplate Only - Started.\n")
 		context := initTestContext()
-		defer cleanupTestContext(context)
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
-		_, err := createBadGenericPodTemplateAW(context, "aw-generic-podtemplate-2")
-
+		aw, err := createBadGenericPodTemplateAW(context, "aw-generic-podtemplate-2")
+		if err == nil {
+			appwrappers = append(appwrappers, aw)
+		}
 		Expect(err).To(HaveOccurred())
 	})
 
 	It("Create AppWrapper  - PodTemplate Only - 2 Pods", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper  - PodTemplate Only - 2 Pods - Started.\n")
 		context := initTestContext()
-		defer cleanupTestContext(context)
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		aw := createPodTemplateAW(context, "aw-podtemplate-2")
+		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
-
 		Expect(err).NotTo(HaveOccurred())
-
-		var appwrappers []*arbv1.AppWrapper
-		appwrappers = append(appwrappers, aw)
-		cleanupTestObjects(context, appwrappers)
 	})
 
 	It("Create AppWrapper  - Generic Pod Only - 1 Pod", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper  - Generic Pod Only - 1 Pod - Started.\n")
 		context := initTestContext()
-		defer cleanupTestContext(context)
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		aw := createGenericPodAW(context, "aw-generic-pod-1")
+		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
-
 		Expect(err).NotTo(HaveOccurred())
-
-		var appwrappers []*arbv1.AppWrapper
-		appwrappers = append(appwrappers, aw)
-		cleanupTestObjects(context, appwrappers)
 	})
 
 	It("Create AppWrapper  - Bad Generic Pod Only", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper  - Bad Generic Pod Only - Started.\n")
 		context := initTestContext()
-		defer cleanupTestContext(context)
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		aw := createBadGenericPodAW(context, "aw-bad-generic-pod-1")
+		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
-
 		Expect(err).To(HaveOccurred())
 
-		var appwrappers []*arbv1.AppWrapper
-		appwrappers = append(appwrappers, aw)
-		cleanupTestObjects(context, appwrappers)
 	})
 
 	It("Create AppWrapper - Namespace Only - 0 Pods", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - Started.\n")
 		context := initTestContext()
-		defer cleanupTestContext(context)
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		aw := createNamespaceAW(context, "aw-namespace-0")
+		appwrappers = append(appwrappers, aw)
 
 		err := waitAWNonComputeResourceActive(context, aw)
-
 		Expect(err).NotTo(HaveOccurred())
-
-		var appwrappers []*arbv1.AppWrapper
-		appwrappers = append(appwrappers, aw)
-		cleanupTestObjects(context, appwrappers)
 	})
 
 	It("Create AppWrapper - Generic Namespace Only - 0 Pods", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Generic Namespace Only - 0 Pods - Started.\n")
 		context := initTestContext()
-		defer cleanupTestContext(context)
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		aw := createGenericNamespaceAW(context, "aw-generic-namespace-0")
+		appwrappers = append(appwrappers, aw)
 
 		err := waitAWNonComputeResourceActive(context, aw)
-
 		Expect(err).NotTo(HaveOccurred())
 
-		var appwrappers []*arbv1.AppWrapper
-		appwrappers = append(appwrappers, aw)
-		cleanupTestObjects(context, appwrappers)
 	})
 
 	It("MCAD CPU Accounting Fail Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Accounting Fail Test - Started.\n")
 		context := initTestContext()
-		defer cleanupTestContext(context)
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 		// This should not fit on cluster
 		aw2 := createDeploymentAWwith351CPU(context, "aw-deployment-2-351cpu")
+		appwrappers = append(appwrappers, aw2)
 
 		err = waitAWReadyQuiet(context, aw2)
 		Expect(err).To(HaveOccurred())
-
-		var appwrappers []*arbv1.AppWrapper
-		appwrappers = append(appwrappers, aw)
-		appwrappers = append(appwrappers, aw2)
-		cleanupTestObjects(context, appwrappers)
-
 	})
 
 	It("Create AppWrapper - Generic 100 Deployment Only - 2 pods each", func() {
