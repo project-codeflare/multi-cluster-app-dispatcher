@@ -7075,8 +7075,6 @@ spec:
                           description: Replicas is the number of desired replicas
                           format: int32
                           type: integer
-                      required:
-                      - metadata
                       type: object
                     type: array
                   Items:
@@ -7132,7 +7130,6 @@ spec:
                             Pod, a ReplicaSet, a ... ?)
                           type: string
                       required:
-                      - metadata
                       - template
                       type: object
                     type: array
@@ -7195,8 +7192,6 @@ spec:
                           field is planned to be removed in 1.21 release."
                         type: string
                     type: object
-                required:
-                - metadata
                 type: object
               schedulingSpec:
                 description: SchedSpec specifies the parameters for scheduling.
@@ -7579,7 +7574,6 @@ spec:
                 type: object
             required:
             - resources
-            - service
             type: object
           status:
             description: AppWrapperStatus represents the current state of a AppWrapper
