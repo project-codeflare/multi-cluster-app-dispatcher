@@ -365,7 +365,21 @@ func awStatePhase(ctx *context, aw *arbv1.AppWrapper, phase []arbv1.AppWrapperSt
 	}
 }
 
+
+func cleanupTestObjectsPtr(context *context, appwrappersPtr *[]*arbv1.AppWrapper) {
+	if appwrappersPtr == nil {
+		fmt.Fprintf(os.Stdout, "[cleanupTestObjectsPtr] No  AppWrappers to cleanup.\n")
+	} else {
+		cleanupTestObjects(context, *appwrappersPtr)
+	}
+}
+
 func cleanupTestObjects(context *context, appwrappers []*arbv1.AppWrapper) {
+	if appwrappers == nil {
+		fmt.Fprintf(os.Stdout, "[cleanupTestObjects] No AppWrappers to cleanup.\n")
+		return
+	}
+
 	for _, aw := range appwrappers {
 		//context.karclient.ArbV1().AppWrappers(context.namespace).Delete(aw.Name, &metav1.DeleteOptions{PropagationPolicy: &foreground})
 
@@ -399,6 +413,7 @@ func cleanupTestObjects(context *context, appwrappers []*arbv1.AppWrapper) {
 		}
 		Expect(err).NotTo(HaveOccurred())
 	}
+	cleanupTestContext(context)
 }
 
 func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum int, quite bool) wait.ConditionFunc {
