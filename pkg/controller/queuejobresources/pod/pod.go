@@ -594,6 +594,7 @@ func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, 
 
 	klog.Infof("Template copy for the pod %+v", templateCopy)
 
+	// Set additional appwrapper label
 	tmpl := templateCopy.Labels
 	if tmpl == nil {
 		tmpl = make(map[string]string)
@@ -601,15 +602,19 @@ func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, 
 	
 	tmpl[queueJobName] = qj.Name
 
+	// Include pre-defined metadata info, e.g. annotations
+	templateObjMetadata := templateCopy.ObjectMeta
+
+	// Set new field values
+	templateObjMetadata.SetName(podName)
+	templateObjMetadata.SetNamespace(qj.Namespace)
+	templateObjMetadata.SetOwnerReferences([]metav1.OwnerReference{
+		*metav1.NewControllerRef(qj, queueJobKind),
+	},)
+	templateObjMetadata.SetLabels(tmpl)
+
 	return &v1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      podName,
-			Namespace: qj.Namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(qj, queueJobKind),
-			},
-			Labels: tmpl,
-		},
+		ObjectMeta: templateObjMetadata,
 		Spec: templateCopy.Spec,
 	}
 }
