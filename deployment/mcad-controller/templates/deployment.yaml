@@ -7675,7 +7675,7 @@ spec:
                   debugging)
                 type: string
               state:
-                description: State - Running, Queued, Deleted ?
+                description: State - Pending, Running, Failed, Deleted
                 type: string
               systempriority:
                 description: System defined Priority

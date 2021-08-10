@@ -213,7 +213,7 @@ type AppWrapperStatus struct {
 	//Is Dispatched?
 	IsDispatched bool `json:"isdispatched,omitempty" protobuf:"bytes,1,opt,name=isdispatched"`
 
-	//State - Running, Queued, Deleted ?
+	//State - Pending, Running, Failed, Deleted
 	State AppWrapperState `json:"state,omitempty"`
 
 	Message string `json:"message,omitempty"`
