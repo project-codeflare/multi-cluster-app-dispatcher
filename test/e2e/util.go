@@ -1748,6 +1748,14 @@ func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 				{
 					"name": "aw-generic-pod-1",
 					"image": "k8s.gcr.io/echoserver:1.4",
+					"resources": {
+						"limits": {
+							"memory": "150Mi"
+						},
+						"requests": {
+							"memory": "150Mi"
+						}
+					},
 					"ports": [
 						{
 							"containerPort": 80
@@ -1759,10 +1767,14 @@ func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 	} `)
 	var schedSpecMin int = 1
 
+	labels := make(map[string]string)
+	labels["quota_service"] = "service-w"
+
 	aw := &arbv1.AppWrapper{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: context.namespace,
+			Labels:    labels,
 		},
 		Spec: arbv1.AppWrapperSpec{
 			SchedSpec: arbv1.SchedulingSpecTemplate{

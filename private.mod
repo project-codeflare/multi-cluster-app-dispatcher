@@ -26,6 +26,7 @@ require (
 	k8s.io/metrics v0.20.5
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 	sigs.k8s.io/scheduler-plugins v0.0.0
+	sigs.k8s.io/yaml v1.2.0
 )
 
 replace (

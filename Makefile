@@ -91,7 +91,7 @@ endif
 
 mcad-controller-private: init generate-code
 	$(info Compiling controller)
-	CGO_ENABLED=0 GOARCH=amd64 GOPRIVATE=github.ibm.com/ai-foundation/quota-manager go build -modfile ./private.mod -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
+	CGO_ENABLED=0 GOARCH=amd64 GOPRIVATE=github.ibm.com/* go build -tags private -modfile ./private.mod -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
 
 coverage:
 #	KUBE_COVER=y hack/make-rules/test.sh $(WHAT) $(TESTS)
