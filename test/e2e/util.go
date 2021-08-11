@@ -1769,7 +1769,6 @@ func createGenericPodAWCustomDemand(context *context, name string, cpuDemand str
 		}
 	} `, name, name, name, name, cpuDemand, cpuDemand)
 
-	fmt.Fprintf(os.Stdout, "[createGenericPodAWCustomDemand] Generic Items: %s.\n", genericItems)
 	rb := []byte(genericItems)
 	var schedSpecMin int = 1
 
@@ -1843,8 +1842,6 @@ func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 			]
 		}
 	} `)
-
-	fmt.Fprintf(os.Stdout, "[createGenericPodAWCustomDemand] Generic Items: %s.\n", string(rb))
 
 	var schedSpecMin int = 1
 
