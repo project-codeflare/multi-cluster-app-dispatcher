@@ -298,7 +298,7 @@ function kube-test-env-up {
 
     # This is meant to orchestrate initial cluster configuration such that accounting tests can be consistent
     echo "---"
-    echo "Orchesrate cluster..."
+    echo "Orchestrate cluster..."
     echo "kubectl cordon test-worker"
     kubectl cordon test-worker
     a=$(kubectl -n kube-system get pods | grep coredns | cut -d' ' -f1)
