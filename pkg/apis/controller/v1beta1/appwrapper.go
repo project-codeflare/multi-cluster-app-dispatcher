@@ -28,6 +28,9 @@ const AppWrapperPlural string = "appwrappers"
 // which AppWrapper it belongs to.
 const AppWrapperAnnotationKey = "appwrapper.mcad.ibm.com/appwrapper-name"
 
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+
 // Definition of AppWrapper class
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type AppWrapper struct {
@@ -36,6 +39,8 @@ type AppWrapper struct {
 	Spec              AppWrapperSpec   `json:"spec"`
 	Status            AppWrapperStatus `json:"status,omitempty"`
 }
+
+//+kubebuilder:object:root=true
 
 // AppWrapperList is a collection of AppWrappers.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -47,8 +52,15 @@ type AppWrapperList struct {
 
 // AppWrapperSpec describes how the App Wrapper will look like.
 type AppWrapperSpec struct {
-	Priority      int32                  `json:"priority,omitempty"`
-	PrioritySlope float64                `json:"priorityslope,omitempty"`
+	// +optional
+	Priority int32 `json:"priority,omitempty"`
+
+	// +kubebuilder:validation:Type=number
+	// +kubebuilder:validation:Format=float
+	// +optional
+	PrioritySlope float64 `json:"priorityslope,omitempty"`
+
+	// +optional
 	Service       AppWrapperService      `json:"service"`
 	AggrResources AppWrapperResourceList `json:"resources"`
 
@@ -62,8 +74,11 @@ type AppWrapperSpec struct {
 type AppWrapperResourceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []AppWrapperResource
-	GenericItems    []AppWrapperGenericResource
+
+	// +optional
+	Items []AppWrapperResource `json:"Items"`
+	// +optional
+	GenericItems []AppWrapperGenericResource `json:"GenericItems"`
 }
 
 // AppWrapperService is App Wrapper service definition
@@ -83,19 +98,26 @@ type AppWrapperResource struct {
 	MinAvailable *int32 `json:"minavailable,omitempty" protobuf:"bytes,3,opt,name=minavailable"`
 
 	// The number of allocated replicas from this resource type
+	// +optional
 	AllocatedReplicas int32 `json:"allocatedreplicas"`
 
-	// The priority of this resource
-	Priority float64 `json:"priority"`
+	// +kubebuilder:validation:Type=number
+	// +kubebuilder:validation:Format=float
+	// +optional
+	Priority float64 `json:"priority,omitempty"`
 
 	// The increasing rate of priority value for this resource
+	// +kubebuilder:validation:Type=number
+	// +kubebuilder:validation:Format=float
 	PrioritySlope float64 `json:"priorityslope"`
 
 	//The type of the resource (is the resource a Pod, a ReplicaSet, a ... ?)
+	// +optional
 	Type ResourceType `json:"type"`
 
 	//The template for the resource; it is now a raw text because we don't know for what resource
 	//it should be instantiated
+	// +kubebuilder:pruning:PreserveUnknownFields
 	Template runtime.RawExtension `json:"template"`
 }
 
@@ -110,16 +132,26 @@ type AppWrapperGenericResource struct {
 	MinAvailable *int32 `json:"minavailable,omitempty" protobuf:"bytes,3,opt,name=minavailable"`
 
 	// The number of allocated replicas from this resource type
+	// +optional
 	Allocated int32 `json:"allocated"`
 
 	// The priority of this resource
+	// +optional
+	// +kubebuilder:validation:Type=number
+	// +kubebuilder:validation:Format=float
 	Priority float64 `json:"priority"`
 
 	// The increasing rate of priority value for this resource
+	// +optional
+	// +kubebuilder:validation:Type=number
+	// +kubebuilder:validation:Format=float
 	PrioritySlope float64 `json:"priorityslope"`
 
 	//The template for the resource; it is now a raw text because we don't know for what resource
 	//it should be instantiated
+	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:EmbeddedResource
 	GenericTemplate runtime.RawExtension `json:"generictemplate"`
 
 	//Optional section that specifies resource requirements for non-standard k8s resources, follows same format as that
@@ -132,7 +164,9 @@ type CustomPodResourceTemplate struct {
 	//todo: replace with
 	//Containers []Container Contain v1.ResourceRequirements
 	Requests v1.ResourceList `json:"requests"`
-	Limits   v1.ResourceList `json:"limits"`
+
+	// +optional
+	Limits v1.ResourceList `json:"limits"`
 }
 
 // App Wrapper resources type
@@ -185,6 +219,8 @@ type AppWrapperStatus struct {
 	Message string `json:"message,omitempty"`
 
 	// System defined Priority
+	// +kubebuilder:validation:Type=number
+	// +kubebuilder:validation:Format=float
 	SystemPriority float64 `json:"systempriority,omitempty"`
 
 	// State of QueueJob - Init, Queueing, HeadOfLine, Rejoining, ...
