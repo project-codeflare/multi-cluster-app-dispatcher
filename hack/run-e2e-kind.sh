@@ -294,8 +294,23 @@ function kube-test-env-up {
 
     # Turn off master taints
     kubectl taint nodes --all node-role.kubernetes.io/master-
-    # Show available resources of cluster nodes
 
+
+    # This is meant to orchestrate initial cluster configuration such that accounting tests can be consistent
+    echo "---"
+    echo "Orchestrate cluster..."
+    echo "kubectl cordon test-worker"
+    kubectl cordon test-worker
+    a=$(kubectl -n kube-system get pods | grep coredns | cut -d' ' -f1)
+    for b in $a
+    do
+      echo "kubectl -n kube-system delete pod $b"
+      kubectl -n kube-system delete pod $b
+    done
+    echo "kubectl uncordon test-worker"
+    kubectl uncordon test-worker
+
+    # Show available resources of cluster nodes
     echo "---"
     echo "kubectl describe nodes"
     kubectl describe nodes
