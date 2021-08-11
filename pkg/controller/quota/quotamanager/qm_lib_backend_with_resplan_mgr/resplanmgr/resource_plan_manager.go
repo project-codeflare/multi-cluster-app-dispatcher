@@ -16,7 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package resourceplanmgr
+package resplanmgr
 
 import (
 	"github.ibm.com/ai-foundation/quota-manager/quota/core"
@@ -25,7 +25,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/quota_backend_lib_resourceplan_mgr/resourceplanmgr/util"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/qm_lib_backend_with_resplan_mgr/resplanmgr/util"
 	qmlib "github.ibm.com/ai-foundation/quota-manager/quota"
 	qmlibutils "github.ibm.com/ai-foundation/quota-manager/quota/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

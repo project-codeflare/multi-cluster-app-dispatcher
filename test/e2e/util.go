@@ -1371,6 +1371,7 @@ func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand s
 	return appwrapper
 }
 
+
 func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "v1",
 		"kind": "Namespace", 
@@ -1730,6 +1731,83 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 	return appwrapper
 }
 
+func createGenericPodAWCustomDemand(context *context, name string, cpuDemand string) *arbv1.AppWrapper {
+
+	genericItems := fmt.Sprintf( `{
+		"apiVersion": "v1",
+		"kind": "Pod",
+		"metadata": {
+			"name": "%s",
+			"namespace": "test",
+			"labels": {
+				"app": "%s"
+			},
+			"annotations": {
+				"appwrapper.mcad.ibm.com/appwrapper-name": "%s"
+			}
+		},
+		"spec": {
+			"containers": [
+					{
+						"name": "%s",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"resources": {
+							"limits": {
+								"cpu": "%s"
+							},
+							"requests": {
+								"cpu": "%s"
+							}
+						},
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+			]
+		}
+	} `, name, name, name, name, cpuDemand, cpuDemand)
+
+	fmt.Fprintf(os.Stdout, "[createGenericPodAWCustomDemand] Generic Items: %s.\n", genericItems)
+	rb := []byte(genericItems)
+	var schedSpecMin int = 1
+
+	labels := make(map[string]string)
+	labels["quota_service"] = "service-w"
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+			Labels:    labels,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item"),
+							Namespace: context.namespace,
+						},
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "v1",
 		"kind": "Pod",
@@ -1765,6 +1843,9 @@ func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 			]
 		}
 	} `)
+
+	fmt.Fprintf(os.Stdout, "[createGenericPodAWCustomDemand] Generic Items: %s.\n", string(rb))
+
 	var schedSpecMin int = 1
 
 	labels := make(map[string]string)

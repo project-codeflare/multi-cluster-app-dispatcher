@@ -25,7 +25,7 @@ import (
 	listersv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota"
-	rpmanager "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/quota_backend_lib_resourceplan_mgr/resourceplanmgr"
+	rpmanager "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/qm_lib_backend_with_resplan_mgr/resplanmgr"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/util"
 	qmbackend "github.ibm.com/ai-foundation/quota-manager/quota"
 	qmbackendutils "github.ibm.com/ai-foundation/quota-manager/quota/utils"

@@ -26,7 +26,7 @@ import (
 
 var _ = Describe("Quota E2E Test", func() {
 
-	It("Create AppWrapper  - Generic Pod Only - Sufficient Quota 1 Tree Run 1", func() {
+	It("Create AppWrapper  - Generic Pod Only - Sufficient Quota 1 Tree", func() {
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
 		appwrappersPtr := &appwrappers
@@ -39,20 +39,19 @@ var _ = Describe("Quota E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-/*
-	It("Create AppWrapper  - Generic Pod Only - Sufficient Quota 1 Tree Run 2", func() {
-		context := initTestContext()
-		defer cleanupTestContext(context)
 
-		aw := createGenericPodAW(context, "aw-generic-pod-1")
+	It("Create AppWrapper  - Generic Pod Only - Insufficient Quota 1 Tree", func() {
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		aw := createGenericPodAWCustomDemand(context, "aw-generic-large-cpu-pod-1", "9000m")
+		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
+		Expect(err).To(HaveOccurred())
 
-		Expect(err).NotTo(HaveOccurred())
-
-		var appwrappers []*arbv1.AppWrapper
-		appwrappers = append(appwrappers, aw)
-		cleanupTestObjects(context, appwrappers)
 	})
-*/
+
 })
