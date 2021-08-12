@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"time"
 
@@ -265,8 +266,10 @@ func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, conta
 	unstruct.Object = blob.(map[string]interface{})
 	spec, isFound, _ := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
 	replicas, isFound, _ := unstructured.NestedFloat64(spec, "replicas")
+
+	// Set default to 1 if no replicas field is found (handles the case of a single pod creation without replicaset.
 	if !isFound {
-		return false, 0, nil
+		replicas = 1
 	}
 
 	template, isFound, _ := unstructured.NestedMap(spec, "template")
@@ -324,6 +327,8 @@ func createObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 func GetResources(awr *arbv1.AppWrapperGenericResource) (resource *clusterstateapi.Resource, er error) {
 
 	totalresource := clusterstateapi.EmptyResource()
+	var err error
+	err = nil
 	if awr.GenericTemplate.Raw != nil {
 		hasContainer, replicas, containers := hasFields(awr.GenericTemplate)
 		if hasContainer {
@@ -340,21 +345,29 @@ func GetResources(awr *arbv1.AppWrapperGenericResource) (resource *clusterstatea
 			}
 			klog.V(8).Infof("[GetResources] Requested total allocation resource from pods `%v`.\n", totalresource)
 		}
+	} else {
+		err = fmt.Errorf("generic template raw object is not defined (nil)")
 	}
-	return totalresource, nil
+
+	return totalresource, err
 }
 
 func getPodResources(pod arbv1.CustomPodResourceTemplate) (resource *clusterstateapi.Resource) {
 	replicas := pod.Replicas
 	req := clusterstateapi.NewResource(pod.Requests)
 	limit := clusterstateapi.NewResource(pod.Limits)
-	if req.MilliCPU < limit.MilliCPU {
+	tolerance := 0.001
+
+	// Use limit if request is 0
+	if diff := math.Abs(req.MilliCPU - float64(0.0)); diff < tolerance {
 		req.MilliCPU = limit.MilliCPU
 	}
-	if req.Memory < limit.Memory {
+
+	if diff := math.Abs(req.Memory - float64(0.0)); diff < tolerance {
 		req.Memory = limit.Memory
 	}
-	if req.GPU < limit.GPU {
+
+	if req.GPU <= 0 {
 		req.GPU = limit.GPU
 	}
 	req.MilliCPU = req.MilliCPU * float64(replicas)
@@ -366,16 +379,22 @@ func getPodResources(pod arbv1.CustomPodResourceTemplate) (resource *clusterstat
 func getContainerResources(container v1.Container, replicas float64) *clusterstateapi.Resource {
 	req := clusterstateapi.NewResource(container.Resources.Requests)
 	limit := clusterstateapi.NewResource(container.Resources.Limits)
-	if req.MilliCPU < limit.MilliCPU {
 
+	tolerance := 0.001
+
+	// Use limit if request is 0
+	if diff := math.Abs(req.MilliCPU - float64(0.0)); diff < tolerance {
 		req.MilliCPU = limit.MilliCPU
 	}
-	if req.Memory < limit.Memory {
+
+	if diff := math.Abs(req.Memory - float64(0.0)); diff < tolerance {
 		req.Memory = limit.Memory
 	}
-	if req.GPU < limit.GPU {
+
+	if req.GPU <= 0 {
 		req.GPU = limit.GPU
 	}
+
 	req.MilliCPU = req.MilliCPU * float64(replicas)
 	req.Memory = req.Memory * float64(replicas)
 	req.GPU = req.GPU * int64(replicas)
