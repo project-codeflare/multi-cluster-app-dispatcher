@@ -30,7 +30,7 @@ import (
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/util"
 	"io/ioutil"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 	"math"
 	"net/http"
 	"net/http/httputil"
