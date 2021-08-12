@@ -21,7 +21,7 @@ import (
 
 	"k8s.io/api/core/v1"
 	clientcache "k8s.io/client-go/tools/cache"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 // PodKey returns the string key of a pod.
