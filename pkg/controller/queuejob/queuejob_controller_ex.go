@@ -40,7 +40,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -822,7 +822,7 @@ func (qjm *XController) ScheduleNext() {
 			qjm.qjqueue.AddIfNotPresent(qjtemp.(*arbv1.AppWrapper))
 		}
 		// Print qjqueue.ativeQ for debugging
-		if klog.V(10) {
+		if klog.V(10).Enabled() {
 			pq := qjm.qjqueue.(*PriorityQueue)
 			if qjm.qjqueue.Length() > 0 {
 				for key, element := range pq.activeQ.data.items {
@@ -1657,7 +1657,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 		}
 
 		if qj.Status.CanRun && !qj.Status.IsDispatched{
-			if klog.V(10) {
+			if klog.V(10).Enabled() {
 				current_time:=time.Now()
 				klog.V(10).Infof("[worker-manageQJ] XQJ %s has Overhead Before Dispatching: %s", qj.Name,current_time.Sub(qj.CreationTimestamp.Time))
 				klog.V(10).Infof("[TTime] %s, %s: WorkerBeforeDispatch", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
@@ -1674,7 +1674,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 			} else {
 				klog.Errorf("[Dispatcher Controller] AppWrapper %s not found in dispatcher mapping." , qj.Name)
 			}
-			if klog.V(10) {
+			if klog.V(10).Enabled() {
 				current_time:=time.Now()
 				klog.V(10).Infof("[Dispatcher Controller] XQJ %s has Overhead After Dispatching: %s", qj.Name,current_time.Sub(qj.CreationTimestamp.Time))
 				klog.V(10).Infof("[TTime] %s, %s: WorkerAfterDispatch", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))

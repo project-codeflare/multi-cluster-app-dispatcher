@@ -26,7 +26,7 @@ import (
 )
 
 func main() {
-	flag.Parse()
+	//flag.Parse()
 
 	s := options.NewServerOption()
 	s.AddFlags(flag.CommandLine)
