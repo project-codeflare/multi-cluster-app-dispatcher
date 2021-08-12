@@ -41,10 +41,11 @@ nodeSelector:
 
 configMap:
   name:
-  multiCluster: false
-  dispatcherMode: "false"
-  agentConfigs:
-  quoteRestUrl:
+  quotaEnabled: '"false"'
+  multiCluster: '"false"'
+  dispatcherMode: '"false"'
+  agentConfigs: ""
+  quoteRestUrl: ""
 
 volumes:
   hostPath:

@@ -1675,7 +1675,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 				klog.Errorf("[Dispatcher Controller] AppWrapper %s not found in dispatcher mapping." , qj.Name)
 			}
 			if klog.V(10).Enabled() {
-				current_time:=time.Now()
+				current_time := time.Now()
 				klog.V(10).Infof("[Dispatcher Controller] XQJ %s has Overhead After Dispatching: %s", qj.Name,current_time.Sub(qj.CreationTimestamp.Time))
 				klog.V(10).Infof("[TTime] %s, %s: WorkerAfterDispatch", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 			}
