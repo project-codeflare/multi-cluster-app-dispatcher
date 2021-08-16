@@ -28,6 +28,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 
+	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	appv1 "k8s.io/api/apps/v1"
@@ -294,6 +295,29 @@ func taskPhase(ctx *context, pg *arbv1.PodGroup, phase []v1.PodPhase, taskNum in
 }
 */
 
+func anyPodsExist(ctx *context, awNamespace string, awName string) wait.ConditionFunc  {
+	return func() (bool, error) {
+		podList, err := ctx.kubeclient.CoreV1().Pods(awNamespace).List(gcontext.Background(), metav1.ListOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		podExistsNum := 0
+		for _, podFromPodList := range podList.Items {
+
+			// First find a pod from the list that is part of the AW
+			if awn, found := podFromPodList.Labels["appwrapper.mcad.ibm.com"]; !found || awn != awName {
+				//DEBUG fmt.Fprintf(os.Stdout, "[anyPodsExist] Pod %s in phase: %s not part of AppWrapper: %s, labels: %#v\n",
+				//DEBUG 	podFromPodList.Name, podFromPodList.Status.Phase, awName, podFromPodList.Labels)
+				continue
+			}
+			podExistsNum++
+			fmt.Fprintf(os.Stdout, "[anyPodsExist] Found Pod %s in phase: %s as part of AppWrapper: %s, labels: %#v\n",
+				podFromPodList.Name, podFromPodList.Status.Phase, awName, podFromPodList.Labels)
+		}
+
+		return podExistsNum > 0, nil
+	}
+}
+
 func podPhase(ctx *context, awNamespace string, awName string, pods []*v1.Pod, phase []v1.PodPhase, taskNum int) wait.ConditionFunc {
 	return func() (bool, error) {
 		podList, err := ctx.kubeclient.CoreV1().Pods(awNamespace).List(gcontext.Background(), metav1.ListOptions{})
@@ -367,6 +391,10 @@ func awStatePhase(ctx *context, aw *arbv1.AppWrapper, phase []arbv1.AppWrapperSt
 
 
 func cleanupTestObjectsPtr(context *context, appwrappersPtr *[]*arbv1.AppWrapper) {
+	cleanupTestObjectsPtrVerbose(context, appwrappersPtr, true)
+}
+
+func cleanupTestObjectsPtrVerbose(context *context, appwrappersPtr *[]*arbv1.AppWrapper, verbose bool) {
 	if appwrappersPtr == nil {
 		fmt.Fprintf(os.Stdout, "[cleanupTestObjectsPtr] No  AppWrappers to cleanup.\n")
 	} else {
@@ -375,6 +403,11 @@ func cleanupTestObjectsPtr(context *context, appwrappersPtr *[]*arbv1.AppWrapper
 }
 
 func cleanupTestObjects(context *context, appwrappers []*arbv1.AppWrapper) {
+	cleanupTestObjectsVerbose(context, appwrappers, true)
+}
+
+
+func cleanupTestObjectsVerbose(context *context, appwrappers []*arbv1.AppWrapper, verbose bool) {
 	if appwrappers == nil {
 		fmt.Fprintf(os.Stdout, "[cleanupTestObjects] No AppWrappers to cleanup.\n")
 		return
@@ -418,6 +451,8 @@ func cleanupTestObjects(context *context, appwrappers []*arbv1.AppWrapper) {
 
 func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum int, quite bool) wait.ConditionFunc {
 	return func() (bool, error) {
+		defer GinkgoRecover()
+
 		aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
@@ -566,11 +601,19 @@ func waitAWReadyQuiet(ctx *context, aw *arbv1.AppWrapper) error {
 	return waitAWPodsReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), true)
 }
 
+func waitAWAnyPodsExists(ctx *context, aw *arbv1.AppWrapper) error {
+	return wait.Poll(100*time.Millisecond, ninetySeconds, anyPodsExist(ctx, aw.Namespace, aw.Name))
+}
+
 func waitAWDeleted(ctx *context, aw *arbv1.AppWrapper, pods []*v1.Pod) error {
 	return waitAWPodsTerminatedEx(ctx, aw.Namespace, aw.Name, pods, 0)
 }
 
 func waitAWPodsDeleted(ctx *context, awNamespace string, awName string, pods []*v1.Pod) error {
+	return waitAWPodsDeletedVerbose(ctx, awNamespace, awName, pods, true)
+}
+
+func waitAWPodsDeletedVerbose(ctx *context, awNamespace string, awName string, pods []*v1.Pod, verbose bool) error {
 	return waitAWPodsTerminatedEx(ctx, awNamespace, awName, pods, 0)
 }
 
@@ -585,6 +628,10 @@ func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bo
 }
 
 func waitAWPodsTerminatedEx(ctx *context, namespace string, name string, pods []*v1.Pod, taskNum int) error {
+	return waitAWPodsTerminatedExVerbose(ctx, namespace, name, pods, taskNum, true)
+}
+
+func waitAWPodsTerminatedExVerbose(ctx *context, namespace string, name string, pods []*v1.Pod, taskNum int, verbose bool) error {
 	return wait.Poll(100*time.Millisecond, ninetySeconds, podPhase(ctx, namespace, name, pods,
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded, v1.PodUnknown, v1.PodFailed, v1.PodPending}, taskNum))
 }
@@ -735,7 +782,7 @@ func createDeploymentAWwith900CPU(context *context, name string) *arbv1.AppWrapp
 		"name": "aw-deployment-2-900cpu",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-deployment-2-900cpu"
 		}
 	},
 	"spec": {
@@ -816,7 +863,7 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 		"name": "aw-deployment-2-550cpu",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-deployment-2-550cpu"
 		}
 	},
 	"spec": {
@@ -897,7 +944,7 @@ func createDeploymentAWwith125CPU(context *context, name string) *arbv1.AppWrapp
 		"name": "aw-deployment-2-125cpu",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-deployment-2-125cpu"
 		}
 	},
 	"spec": {
@@ -978,7 +1025,7 @@ func createDeploymentAWwith126CPU(context *context, name string) *arbv1.AppWrapp
 		"name": "aw-deployment-2-126cpu",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-deployment-2-126cpu"
 		}
 	},
 	"spec": {
@@ -1059,7 +1106,7 @@ func createDeploymentAWwith350CPU(context *context, name string) *arbv1.AppWrapp
 		"name": "aw-deployment-2-350cpu",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-deployment-2-350cpu"
 		}
 	},
 	"spec": {
@@ -1140,7 +1187,7 @@ func createDeploymentAWwith351CPU(context *context, name string) *arbv1.AppWrapp
 		"name": "aw-deployment-2-351cpu",
 		"namespace": "test",
 		"labels": {
-			"app": "nginx"
+			"app": "aw-deployment-2-351cpu"
 		}
 	},
 	"spec": {
@@ -1167,6 +1214,168 @@ func createDeploymentAWwith351CPU(context *context, name string) *arbv1.AppWrapp
 						"resources": {
 							"requests": {
 								"cpu": "351m"
+							}
+						},
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `)
+	var schedSpecMin int = 2
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				Items: []arbv1.AppWrapperResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item1"),
+							Namespace: context.namespace,
+						},
+						Replicas: 1,
+						Type:     arbv1.ResourceTypeDeployment,
+						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createDeploymentAWwith426CPU(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "apps/v1",
+	"kind": "Deployment", 
+	"metadata": {
+		"name": "aw-deployment-2-426cpu",
+		"namespace": "test",
+		"labels": {
+			"app": "aw-deployment-2-426cpu"
+		}
+	},
+	"spec": {
+		"replicas": 2,
+		"selector": {
+			"matchLabels": {
+				"app": "aw-deployment-2-426cpu"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "aw-deployment-2-426cpu"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-426cpu"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "aw-deployment-2-426cpu",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"resources": {
+							"requests": {
+								"cpu": "426m"
+							}
+						},
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `)
+	var schedSpecMin int = 2
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				Items: []arbv1.AppWrapperResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item1"),
+							Namespace: context.namespace,
+						},
+						Replicas: 1,
+						Type:     arbv1.ResourceTypeDeployment,
+						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createDeploymentAWwith425CPU(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "apps/v1",
+	"kind": "Deployment", 
+	"metadata": {
+		"name": "aw-deployment-2-425cpu",
+		"namespace": "test",
+		"labels": {
+			"app": "aw-deployment-2-425cpu"
+		}
+	},
+	"spec": {
+		"replicas": 2,
+		"selector": {
+			"matchLabels": {
+				"app": "aw-deployment-2-425cpu"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "aw-deployment-2-425cpu"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-425cpu"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "aw-deployment-2-425cpu",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"resources": {
+							"requests": {
+								"cpu": "425m"
 							}
 						},
 						"ports": [
@@ -1376,9 +1585,9 @@ func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "v1",
 		"kind": "Namespace", 
 	"metadata": {
-		"name": "aw-namespace-1",
+		"name": "aw-namespace-0",
 		"labels": {
-			"app": "aw-namespace-1"
+			"app": "aw-namespace-0"
 		}
 	}} `)
 	var schedSpecMin int = 0
