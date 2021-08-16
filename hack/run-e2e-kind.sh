@@ -292,6 +292,16 @@ function kube-test-env-up {
         kubectl get pod ${mcad_pod} -n kube-system -o yaml
     fi
 
+
+    sleep 10
+    echo "Listing MCAD Controller Helm Chart and Pod YAML..."
+    helm list
+    mcad_pod=$(kubectl get pods -n kube-system | grep mcad-controller | awk '{print $1}')
+    if [[ "$mcad_pod" != "" ]]
+    then
+        kubectl get pod ${mcad_pod} -n kube-system -o yaml
+    fi
+
     # Turn off master taints
     kubectl taint nodes --all node-role.kubernetes.io/master-
 

@@ -20,11 +20,11 @@ package e2e
 
 import (
 	"fmt"
-	"os"
-
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"os"
+	"time"
 )
 
 var _ = Describe("AppWrapper E2E Test", func() {
@@ -253,9 +253,9 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 	})
-/*
-	It("MCAD CPU Accounting Fail Test", func() {
-		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Accounting Fail Test - Started.\n")
+
+	It("MCAD CPU Accounting Queuing Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Accounting Queuing Test - Started.\n")
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
 		appwrappersPtr := &appwrappers
@@ -269,43 +269,53 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// This should not fit on cluster
-		aw2 := createDeploymentAWwith351CPU(context, "aw-deployment-2-351cpu")
+		aw2 := createDeploymentAWwith426CPU(context, "aw-deployment-2-426cpu")
 		appwrappers = append(appwrappers, aw2)
 
-		err = waitAWReadyQuiet(context, aw2)
+		err = waitAWAnyPodsExists(context, aw2)
 		Expect(err).To(HaveOccurred())
 	})
 
 	It("Create AppWrapper - Generic 100 Deployment Only - 2 pods each", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Generic 100 Deployment Only - 2 pods each - Started.\n")
+
 		context := initTestContext()
-		defer cleanupTestContextExtendedTime(context, (240 * time.Second))
+		var aws []*arbv1.AppWrapper
+		//appwrappersPtr := &aws
+		//defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		const (
 			awCount = 100
+			reportingInterval = 10
 		)
-		modDivisor := int(awCount / 10)
+
 		replicas := 2
-		var aws [awCount]*arbv1.AppWrapper
+		modDivisor := int(awCount / reportingInterval)
 		for i := 0; i < awCount; i++ {
 			name := fmt.Sprintf("%s%d-", "aw-generic-deployment-", replicas)
-			if i < 99 {
+
+			// Pad name with '0' when i < 100
+			if i < (awCount - 1) {
 				name = fmt.Sprintf("%s%s", name, "0")
 			}
-			if i < 9 {
+
+			// Pad name with '0' when i < 10
+			if i < (reportingInterval - 1) {
 				name = fmt.Sprintf("%s%s", name, "0")
 			}
+
 			name = fmt.Sprintf("%s%d", name, i+1)
 			cpuDemand := "5m"
 			if ((i+1)%modDivisor) == 0 || i == 0 {
 				fmt.Fprintf(os.Stdout, "[e2e] Creating AW %s with %s cpu and %d replica(s).\n", name, cpuDemand, replicas)
 			}
-			aws[i] = createGenericDeploymentWithCPUAW(context, name, cpuDemand, replicas)
+			aw := createGenericDeploymentWithCPUAW(context, name, cpuDemand, replicas)
+			aws = append(aws, aw)
 		}
 
 		// Give the deployments time to create pods
 		time.Sleep(2 * time.Minute)
-		for i := 0; i < awCount; i++ {
+		for i := 0; i < len(aws); i++ {
 			if ((i+1)%modDivisor) == 0 || i == 0 {
 				fmt.Fprintf(os.Stdout, "[e2e] Checking for %d replicas running for AW %s.\n", replicas, aws[i].Name)
 			}
@@ -313,7 +323,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 	})
-*/
+
 	/*
 		It("Gang scheduling", func() {
 			context := initTestContext()
