@@ -19,6 +19,7 @@ limitations under the License.
 package quotamanager
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
@@ -190,17 +191,12 @@ func (qm *QuotaManager) loadDispatchedAWs(awJobLister listersv1.AppWrapperLister
 		aw := getDispatchedAppWrapper(awJobLister, k)
 		if aw != nil {
 
-			doesFit, preemptionIds := qm.Fits(aw, v, nil)
+			doesFit, preemptionIds, err2:= qm.Fits(aw, v, nil)
 			if doesFit == false {
 				klog.Errorf("[loadDispatchedAWs] Loading of AppWrapper %s/%s failed.",
 										aw.Namespace, aw.Name)
-				if err == nil {
-					err = fmt.Errorf("Loading of AppWrapper %s/%s failed. \n",
-										aw.Namespace, aw.Name)
-				} else {
-					err = fmt.Errorf("%w; Next error %s Loading of AppWrapper %s/%s failed. \n",
-										err, aw.Namespace, aw.Name)
-				}
+				err = fmt.Errorf("Loading of AppWrapper %s/%s failed, %#v \n",
+										aw.Namespace, aw.Name, err2)
 			}
 
 			if preemptionIds != nil && len(preemptionIds) > 0 {
@@ -268,16 +264,16 @@ func isValidQuota(quotaGroup QuotaGroup, qmTreeIDs []string) bool {
 	return false
 }
 
-func (qm *QuotaManager) getQuotaDesignation(aw *arbv1.AppWrapper) ([]QuotaGroup, map[string][]string) {
+func (qm *QuotaManager) getQuotaDesignation(aw *arbv1.AppWrapper) ([]QuotaGroup, map[string][]string, error) {
 	var groups []QuotaGroup
 	treeNameToResourceTypes := make(map[string][]string)
 
 	// Get list of quota management tree IDs
 	qmTreeIDs := qm.quotaManagerBackend.GetTreeNames()
 	if len(qmTreeIDs) <= 0 {
-		klog.Warningf("[getQuotaDesignation] No valid quota management IDs found for AppWrapper Job: %s/%s",
+		klog.Warningf("[getQuotaDesignation] No quota management IDs defined for quota evalution of for AppWrapper Job: %s/%s",
 			aw.Namespace, aw.Name)
-		return groups, treeNameToResourceTypes
+		return groups, treeNameToResourceTypes, nil
 	}
 
 	labels := aw.GetLabels()
@@ -307,6 +303,46 @@ func (qm *QuotaManager) getQuotaDesignation(aw *arbv1.AppWrapper) ([]QuotaGroup,
 										aw.Namespace, aw.Name)
 	}
 
+	// Figure out which quota tree allocation is missing and produce an error
+	if len(groups) < len(qmTreeIDs) {
+		var allocationMessage bytes.Buffer
+		fmt.Fprintf(&allocationMessage, "Missing required quota designation: ")
+
+		numMissingTreesCt := 0
+		for _, treeName := range qmTreeIDs {
+			treeFound := false
+			for _, quotaGroup := range groups {
+				if strings.Compare(treeName, quotaGroup.GroupContext) == 0 {
+					treeFound = true
+					break
+				}
+			}
+			if treeFound {
+				continue
+			} else {
+				if numMissingTreesCt < 1 {
+					fmt.Fprintf(&allocationMessage, "%s", treeName)
+				} else {
+					fmt.Fprintf(&allocationMessage, ", %s", treeName)
+				}
+				numMissingTreesCt++
+			}
+		}
+
+		// Produce an error
+		var err error
+		err = nil
+		if len(allocationMessage.String()) > 0 {
+			fmt.Fprintf(&allocationMessage, ".")
+			err = fmt.Errorf(allocationMessage.String())
+		} else {
+			err = fmt.Errorf("Unknown error verifying quota designations.")
+		}
+		klog.V(6).Infof("[getQuotaDesignation] No valid quota management IDs found for AppWrapper Job: %s/%s, err=%#v",
+			aw.Namespace, aw.Name, err)
+		return groups, treeNameToResourceTypes, err
+	}
+
 	if len(groups) > 0 {
 		klog.V(6).Infof("[getQuotaDesignation] AppWrapper: %s/%s quota labels: %v.", aw.Namespace,
 			aw.Name, groups)
@@ -315,7 +351,7 @@ func (qm *QuotaManager) getQuotaDesignation(aw *arbv1.AppWrapper) ([]QuotaGroup,
 			aw.Namespace, aw.Name)
 	}
 
-	return groups, treeNameToResourceTypes
+	return groups, treeNameToResourceTypes, nil
 }
 
 func (qm *QuotaManager) convertInt64Demand (int64Demand int64) (int, error) {
@@ -429,7 +465,11 @@ func (qm *QuotaManager) buildRequest(aw *arbv1.AppWrapper,
 	var consumerTrees []qmbackendutils.JConsumerTreeSpec
 
 	// Get quota tree designations and associated resource demands from AW labels
-	quotaTreeDesignations, treeNameToResourceTypes := qm.getQuotaDesignation(aw)
+	quotaTreeDesignations, treeNameToResourceTypes, err := qm.getQuotaDesignation(aw)
+
+	if err != nil {
+		return nil, err
+	}
 
 	for _, quotaTreeDesignation := range quotaTreeDesignations {
 		unPreemptable := !qm.preemptionEnabled
@@ -482,7 +522,7 @@ func (qm *QuotaManager) refreshQuotaDefiniions() error {
 }
 
 func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource,
-					proposedPreemptions []*arbv1.AppWrapper) (bool, []*arbv1.AppWrapper) {
+					proposedPreemptions []*arbv1.AppWrapper) (bool, []*arbv1.AppWrapper, string) {
 
 	doesFit := false
 
@@ -490,7 +530,7 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 	if qm.quotaManagerBackend == nil {
 		klog.V(4).Infof("[Fits] No quota manager backend exists, %#v fails quota by default.",
 													awResDemands)
-		return doesFit, nil
+		return doesFit, nil, "No quota manager backend exists"
 	}
 
 	// If Quota Manager initialization is complete but quota manager backend is in maintenance mode assume quota
@@ -498,7 +538,7 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 	if qm.quotaManagerBackend.GetMode() == qmbackend.Maintenance && qm.initializationDone {
 		klog.Warningf("[Fits] Quota Manager backend in maintenance mode.  Unable to process request for AppWrapper: %s/%s",
 			aw.Namespace, aw.Name)
-		return doesFit, nil
+		return doesFit, nil, "Quota Manager backend in maintenance mode"
 	}
 
 	// Refresh Quota Manager Backend Cache and Tree(s) if detected change in ResourcePlans
@@ -516,7 +556,7 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 	consumerInfo, err := qm.buildRequest(aw, awResDemands)
 	if err != nil {
 		klog.Errorf("[Fits] Creation of quota request failed: %s/%s, err=%#v.", aw.Namespace, aw.Name, err)
-		return doesFit, nil
+		return doesFit, nil, err.Error()
 	}
 
 	var preemptIds []*arbv1.AppWrapper
@@ -528,15 +568,26 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 	allocResponse, err := qm.quotaManagerBackend.AllocateForest(QuotaManagerForestName, consumerID)
 
 	if err != nil {
-		klog.Errorf("[Fits] Error allocating consumer: %s/%s, msg=%s, err=%#v.",
-								aw.Namespace, aw.Name, err)
-		return 	doesFit, nil
+		if allocResponse != nil && len(allocResponse.GetMessage()) > 0 {
+			klog.Errorf("[Fits] Error allocating consumer: %s/%s, msg=%s, err=%#v.",
+				aw.Namespace, aw.Name, allocResponse.GetMessage(), err)
+			return 	doesFit, nil, allocResponse.GetMessage()
+		} else {
+			klog.Errorf("[Fits] Error allocating consumer: %s/%s, err=%#v.",
+				aw.Namespace, aw.Name, err)
+			return 	doesFit, nil, err.Error()
+
+		}
 	}
 
 	doesFit = allocResponse.IsAllocated()
+	if len(allocResponse.GetMessage()) > 0 {
+		klog.Warningf("[Fits] Response from Quota Management backend: %s",
+			allocResponse.GetMessage())
+	}
 	preemptIds = qm.getAppWrappers(allocResponse.GetPreemptedIds())
 
-	return doesFit, preemptIds
+	return doesFit, preemptIds, allocResponse.GetMessage()
 }
 
 
