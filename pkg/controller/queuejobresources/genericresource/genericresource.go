@@ -82,7 +82,8 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
-		klog.Fatal(err)
+		klog.Errorf("Error getting API resources, err=%#v", err)
+		return  []*v1.Pod{}, err
 	}
 	ext := awr.GenericTemplate
 	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
@@ -107,12 +108,14 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	}
 	dclient, err := dynamic.NewForConfig(restconfig)
 	if err != nil {
-		klog.Fatal(err)
+		klog.Errorf("Error creating new dynamic client, err=%#v", err)
+		return  []*v1.Pod{}, err
 	}
 
 	_, apiresourcelist, err := dd.ServerGroupsAndResources()
 	if err != nil {
-		klog.Fatal(err)
+		klog.Errorf("Error getting supported groups and resources, err=%#v", err)
+		return  []*v1.Pod{}, err
 	}
 
 	rsrc := mapping.Resource
@@ -130,7 +133,8 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	unstruct.Object = make(map[string]interface{})
 	var blob interface{}
 	if err = json.Unmarshal(ext.Raw, &blob); err != nil {
-		klog.Fatal(err)
+		klog.Errorf("Error unmarshalling, err=%#v", err)
+		return  []*v1.Pod{}, err
 	}
 	ownerRef := metav1.NewControllerRef(aw, appWrapperKind)
 	unstruct.Object = blob.(map[string]interface{}) //set object to the content of the blob after Unmarshalling
@@ -261,12 +265,16 @@ func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, conta
 	unstruct.Object = make(map[string]interface{})
 	var blob interface{}
 	if err := json.Unmarshal(obj.Raw, &blob); err != nil {
-		klog.Fatal(err)
+		klog.Errorf("Error unmarshalling, err=%#v", err)
+		return false, 0, nil
 	}
 	unstruct.Object = blob.(map[string]interface{})
 	spec, isFound, _ := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
-	replicas, isFound, _ := unstructured.NestedFloat64(spec, "replicas")
+	if !isFound {
+		klog.Warningf("[hasFields] No spec field found in raw object: %#v", unstruct.UnstructuredContent())
+	}
 
+	replicas, isFound, _ := unstructured.NestedFloat64(spec, "replicas")
 	// Set default to 1 if no replicas field is found (handles the case of a single pod creation without replicaset.
 	if !isFound {
 		replicas = 1
