@@ -616,6 +616,8 @@ github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.ibm.com/ai-foundation/quota-manager v0.0.0-20210624161340-4090ece12dab h1:n/zPDmY5Wabc1rn0xezzafZg4ACc639+D6w5s428Hj0=
 github.ibm.com/ai-foundation/quota-manager v0.0.0-20210624161340-4090ece12dab/go.mod h1:16W/ZT/3zZ+avPUZdZwrOzAIuSr7SSKzu6Dj5PUPEG0=
+github.ibm.com/ai-foundation/quota-manager v0.0.0-20210819031834-370d6c6686cb h1:7O1w+fic68W24PX2MdfzwnxS6dI82VRtlTGW25eQVX0=
+github.ibm.com/ai-foundation/quota-manager v0.0.0-20210819031834-370d6c6686cb/go.mod h1:16W/ZT/3zZ+avPUZdZwrOzAIuSr7SSKzu6Dj5PUPEG0=
 github.ibm.com/platformcomputing/k8s-plugins v0.0.0-20210729025643-afe9bf1a6d8e h1:VGt2Z8wlV4UNaZXCfjSw2LqvWxFhnSP00mprf39WD2o=
 github.ibm.com/platformcomputing/k8s-plugins v0.0.0-20210729025643-afe9bf1a6d8e/go.mod h1:KHXLGVjHzBBPlT6/Gpaunoo2e2ragCCEgku/za2XxDI=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=

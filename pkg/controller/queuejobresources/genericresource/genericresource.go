@@ -280,18 +280,19 @@ func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, conta
 		replicas = 1
 	}
 
-
 	template, isFound, _ := unstructured.NestedMap(spec, "template")
 	// If spec does not contain a podtemplate, check for pod singletons
 	var subspec map[string]interface{}
 	if !isFound {
 		subspec = spec
+		klog.V(6).Infof("[hasFields] No template field found in raw object: %#v", spec)
 	} else {
 		subspec, isFound, _ = unstructured.NestedMap(template, "spec")
 	}
 
 	containerList, isFound, _ := unstructured.NestedSlice(subspec, "containers")
 	if !isFound {
+		klog.Warningf("[hasFields] No containers field found in raw object: %#v", subspec)
 		return false, 0, nil
 	}
 	objContainers := make([]v1.Container, len(containerList))

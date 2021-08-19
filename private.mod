@@ -11,7 +11,7 @@ require (
 	github.com/onsi/gomega v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
-	github.ibm.com/ai-foundation/quota-manager v0.0.0-20210624161340-4090ece12dab
+	github.ibm.com/ai-foundation/quota-manager v0.0.0-20210819031834-370d6c6686cb
 	golang.org/x/tools v0.1.1 // indirect
 	k8s.io/api v0.20.5
 	k8s.io/apiextensions-apiserver v0.20.0

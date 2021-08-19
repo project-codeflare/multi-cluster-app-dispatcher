@@ -757,7 +757,7 @@ func (qjm *XController) chooseAgent(qj *arbv1.AppWrapper) string{
 		//Now evaluate quota
 		if qjm.serverOption.QuotaEnabled {
 			if qjm.quotaManager != nil {
-				if fits, preemptAWs := qjm.quotaManager.Fits(qj, qjAggrResources, proposedPreemptions); fits {
+				if fits, preemptAWs, _ := qjm.quotaManager.Fits(qj, qjAggrResources, proposedPreemptions); fits {
 					klog.V(2).Infof("[chooseAgent] AppWrapper %s has enough quota.\n", qj.Name)
 					qjm.preemptAWJobs(preemptAWs)
 					return agentId
@@ -939,14 +939,19 @@ func (qjm *XController) ScheduleNext() {
 				klog.V(10).Infof("[ScheduleNext] HOL available resourse successful check for %s at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				if qjm.serverOption.QuotaEnabled {
 					if qjm.quotaManager != nil {
-						quotaFits, preemptAWs := qjm.quotaManager.Fits(qj, aggqj, proposedPreemptions)
+						quotaFits, preemptAWs, msg := qjm.quotaManager.Fits(qj, aggqj, proposedPreemptions)
 						if quotaFits {
 							klog.V(4).Infof("[ScheduleNext] HOL quota evaluation successful %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 							// Set any jobs that are marked for preemption
 							qjm.preemptAWJobs(preemptAWs)
 						} else { // Not enough free quota to dispatch appwrapper
 							dispatchFailedMessage = "Insufficient quota to dispatch AppWrapper."
-							klog.V(3).Infof("[ScheduleNext] HOL Blocking by %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+							if len(msg) > 0 {
+								dispatchFailedReason += " "
+								dispatchFailedReason += msg
+							}
+							klog.V(3).Infof("[ScheduleNext] HOL Blocking by %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v msg=%s, due to quota limits",
+								qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, msg)
 						}
 						fits = quotaFits
 					} else {
