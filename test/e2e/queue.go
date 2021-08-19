@@ -220,7 +220,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createGenericPodTooBigAW(context, "aw-generic-big-pod-1")
 		appwrappers = append(appwrappers, aw)
 
-		err := waitAWPodsReady(context, aw)
+		err := waitAWAnyPodsExists(context, aw)
 		Expect(err).To(HaveOccurred())
 	})
 

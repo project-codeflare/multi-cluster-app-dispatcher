@@ -280,8 +280,16 @@ func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, conta
 		replicas = 1
 	}
 
+
 	template, isFound, _ := unstructured.NestedMap(spec, "template")
-	subspec, isFound, _ := unstructured.NestedMap(template, "spec")
+	// If spec does not contain a podtemplate, check for pod singletons
+	var subspec map[string]interface{}
+	if !isFound {
+		subspec = spec
+	} else {
+		subspec, isFound, _ = unstructured.NestedMap(template, "spec")
+	}
+
 	containerList, isFound, _ := unstructured.NestedSlice(subspec, "containers")
 	if !isFound {
 		return false, 0, nil
