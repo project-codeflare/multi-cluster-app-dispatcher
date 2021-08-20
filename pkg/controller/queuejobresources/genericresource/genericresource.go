@@ -341,6 +341,40 @@ func createObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 	}
 }
 
+func GetListOfPodResourcesFromOneGenericItem(awr *arbv1.AppWrapperGenericResource) (resource []*clusterstateapi.Resource, er error) {
+	var podResourcesList []*clusterstateapi.Resource
+
+	podTotalresource := clusterstateapi.EmptyResource()
+	var err error
+	err = nil
+	if awr.GenericTemplate.Raw != nil {
+		hasContainer, replicas, containers := hasFields(awr.GenericTemplate)
+		if hasContainer {
+			// Add up all the containers in a pod
+			for _, container := range containers {
+				res := getContainerResources(container, 1)
+				podTotalresource = podTotalresource.Add(res)
+			}
+			klog.V(8).Infof("[GetListOfPodResourcesFromOneGenericItem] Requested total pod allocation resource from containers `%v`.\n", podTotalresource)
+		} else {
+			podresources := awr.CustomPodResources
+			for _, item := range podresources {
+				res := getPodResources(item)
+				podTotalresource = podTotalresource.Add(res)
+			}
+			klog.V(8).Infof("[GetListOfPodResourcesFromOneGenericItem] Requested total allocation resource from 1 pod `%v`.\n", podTotalresource)
+		}
+
+		// Addd individual pods to results
+		var replicaCount int = int(replicas)
+		for i := 0; i < replicaCount; i++ {
+			podResourcesList = append(podResourcesList, podTotalresource)
+		}
+	}
+
+	return podResourcesList, err
+}
+
 func GetResources(awr *arbv1.AppWrapperGenericResource) (resource *clusterstateapi.Resource, er error) {
 
 	totalresource := clusterstateapi.EmptyResource()
