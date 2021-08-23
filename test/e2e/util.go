@@ -2089,6 +2089,81 @@ func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 	return appwrapper
 }
 
+func createGenericPodTooBigAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "v1",
+		"kind": "Pod",
+		"metadata": {
+			"name": "aw-generic-big-pod-1",
+			"namespace": "test",
+			"labels": {
+				"app": "aw-generic-big-pod-1"
+			},
+			"annotations": {
+				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-generic-big-pod-1"
+			}
+		},
+		"spec": {
+			"containers": [
+				{
+					"name": "aw-generic-big-pod-1",
+					"image": "k8s.gcr.io/echoserver:1.4",
+					"resources": {
+						"limits": {
+							"cpu": "100",
+							"memory": "150Mi"
+						},
+						"requests": {
+							"cpu": "100",
+							"memory": "150Mi"
+						}
+					},
+					"ports": [
+						{
+							"containerPort": 80
+						}
+					]
+				}
+			]
+		}
+	} `)
+
+	var schedSpecMin int = 1
+
+	labels := make(map[string]string)
+	labels["quota_service"] = "service-w"
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+			Labels:    labels,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item"),
+							Namespace: context.namespace,
+						},
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 func createBadGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "v1",
 		"kind": "Pod",

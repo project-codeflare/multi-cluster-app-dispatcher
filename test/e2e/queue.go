@@ -210,6 +210,20 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("Create AppWrapper  - Generic Pod Too Big - 1 Pod", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper  - Generic Pod Too Big - 1 Pod - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		aw := createGenericPodTooBigAW(context, "aw-generic-big-pod-1")
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWAnyPodsExists(context, aw)
+		Expect(err).To(HaveOccurred())
+	})
+
 	It("Create AppWrapper  - Bad Generic Pod Only", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper  - Bad Generic Pod Only - Started.\n")
 		context := initTestContext()

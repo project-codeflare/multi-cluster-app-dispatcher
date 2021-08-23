@@ -19,6 +19,8 @@ package cache
 import (
 	"context"
 	"fmt"
+	"github.com/golang/protobuf/proto"
+	dto "github.com/prometheus/client_model/go"
 	"sync"
 	"time"
 
@@ -55,6 +57,7 @@ type ClusterStateCache struct {
 	Nodes map[string]*api.NodeInfo
 
 	availableResources *api.Resource
+	availableHistogram *api.ResourceHistogram
 	resourceCapacities *api.Resource
 	deletedJobs        *cache.FIFO
 
@@ -153,6 +156,7 @@ func newClusterStateCache(config *rest.Config) *ClusterStateCache {
 	})
 
 	sc.availableResources = api.EmptyResource()
+	sc.availableHistogram = api.NewResourceHistogram(api.EmptyResource(), api.EmptyResource())
 	sc.resourceCapacities = api.EmptyResource()
 
 	return sc
@@ -192,6 +196,23 @@ func (sc *ClusterStateCache) GetUnallocatedResources() *api.Resource {
 	return r.Add(sc.availableResources)
 }
 
+
+func (sc *ClusterStateCache) GetUnallocatedHistograms() map[string]*dto.Metric {
+	sc.Mutex.Lock()
+	defer sc.Mutex.Unlock()
+
+	rtval := make(map[string]*dto.Metric)
+	rtcpu := &dto.Metric{}
+	(*sc.availableHistogram.GPU).Write(rtcpu)
+	rtval["gpu"] = rtcpu
+	return rtval
+}
+
+// Gets available free resoures.
+func (sc *ClusterStateCache) GetUnallocatedResourcesHistogram() *api.ResourceHistogram {
+	return sc.availableHistogram
+}
+
 // Gets the full capacity of resources in the cluster
 func (sc *ClusterStateCache) GetResourceCapacities() *api.Resource {
 	sc.Mutex.Lock()
@@ -202,13 +223,15 @@ func (sc *ClusterStateCache) GetResourceCapacities() *api.Resource {
 }
 
 // Save the cluster state.
-func (sc *ClusterStateCache) saveState(available *api.Resource, capacity *api.Resource) error {
+func (sc *ClusterStateCache) saveState(available *api.Resource, capacity *api.Resource,
+								availableHistogram *api.ResourceHistogram) error {
 	klog.V(12).Infof("Saving Cluster State")
 
 	sc.Mutex.Lock()
 	defer sc.Mutex.Unlock()
 	sc.availableResources.Replace(available)
 	sc.resourceCapacities.Replace(capacity)
+	sc.availableHistogram = availableHistogram
 	klog.V(12).Infof("Updated Cluster State completed.")
 	return nil
 }
@@ -221,15 +244,71 @@ func (sc *ClusterStateCache) updateState() error {
 	total := api.EmptyResource()
 	used := api.EmptyResource()
 	idle := api.EmptyResource()
+	idleMin := api.EmptyResource()
+	idleMax := api.EmptyResource()
 
+	firstNode :=  true
 	for _, value := range cluster.Nodes {
 		total = total.Add(value.Allocatable)
 		used = used.Add(value.Used)
 		idle = idle.Add(value.Idle)
-	}
-	klog.V(8).Infof("Total capacity %+v, used %+v, free space %+v", total, used, idle)
 
-	err := sc.saveState(idle, total)
+		// Collect Min and Max for histogram
+		if firstNode {
+			idleMin.MilliCPU = idle.MilliCPU
+			idleMin.Memory   = idle.Memory
+			idleMin.GPU      = idle.GPU
+
+			idleMax.MilliCPU = idle.MilliCPU
+			idleMax.Memory   = idle.Memory
+			idleMax.GPU      = idle.GPU
+			firstNode = false
+		} else {
+			if value.Idle.MilliCPU < idleMin.MilliCPU {
+				idleMin.MilliCPU = value.Idle.MilliCPU
+			} else if value.Idle.MilliCPU > idleMax.MilliCPU {
+				idleMax.MilliCPU = value.Idle.MilliCPU
+			}
+
+			if value.Idle.Memory < idleMin.Memory {
+				idleMin.Memory = value.Idle.Memory
+			} else if value.Idle.Memory > idleMax.Memory{
+				idleMax.Memory = value.Idle.Memory
+			}
+
+			if value.Idle.GPU < idleMin.GPU {
+				idleMin.GPU = value.Idle.GPU
+			} else if value.Idle.GPU > idleMax.GPU {
+				idleMax.GPU = value.Idle.GPU
+			}
+		}
+	}
+
+	// Create available histograms
+	newIdleHistogram := api.NewResourceHistogram(idleMin, idleMax)
+	for _, value := range cluster.Nodes {
+		newIdleHistogram.Observer(value.Idle)
+	}
+
+	klog.V(8).Infof("Total capacity %+v, used %+v, free space %+v", total, used, idle)
+	if klog.V(10).Enabled() {
+		// CPU histogram
+		metricCPU := &dto.Metric{}
+		(*newIdleHistogram.MilliCPU).Write(metricCPU)
+		klog.V(10).Infof("[updateState] CPU histogram:\n%s", proto.MarshalTextString(metricCPU))
+
+		// Memory histogram
+		metricMem := &dto.Metric{}
+		(*newIdleHistogram.Memory).Write(metricMem)
+		klog.V(10).Infof("[updateState] Memory histogram:\n%s", proto.MarshalTextString(metricMem))
+
+		// GPU histogram
+		metricGPU := &dto.Metric{}
+		(*newIdleHistogram.GPU).Write(metricGPU)
+		klog.V(10).Infof("[updateState] GPU histogram:\n%s", proto.MarshalTextString(metricGPU))
+	}
+
+	err := sc.saveState(idle, total, newIdleHistogram)
 	return err
 }
 

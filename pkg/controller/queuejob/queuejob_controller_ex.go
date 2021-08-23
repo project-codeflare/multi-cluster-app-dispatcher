@@ -18,6 +18,7 @@ package queuejob
 
 import (
 	"fmt"
+	dto "github.com/prometheus/client_model/go"
 	"math"
 	"math/rand"
 	"reflect"
@@ -517,6 +518,19 @@ func GetPodTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.PodTemplateSpec, err
 
 }
 
+func (qjm *XController) GetAggregatedResourcesPerGenericItem(cqj *arbv1.AppWrapper) []*clusterstateapi.Resource {
+	var retVal []*clusterstateapi.Resource
+
+	// Get all pods and related resources
+	for _, genericItem := range cqj.Spec.AggrResources.GenericItems {
+		itemsList, _ := genericresource.GetListOfPodResourcesFromOneGenericItem(&genericItem)
+		for i :=0; i < len(itemsList); i++ {
+			retVal = append(retVal, itemsList[i])
+		}
+	}
+
+	return retVal
+}
 func (qjm *XController) GetAggregatedResources(cqj *arbv1.AppWrapper) *clusterstateapi.Resource {
 	//todo: deprecate resource controllers
 	allocated := clusterstateapi.EmptyResource()
@@ -757,7 +771,7 @@ func (qjm *XController) chooseAgent(qj *arbv1.AppWrapper) string{
 		//Now evaluate quota
 		if qjm.serverOption.QuotaEnabled {
 			if qjm.quotaManager != nil {
-				if fits, preemptAWs := qjm.quotaManager.Fits(qj, qjAggrResources, proposedPreemptions); fits {
+				if fits, preemptAWs, _ := qjm.quotaManager.Fits(qj, qjAggrResources, proposedPreemptions); fits {
 					klog.V(2).Infof("[chooseAgent] AppWrapper %s has enough quota.\n", qj.Name)
 					qjm.preemptAWJobs(preemptAWs)
 					return agentId
@@ -777,6 +791,51 @@ func (qjm *XController) chooseAgent(qj *arbv1.AppWrapper) string{
 	return ""
 }
 
+func (qjm *XController) nodeChecks(histograms map[string]*dto.Metric, aw *arbv1.AppWrapper) bool {
+	ok := true
+	allPods := qjm.GetAggregatedResourcesPerGenericItem(aw)
+
+	// Check only GPUs at this time
+	var podsToCheck []*clusterstateapi.Resource
+
+	for _, pod := range allPods {
+		if pod.GPU > 0 {
+			podsToCheck = append(podsToCheck, pod)
+		}
+	}
+
+	gpuHistogram := histograms["gpu"]
+
+	if gpuHistogram != nil {
+		buckets := gpuHistogram.Histogram.Bucket
+		// Go through pods needing checking
+		for _, gpuPod := range podsToCheck {
+
+			// Go through each bucket of the histogram to find a valid bucket
+			bucketFound := false
+			for _, bucket := range buckets {
+				ub := bucket.UpperBound
+				if ub == nil {
+					klog.Errorf("Unable to get upperbound of histogram bucket.")
+					continue
+				}
+				c := bucket.GetCumulativeCount()
+				var fGPU float64 = float64(gpuPod.GPU)
+				if fGPU < *ub && c > 1 {
+					// Found a valid node
+					bucketFound = true
+					break
+				}
+			}
+			if ! bucketFound {
+				ok = false
+				break
+			}
+		}
+	}
+
+	return ok
+}
 
 // Thread to find queue-job(QJ) for next schedule
 func (qjm *XController) ScheduleNext() {
@@ -933,20 +992,25 @@ func (qjm *XController) ScheduleNext() {
 								qjm.cache.GetUnallocatedResources(), priorityindex, qj, "")
 			klog.V(2).Infof("[ScheduleNext] XQJ %s with resources %v to be scheduled on aggregated idle resources %v", qj.Name, aggqj, resources)
 
-			if aggqj.LessEqual(resources) {
+			if aggqj.LessEqual(resources) && qjm.nodeChecks(qjm.cache.GetUnallocatedHistograms(), qj) {
 				//Now evaluate quota
 				fits := true
 				klog.V(10).Infof("[ScheduleNext] HOL available resourse successful check for %s at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				if qjm.serverOption.QuotaEnabled {
 					if qjm.quotaManager != nil {
-						quotaFits, preemptAWs := qjm.quotaManager.Fits(qj, aggqj, proposedPreemptions)
+						quotaFits, preemptAWs, msg := qjm.quotaManager.Fits(qj, aggqj, proposedPreemptions)
 						if quotaFits {
 							klog.V(4).Infof("[ScheduleNext] HOL quota evaluation successful %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 							// Set any jobs that are marked for preemption
 							qjm.preemptAWJobs(preemptAWs)
 						} else { // Not enough free quota to dispatch appwrapper
 							dispatchFailedMessage = "Insufficient quota to dispatch AppWrapper."
-							klog.V(3).Infof("[ScheduleNext] HOL Blocking by %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+							if len(msg) > 0 {
+								dispatchFailedReason += " "
+								dispatchFailedReason += msg
+							}
+							klog.V(3).Infof("[ScheduleNext] HOL Blocking by %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v msg=%s, due to quota limits",
+								qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, msg)
 						}
 						fits = quotaFits
 					} else {

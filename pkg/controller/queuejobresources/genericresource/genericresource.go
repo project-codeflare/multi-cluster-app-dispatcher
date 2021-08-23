@@ -82,7 +82,8 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
-		klog.Fatal(err)
+		klog.Errorf("Error getting API resources, err=%#v", err)
+		return  []*v1.Pod{}, err
 	}
 	ext := awr.GenericTemplate
 	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
@@ -107,12 +108,14 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	}
 	dclient, err := dynamic.NewForConfig(restconfig)
 	if err != nil {
-		klog.Fatal(err)
+		klog.Errorf("Error creating new dynamic client, err=%#v", err)
+		return  []*v1.Pod{}, err
 	}
 
 	_, apiresourcelist, err := dd.ServerGroupsAndResources()
 	if err != nil {
-		klog.Fatal(err)
+		klog.Errorf("Error getting supported groups and resources, err=%#v", err)
+		return  []*v1.Pod{}, err
 	}
 
 	rsrc := mapping.Resource
@@ -130,7 +133,8 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	unstruct.Object = make(map[string]interface{})
 	var blob interface{}
 	if err = json.Unmarshal(ext.Raw, &blob); err != nil {
-		klog.Fatal(err)
+		klog.Errorf("Error unmarshalling, err=%#v", err)
+		return  []*v1.Pod{}, err
 	}
 	ownerRef := metav1.NewControllerRef(aw, appWrapperKind)
 	unstruct.Object = blob.(map[string]interface{}) //set object to the content of the blob after Unmarshalling
@@ -261,21 +265,34 @@ func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, conta
 	unstruct.Object = make(map[string]interface{})
 	var blob interface{}
 	if err := json.Unmarshal(obj.Raw, &blob); err != nil {
-		klog.Fatal(err)
+		klog.Errorf("Error unmarshalling, err=%#v", err)
+		return false, 0, nil
 	}
 	unstruct.Object = blob.(map[string]interface{})
 	spec, isFound, _ := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
-	replicas, isFound, _ := unstructured.NestedFloat64(spec, "replicas")
+	if !isFound {
+		klog.Warningf("[hasFields] No spec field found in raw object: %#v", unstruct.UnstructuredContent())
+	}
 
+	replicas, isFound, _ := unstructured.NestedFloat64(spec, "replicas")
 	// Set default to 1 if no replicas field is found (handles the case of a single pod creation without replicaset.
 	if !isFound {
 		replicas = 1
 	}
 
 	template, isFound, _ := unstructured.NestedMap(spec, "template")
-	subspec, isFound, _ := unstructured.NestedMap(template, "spec")
+	// If spec does not contain a podtemplate, check for pod singletons
+	var subspec map[string]interface{}
+	if !isFound {
+		subspec = spec
+		klog.V(6).Infof("[hasFields] No template field found in raw object: %#v", spec)
+	} else {
+		subspec, isFound, _ = unstructured.NestedMap(template, "spec")
+	}
+
 	containerList, isFound, _ := unstructured.NestedSlice(subspec, "containers")
 	if !isFound {
+		klog.Warningf("[hasFields] No containers field found in raw object: %#v", subspec)
 		return false, 0, nil
 	}
 	objContainers := make([]v1.Container, len(containerList))
@@ -322,6 +339,40 @@ func createObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 
 		}
 	}
+}
+
+func GetListOfPodResourcesFromOneGenericItem(awr *arbv1.AppWrapperGenericResource) (resource []*clusterstateapi.Resource, er error) {
+	var podResourcesList []*clusterstateapi.Resource
+
+	podTotalresource := clusterstateapi.EmptyResource()
+	var err error
+	err = nil
+	if awr.GenericTemplate.Raw != nil {
+		hasContainer, replicas, containers := hasFields(awr.GenericTemplate)
+		if hasContainer {
+			// Add up all the containers in a pod
+			for _, container := range containers {
+				res := getContainerResources(container, 1)
+				podTotalresource = podTotalresource.Add(res)
+			}
+			klog.V(8).Infof("[GetListOfPodResourcesFromOneGenericItem] Requested total pod allocation resource from containers `%v`.\n", podTotalresource)
+		} else {
+			podresources := awr.CustomPodResources
+			for _, item := range podresources {
+				res := getPodResources(item)
+				podTotalresource = podTotalresource.Add(res)
+			}
+			klog.V(8).Infof("[GetListOfPodResourcesFromOneGenericItem] Requested total allocation resource from 1 pod `%v`.\n", podTotalresource)
+		}
+
+		// Addd individual pods to results
+		var replicaCount int = int(replicas)
+		for i := 0; i < replicaCount; i++ {
+			podResourcesList = append(podResourcesList, podTotalresource)
+		}
+	}
+
+	return podResourcesList, err
 }
 
 func GetResources(awr *arbv1.AppWrapperGenericResource) (resource *clusterstateapi.Resource, er error) {

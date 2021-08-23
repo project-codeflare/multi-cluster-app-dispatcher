@@ -88,9 +88,9 @@ func (s *ServerOption) loadDefaultsFromEnvVars() {
 	}
 
 	preemption, envVarExists := os.LookupEnv("PREEMPTION")
-	s.Preemption = true
-	if envVarExists && strings.EqualFold(preemption, "false") {
-		s.Preemption = false
+	s.Preemption = false
+	if envVarExists && strings.EqualFold(preemption, "true") {
+		s.Preemption = true
 	}
 
 	backoffString, envVarExists := os.LookupEnv("BACKOFFTIME")

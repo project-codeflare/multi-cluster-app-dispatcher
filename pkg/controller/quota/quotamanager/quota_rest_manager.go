@@ -239,16 +239,16 @@ func (qm *QuotaManager) getQuotaDesignation(aw *arbv1.AppWrapper) ([]QuotaGroup)
 }
 
 func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource,
-					proposedPreemptions []*arbv1.AppWrapper) (bool, []*arbv1.AppWrapper) {
+					proposedPreemptions []*arbv1.AppWrapper) (bool, []*arbv1.AppWrapper, string) {
 
 	// Handle uninitialized quota manager
 	if len(qm.url) <= 0 {
-		return true, proposedPreemptions
+		return true, proposedPreemptions, ""
 	}
 	awId := createId(aw.Namespace, aw.Name)
 	if len(awId) <= 0 {
 		klog.Errorf("[Fits] Request failed due to invalid AppWrapper due to empty namespace: %s or name:%s.", aw.Namespace, aw.Name)
-		return false, nil
+		return false, nil, ""
 	}
 
 	groups := qm.getQuotaDesignation(aw)
@@ -271,7 +271,7 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 	// If a url does not exists then assume fits quota
 	if len(qm.url) < 1 {
 		klog.V(4).Infof("[Fits] No quota manager exists, %#v meets quota by default.", awResDemands)
-		return doesFit, nil
+		return doesFit, nil, ""
 	}
 
 	uri := qm.url + "/quota/alloc"
@@ -279,7 +279,7 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 	err := json.NewEncoder(buf).Encode(req)
 	if err != nil {
 		klog.Errorf("[Fits] Failed encoding of request: %v, err=%#v.", req, err)
-		return doesFit, nil
+		return doesFit, nil, ""
 	}
 
 	var preemptIds []*arbv1.AppWrapper
@@ -311,7 +311,7 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 			preemptIds = qm.getAppWrappers(quotaResponse.PreemptIds)
 		}
 	}
-	return doesFit, preemptIds
+	return doesFit, preemptIds, ""
 }
 
 

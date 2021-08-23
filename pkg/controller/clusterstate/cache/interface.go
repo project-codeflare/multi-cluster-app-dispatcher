@@ -18,6 +18,7 @@ package cache
 
 import (
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	dto "github.com/prometheus/client_model/go"
 )
 
 // Cache collects pods/nodes/queues information
@@ -37,4 +38,7 @@ type Cache interface {
 
 	// Obtains current cluster unallocated resources.
 	GetUnallocatedResources() *api.Resource
+
+	// Obtains current cluster unallocated histogram of resources
+	GetUnallocatedHistograms() map[string]*dto.Metric
 }
