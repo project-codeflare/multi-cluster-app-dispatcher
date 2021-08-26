@@ -951,7 +951,7 @@ func (qjm *XController) ScheduleNext() {
 			}
 		}
 
-		// Retrive HeadOfLine after priority update
+		// Retrieve HeadOfLine after priority update
 		qj, err = qjm.qjqueue.Pop()
 		qjm.schedulingAW = qj
 		if err != nil {
@@ -1262,7 +1262,7 @@ func (qjm *XController) UpdateAgent() {
 
 func (qjm *XController) UpdateQueueJobs() {
 	firstTime := metav1.NowMicro()
-	// retrive queueJobs from local cache.  no guarantee queueJobs contain up-to-date information
+	// retrieve queueJobs from local cache.  no guarantee queueJobs contain up-to-date information
 	queueJobs, err := qjm.queueJobLister.AppWrappers("").List(labels.Everything())
 	if err != nil {
 		klog.Errorf("[UpdateQueueJobs] List of queueJobs err=%+v", err)
