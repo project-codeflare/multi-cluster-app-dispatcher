@@ -305,21 +305,21 @@ func (sc *ClusterStateCache) updateState() error {
 	}
 
 	klog.V(8).Infof("Total capacity %+v, used %+v, free space %+v", total, used, idle)
-	if klog.V(10).Enabled() {
+	if klog.V(12).Enabled() {
 		// CPU histogram
 		metricCPU := &dto.Metric{}
 		(*newIdleHistogram.MilliCPU).Write(metricCPU)
-		klog.V(10).Infof("[updateState] CPU histogram:\n%s", proto.MarshalTextString(metricCPU))
+		klog.V(12).Infof("[updateState] CPU histogram:\n%s", proto.MarshalTextString(metricCPU))
 
 		// Memory histogram
 		metricMem := &dto.Metric{}
 		(*newIdleHistogram.Memory).Write(metricMem)
-		klog.V(10).Infof("[updateState] Memory histogram:\n%s", proto.MarshalTextString(metricMem))
+		klog.V(12).Infof("[updateState] Memory histogram:\n%s", proto.MarshalTextString(metricMem))
 
 		// GPU histogram
 		metricGPU := &dto.Metric{}
 		(*newIdleHistogram.GPU).Write(metricGPU)
-		klog.V(10).Infof("[updateState] GPU histogram:\n%s", proto.MarshalTextString(metricGPU))
+		klog.V(12).Infof("[updateState] GPU histogram:\n%s", proto.MarshalTextString(metricGPU))
 	}
 
 	err := sc.saveState(idle, total, newIdleHistogram)
