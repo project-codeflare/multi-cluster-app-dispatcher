@@ -109,16 +109,17 @@ func createId(ns string, n string) string {
 	return id
 }
 
-func NewQuotaManager(awJobLister listersv1.AppWrapperLister, dispatchedAWDemands map[string]*clusterstateapi.Resource,
-				config *rest.Config, serverOptions *options.ServerOption) (*QuotaManager, error) {
+func NewQuotaManager(dispatchedAWDemands map[string]*clusterstateapi.Resource, dispatchedAWs map[string]*arbv1.AppWrapper,
+			awJobLister listersv1.AppWrapperLister, config *rest.Config,
+				serverOptions *options.ServerOption) (*QuotaManager, error) {
 	if serverOptions.QuotaEnabled == false {
 		klog.Infof("[NewQuotaManager] Quota management is not enabled.")
 		return nil, nil
 	}
 
 	qm := &QuotaManager{
-		appwrapperLister:    awJobLister,
 		url:                 serverOptions.QuotaRestURL,
+		appwrapperLister:    awJobLister,
 		preemptionEnabled:   serverOptions.Preemption,
 	}
 

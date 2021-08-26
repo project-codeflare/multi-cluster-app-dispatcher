@@ -32,6 +32,7 @@ package queuejob
 
 import (
 	"fmt"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager"
 	dto "github.com/prometheus/client_model/go"
 	"math"
 	"math/rand"
@@ -44,7 +45,6 @@ import (
 	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter"
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota"
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager"
 	qmutils "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/util"
 	"k8s.io/apimachinery/pkg/api/equality"
 
@@ -159,6 +159,9 @@ type XController struct {
 
 	// Quota Manager
 	quotaManager quota.QuotaManagerInterface
+
+	// Active Scheduling AppWrapper
+	schedulingAW *arbv1.AppWrapper
 }
 
 type JobAndClusterAgent struct{
@@ -371,18 +374,19 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 			},
 		})
 	cc.queueJobLister = cc.queueJobInformer.Lister()
-
-	// Setup Quota
-	if serverOption.QuotaEnabled {
-		dispatchedAWDemands := cc.getDispatchedAppWrappers(cc.queueJobLister)
-		cc.quotaManager, _ = quotamanager.NewQuotaManager(cc.queueJobLister, dispatchedAWDemands, config, serverOption)
-	} else {
-		cc.quotaManager = nil
-	}
 	cc.queueJobSynced = cc.queueJobInformer.Informer().HasSynced
 
 	//create sub-resource reference manager
 	cc.refManager = queuejobresources.NewLabelRefManager()
+
+	// Setup Quota
+	if serverOption.QuotaEnabled {
+		dispatchedAWDemands, dispatchedAWs := cc.getDispatchedAppWrappers()
+		cc.quotaManager, _ = quotamanager.NewQuotaManager(dispatchedAWDemands, dispatchedAWs, cc.queueJobLister,
+											config, serverOption)
+	} else {
+		cc.quotaManager = nil
+	}
 
 	// Set dispatcher mode or agent mode
 	cc.isDispatcher=serverOption.Dispatcher
@@ -409,6 +413,8 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	//create (empty) dispatchMap
 	cc.dispatchMap=map[string]string{}
 
+	// Initialize current scheuling active AppWrapper
+	cc.schedulingAW = nil
 	return cc
 }
 
@@ -624,24 +630,62 @@ func (qjm *XController) getProposedPreemptions(requestingJob *arbv1.AppWrapper, 
 	return proposedPreemptions
 }
 
-func (qjm *XController)  getDispatchedAppWrappers(awJobLister listersv1.AppWrapperLister) map[string]*clusterstateapi.Resource {
-	retval := make(map[string]*clusterstateapi.Resource)
+func (qjm *XController) getDispatchedAppWrappers() (map[string]*clusterstateapi.Resource, map[string]*arbv1.AppWrapper){
+	awrRetVal := make(map[string]*clusterstateapi.Resource)
+	awsRetVal := make(map[string]*arbv1.AppWrapper)
+	// Setup and break down an informer to get a list of appwrappers bofore controllerinitialization completes
+	appwrapperJobClient, _, err := clients.NewClient(qjm.config)
+	if err != nil {
+		klog.Errorf("[getDispatchedAppWrappers] Failure creating client for initialization informer err=%#v", err)
+		return awrRetVal, awsRetVal
+	}
+	queueJobInformer := arbinformers.NewSharedInformerFactory(appwrapperJobClient, 0).AppWrapper().AppWrappers()
+	queueJobInformer.Informer().AddEventHandler(
+		cache.FilteringResourceEventHandler{
+			FilterFunc: func(obj interface{}) bool {
+				switch t := obj.(type) {
+				case *arbv1.AppWrapper:
+					klog.V(10).Infof("[getDispatchedAppWrappers] Filtered name=%s/%s",
+											t.Namespace, t.Name)
+					return true
+				default:
+					return false
+				}
+			},
+			Handler: cache.ResourceEventHandlerFuncs{
+				AddFunc:    qjm.addQueueJob,
+				UpdateFunc: qjm.updateQueueJob,
+				DeleteFunc: qjm.deleteQueueJob,
+			},
+		})
+	queueJobLister := queueJobInformer.Lister()
+	queueJobSynced := queueJobInformer.Informer().HasSynced
 
-	appwrappers, err := awJobLister.AppWrappers("").List(labels.Everything())
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+
+	go queueJobInformer.Informer().Run(stopCh)
+
+	cache.WaitForCacheSync(stopCh, queueJobSynced)
+
+	appwrappers, err := queueJobLister.AppWrappers("").List(labels.Everything())
+
 	if err != nil {
 		klog.Errorf("[getDispatchedAppWrappers] List of AppWrappers err=%+v", err)
-		return retval
+		return awrRetVal, awsRetVal
 	}
 
 	for _, aw := range appwrappers {
 		// Get dispatched jobs
 		if aw.Status.CanRun == true {
 			id := qmutils.CreateId(aw.Namespace, aw.Name)
-			retval[id] = qjm.GetAggregatedResources(aw)
+			awrRetVal[id] = qjm.GetAggregatedResources(aw)
+			awsRetVal[id] = aw
 		}
 	}
-	klog.V(10).Infof("[getDispatchedAppWrappers] List of runnable AppWrappers dispatched or to be dispatched: %+v", retval)
-	return retval
+	klog.V(10).Infof("[getDispatchedAppWrappers] List of runnable AppWrappers dispatched or to be dispatched: %+v",
+		awrRetVal)
+	return awrRetVal, awsRetVal
 }
 
 func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClusterResources *clusterstateapi.
@@ -858,6 +902,7 @@ func (qjm *XController) ScheduleNext() {
 	// if we have enough compute resources then we set the AllocatedReplicas to the total
 	// amount of resources asked by the job
 	qj, err := qjm.qjqueue.Pop()
+	qjm.schedulingAW = qj
 	if err != nil {
 		klog.V(3).Infof("[ScheduleNext] Cannot pop QueueJob from qjqueue! err=%#v", err)
 		return // Try to pop qjqueue again
@@ -908,6 +953,7 @@ func (qjm *XController) ScheduleNext() {
 
 		// Retrive HeadOfLine after priority update
 		qj, err = qjm.qjqueue.Pop()
+		qjm.schedulingAW = qj
 		if err != nil {
 			klog.V(3).Infof("[ScheduleNext] Cannot pop QueueJob from qjqueue! err=%#v", err)
 		} else {
@@ -1601,12 +1647,16 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 
 		//Handle recovery condition
 		if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued &&
-			!cc.qjqueue.IfExistUnschedulableQ(qj) && !cc.qjqueue.IfExistActiveQ(qj){
+				!cc.qjqueue.IfExistUnschedulableQ(qj) && !cc.qjqueue.IfExistActiveQ(qj) {
+			// One more check to ensure AW is not the current active schedule object
+			if cc.schedulingAW == nil ||
+				(strings.Compare(cc.schedulingAW.Namespace, qj.Namespace) != 0 &&
+					strings.Compare(cc.schedulingAW.Name, qj.Name) != 0) {
 				cc.qjqueue.AddIfNotPresent(qj)
-			klog.V(3).Infof("[manageQueueJob] Recovered AppWrapper %s%s - added to active queue, Status=%+v",
-				qj.Namespace, qj.Name, qj.Status)
-
-			return nil
+				klog.V(3).Infof("[manageQueueJob] Recovered AppWrapper %s%s - added to active queue, Status=%+v",
+					qj.Namespace, qj.Name, qj.Status)
+				return nil
+			}
 		}
 
 		// add qj to Etcd for dispatch
