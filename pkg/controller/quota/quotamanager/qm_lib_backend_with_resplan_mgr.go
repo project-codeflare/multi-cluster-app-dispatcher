@@ -25,7 +25,6 @@ import (
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/util"
 	qmbackend "github.ibm.com/ai-foundation/quota-manager/quota"
 	qmbackendutils "github.ibm.com/ai-foundation/quota-manager/quota/utils"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"strings"
 
@@ -93,31 +92,17 @@ type TreeNode struct {
 // Making sure that QuotaManager implements QuotaManager.
 var _ = quota.QuotaManagerInterface(&QuotaManager{})
 
-func getDispatchedAppWrapper(awJobLister listersv1.AppWrapperLister, awId string) *arbv1.AppWrapper {
-	targetAWIdNamespace, targetAWIdName := util.ParseId(awId)
-
-	// Get all AWs
-	appwrappers, err := awJobLister.AppWrappers("").List(labels.Everything())
-	if err != nil {
-		klog.Errorf("[getDispatchedAppWrapper] List of AppWrappers err=%#v", err)
-		return nil
-	}
-
-	// Find Appwrappers that can run (runnable)
-	for _, aw := range appwrappers {
-		// Get dispatched jobs
-		if aw.Status.CanRun == true {
-			if strings.Compare(aw.Name, targetAWIdName) == 0 &&
-				strings.Compare(aw.Namespace, targetAWIdNamespace) == 0 {
-				return aw
-			}
-		}
+func getDispatchedAppWrapper(dispatchedAWs map[string]*arbv1.AppWrapper, awId string) *arbv1.AppWrapper {
+	// Find Appwrapper that is run (runnable)
+	aw := dispatchedAWs[awId]
+	if aw != nil && aw.Status.CanRun == true {
+		return aw
 	}
 	return nil
 }
 
-func NewQuotaManager(awJobLister listersv1.AppWrapperLister, dispatchedAWDemands map[string]*clusterstateapi.Resource,
-				config *rest.Config, serverOptions *options.ServerOption) (*QuotaManager, error) {
+func NewQuotaManager(dispatchedAWDemands map[string]*clusterstateapi.Resource, dispatchedAWs map[string]*arbv1.AppWrapper,
+			awJobLister listersv1.AppWrapperLister, config *rest.Config, serverOptions *options.ServerOption) (*QuotaManager, error) {
 
 	if serverOptions.QuotaEnabled == false {
 		klog.
@@ -126,8 +111,8 @@ func NewQuotaManager(awJobLister listersv1.AppWrapperLister, dispatchedAWDemands
 	}
 
 	qm := &QuotaManager{
-		appwrapperLister:    awJobLister,
 		url:                 serverOptions.QuotaRestURL,
+		appwrapperLister:    awJobLister,
 		preemptionEnabled:   serverOptions.Preemption,
 		quotaManagerBackend: qmbackend.NewManager(),
 		initializationDone:  false,
@@ -147,7 +132,7 @@ func NewQuotaManager(awJobLister listersv1.AppWrapperLister, dispatchedAWDemands
 	}
 
 	// Add AppWrappers that have been evaluated as runnable to QuotaManager
-	err2 := qm.loadDispatchedAWs(awJobLister, dispatchedAWDemands)
+	err2 := qm.loadDispatchedAWs(dispatchedAWDemands, dispatchedAWs)
 	if err2 != nil {
 		klog.Errorf("[dispatchedAWDemands] Failure during Quota Manager Backend Cache refresh, err=%#v",
 														err2)
@@ -171,19 +156,22 @@ func NewQuotaManager(awJobLister listersv1.AppWrapperLister, dispatchedAWDemands
 	return qm, err
 }
 
-func (qm *QuotaManager) loadDispatchedAWs(awJobLister listersv1.AppWrapperLister,
-						dispatchedAWDemands map[string]*clusterstateapi.Resource) error {
+func (qm *QuotaManager) loadDispatchedAWs(dispatchedAWDemands map[string]*clusterstateapi.Resource,
+						dispatchedAWs map[string]*arbv1.AppWrapper) error {
+
 	// Nothing to do
-	if dispatchedAWDemands == nil {
+	if dispatchedAWDemands == nil || len(dispatchedAWDemands) <= 0 {
+		klog.V(4).Infof("[loadDispatchedAWs] No dispatched AppWrappers found to preload.")
 		return nil
 	}
+
 
 	// Process list of AppWrappers that are already dispatched
 	var err error
 	err = nil
 
 	for k, v := range dispatchedAWDemands{
-		aw := getDispatchedAppWrapper(awJobLister, k)
+		aw := getDispatchedAppWrapper(dispatchedAWs, k)
 		if aw != nil {
 
 			doesFit, preemptionIds, err2:= qm.Fits(aw, v, nil)
@@ -205,6 +193,7 @@ func (qm *QuotaManager) loadDispatchedAWs(awJobLister listersv1.AppWrapperLister
 						err, aw.Namespace, aw.Name, preemptionIds)
 				}
 			}
+			klog.V(4).Infof("[loadDispatchedAWs] Dispatched AppWrappers %s/%s found to preload.", aw.Namespace, aw.Name)
 		} else {
 			klog.Warningf("[loadDispatchedAWs] Unable to obtain AppWrapper from key: %s.  Loading of AppWrapper will be skipped.",
 				k)
