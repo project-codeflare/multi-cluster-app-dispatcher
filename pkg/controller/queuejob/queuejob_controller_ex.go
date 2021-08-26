@@ -1599,6 +1599,16 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 			return nil
 		} // End of first execution of qj to add to qjqueue for ScheduleNext
 
+		//Handle recovery condition
+		if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued &&
+			!cc.qjqueue.IfExistUnschedulableQ(qj) && !cc.qjqueue.IfExistActiveQ(qj){
+				cc.qjqueue.AddIfNotPresent(qj)
+			klog.V(3).Infof("[manageQueueJob] Recovered AppWrapper %s%s - added to active queue, Status=%+v",
+				qj.Namespace, qj.Name, qj.Status)
+
+			return nil
+		}
+
 		// add qj to Etcd for dispatch
 		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive {
 			qj.Status.State = arbv1.AppWrapperStateActive
