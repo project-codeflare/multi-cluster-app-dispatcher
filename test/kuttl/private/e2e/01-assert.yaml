@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: 01-install
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: aw-generic-statefulset-2-0
+  namespace: 01-install
+status:
+  phase: Running
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: aw-generic-statefulset-2-1
+  namespace: 01-install
+status:
+  phase: Running

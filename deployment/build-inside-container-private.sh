@@ -28,4 +28,4 @@ set +x
 git config --global url."https://${GIT_UID}:${GIT_TOKEN}@github.ibm.com/".insteadOf "https://github.ibm.com/"
 set -x
 
-cd ..  && make mcad-controller-private && make run-test
+cd ..  && BUILD_TAG=private BUILD_GOPRIVATE=github.ibm.com/* make mcad-controller && make run-test

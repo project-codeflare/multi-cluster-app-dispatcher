@@ -39,19 +39,54 @@ export KA_BIN=_output/bin
 export WAIT_TIME="20s"
 export IMAGE_REPOSITORY_MCAD="${1}"
 export IMAGE_TAG_MCAD="${2}"
-export MCAD_IMAGE_PULL_POLICY="${3-Always}"
+export MCAD_IMAGE_PULL_POLICY="${3}"
+export BUILD_TAG_MCAD="${4}"
 export IMAGE_MCAD="${IMAGE_REPOSITORY_MCAD}:${IMAGE_TAG_MCAD}"
+export KUBECTL_VERSION=1.20.0-00
+
+######
+# Vars
+######
+return_code=0
+
+##################
+# Install prereqs.
+##################
+
+# Verify paramenter
+if [ "$#" -lt "3" ]
+then
+    echo "Illegal number of parameters, requires 3."
+    echo " "
+    exit 2
+fi
 
 sudo apt-get update && sudo apt-get install -y apt-transport-https
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
 sudo apt-get update
-# Using older version due to older version of kubernetes cluster"
-sudo apt-get install -y  kubectl=1.17.0-00
 
-# Download kind binary (0.6.1)
+# Using kubernetes cluster client CLI"
+sudo apt-get install -y kubectl=$KUBECTL_VERSION
+
+# Download kind binary
 sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.11.0/kind-linux-amd64
 sudo chmod +x /usr/local/bin/kind
+
+# Download krew
+(
+  set -x; cd "$(mktemp -d)" &&
+  OS="$(uname | tr '[:upper:]' '[:lower:]')" &&
+  ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" &&
+  curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/krew.tar.gz" &&
+  tar zxvf krew.tar.gz &&
+  KREW=./krew-"${OS}_${ARCH}" &&
+  "$KREW" install krew
+)
+export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+
+# Install kuttl
+kubectl krew install kuttl && true
 
 # check if kind installed
 function check-prerequisites {
@@ -71,7 +106,15 @@ function check-prerequisites {
   else
     echo -n "found kubectl, " && kubectl version --short --client
   fi
-  
+
+  kuttl_plugin=$(kubectl plugin list 2>&1 | grep kuttl)
+  if [[ "$kuttl_plugin" == "" ]]; then
+    echo "kubectl kuttl not installed, exiting."
+    exit 1
+  else
+    echo -n "found kubectl kuttl, " && kubectl plugin list
+  fi
+
   if [[ $IMAGE_REPOSITORY_MCAD == "" ]]
   then
     echo "No MCAD image was provided."
@@ -353,6 +396,13 @@ function kube-test-env-up {
     kubectl describe nodes
 }
 
+kuttl_e2e_tests() {
+  if [[ "$BUILD_TAG_MCAD" == "" ]]
+  then
+    kubectl kuttl test
+    return_code=$?
+  fi
+}
 
 trap cleanup EXIT
 
@@ -363,4 +413,10 @@ kube-test-env-up
 cd ${ROOT_DIR}
 
 echo "==========================>>>>> Running E2E tests... <<<<<=========================="
+kuttl_e2e_tests
+if [[ "$return_code" != "0" ]]
+then
+  exit $return_code
+fi
+
 go test ./test/e2e -v -timeout 30m
