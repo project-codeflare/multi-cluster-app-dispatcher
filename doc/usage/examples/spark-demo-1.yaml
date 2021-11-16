@@ -1,0 +1,93 @@
+apiVersion: mcad.ibm.com/v1alpha1
+kind: AppWrapper
+metadata:
+  name: spark-c3-sx
+  labels:
+    quota_context: "context-3"
+    quota_service: "service-x"
+spec:
+  resources:
+    GenericItems:
+      - replicas: 1
+        generictemplate:
+          apiVersion: v1
+          kind: ReplicationController
+          metadata:
+            name: spark-master-controller
+          spec:
+            replicas: 1
+            selector:
+              component: spark-master
+            template:
+              metadata:
+                labels:
+                  component: spark-master
+              spec:
+                containers:
+                  - name: spark-master
+                    image: k8s.gcr.io/spark:1.5.2_v1
+                    command: ["/start-master"]
+                    ports:
+                      - containerPort: 7077
+                      - containerPort: 8080
+                    resources:
+                      requests:
+                        cpu: 100m
+      - replicas: 1
+        generictemplate:
+          apiVersion: v1
+          kind: ReplicationController
+          metadata:
+            name: spark-worker-controller
+          spec:
+            replicas: 3
+            selector:
+              component: spark-worker
+            template:
+              metadata:
+                labels:
+                  component: spark-worker
+              spec:
+                containers:
+                  - name: spark-worker
+                    image: k8s.gcr.io/spark:1.5.2_v1
+                    command: ["/start-worker"]
+                    ports:
+                      - containerPort: 8081
+                    resources:
+                      requests:
+                        cpu: 10m
+      - replicas: 1
+        generictemplate:
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: spark-job
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: spark-job
+                    image: k8s.gcr.io/spark:1.5.2_v1
+                    command: ["/bin/bash", "-c"]
+                    args: ["/opt/spark/bin/spark-submit --master spark://spark-master:7077 /opt/spark/examples/src/main/python/pi.py"]
+                    ports:
+                      - containerPort: 8080
+                restartPolicy: OnFailure
+            backoffLimit: 2
+      - replicas: 1
+        generictemplate:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: spark-master
+          spec:
+            ports:
+              - port: 7077
+                targetPort: 7077
+                name: spark
+              - port: 8080
+                targetPort: 8080
+                name: http
+            selector:
+              component: spark-master
