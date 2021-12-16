@@ -2,9 +2,6 @@ apiVersion: mcad.ibm.com/v1alpha1
 kind: AppWrapper
 metadata:
   name: spark-c3-sx
-  labels:
-    quota_context: "context-3"
-    quota_service: "service-x"
 spec:
   resources:
     GenericItems:
