@@ -14,17 +14,15 @@ The following example of running AppWrapper job for Spark is heavily based on th
 An example yaml file for this demo can also be found in 
 ```/examples/spark-demo-1.yaml```
 
-The content is pasted below, 
+In the example, all Kubernetes objects are collected in an AppWrapper. When AppWrapper is deployed, 5 pods and a service will be created: 1 Spark-Master pod and Master Service, 3 Spark_Worker pods and 1 Spark-Job Pod (i.e. a client pod).
 
+The content of the example YAML file is pasted below, 
 
 ```
 apiVersion: mcad.ibm.com/v1alpha1
 kind: AppWrapper
 metadata:
   name: spark-c3-sx
-  labels:
-    quota_context: "context-3"
-    quota_service: "service-x"
 spec:
   resources:
     GenericItems:
@@ -116,14 +114,18 @@ spec:
 
 ### Running a Spark Job
 
-Once the AppWrapper job is created. It can be used to create pods to run Spark Master Services, Spark Workers and Spark Job. 
+Once the MCAD Controller dispatches the AppWrapper, MCAD Controller will take care of pods creation and services that are listed in the AppWrapper. For this example, 5 pods and a service will be created as mentioned above. 
 
 ```
 $ kubectl create -f spark-demo-1.yaml 
 appwrapper.mcad.ibm.com/spark-c3-sx created
+
+$ kubectl get appwrappers
+NAME          AGE
+spark-c3-sx   5s
 ```
 
-Once created, we can check that the pods are running,
+Once deployed, we can check that the pods are created and running,
 
 ```
 $ kubectl get pods
@@ -166,3 +168,14 @@ Pi is roughly 3.133620
 ...
 ```
 
+and AppWrapper can be deleted, 
+```
+$ kubectl delete appwrapper spark-c3-sx
+appwrapper.mcad.ibm.com "spark-c3-sx" deleted
+
+$ kubectl get pods
+NAME                            READY   STATUS      RESTARTS   AGE
+spark-master-controller-6lvbv   1/1     Terminating 0          68s
+spark-worker-controller-2lb6m   1/1     Terminating 0          68s
+spark-worker-controller-6x25v   1/1     Terminating 0          68s
+spark-worker-controller-fwf7c   1/1     Terminating 0          68s
