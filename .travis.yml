@@ -1,7 +1,7 @@
 # the defaults
 os: linux
 dist: xenial
-# -----------
+# ----------
 
 language: go
 
