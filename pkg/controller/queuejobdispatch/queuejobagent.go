@@ -67,7 +67,7 @@ func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterA
 
 	agent_config, err := clientcmd.BuildConfigFromFlags("", "/root/kubernetes/"+configStrings[0])
 	if err != nil {
-		klog.V(2).Infof("[Dispatcher: Agent] Cannot crate client\n")
+		klog.Errorf("[Dispatcher: Agent] Cannot create client due to %s.\n", err)
 		return nil
 	}
 	qa := &JobClusterAgent{
