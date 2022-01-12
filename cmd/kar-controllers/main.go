@@ -16,16 +16,36 @@ limitations under the License.
 package main
 
 import (
+	"flag"
 	"fmt"
 
 	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app"
 	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
+
+	"k8s.io/klog"
+
 	"github.com/spf13/pflag"
 
 	"os"
 )
 
 func main() {
+	// based on the tips here: https://github.com/kubernetes/klog/blob/main/examples/coexist_glog/coexist_glog.go
+	flag.Parse()
+
+	klogFlags := flag.NewFlagSet("klog", flag.ContinueOnError)
+	klog.InitFlags(klogFlags)
+
+	// Sync the glog and klog flags.
+	flag.CommandLine.VisitAll(func(f1 *flag.Flag) {
+		f2 := klogFlags.Lookup(f1.Name)
+
+		if f2 != nil {
+			value := f1.Value.String()
+			f2.Value.Set(value)
+		}
+	})
+
 	s := options.NewServerOption()
 	s.AddFlags(pflag.CommandLine)
 
