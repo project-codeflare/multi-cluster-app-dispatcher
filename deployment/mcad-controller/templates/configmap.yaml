@@ -8,5 +8,6 @@ data:
   QUOTA_ENABLED: {{ .Values.configMap.quotaEnabled }}
   DISPATCHER_MODE: {{ .Values.configMap.dispatcherMode }}
   DISPATCHER_AGENT_CONFIGS: {{ .Values.configMap.agentConfigs }}
+  PREEMPTION: {{ .Values.configMap.preemptionEnabled }}
   QUOTA_REST_URL: {{ .Values.configMap.quotaRestUrl }}
 #{{ end }}

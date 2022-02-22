@@ -976,8 +976,7 @@ func (qjm *XController) ScheduleNext() {
 	}
 
 	qj.Status.QueueJobState = arbv1.AppWrapperCondHeadOfLine
-	cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondHeadOfLine, v1.ConditionTrue, "FrontOfQueue.", "")
-	qj.Status.Conditions = append(qj.Status.Conditions, cond)
+	qjm.addOrUpdateCondition(qj, arbv1.AppWrapperCondHeadOfLine, v1.ConditionTrue, "FrontOfQueue.", "")
 
 	qj.Status.FilterIgnore = true   // update QueueJobState only
 	qjm.updateEtcd(qj, "ScheduleNext - setHOL")
@@ -1180,6 +1179,30 @@ func (cc *XController) updateStatusInEtcd(qj *arbv1.AppWrapper, at string) error
 	return nil
 }
 
+func (qjm *XController) addOrUpdateCondition(aw *arbv1.AppWrapper, condType arbv1.AppWrapperConditionType,
+	condStatus v1.ConditionStatus, condReason string, condMsg string)  {
+	var dupConditionExists bool = false
+	if aw.Status.Conditions != nil && len(aw.Status.Conditions) > 0 {
+		for _, condition := range aw.Status.Conditions {
+			if condition.Type == condType && condition.Status == condStatus &&
+				condition.Reason == condReason && condition.Message == condMsg {
+				oldLastUpdateMicroTime := condition.LastUpdateMicroTime
+				condition.LastUpdateMicroTime = metav1.NowMicro()
+				condition.LastTransitionMicroTime = metav1.NowMicro()
+				dupConditionExists = true
+				klog.V(10).Infof("[addOrUpdateCondition] Updated timestamp of condition for AppWrapper %s/%s from timestamp %v to %+v",
+					aw.Name, aw.Name, oldLastUpdateMicroTime, condition)
+				break
+			}
+		}
+	}
+
+	if ! dupConditionExists {
+		cond := GenerateAppWrapperCondition(condType, condStatus, condReason, condMsg)
+		aw.Status.Conditions = append(aw.Status.Conditions, cond)
+	}
+}
+
 func (qjm *XController) backoff(q *arbv1.AppWrapper, reason string, message string) {
 	var workingAW *arbv1.AppWrapper
 	apiCacheAWJob, e := qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
@@ -1187,9 +1210,8 @@ func (qjm *XController) backoff(q *arbv1.AppWrapper, reason string, message stri
 	if (e == nil) {
 		workingAW = apiCacheAWJob
 		apiCacheAWJob.Status.QueueJobState = arbv1.AppWrapperCondBackoff
-		cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondBackoff, v1.ConditionTrue, reason, message)
-		workingAW.Status.Conditions = append(workingAW.Status.Conditions, cond)
 		workingAW.Status.FilterIgnore = true // update QueueJobState only, no work needed
+		qjm.addOrUpdateCondition(workingAW, arbv1.AppWrapperCondBackoff, v1.ConditionTrue, reason, message)
 		//qjm.updateEtcd(workingAW, "backoff - Rejoining")
 		qjm.updateStatusInEtcd(workingAW, "backoff - Rejoining")
 	} else {
