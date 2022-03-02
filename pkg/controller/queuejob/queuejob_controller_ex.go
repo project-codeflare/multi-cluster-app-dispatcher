@@ -1183,6 +1183,7 @@ func (qjm *XController) addOrUpdateCondition(aw *arbv1.AppWrapper, condType arbv
 	condStatus v1.ConditionStatus, condReason string, condMsg string)  {
 	var dupConditionExists bool = false
 	if aw.Status.Conditions != nil && len(aw.Status.Conditions) > 0 {
+		// Find a matching condition based on fields not related to timestamps
 		for _, condition := range aw.Status.Conditions {
 			if condition.Type == condType && condition.Status == condStatus &&
 				condition.Reason == condReason && condition.Message == condMsg {
@@ -1197,6 +1198,7 @@ func (qjm *XController) addOrUpdateCondition(aw *arbv1.AppWrapper, condType arbv
 		}
 	}
 
+	// Only add new condition if is is a new one otherwise it is assumed that the condition was updated above.
 	if ! dupConditionExists {
 		cond := GenerateAppWrapperCondition(condType, condStatus, condReason, condMsg)
 		aw.Status.Conditions = append(aw.Status.Conditions, cond)
