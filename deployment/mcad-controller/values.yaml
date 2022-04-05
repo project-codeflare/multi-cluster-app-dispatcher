@@ -10,6 +10,8 @@ image:
   tag: latest
   pullPolicy: Always
 
+crd:
+
 httpImage:
   repository: restserver
   tag: latest
@@ -44,6 +46,7 @@ configMap:
   quotaEnabled: '"false"'
   multiCluster: '"false"'
   dispatcherMode: '"false"'
+  preemptionEnabled: '"false"'
   agentConfigs: ""
   quoteRestUrl: ""
 
