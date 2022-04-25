@@ -79,7 +79,7 @@ func (s *ServerOption) AddFlags(fs *flag.FlagSet) {
 	fs.IntVar(&s.HeadOfLineHoldingTime, "headoflineholdingtime", s.HeadOfLineHoldingTime, "Number of seconds a job can stay at the Head Of Line without being bumped.  Default is 0.")
 	fs.BoolVar(&s.QuotaEnabled,"quotaEnabled", s.QuotaEnabled,"Enable quota policy evaluation.  Default is false.")
 	fs.StringVar(&s.QuotaRestURL, "quotaURL", s.QuotaRestURL, "URL for ReST quota management.  Default is none.")
-	//	fs.IntVar(&s.SecurePort, "secure-port", 6443, "The port on which to serve secured, uthenticated access for metrics.")
+	fs.IntVar(&s.SecurePort, "secure-port", 6443, "The port on which to serve secured, authenticated access for metrics.")
 	fs.StringVar(&s.HealthProbeListenAddr, "healthProbeListenAddr", ":8081", "Listen address for health probes. Defaults to ':8081'")
 	flag.Parse()
 	klog.V(4).Infof("[AddFlags] Controller configuration: %#v", s)

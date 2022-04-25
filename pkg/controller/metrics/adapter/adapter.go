@@ -32,6 +32,9 @@ package adapter
 
 import (
 	"flag"
+	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
+	openapinamer "k8s.io/apiserver/pkg/endpoints/openapi"
+	genericapiserver "k8s.io/apiserver/pkg/server"
 	"net/http"
 	"os"
 
@@ -41,15 +44,17 @@ import (
 	"k8s.io/klog/v2"
 
 	adapterprov "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter/provider"
+	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/apiserver"
 	basecmd "github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/cmd"
 	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/provider"
+	generatedopenapi "github.com/kubernetes-sigs/custom-metrics-apiserver/test-adapter/generated/openapi"
 
 	clusterstatecache "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
 )
 
 // New returns a Cache implementation.
-func New(config *rest.Config, clusterStateCache clusterstatecache.Cache) *MetricsAdpater {
-	return newMetricsAdpater(config, clusterStateCache)
+func New(serverOptions *options.ServerOption, config *rest.Config, clusterStateCache clusterstatecache.Cache) *MetricsAdpater {
+	return newMetricsAdpater(serverOptions, config, clusterStateCache)
 }
 
 type MetricsAdpater struct {
@@ -60,7 +65,7 @@ type MetricsAdpater struct {
 }
 
 func (a *MetricsAdpater) makeProviderOrDie(clusterStateCache clusterstatecache.Cache) (provider.MetricsProvider, *restful.WebService) {
-	klog.Infof("Entered makeProviderOrDie()")
+	klog.Infof("[makeProviderOrDie] Entered makeProviderOrDie()")
 	client, err := a.DynamicClient()
 	if err != nil {
 		klog.Fatalf("unable to construct dynamic client: %v", err)
@@ -74,16 +79,38 @@ func (a *MetricsAdpater) makeProviderOrDie(clusterStateCache clusterstatecache.C
 	return adapterprov.NewFakeProvider(client, mapper, clusterStateCache)
 }
 
-func newMetricsAdpater(config *rest.Config, clusterStateCache clusterstatecache.Cache) *MetricsAdpater {
-	klog.V(10).Infof("Entered main()")
+func covertServerOptionsToMetricsServerOptions(serverOptions *options.ServerOption) []string{
+	var portedArgs = make([]string, 0)
+	if serverOptions == nil {
+		return portedArgs
+	}
 
-	cmd := &MetricsAdpater{}
-	cmd.Flags().StringVar(&cmd.Message, "msg", "starting adapter...", "startup message")
-	klog.Infof("")
+	if len(serverOptions.Kubeconfig) > 0 {
+		kubeConfigArg := "--lister-kubeconfig=" + serverOptions.Kubeconfig
+		portedArgs = append(portedArgs, kubeConfigArg)
+	}
+	return portedArgs
+}
+func newMetricsAdpater(serverOptions *options.ServerOption, config *rest.Config, clusterStateCache clusterstatecache.Cache) *MetricsAdpater {
+	klog.V(10).Infof("[newMetricsAdpater] Entered newMetricsAdpater()")
+
+	cmd := &MetricsAdpater{
+	}
+
+	cmd.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(generatedopenapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(apiserver.Scheme))
+	cmd.OpenAPIConfig.Info.Title = "MetricsAdpater"
+	cmd.OpenAPIConfig.Info.Version = "1.0.0"
+
+	cmd.Flags().StringVar(&cmd.Message, "msg", "starting metrics adapter...", "startup message")
 	cmd.Flags().AddGoFlagSet(flag.CommandLine) // make sure we get the klog flags
-	klog.V(9).Infof("commandline: %v", flag.CommandLine)
-	cmd.Flags().Args()
+	klog.V(10).Infof("[newMetricsAdpater] Go flag set from commandline: %+v", flag.CommandLine)
+	klog.V(10).Infof("[newMetricsAdpater] Flag arguments: %+v", cmd.Flags().Args())
 	cmd.Flags().Parse(os.Args)
+
+	// The metrics server thread requires a different flag name than the primary server, e.g. primary
+	// server uses --kubeconfig but metrics server uses --lister-kubeconfig
+	portedArgs := covertServerOptionsToMetricsServerOptions(serverOptions)
+	cmd.Flags().Parse(portedArgs)
 
 	testProvider, webService := cmd.makeProviderOrDie(clusterStateCache)
 	cmd.WithCustomMetrics(testProvider)
@@ -96,9 +123,6 @@ func newMetricsAdpater(config *rest.Config, clusterStateCache clusterstatecache.
 		// Open port for POSTing fake metrics
 		klog.Fatal(http.ListenAndServe(":8080", nil))
 	}()
-	//	if err := cmd.Run(wait.NeverStop); err != nil {
-	//		klog.Fatalf("unable to run custom metrics adapter: %v", err)
-	//	}
 	go cmd.Run(wait.NeverStop)
 	return cmd
 }

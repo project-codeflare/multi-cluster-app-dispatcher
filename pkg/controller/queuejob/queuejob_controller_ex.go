@@ -223,7 +223,7 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		qjqueue:		NewSchedulingQueue(),
 		cache: 			clusterstatecache.New(config),
 	}
-	cc.metricsAdapter =  adapter.New(config, cc.cache)
+	cc.metricsAdapter =  adapter.New(serverOption, config, cc.cache)
 
 	cc.genericresources = genericresource.NewAppWrapperGenericResource(config)
 

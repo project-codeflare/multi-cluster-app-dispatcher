@@ -143,7 +143,7 @@ type clusterMetricsProvider struct {
 
 // NewFakeProvider returns an instance of clusterMetricsProvider, along with its restful.WebService that opens endpoints to post new fake metrics
 func NewFakeProvider(client dynamic.Interface, mapper apimeta.RESTMapper, clusterStateCache clusterstatecache.Cache) (provider.MetricsProvider, *restful.WebService) {
-	klog.V(10).Infof("Entered NewFakeProvider()")
+	klog.V(10).Infof("[NewFakeProvider] Entered NewFakeProvider()")
 	provider := &clusterMetricsProvider{
 		client:          client,
 		mapper:          mapper,

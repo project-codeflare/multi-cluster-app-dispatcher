@@ -32,7 +32,7 @@ spec:
       nodePort: 30082
 #{{ end }}
 ---
-#{{ if (eq .Values.configMap.multiCluster "true") }}
+#{{ if (eq .Values.configMap.multiCluster true) }}
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
 metadata:
@@ -7916,8 +7916,12 @@ spec:
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["mcad-controller"]
+#{{ if (eq .Values.configMap.multiCluster true) }}
+        args: ["--v", "10", "--logtostderr", "--secure-port=6443"]
+#{{ end }}
+#{{ if (eq .Values.configMap.multiCluster false) }}
         args: ["--v", "{{ .Values.loglevel }}", "--logtostderr"]
-#        args: ["--v", "10", "--logtostderr", "--secure-port=6443"]
+#{{ end }}
         ports:
         - containerPort: 6443
           name: https

@@ -44,7 +44,7 @@ nodeSelector:
 configMap:
   name:
   quotaEnabled: '"false"'
-  multiCluster: '"false"'
+  multiCluster: false
   dispatcherMode: '"false"'
   preemptionEnabled: '"false"'
   agentConfigs: ""
