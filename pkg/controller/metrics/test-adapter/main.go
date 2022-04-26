@@ -42,8 +42,9 @@ import (
 
 	// "k8s.io/apiserver/pkg/util/logs"
 
-	basecmd "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/cmd"
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/provider"
+	basecmd "github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/cmd"
+	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/provider"
+
 	fakeprov "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/test-adapter/provider"
 )
 

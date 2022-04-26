@@ -215,7 +215,7 @@ type ClusterMetricsList struct {
 }
 
 func (qa *JobClusterAgent) UpdateAggrResources() error {
-	klog.V(6).Infof("[Dispatcher: Agent] Getting aggregated resources for Agent ID: %s with Agent QueueJob Name: %s\n", qa.AgentId, qa.DeploymentName)
+	klog.V(6).Infof("[Dispatcher: UpdateAggrResources] Getting aggregated resources for Agent ID: %s with Agent Name: %s\n", qa.AgentId, qa.DeploymentName)
 
 	// Read the Agent XQJ Deployment object
 	if qa.k8sClients == nil {
@@ -226,18 +226,18 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 	data, err := qa.k8sClients.RESTClient().Get().AbsPath("apis/external.metrics.k8s.io/v1beta1/namespaces/default/cluster-external-metric").DoRaw(context.Background())
 
 	if err != nil {
-		klog.V(2).Infof("Failed to get metrics from deployment Agent ID: %s with Agent QueueJob Name: %s, Error: %v\n", qa.AgentId, qa.DeploymentName, err)
+		klog.V(2).Infof("[Dispatcher: UpdateAggrResources] Failed to get metrics from deployment Agent ID: %s with Agent Name: %s, Error: %v\n", qa.AgentId, qa.DeploymentName, err)
 
 	} else {
 		res := &ClusterMetricsList{}
 		unmarshalerr := json.Unmarshal(data, res)
 		if unmarshalerr != nil {
-			klog.V(2).Infof("Failed to unmarshal metrics to struct: %v from deployment Agent ID: %s with Agent QueueJob Name: %s, Error: %v\n",
+			klog.V(2).Infof("[Dispatcher: UpdateAggrResources] Failed to unmarshal metrics to struct: %v from deployment Agent ID: %s with Agent Name: %s, Error: %v\n",
 				res, qa.AgentId, qa.DeploymentName, unmarshalerr)
 		} else {
 			if len(res.Items) > 0 {
 				for i := 0; i < len(res.Items); i++ {
-					klog.V(9).Infof("Obtained the metric:%s, label:%v, value: %s, from the Agent: %s  with Agent QueueJob Name: %s.\n",
+					klog.V(9).Infof("[Dispatcher: UpdateAggrResources] Obtained the metric:%s, label:%v, value: %s, from the Agent: %s  with Agent Name: %s.\n",
 						res.Items[i].MetricName, res.Items[i].MetricLabels, res.Items[i].Value, qa.AgentId, qa.DeploymentName)
 					clusterMetricType := res.Items[i].MetricLabels["cluster"]
 
@@ -245,7 +245,7 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 						val, units, _ := getFloatString(res.Items[i].Value)
 						num, err := strconv.ParseFloat(val, 64)
 						if err !=nil {
-							klog.Warningf("Possible issue converting %s string value of %s due to error: %v\n",
+							klog.Warningf("[Dispatcher: UpdateAggrResources] Possible issue converting %s string value of %s due to error: %v\n",
 								clusterMetricType, res.Items[i].Value, err)
 						} else {
 							if units == "k" {
@@ -256,31 +256,39 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 							if f_num > f_zero {
 								if strings.Compare(clusterMetricType, "cpu") == 0 {
 									qa.AggrResources.MilliCPU = num
-									klog.V(10).Infof("Updated %s from %f to %f for metrics: %v from deployment Agent ID: %s with Agent QueueJob Name: %s\n",
+									klog.V(10).Infof("[Dispatcher: UpdateAggrResources] Updated %s from %f to %f for metrics: %v from deployment Agent ID: %s with Agent Name: %s\n",
 										clusterMetricType, qa.AggrResources.MilliCPU, num, res, qa.AgentId, qa.DeploymentName)
 								} else {
 									qa.AggrResources.Memory = num
-									klog.V(10).Infof("Updated %s from %f to %f for metrics: %v from deployment Agent ID: %s with Agent QueueJob Name: %s\n",
+									klog.V(10).Infof("[Dispatcher: UpdateAggrResources] Updated %s from %f to %f for metrics: %v from deployment Agent ID: %s with Agent Name: %s\n",
 										clusterMetricType, qa.AggrResources.Memory, num, res, qa.AgentId, qa.DeploymentName)
 								}
 							} else {
-								klog.Warningf("Possible issue converting %s string value of %s to float type.  Conversion result: %f\n",
+								klog.Warningf("[Dispatcher: UpdateAggrResources] Possible issue converting %s string value of %s to float type.  Conversion result: %f\n",
 									clusterMetricType, res.Items[i].Value, num)
 							} // Float value resulted in zero value.
 						} // Converting string to float success
+					} else if strings.Compare(clusterMetricType, "gpu") == 0 {
+						 num, err := getInt64String(res.Items[i].Value)
+						if err !=nil {
+							klog.Warningf("[Dispatcher: UpdateAggrResources] Possible issue converting %s string value of %s due to int64 type, error: %v\n",
+								clusterMetricType, res.Items[i].Value, err)
+						} else {
+							qa.AggrResources.GPU = num
+						}
 					} else {
-						klog.V(9).Infof("Unknown label value: %s for metrics: %v from deployment Agent ID: %s with Agent QueueJob Name: %s\n",
+						klog.V(9).Infof("[Dispatcher: UpdateAggrResources] Unknown label value: %s for metrics: %v from deployment Agent ID: %s with Agent Name: %s\n",
 							clusterMetricType, res, qa.AgentId, qa.DeploymentName)
 					} // Unknown label
 
 				}
 			} else {
-				klog.V(2).Infof("Failed to obtain values for metrics: %v from deployment Agent ID: %s with Agent QueueJob Name: %s, Error: %v\n", res, qa.AgentId, qa.DeploymentName, unmarshalerr)
+				klog.V(2).Infof("[Dispatcher: UpdateAggrResources] Failed to obtain values for metrics: %v from deployment Agent ID: %s with Agent Name: %s, Error: %v\n", res, qa.AgentId, qa.DeploymentName, unmarshalerr)
 			}
 		}
 	}
 
-	klog.V(4).Infof("[Dispatcher: Agent] Updated Aggr Resources of %s: %v\n", qa.AgentId, qa.AggrResources)
+	klog.V(4).Infof("[Dispatcher: UpdateAggrResources] Updated Aggr Resources of %s: %v\n", qa.AgentId, qa.AggrResources)
 	return nil
 }
 
@@ -302,6 +310,14 @@ func getFloatString(num string) (string, string, error) {
 		validatedNum = num
 	}
 	return  validatedNum, numUnits, err
+}
+func getInt64String(num string) (int64, error) {
+	var validatedNum int64 = 0
+	n, err := strconv.ParseInt(num, 10, 64)
+	if err == nil {
+		validatedNum = n
+	}
+	return  validatedNum, err
 }
 
 func buildResource(cpu string, memory string) *clusterstateapi.Resource {
