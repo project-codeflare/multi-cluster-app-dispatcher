@@ -82,7 +82,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
 		klog.Errorf("Error getting API resources, err=%#v", err)
-		return  []*v1.Pod{}, err
+		return []*v1.Pod{}, err
 	}
 	ext := awr.GenericTemplate
 	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
@@ -108,13 +108,13 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	dclient, err := dynamic.NewForConfig(restconfig)
 	if err != nil {
 		klog.Errorf("Error creating new dynamic client, err=%#v", err)
-		return  []*v1.Pod{}, err
+		return []*v1.Pod{}, err
 	}
 
 	_, apiresourcelist, err := dd.ServerGroupsAndResources()
 	if err != nil {
 		klog.Errorf("Error getting supported groups and resources, err=%#v", err)
-		return  []*v1.Pod{}, err
+		return []*v1.Pod{}, err
 	}
 
 	rsrc := mapping.Resource
@@ -133,7 +133,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	var blob interface{}
 	if err = json.Unmarshal(ext.Raw, &blob); err != nil {
 		klog.Errorf("Error unmarshalling, err=%#v", err)
-		return  []*v1.Pod{}, err
+		return []*v1.Pod{}, err
 	}
 	ownerRef := metav1.NewControllerRef(aw, appWrapperKind)
 	unstruct.Object = blob.(map[string]interface{}) //set object to the content of the blob after Unmarshalling
@@ -340,34 +340,42 @@ func createObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 	}
 }
 
+// Listing allocated resources for all pods (incl. their containers and replicas) as requested in AppWrapper
 func GetListOfPodResourcesFromOneGenericItem(awr *arbv1.AppWrapperGenericResource) (resource []*clusterstateapi.Resource, er error) {
 	var podResourcesList []*clusterstateapi.Resource
 
+	// Initializing podTotalresource to zero
 	podTotalresource := clusterstateapi.EmptyResource()
 	var err error
 	err = nil
 	if awr.GenericTemplate.Raw != nil {
 		hasContainer, replicas, containers := hasFields(awr.GenericTemplate)
+		// checking if requested pods in AppWrapper have any containers and replicas
 		if hasContainer {
 			// Add up all the containers in a pod
 			for _, container := range containers {
 				res := getContainerResources(container, 1)
+				// getContainerResources will return memory/cpu/gpu for each container and its replicas
 				podTotalresource = podTotalresource.Add(res)
+				// updating podTotalresource by adding to previous allocated resources
 			}
 			klog.V(8).Infof("[GetListOfPodResourcesFromOneGenericItem] Requested total pod allocation resource from containers `%v`.\n", podTotalresource)
 		} else {
 			podresources := awr.CustomPodResources
 			for _, item := range podresources {
 				res := getPodResources(item)
+				// getPodResources will return memory/cpu/gpu for each pod and its replicas
 				podTotalresource = podTotalresource.Add(res)
+				// updating podTotalresource by adding to previous allocated resources
 			}
 			klog.V(8).Infof("[GetListOfPodResourcesFromOneGenericItem] Requested total allocation resource from 1 pod `%v`.\n", podTotalresource)
 		}
 
-		// Addd individual pods to results
+		// Add individual pods to results
 		var replicaCount int = int(replicas)
 		for i := 0; i < replicaCount; i++ {
 			podResourcesList = append(podResourcesList, podTotalresource)
+			// append the allocated resources to each pod
 		}
 	}
 
@@ -402,9 +410,13 @@ func GetResources(awr *arbv1.AppWrapperGenericResource) (resource *clusterstatea
 	return totalresource, err
 }
 
+// to get allocated resources in a pod and its replicas
 func getPodResources(pod arbv1.CustomPodResourceTemplate) (resource *clusterstateapi.Resource) {
+	// track number of replicas in a pod
 	replicas := pod.Replicas
+	// track the requested resource in a pod
 	req := clusterstateapi.NewResource(pod.Requests)
+	// track the minimum resource allocated for a pod
 	limit := clusterstateapi.NewResource(pod.Limits)
 	tolerance := 0.001
 
@@ -426,8 +438,11 @@ func getPodResources(pod arbv1.CustomPodResourceTemplate) (resource *clusterstat
 	return req
 }
 
+// to get allocated resources in a container and its replicas
 func getContainerResources(container v1.Container, replicas float64) *clusterstateapi.Resource {
+	// track the requested resource in a container
 	req := clusterstateapi.NewResource(container.Resources.Requests)
+	// track the minimum resource allocated for a container
 	limit := clusterstateapi.NewResource(container.Resources.Limits)
 
 	tolerance := 0.001
