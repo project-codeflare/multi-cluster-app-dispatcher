@@ -7750,6 +7750,22 @@ rules:
   - delete
 #{{ end }}
 #{{ end }}
+#{{ if .Values.coscheduler.rbac.apiGroup }}
+#{{ if .Values.coschedulert.rbac.resource }}
+- apiGroups:
+    - {{ .Values.coscheduler.rbac.apiGroup }}
+  resources:
+    - {{ .Values.coscheduler.rbac.resource }}
+  verbs:
+  - get 
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+#{{ end }}
+#{{ end }}
 ---
 #{{ if .Values.serviceAccount }}
 apiVersion: v1

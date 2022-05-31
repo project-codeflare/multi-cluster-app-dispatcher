@@ -53,6 +53,11 @@ configMap:
 volumes:
   hostPath:
 
+coscheduler:
+  rbac:
+    apiGroup:
+    resource:
+
 quotaManagement:
   rbac:
     apiGroup:
