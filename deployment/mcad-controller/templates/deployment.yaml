@@ -7751,7 +7751,7 @@ rules:
 #{{ end }}
 #{{ end }}
 #{{ if .Values.coscheduler.rbac.apiGroup }}
-#{{ if .Values.coschedulert.rbac.resource }}
+#{{ if .Values.coscheduler.rbac.resource }}
 - apiGroups:
     - {{ .Values.coscheduler.rbac.apiGroup }}
   resources:
