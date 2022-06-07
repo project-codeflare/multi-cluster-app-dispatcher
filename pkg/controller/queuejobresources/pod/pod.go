@@ -254,6 +254,10 @@ func (qjrPod *QueueJobResPod) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) e
 	queuejob.Status.Running = running
 	queuejob.Status.Succeeded = succeeded
 	queuejob.Status.Failed = failed
+	queuejob.Status.MaxRunning = int32(len(pods))
+	if queuejob.Status.MaxRunning == queuejob.Status.Succeeded {
+		queuejob.Status.State = arbv1.AppWrapperStateCompleted
+	}
 
 	return nil
 }
@@ -612,7 +616,7 @@ func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, 
 	if tmpl == nil {
 		tmpl = make(map[string]string)
 	}
-	
+
 	tmpl[queueJobName] = qj.Name
 
 	// Include pre-defined metadata info, e.g. annotations
@@ -623,12 +627,12 @@ func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, 
 	templateObjMetadata.SetNamespace(qj.Namespace)
 	templateObjMetadata.SetOwnerReferences([]metav1.OwnerReference{
 		*metav1.NewControllerRef(qj, queueJobKind),
-	},)
+	})
 	templateObjMetadata.SetLabels(tmpl)
 
 	return &v1.Pod{
 		ObjectMeta: templateObjMetadata,
-		Spec: templateCopy.Spec,
+		Spec:       templateCopy.Spec,
 	}
 }
 

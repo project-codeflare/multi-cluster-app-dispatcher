@@ -31,7 +31,7 @@ limitations under the License.
 package v1beta1
 
 import (
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -209,6 +209,9 @@ type AppWrapperStatus struct {
 	// +optional
 	Running int32 `json:"running,omitempty" protobuf:"bytes,1,opt,name=running"`
 
+	//The total number of running pods which is used to determine Completed status of AW
+	MaxRunning int32 `json:"runcount,omitempty" protobuf:"bytes,1,opt,name=runcount"`
+
 	// The number of resources which reached phase Succeeded.
 	// +optional
 	Succeeded int32 `json:"Succeeded,omitempty" protobuf:"bytes,2,opt,name=succeeded"`
@@ -260,10 +263,11 @@ type AppWrapperState string
 
 //enqueued, active, deleting, succeeded, failed
 const (
-	AppWrapperStateEnqueued AppWrapperState = "Pending"
-	AppWrapperStateActive   AppWrapperState = "Running"
-	AppWrapperStateDeleted  AppWrapperState = "Deleted"
-	AppWrapperStateFailed   AppWrapperState = "Failed"
+	AppWrapperStateEnqueued  AppWrapperState = "Pending"
+	AppWrapperStateActive    AppWrapperState = "Running"
+	AppWrapperStateDeleted   AppWrapperState = "Deleted"
+	AppWrapperStateFailed    AppWrapperState = "Failed"
+	AppWrapperStateCompleted AppWrapperState = "Completed"
 )
 
 type AppWrapperConditionType string
@@ -279,6 +283,7 @@ const (
 	AppWrapperCondPreempted        AppWrapperConditionType = "Preempted"
 	AppWrapperCondDeleted          AppWrapperConditionType = "Deleted"
 	AppWrapperCondFailed           AppWrapperConditionType = "Failed"
+	AppWrapperCondCompleted        AppWrapperConditionType = "Completed"
 )
 
 // DeploymentCondition describes the state of a deployment at a certain point.
