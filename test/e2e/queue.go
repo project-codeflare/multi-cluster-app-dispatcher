@@ -150,6 +150,21 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("Create AppWrapper - Job - 1 Parallelism==Completions", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Job - 1 Parallelism==Completions.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		aw := createDeploymentAW(context, "test-job")
+		appwrappers = append(appwrappers, aw)
+
+		fmt.Fprintf(os.Stdout, "[e2e] Awaiting %d pods running for AW %s.\n", aw.Spec.SchedSpec.MinAvailable, aw.Name)
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	It("Create AppWrapper - Generic Deployment Only - 3 pods", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Generic Deployment Only - 3 pods - Started.\n")
 		context := initTestContext()

@@ -309,7 +309,7 @@ func taskPhase(ctx *context, pg *arbv1.PodGroup, phase []v1.PodPhase, taskNum in
 }
 */
 
-func anyPodsExist(ctx *context, awNamespace string, awName string) wait.ConditionFunc  {
+func anyPodsExist(ctx *context, awNamespace string, awName string) wait.ConditionFunc {
 	return func() (bool, error) {
 		podList, err := ctx.kubeclient.CoreV1().Pods(awNamespace).List(gcontext.Background(), metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
@@ -403,7 +403,6 @@ func awStatePhase(ctx *context, aw *arbv1.AppWrapper, phase []arbv1.AppWrapperSt
 	}
 }
 
-
 func cleanupTestObjectsPtr(context *context, appwrappersPtr *[]*arbv1.AppWrapper) {
 	cleanupTestObjectsPtrVerbose(context, appwrappersPtr, true)
 }
@@ -419,7 +418,6 @@ func cleanupTestObjectsPtrVerbose(context *context, appwrappersPtr *[]*arbv1.App
 func cleanupTestObjects(context *context, appwrappers []*arbv1.AppWrapper) {
 	cleanupTestObjectsVerbose(context, appwrappers, true)
 }
-
 
 func cleanupTestObjectsVerbose(context *context, appwrappers []*arbv1.AppWrapper, verbose bool) {
 	if appwrappers == nil {
@@ -448,7 +446,7 @@ func cleanupTestObjectsVerbose(context *context, appwrappers []*arbv1.AppWrapper
 		if err != nil {
 			var podsStillExisting []*v1.Pod
 			for _, pod := range pods {
-				podExist, _ := context.kubeclient.CoreV1().Pods(pod.Namespace).Get(gcontext.Background(), pod.Name,metav1.GetOptions{})
+				podExist, _ := context.kubeclient.CoreV1().Pods(pod.Namespace).Get(gcontext.Background(), pod.Name, metav1.GetOptions{})
 				if podExist != nil {
 					fmt.Fprintf(os.Stdout, "[cleanupTestObjects] Found pod %s/%s %s, not completedly deleted for AW %s.\n", podExist.Namespace, podExist.Name, podExist.Status.Phase, aw.Name)
 					podsStillExisting = append(podsStillExisting, podExist)
@@ -1512,6 +1510,76 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 	return appwrapper
 }
 
+func createGenericJobAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`apiVersion: mcad.ibm.com/v1beta1
+	kind: AppWrapper
+	metadata:
+	  name: test-job
+	  namespace: default
+	spec:
+	  resources:
+		Items: []
+		GenericItems:
+		- replicas: 1
+		  generictemplate:
+			apiVersion: batch/v1
+			kind: Job
+			metadata:
+			  name: test-job
+			  namespace: default
+			spec:
+			  parallelism: 1
+			  completions: 1
+			  template:
+				metadata:
+				  labels:
+					appwrapper.mcad.ibm.com: "test-job"
+				spec:
+					restartPolicy: Never
+					containers:
+					- name: sleep-job
+					  image: ubuntu:latest
+					  command: ["/bin/bash", "-c", "--" ]
+					  imagePullPolicy: IfNotPresent
+					  args:
+					  - "sleep 5"
+					  resources:
+						requests:
+						  cpu: 2
+						  memory: 2G
+						limits:
+						  cpu: 2
+						  memory: 2G`)
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "test-job"),
+							Namespace: context.namespace,
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand string, replicas int) *arbv1.AppWrapper {
 	rb := []byte(fmt.Sprintf(`{
 	"apiVersion": "apps/v1",
@@ -1593,7 +1661,6 @@ func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand s
 
 	return appwrapper
 }
-
 
 func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "v1",
@@ -1956,7 +2023,7 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 
 func createGenericPodAWCustomDemand(context *context, name string, cpuDemand string) *arbv1.AppWrapper {
 
-	genericItems := fmt.Sprintf( `{
+	genericItems := fmt.Sprintf(`{
 		"apiVersion": "v1",
 		"kind": "Pod",
 		"metadata": {
