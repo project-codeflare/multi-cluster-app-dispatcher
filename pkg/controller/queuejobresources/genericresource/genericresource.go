@@ -344,38 +344,40 @@ func createObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 func GetListOfPodResourcesFromOneGenericItem(awr *arbv1.AppWrapperGenericResource) (resource []*clusterstateapi.Resource, er error) {
 	var podResourcesList []*clusterstateapi.Resource
 
-	// Initializing podTotalresource to zero
+	// Initializing variable used to sum allocated resources to zero
 	podTotalresource := clusterstateapi.EmptyResource()
 	var err error
 	err = nil
 	if awr.GenericTemplate.Raw != nil {
 		hasContainer, replicas, containers := hasFields(awr.GenericTemplate)
-		// checking if requested pods in AppWrapper have any containers and replicas
+		// Checking if requested pods in AppWrapper have any containers and replicas
 		if hasContainer {
-			// Add up all the containers in a pod
+			// Adding up all the containers in a pod
 			for _, container := range containers {
+				// Get the resource in a container. Return values will be memory/cpu/gpu for that container.
+				// Replicas is set to 1 if k8s objects do not have replicas as part of their definition (i.e. 1 pod)
+				// Refer to, https://github.com/kubernetes/kubernetes/blob/3024ddcfe2440b0cf5c3ace3100c6232d6a23df9/pkg/apis/core/types.go#L2813
 				res := getContainerResources(container, 1)
-				// getContainerResources will return memory/cpu/gpu for each container and its replicas
+				// Updating the sum of allocated resources variable by adding current allocated resources to the previous one
 				podTotalresource = podTotalresource.Add(res)
-				// updating podTotalresource by adding to previous allocated resources
 			}
 			klog.V(8).Infof("[GetListOfPodResourcesFromOneGenericItem] Requested total pod allocation resource from containers `%v`.\n", podTotalresource)
 		} else {
 			podresources := awr.CustomPodResources
 			for _, item := range podresources {
+				// Get the resource in a pod. Return values will be memory/cpu/gpu for each pod and its replicas
 				res := getPodResources(item)
-				// getPodResources will return memory/cpu/gpu for each pod and its replicas
+				// updating the sum of allocated resources variable by adding current allocated resources to the previous one
 				podTotalresource = podTotalresource.Add(res)
-				// updating podTotalresource by adding to previous allocated resources
 			}
 			klog.V(8).Infof("[GetListOfPodResourcesFromOneGenericItem] Requested total allocation resource from 1 pod `%v`.\n", podTotalresource)
 		}
 
-		// Add individual pods to results
 		var replicaCount int = int(replicas)
+		// Add individual pods to results
 		for i := 0; i < replicaCount; i++ {
+			// Append the allocated resources to each pod
 			podResourcesList = append(podResourcesList, podTotalresource)
-			// append the allocated resources to each pod
 		}
 	}
 
@@ -384,21 +386,30 @@ func GetListOfPodResourcesFromOneGenericItem(awr *arbv1.AppWrapperGenericResourc
 
 func GetResources(awr *arbv1.AppWrapperGenericResource) (resource *clusterstateapi.Resource, er error) {
 
+	// Initializing variable used to sum allocated resources to zero
 	totalresource := clusterstateapi.EmptyResource()
 	var err error
 	err = nil
 	if awr.GenericTemplate.Raw != nil {
 		hasContainer, replicas, containers := hasFields(awr.GenericTemplate)
+		// Checking if requested pods in AppWrapper have any containers and replicas
 		if hasContainer {
+			// Adding up all the containers in a pod
 			for _, item := range containers {
+				// Get the resource in a container. Return values will be memory/cpu/gpu for that container.
+				// Replicas is set as defined in k8s deployment objects.
+				// Refer to, https://github.com/kubernetes/kubernetes/blob/3024ddcfe2440b0cf5c3ace3100c6232d6a23df9/pkg/apis/apps/types.go#L349
 				res := getContainerResources(item, replicas)
+				// Updating the sum of allocated resources variable by adding current allocated resources to the previous one
 				totalresource = totalresource.Add(res)
 			}
 			klog.V(8).Infof("[GetResources] Requested total allocation resource from containers `%v`.\n", totalresource)
 		} else {
 			podresources := awr.CustomPodResources
 			for _, item := range podresources {
+				// Get the resource in a pod. Return values will be memory/cpu/gpu for each pod and its replicas
 				res := getPodResources(item)
+				// Updating the sum of allocated resources variable by adding current allocated resources to the previous one
 				totalresource = totalresource.Add(res)
 			}
 			klog.V(8).Infof("[GetResources] Requested total allocation resource from pods `%v`.\n", totalresource)
@@ -410,17 +421,17 @@ func GetResources(awr *arbv1.AppWrapperGenericResource) (resource *clusterstatea
 	return totalresource, err
 }
 
-// to get allocated resources in a pod and its replicas
+// To get allocated resources in a pod and its replicas
 func getPodResources(pod arbv1.CustomPodResourceTemplate) (resource *clusterstateapi.Resource) {
-	// track number of replicas in a pod
+	// Track number of replicas in a pod
 	replicas := pod.Replicas
-	// track the requested resource in a pod
+	// Track the requested resource in a pod
 	req := clusterstateapi.NewResource(pod.Requests)
-	// track the minimum resource allocated for a pod
+	// Track the minimum resource allocated for a pod
 	limit := clusterstateapi.NewResource(pod.Limits)
 	tolerance := 0.001
 
-	// Use limit if request is 0
+	// Use the minimum resource allocated if request is 0
 	if diff := math.Abs(req.MilliCPU - float64(0.0)); diff < tolerance {
 		req.MilliCPU = limit.MilliCPU
 	}
@@ -438,16 +449,16 @@ func getPodResources(pod arbv1.CustomPodResourceTemplate) (resource *clusterstat
 	return req
 }
 
-// to get allocated resources in a container and its replicas
+// To get allocated resources in a container
 func getContainerResources(container v1.Container, replicas float64) *clusterstateapi.Resource {
-	// track the requested resource in a container
+	// Track the requested resource in a container
 	req := clusterstateapi.NewResource(container.Resources.Requests)
-	// track the minimum resource allocated for a container
+	// Track the minimum resource allocated for a container
 	limit := clusterstateapi.NewResource(container.Resources.Limits)
 
 	tolerance := 0.001
 
-	// Use limit if request is 0
+	// Use the minimum resource allocated if request is 0
 	if diff := math.Abs(req.MilliCPU - float64(0.0)); diff < tolerance {
 		req.MilliCPU = limit.MilliCPU
 	}
