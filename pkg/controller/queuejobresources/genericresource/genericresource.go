@@ -422,6 +422,7 @@ func GetResources(awr *arbv1.AppWrapperGenericResource) (resource *clusterstatea
 }
 
 // To get allocated resources in a pod and its replicas
+// The return value from this function will list CPU/Memory/GPU resources in a pod and its replicas
 func getPodResources(pod arbv1.CustomPodResourceTemplate) (resource *clusterstateapi.Resource) {
 	// Track number of replicas in a pod
 	replicas := pod.Replicas
@@ -450,6 +451,7 @@ func getPodResources(pod arbv1.CustomPodResourceTemplate) (resource *clusterstat
 }
 
 // To get allocated resources in a container
+// The return value from this function will list CPU/Memory/GPU resources in a container
 func getContainerResources(container v1.Container, replicas float64) *clusterstateapi.Resource {
 	// Make a copy of the requested resource of a container
 	req := clusterstateapi.NewResource(container.Resources.Requests)
