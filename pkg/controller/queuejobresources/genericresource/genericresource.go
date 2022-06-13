@@ -425,9 +425,9 @@ func GetResources(awr *arbv1.AppWrapperGenericResource) (resource *clusterstatea
 func getPodResources(pod arbv1.CustomPodResourceTemplate) (resource *clusterstateapi.Resource) {
 	// Track number of replicas in a pod
 	replicas := pod.Replicas
-	// Track the requested resource in a pod
+	// Make a copy of requested resources of a pod
 	req := clusterstateapi.NewResource(pod.Requests)
-	// Track the minimum resource allocated for a pod
+	// Investigating the limit field of a pod in k8s
 	limit := clusterstateapi.NewResource(pod.Limits)
 	tolerance := 0.001
 
@@ -451,9 +451,9 @@ func getPodResources(pod arbv1.CustomPodResourceTemplate) (resource *clusterstat
 
 // To get allocated resources in a container
 func getContainerResources(container v1.Container, replicas float64) *clusterstateapi.Resource {
-	// Track the requested resource in a container
+	// Make a copy of the requested resource of a container
 	req := clusterstateapi.NewResource(container.Resources.Requests)
-	// Track the minimum resource allocated for a container
+	// Investigating the limit field of a container in k8s
 	limit := clusterstateapi.NewResource(container.Resources.Limits)
 
 	tolerance := 0.001
