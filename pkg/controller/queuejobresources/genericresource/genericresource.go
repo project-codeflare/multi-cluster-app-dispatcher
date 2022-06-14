@@ -340,7 +340,8 @@ func createObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 	}
 }
 
-// Listing allocated resources for all pods (incl. their containers and replicas) as requested in AppWrapper
+// Listing allocated resources for all pods (incl. their containers and replicas) as requested in AppWrapper.
+// However, this function also takes care if k8s objects do not have replicas in the definition.
 func GetListOfPodResourcesFromOneGenericItem(awr *arbv1.AppWrapperGenericResource) (resource []*clusterstateapi.Resource, er error) {
 	var podResourcesList []*clusterstateapi.Resource
 
@@ -367,14 +368,14 @@ func GetListOfPodResourcesFromOneGenericItem(awr *arbv1.AppWrapperGenericResourc
 			for _, item := range podresources {
 				// Get the resource in a pod. Return values will be memory/cpu/gpu for each pod and its replicas
 				res := getPodResources(item)
-				// updating the sum of allocated resources variable by adding current allocated resources to the previous one
+				// Updating the sum of allocated resources variable by adding current allocated resources to the previous one
 				podTotalresource = podTotalresource.Add(res)
 			}
 			klog.V(8).Infof("[GetListOfPodResourcesFromOneGenericItem] Requested total allocation resource from 1 pod `%v`.\n", podTotalresource)
 		}
 
 		var replicaCount int = int(replicas)
-		// Add individual pods to results
+		// The loop is to account all resources in a pod (including its replicas)
 		for i := 0; i < replicaCount; i++ {
 			// Append the allocated resources to each pod
 			podResourcesList = append(podResourcesList, podTotalresource)
@@ -384,6 +385,7 @@ func GetListOfPodResourcesFromOneGenericItem(awr *arbv1.AppWrapperGenericResourc
 	return podResourcesList, err
 }
 
+// Listing allocated resources for all pods (incl. their containers and replicas) as requested in AppWrapper
 func GetResources(awr *arbv1.AppWrapperGenericResource) (resource *clusterstateapi.Resource, er error) {
 
 	// Initializing variable used to sum allocated resources to zero
@@ -397,7 +399,7 @@ func GetResources(awr *arbv1.AppWrapperGenericResource) (resource *clusterstatea
 			// Adding up all the containers in a pod
 			for _, item := range containers {
 				// Get the resource in a container. Return values will be memory/cpu/gpu for that container.
-				// Replicas is set as defined in k8s deployment objects.
+				// Variable is used if replicas is defined in k8s deployment objects.
 				// Refer to, https://github.com/kubernetes/kubernetes/blob/3024ddcfe2440b0cf5c3ace3100c6232d6a23df9/pkg/apis/apps/types.go#L349
 				res := getContainerResources(item, replicas)
 				// Updating the sum of allocated resources variable by adding current allocated resources to the previous one
