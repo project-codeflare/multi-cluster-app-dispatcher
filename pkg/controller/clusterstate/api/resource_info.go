@@ -34,7 +34,7 @@ import (
 	"fmt"
 	"math"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 type Resource struct {
@@ -48,6 +48,7 @@ const (
 	GPUResourceName = "nvidia.com/gpu"
 )
 
+// To set values in resource to zero
 func EmptyResource() *Resource {
 	return &Resource{
 		MilliCPU: 0,
@@ -84,6 +85,7 @@ func NewResource(rl v1.ResourceList) *Resource {
 	return r
 }
 
+// To check if insufficient resource relative to minimum set value of CPU and Memory
 func (r *Resource) IsEmpty() bool {
 	return r.MilliCPU < minMilliCPU && r.Memory < minMemory && r.GPU == 0
 }
@@ -101,6 +103,7 @@ func (r *Resource) IsZero(rn v1.ResourceName) bool {
 	}
 }
 
+// For adding resources
 func (r *Resource) Add(rr *Resource) *Resource {
 	r.MilliCPU += rr.MilliCPU
 	r.Memory += rr.Memory
