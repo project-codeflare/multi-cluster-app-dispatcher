@@ -450,3 +450,70 @@ func getContainerResources(container v1.Container, replicas float64) *clustersta
 	req.GPU = req.GPU * int64(replicas)
 	return req
 }
+
+func GetGenericItemKind(aw *arbv1.AppWrapperGenericResource) (kindstring string) {
+	ext := aw.GenericTemplate
+	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, nil)
+	if err != nil {
+		klog.Errorf("Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
+	}
+	return gvk.GroupKind().Kind
+}
+
+func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGenericResource, kindstring string, namespace string) (completed string) {
+	dd := gr.clients.Discovery()
+	apigroups, err := restmapper.GetAPIGroupResources(dd)
+	if err != nil {
+		klog.Errorf("Error getting API resources, err=%#v", err)
+	}
+	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
+	//versions := &unstructured.Unstructured{}
+	//_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, versions)
+	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(aw.GenericTemplate.Raw, nil, nil)
+	if err != nil {
+		klog.Errorf("Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
+	}
+
+	mapping, err := restmapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		klog.Errorf("mapping error from raw object: `%v`", err)
+	}
+	restconfig := gr.kubeClientConfig
+	restconfig.GroupVersion = &schema.GroupVersion{
+		Group:   mapping.GroupVersionKind.Group,
+		Version: mapping.GroupVersionKind.Version,
+	}
+	rsrc := mapping.Resource
+	dclient, err := dynamic.NewForConfig(restconfig)
+	if err != nil {
+		klog.Errorf("Error creating new dynamic client, err=%#v", err)
+	}
+
+	inEtcd, err := dclient.Resource(rsrc).Namespace(namespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		klog.Errorf("Error listing object: ", err)
+	}
+	klog.Infof("The Items in etcd are: %v", inEtcd.Items)
+
+	for _, job := range inEtcd.Items {
+		completionRequired := aw.CompletionRequired
+		klog.Infof("The completion required flag is %v", completionRequired)
+		if completionRequired && kindstring == "Job" {
+			completions := job.Object["spec"].(map[string]interface{})["completions"]
+			succeeded := job.Object["status"].(map[string]interface{})["succeeded"]
+			if completions == succeeded && (completions != nil || succeeded != nil) {
+				return "completed"
+			}
+
+		}
+		klog.Infof(
+			"completions: %v\n",
+			job.Object["spec"].(map[string]interface{})["completions"],
+		)
+		klog.Infof(
+			"succeeded: %v\n",
+			job.Object["status"].(map[string]interface{})["succeeded"],
+		)
+	}
+	return ""
+}

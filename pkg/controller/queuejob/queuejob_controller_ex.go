@@ -52,6 +52,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -86,6 +87,8 @@ import (
 	listersv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
 
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobdispatch"
+
+	JSON "encoding/json"
 
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	clusterstatecache "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
@@ -550,6 +553,44 @@ func (qjm *XController) GetAggregatedResourcesPerGenericItem(cqj *arbv1.AppWrapp
 
 	return retVal
 }
+func (qjm *XController) GetAllObjectsOwned(cqj *arbv1.AppWrapper) {
+
+	// Get all pods and related resources
+	//init from 1
+	countCompletedItems := 0
+	countCompletionRequired := 0
+	for _, genericItem := range cqj.Spec.AggrResources.GenericItems {
+		// itemsList, _ := genericresource.GetListOfPodResourcesFromOneGenericItem(&genericItem)
+		// for i := 0; i < len(itemsList); i++ {
+		// 	retVal = append(retVal, itemsList[i])
+		// }
+		objectName := genericItem.GenericTemplate
+		var unstruct unstructured.Unstructured
+		unstruct.Object = make(map[string]interface{})
+		var blob interface{}
+		if err := JSON.Unmarshal(objectName.Raw, &blob); err != nil {
+			klog.Errorf("Error unmarshalling, err=%#v", err)
+		}
+		kindstring := genericresource.GetGenericItemKind(&genericItem)
+		if genericItem.CompletionRequired {
+			countCompletionRequired = countCompletionRequired + 1
+		}
+		klog.Infof("The completion count for object is %v", countCompletionRequired)
+		klog.Infof("The object kind is %v", kindstring)
+		status := qjm.genericresources.GetGenericItemKindStatus(&genericItem, kindstring, cqj.Namespace)
+		if status == "completed" {
+			countCompletedItems = countCompletedItems + 1
+
+		}
+		klog.Infof("The completed count for object is %v", countCompletedItems)
+	}
+	// Mark completed only when all items are completed.
+	if countCompletedItems == countCompletionRequired {
+		cqj.Status.State = arbv1.AppWrapperStateCompleted
+		klog.Infof("Abhishek the job state is set to completed")
+	}
+}
+
 func (qjm *XController) GetAggregatedResources(cqj *arbv1.AppWrapper) *clusterstateapi.Resource {
 	//todo: deprecate resource controllers
 	allocated := clusterstateapi.EmptyResource()
@@ -566,6 +607,7 @@ func (qjm *XController) GetAggregatedResources(cqj *arbv1.AppWrapper) *clusterst
 		}
 		allocated = allocated.Add(qjv)
 	}
+	//qjm.GetAllObjectsOwned(cqj)
 
 	return allocated
 }
@@ -1583,17 +1625,18 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 				cc.updateEtcd(awNew, "[syncQueueJob] setRunning")
 			}
 
-			//Set Appwrapper state to complete if
-			//int value Status.Succeeded should be equal to int value awNew.Status.MaxRunning
-			//MaxRunning is set in pod.go
-			if qj.Status.State == arbv1.AppWrapperStateActive {
-				if (awNew.Status.QueueJobState == arbv1.AppWrapperCondRunning) && (awNew.Status.MaxRunning == awNew.Status.Succeeded) {
-					awNew.Status.QueueJobState = arbv1.AppWrapperCondCompleted
-					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
-					awNew.Status.Conditions = append(awNew.Status.Conditions, cond)
-					awNew.Status.FilterIgnore = true // Update AppWrapperCondCompleted
-					cc.updateEtcd(awNew, "[syncQueueJob] setCompleted")
-				}
+			//Set Appwrapper state to complete if all items in Appwrapper
+			//are completed
+			if awNew.Status.State != arbv1.AppWrapperStateCompleted {
+				cc.GetAllObjectsOwned(awNew)
+			}
+
+			if awNew.Status.State == arbv1.AppWrapperStateCompleted {
+				awNew.Status.QueueJobState = arbv1.AppWrapperCondCompleted
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
+				awNew.Status.Conditions = append(awNew.Status.Conditions, cond)
+				awNew.Status.FilterIgnore = true // Update AppWrapperCondCompleted
+				cc.updateEtcd(awNew, "[syncQueueJob] setCompleted")
 			}
 
 			//For debugging?
@@ -1706,7 +1749,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 		}
 
 		// add qj to Etcd for dispatch
-		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive {
+		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive && qj.Status.State != arbv1.AppWrapperStateCompleted {
 			qj.Status.State = arbv1.AppWrapperStateActive
 			// Bugfix to eliminate performance problem of overloading the event queue.}
 

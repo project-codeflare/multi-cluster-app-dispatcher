@@ -254,10 +254,6 @@ func (qjrPod *QueueJobResPod) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) e
 	queuejob.Status.Running = running
 	queuejob.Status.Succeeded = succeeded
 	queuejob.Status.Failed = failed
-	queuejob.Status.MaxRunning = int32(len(pods))
-	if queuejob.Status.MaxRunning == queuejob.Status.Succeeded {
-		queuejob.Status.State = arbv1.AppWrapperStateCompleted
-	}
 
 	return nil
 }

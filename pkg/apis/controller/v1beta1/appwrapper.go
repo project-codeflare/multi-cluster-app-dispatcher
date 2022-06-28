@@ -171,6 +171,9 @@ type AppWrapperGenericResource struct {
 	//Optional section that specifies resource requirements for non-standard k8s resources, follows same format as that
 	// of standard k8s resources
 	CustomPodResources []CustomPodResourceTemplate `json:"custompodresources,omitempty"`
+
+	//Optional field for users to determine completion status of item
+	CompletionRequired bool `json:"completionrequired,omitempty"`
 }
 
 type CustomPodResourceTemplate struct {
