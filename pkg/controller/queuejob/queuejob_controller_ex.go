@@ -575,12 +575,12 @@ func (qjm *XController) GetAllObjectsOwned(cqj *arbv1.AppWrapper) {
 		if genericItem.CompletionStatus != nil {
 			setCompletionRequired := genericItem.CompletionStatus[0].CompletionRequired
 			//hasCompletionRequiredBlock = setCompletionRequired
-			statusPath := genericItem.CompletionStatus[0].StatusPath
-			klog.Infof("The statusPath set by user is %v", statusPath)
+			//statusPath := genericItem.CompletionStatus[0].StatusPath
+			//klog.Infof("The statusPath set by user is %v", statusPath)
 			if setCompletionRequired {
 				countCompletionRequired = countCompletionRequired + 1
 			}
-			klog.Infof("The completion count for object is %v", countCompletionRequired)
+			//klog.Infof("The completion count for object is %v", countCompletionRequired)
 			//klog.Infof("The object kind is %v", kindstring)
 			//&genericItem, kindstring, cqj.Namespace
 		}
@@ -593,15 +593,15 @@ func (qjm *XController) GetAllObjectsOwned(cqj *arbv1.AppWrapper) {
 	//&& countCompletionRequired != 0
 	//|| countCompletedItems == len(cqj.Spec.AggrResources.GenericItems)
 	//&& countCompletedItems == len(cqj.Spec.AggrResources.GenericItems)
-	klog.Infof("The countCompletedItems count for object is %v", countCompletedItems)
-	klog.Infof("The countCompletionRequired count for object is %v", countCompletionRequired)
-	klog.Infof("The length of genericItems is %v", len(cqj.Spec.AggrResources.GenericItems))
+	// klog.Infof("The countCompletedItems count for object is %v", countCompletedItems)
+	// klog.Infof("The countCompletionRequired count for object is %v", countCompletionRequired)
+	// klog.Infof("The length of genericItems is %v", len(cqj.Spec.AggrResources.GenericItems))
 	if countCompletedItems == countCompletionRequired && countCompletedItems != 0 && countCompletedItems == len(cqj.Spec.AggrResources.GenericItems) {
 		cqj.Status.State = arbv1.AppWrapperStateCompleted
 		//|| (countCompletedItems < len(cqj.Spec.AggrResources.GenericItems))
 		//&& hasCompletionRequiredBlock
 	} else if ((countCompletedItems < countCompletionRequired) && (countCompletedItems != 0)) || (countCompletedItems < len(cqj.Spec.AggrResources.GenericItems) && countCompletedItems != 0) {
-		klog.Infof("Abhishek the job state is set to RunningHoldCompletion")
+		//klog.Infof("Abhishek the job state is set to RunningHoldCompletion")
 		cqj.Status.State = arbv1.AppWrapperStateRunningHoldCompletion
 	}
 }
@@ -1647,7 +1647,7 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 			}
 
 			if awNew.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
-				klog.Infof("Adding QueueJobState of AppWrapperStateRunningHoldCompletion")
+				//klog.Infof("Adding QueueJobState of AppWrapperStateRunningHoldCompletion")
 				awNew.Status.QueueJobState = arbv1.AppWrapperCondRunningHoldCompletion
 				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
 				awNew.Status.Conditions = append(awNew.Status.Conditions, cond)

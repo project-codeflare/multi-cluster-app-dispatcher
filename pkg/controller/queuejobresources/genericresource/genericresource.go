@@ -495,7 +495,7 @@ func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGeneric
 	if err != nil {
 		klog.Errorf("Error listing object: ", err)
 	}
-	klog.Infof("The Items in etcd are: %v", inEtcd.Items)
+	//klog.Infof("The Items in etcd are: %v", inEtcd.Items)
 
 	// status, isStatusPresent, errStatus := unstructured.NestedMap(inEtcd.UnstructuredContent(), "status")
 	// klog.Infof("isStatusPresent, %v", isStatusPresent)
@@ -536,21 +536,21 @@ func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGeneric
 				// status := job.Object["status"].(map[string]interface{})
 				// klog.Infof("The status is: %v", status)
 				statusPath := strings.Split(aw.CompletionStatus[0].StatusPath, ".")
-				klog.Infof("the splitted string path is %v", statusPath)
+				//klog.Infof("the splitted string path is %v", statusPath)
 				conditions := job.Object[statusPath[0]].(map[string]interface{})[statusPath[1]].([]interface{})
 				//TODO: check all conditions where multiple conditions exists
 				klog.V(3).Infof("The conditions array len is : %v", len(conditions))
 				for _, item := range conditions {
-					klog.V(3).Infof("The item  is : %v", item)
+					//klog.V(3).Infof("The item  is : %v", item)
 					//completionType = fmt.Sprint(item.(map[string]interface{})[statusPath[2]])
 					completionType := fmt.Sprint(item.(map[string]interface{})[statusPath[2]])
 					//Move this to utils package?
 					userSpecfiedCompletionConditions := aw.CompletionStatus[0].CompletionConditions
-					klog.V(3).Infof("The user specified conditions are : %v", userSpecfiedCompletionConditions)
+					//klog.V(3).Infof("The user specified conditions are : %v", userSpecfiedCompletionConditions)
 					for _, condition := range userSpecfiedCompletionConditions {
-						klog.V(3).Infof("Checking for condition : %v", condition)
+						//klog.V(3).Infof("Checking for condition : %v", condition)
 						if strings.Contains(strings.ToLower(completionType), strings.ToLower(condition)) {
-							klog.V(3).Infof("The completionType is: %v", completionType)
+							//klog.V(3).Infof("The completionType is: %v", completionType)
 							return "true"
 						}
 					}
