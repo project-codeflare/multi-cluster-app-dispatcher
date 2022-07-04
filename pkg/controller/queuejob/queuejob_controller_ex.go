@@ -601,7 +601,6 @@ func (qjm *XController) GetAllObjectsOwned(cqj *arbv1.AppWrapper) {
 		//|| (countCompletedItems < len(cqj.Spec.AggrResources.GenericItems))
 		//&& hasCompletionRequiredBlock
 	} else if ((countCompletedItems < countCompletionRequired) && (countCompletedItems != 0)) || (countCompletedItems < len(cqj.Spec.AggrResources.GenericItems) && countCompletedItems != 0) {
-		//klog.Infof("Abhishek the job state is set to RunningHoldCompletion")
 		cqj.Status.State = arbv1.AppWrapperStateRunningHoldCompletion
 	}
 }
