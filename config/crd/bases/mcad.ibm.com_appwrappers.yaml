@@ -60,6 +60,28 @@ spec:
                             recognized schemas to the latest internal value, and may
                             reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                           type: string
+                        # completionrequired:
+                        #   description: Optional field CompletionRequired defines if an item in an 
+                        #     Appwrapper should be a candidate to complete an appwrapper.
+                        #   type: boolean
+                        completionstatus:
+                          description: Optional section that drives completion status of appwrapper
+                          items:
+                            properties:
+                              statuspath:
+                                type: string
+                              completionrequired:
+                                type: boolean
+                              completionconditions:
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - statuspath
+                            - completionrequired
+                            - completionconditions
+                            type: object
+                          type: array
                         custompodresources:
                           description: Optional section that specifies resource requirements
                             for non-standard k8s resources, follows same format as

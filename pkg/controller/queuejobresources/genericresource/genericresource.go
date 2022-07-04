@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"strings"
 	"time"
 
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
@@ -82,7 +83,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
 		klog.Errorf("Error getting API resources, err=%#v", err)
-		return  []*v1.Pod{}, err
+		return []*v1.Pod{}, err
 	}
 	ext := awr.GenericTemplate
 	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
@@ -108,13 +109,13 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	dclient, err := dynamic.NewForConfig(restconfig)
 	if err != nil {
 		klog.Errorf("Error creating new dynamic client, err=%#v", err)
-		return  []*v1.Pod{}, err
+		return []*v1.Pod{}, err
 	}
 
 	_, apiresourcelist, err := dd.ServerGroupsAndResources()
 	if err != nil {
 		klog.Errorf("Error getting supported groups and resources, err=%#v", err)
-		return  []*v1.Pod{}, err
+		return []*v1.Pod{}, err
 	}
 
 	rsrc := mapping.Resource
@@ -133,7 +134,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	var blob interface{}
 	if err = json.Unmarshal(ext.Raw, &blob); err != nil {
 		klog.Errorf("Error unmarshalling, err=%#v", err)
-		return  []*v1.Pod{}, err
+		return []*v1.Pod{}, err
 	}
 	ownerRef := metav1.NewControllerRef(aw, appWrapperKind)
 	unstruct.Object = blob.(map[string]interface{}) //set object to the content of the blob after Unmarshalling
@@ -460,7 +461,8 @@ func GetGenericItemKind(aw *arbv1.AppWrapperGenericResource) (kindstring string)
 	return gvk.GroupKind().Kind
 }
 
-func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGenericResource, kindstring string, namespace string) (completed string) {
+//aw *arbv1.AppWrapperGenericResource, kindstring string, namespace string
+func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGenericResource, namespace string) (completed string) {
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
@@ -495,25 +497,85 @@ func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGeneric
 	}
 	klog.Infof("The Items in etcd are: %v", inEtcd.Items)
 
+	// status, isStatusPresent, errStatus := unstructured.NestedMap(inEtcd.UnstructuredContent(), "status")
+	// klog.Infof("isStatusPresent, %v", isStatusPresent)
+	// if errStatus != nil {
+	// 	klog.Infof("the error to condition map is %v", errStatus)
+	// }
+	// conditions, isPresent, error := unstructured.NestedMap(status, "conditions")
+	// klog.Infof("converted, %v", isPresent)
+	// if error != nil {
+	// 	klog.Infof("the error to condition map is %v", error)
+	// }
+	// for k, v := range conditions {
+	// 	klog.Infof("The key is %v", k)
+	// 	if k == "type" {
+	// 		klog.Infof("The completion status is %v", v)
+	// 	}
+	// }
 	for _, job := range inEtcd.Items {
-		completionRequired := aw.CompletionRequired
-		klog.Infof("The completion required flag is %v", completionRequired)
-		if completionRequired && kindstring == "Job" {
-			completions := job.Object["spec"].(map[string]interface{})["completions"]
-			succeeded := job.Object["status"].(map[string]interface{})["succeeded"]
-			if completions == succeeded && (completions != nil || succeeded != nil) {
-				return "completed"
-			}
+		completionRequiredBlock := aw.CompletionStatus
+		// if completionRequiredBlock != nil {
+		// 	completionRequiredFlag :=completionRequiredBlock[0].CompletionRequired
+		// }
+		// var completionRequiredFlag bool
+		// for item := range completionRequired {
+		// 	if string(item) == "completionrequired" {
+		// 		completionRequiredFlag = true
+		// 	}
+		// 	if string(item) == "statuspath" {
+		// 		klog.Infof("The status path supplied by user is %v", item)
+		// 	}
+		// }
+		//klog.Infof("The completion required flag is %v", completionRequiredFlag)
+		//completionRequiredFlag && kindstring == "Job"
+		if completionRequiredBlock != nil {
+			if completionRequiredBlock[0].CompletionRequired {
+				//completions := job.Object["spec"].(map[string]interface{})["completions"]
+				//succeeded := job.Object["status"].(map[string]interface{})["succeeded"]
+				// status := job.Object["status"].(map[string]interface{})
+				// klog.Infof("The status is: %v", status)
+				statusPath := strings.Split(aw.CompletionStatus[0].StatusPath, ".")
+				klog.Infof("the splitted string path is %v", statusPath)
+				conditions := job.Object[statusPath[0]].(map[string]interface{})[statusPath[1]].([]interface{})
+				//TODO: check all conditions where multiple conditions exists
+				klog.V(3).Infof("The conditions array len is : %v", len(conditions))
+				for _, item := range conditions {
+					klog.V(3).Infof("The item  is : %v", item)
+					//completionType = fmt.Sprint(item.(map[string]interface{})[statusPath[2]])
+					completionType := fmt.Sprint(item.(map[string]interface{})[statusPath[2]])
+					//Move this to utils package?
+					userSpecfiedCompletionConditions := aw.CompletionStatus[0].CompletionConditions
+					klog.V(3).Infof("The user specified conditions are : %v", userSpecfiedCompletionConditions)
+					for _, condition := range userSpecfiedCompletionConditions {
+						klog.V(3).Infof("Checking for condition : %v", condition)
+						if strings.Contains(strings.ToLower(completionType), strings.ToLower(condition)) {
+							klog.V(3).Infof("The completionType is: %v", completionType)
+							return "true"
+						}
+					}
+				}
 
+			}
+		} else { //user did not supply path look status in default location
+			// conditions := job.Object["status"].(map[string]interface{})["conditions"].([]interface{})
+			// for _, item := range conditions {
+			// 	//completionType = fmt.Sprint(item.(map[string]interface{})[statusPath[2]])
+			// 	completionType := fmt.Sprint(item.(map[string]interface{})["type"])
+			// 	if completionType == "Complete" {
+			// 		klog.Infof("The completionType in else is: %v", completionType)
+			// 		return "completed"
+			// 	}
+			// }
 		}
-		klog.Infof(
-			"completions: %v\n",
-			job.Object["spec"].(map[string]interface{})["completions"],
-		)
-		klog.Infof(
-			"succeeded: %v\n",
-			job.Object["status"].(map[string]interface{})["succeeded"],
-		)
+		// klog.Infof(
+		// 	"completions: %v\n",
+		// 	job.Object["spec"].(map[string]interface{})["completions"],
+		// )
+		// klog.Infof(
+		// 	"succeeded: %v\n",
+		// 	job.Object["status"].(map[string]interface{})["succeeded"],
+		// )
 	}
 	return ""
 }

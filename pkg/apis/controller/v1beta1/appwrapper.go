@@ -173,7 +173,7 @@ type AppWrapperGenericResource struct {
 	CustomPodResources []CustomPodResourceTemplate `json:"custompodresources,omitempty"`
 
 	//Optional field for users to determine completion status of item
-	CompletionRequired bool `json:"completionrequired,omitempty"`
+	CompletionStatus []CompletionStatusTemplate `json:"completionstatus,omitempty"`
 }
 
 type CustomPodResourceTemplate struct {
@@ -184,6 +184,12 @@ type CustomPodResourceTemplate struct {
 
 	// +optional
 	Limits v1.ResourceList `json:"limits"`
+}
+
+type CompletionStatusTemplate struct {
+	StatusPath           string   `json:"statuspath"`
+	CompletionRequired   bool     `json:"completionrequired,omitempty"`
+	CompletionConditions []string `json:"completionconditions,omitempty"`
 }
 
 // App Wrapper resources type
@@ -211,9 +217,6 @@ type AppWrapperStatus struct {
 
 	// +optional
 	Running int32 `json:"running,omitempty" protobuf:"bytes,1,opt,name=running"`
-
-	//The total number of running pods which is used to determine Completed status of AW
-	MaxRunning int32 `json:"runcount,omitempty" protobuf:"bytes,1,opt,name=runcount"`
 
 	// The number of resources which reached phase Succeeded.
 	// +optional
@@ -266,27 +269,29 @@ type AppWrapperState string
 
 //enqueued, active, deleting, succeeded, failed
 const (
-	AppWrapperStateEnqueued  AppWrapperState = "Pending"
-	AppWrapperStateActive    AppWrapperState = "Running"
-	AppWrapperStateDeleted   AppWrapperState = "Deleted"
-	AppWrapperStateFailed    AppWrapperState = "Failed"
-	AppWrapperStateCompleted AppWrapperState = "Completed"
+	AppWrapperStateEnqueued              AppWrapperState = "Pending"
+	AppWrapperStateActive                AppWrapperState = "Running"
+	AppWrapperStateDeleted               AppWrapperState = "Deleted"
+	AppWrapperStateFailed                AppWrapperState = "Failed"
+	AppWrapperStateCompleted             AppWrapperState = "Completed"
+	AppWrapperStateRunningHoldCompletion AppWrapperState = "RunningHoldCompletion"
 )
 
 type AppWrapperConditionType string
 
 const (
-	AppWrapperCondInit             AppWrapperConditionType = "Init"
-	AppWrapperCondQueueing         AppWrapperConditionType = "Queueing"
-	AppWrapperCondHeadOfLine       AppWrapperConditionType = "HeadOfLine"
-	AppWrapperCondBackoff          AppWrapperConditionType = "Backoff"
-	AppWrapperCondDispatched       AppWrapperConditionType = "Dispatched"
-	AppWrapperCondRunning          AppWrapperConditionType = "Running"
-	AppWrapperCondPreemptCandidate AppWrapperConditionType = "PreemptCandidate"
-	AppWrapperCondPreempted        AppWrapperConditionType = "Preempted"
-	AppWrapperCondDeleted          AppWrapperConditionType = "Deleted"
-	AppWrapperCondFailed           AppWrapperConditionType = "Failed"
-	AppWrapperCondCompleted        AppWrapperConditionType = "Completed"
+	AppWrapperCondInit                  AppWrapperConditionType = "Init"
+	AppWrapperCondQueueing              AppWrapperConditionType = "Queueing"
+	AppWrapperCondHeadOfLine            AppWrapperConditionType = "HeadOfLine"
+	AppWrapperCondBackoff               AppWrapperConditionType = "Backoff"
+	AppWrapperCondDispatched            AppWrapperConditionType = "Dispatched"
+	AppWrapperCondRunning               AppWrapperConditionType = "Running"
+	AppWrapperCondPreemptCandidate      AppWrapperConditionType = "PreemptCandidate"
+	AppWrapperCondPreempted             AppWrapperConditionType = "Preempted"
+	AppWrapperCondDeleted               AppWrapperConditionType = "Deleted"
+	AppWrapperCondFailed                AppWrapperConditionType = "Failed"
+	AppWrapperCondCompleted             AppWrapperConditionType = "Completed"
+	AppWrapperCondRunningHoldCompletion AppWrapperConditionType = "RunningHoldCompletion"
 )
 
 // DeploymentCondition describes the state of a deployment at a certain point.

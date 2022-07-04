@@ -556,9 +556,9 @@ func (qjm *XController) GetAggregatedResourcesPerGenericItem(cqj *arbv1.AppWrapp
 func (qjm *XController) GetAllObjectsOwned(cqj *arbv1.AppWrapper) {
 
 	// Get all pods and related resources
-	//init from 1
 	countCompletedItems := 0
 	countCompletionRequired := 0
+	//hasCompletionRequiredBlock := false
 	for _, genericItem := range cqj.Spec.AggrResources.GenericItems {
 		// itemsList, _ := genericresource.GetListOfPodResourcesFromOneGenericItem(&genericItem)
 		// for i := 0; i < len(itemsList); i++ {
@@ -571,23 +571,38 @@ func (qjm *XController) GetAllObjectsOwned(cqj *arbv1.AppWrapper) {
 		if err := JSON.Unmarshal(objectName.Raw, &blob); err != nil {
 			klog.Errorf("Error unmarshalling, err=%#v", err)
 		}
-		kindstring := genericresource.GetGenericItemKind(&genericItem)
-		if genericItem.CompletionRequired {
-			countCompletionRequired = countCompletionRequired + 1
+		//kindstring := genericresource.GetGenericItemKind(&genericItem)
+		if genericItem.CompletionStatus != nil {
+			setCompletionRequired := genericItem.CompletionStatus[0].CompletionRequired
+			//hasCompletionRequiredBlock = setCompletionRequired
+			statusPath := genericItem.CompletionStatus[0].StatusPath
+			klog.Infof("The statusPath set by user is %v", statusPath)
+			if setCompletionRequired {
+				countCompletionRequired = countCompletionRequired + 1
+			}
+			klog.Infof("The completion count for object is %v", countCompletionRequired)
+			//klog.Infof("The object kind is %v", kindstring)
+			//&genericItem, kindstring, cqj.Namespace
 		}
-		klog.Infof("The completion count for object is %v", countCompletionRequired)
-		klog.Infof("The object kind is %v", kindstring)
-		status := qjm.genericresources.GetGenericItemKindStatus(&genericItem, kindstring, cqj.Namespace)
-		if status == "completed" {
+		status := qjm.genericresources.GetGenericItemKindStatus(&genericItem, cqj.Namespace)
+		if status == "true" {
 			countCompletedItems = countCompletedItems + 1
-
 		}
-		klog.Infof("The completed count for object is %v", countCompletedItems)
 	}
-	// Mark completed only when all items are completed.
-	if countCompletedItems == countCompletionRequired {
+	// Mark completed only when all items are completed or
+	//&& countCompletionRequired != 0
+	//|| countCompletedItems == len(cqj.Spec.AggrResources.GenericItems)
+	//&& countCompletedItems == len(cqj.Spec.AggrResources.GenericItems)
+	klog.Infof("The countCompletedItems count for object is %v", countCompletedItems)
+	klog.Infof("The countCompletionRequired count for object is %v", countCompletionRequired)
+	klog.Infof("The length of genericItems is %v", len(cqj.Spec.AggrResources.GenericItems))
+	if countCompletedItems == countCompletionRequired && countCompletedItems != 0 && countCompletedItems == len(cqj.Spec.AggrResources.GenericItems) {
 		cqj.Status.State = arbv1.AppWrapperStateCompleted
-		klog.Infof("Abhishek the job state is set to completed")
+		//|| (countCompletedItems < len(cqj.Spec.AggrResources.GenericItems))
+		//&& hasCompletionRequiredBlock
+	} else if ((countCompletedItems < countCompletionRequired) && (countCompletedItems != 0)) || (countCompletedItems < len(cqj.Spec.AggrResources.GenericItems) && countCompletedItems != 0) {
+		klog.Infof("Abhishek the job state is set to RunningHoldCompletion")
+		cqj.Status.State = arbv1.AppWrapperStateRunningHoldCompletion
 	}
 }
 
@@ -1631,6 +1646,15 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 				cc.GetAllObjectsOwned(awNew)
 			}
 
+			if awNew.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
+				klog.Infof("Adding QueueJobState of AppWrapperStateRunningHoldCompletion")
+				awNew.Status.QueueJobState = arbv1.AppWrapperCondRunningHoldCompletion
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
+				awNew.Status.Conditions = append(awNew.Status.Conditions, cond)
+				awNew.Status.FilterIgnore = true // Update AppWrapperCondCompleted
+				cc.updateEtcd(awNew, "[syncQueueJob] setRunningHoldCompletion")
+			}
+
 			if awNew.Status.State == arbv1.AppWrapperStateCompleted {
 				awNew.Status.QueueJobState = arbv1.AppWrapperCondCompleted
 				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
@@ -1651,7 +1675,6 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 			}
 		}
 	}
-
 	return cc.manageQueueJob(qj, podPhaseChanges)
 	//return cc.manageQueueJob(cacheAWJob)
 }
@@ -1749,7 +1772,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 		}
 
 		// add qj to Etcd for dispatch
-		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive && qj.Status.State != arbv1.AppWrapperStateCompleted {
+		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive && qj.Status.State != arbv1.AppWrapperStateCompleted && qj.Status.State != arbv1.AppWrapperStateRunningHoldCompletion {
 			qj.Status.State = arbv1.AppWrapperStateActive
 			// Bugfix to eliminate performance problem of overloading the event queue.}
 
