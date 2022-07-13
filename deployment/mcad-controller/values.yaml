@@ -55,7 +55,15 @@ volumes:
 
 coscheduler:
   rbac:
+    
     apiGroup:
+    resource:
+
+machinesets:
+  rbac:
+    #machine.openshift.io
+    apiGroup:
+    #""
     resource:
 
 quotaManagement:
