@@ -706,7 +706,7 @@ func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bo
 
 func waitAWPodsReadyExDebug(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
 	return wait.Poll(100*time.Millisecond, ninetySeconds, awPodPhase(ctx, aw,
-		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite, false))
+		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite, true))
 }
 
 func waitAWPodsTerminatedEx(ctx *context, namespace string, name string, pods []*v1.Pod, taskNum int) error {
