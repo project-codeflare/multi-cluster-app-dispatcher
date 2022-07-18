@@ -308,7 +308,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
 		appwrappers = append(appwrappers, aw)
 
-		err := waitAWPodsReady(context, aw)
+		err := waitAWPodsReadyDebug(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 		// This should not fit on cluster

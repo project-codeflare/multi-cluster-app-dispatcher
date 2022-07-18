@@ -461,7 +461,69 @@ func cleanupTestObjectsVerbose(context *context, appwrappers []*arbv1.AppWrapper
 	cleanupTestContext(context)
 }
 
-func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum int, quite bool) wait.ConditionFunc {
+// func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum int, quite bool) wait.ConditionFunc {
+// 	return func() (bool, error) {
+// 		defer GinkgoRecover()
+
+// 		aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+// 		Expect(err).NotTo(HaveOccurred())
+
+// 		podList, err := ctx.kubeclient.CoreV1().Pods(aw.Namespace).List(gcontext.Background(), metav1.ListOptions{})
+// 		Expect(err).NotTo(HaveOccurred())
+
+// 		if podList == nil || podList.Size() < 1 {
+// 			fmt.Fprintf(os.Stdout, "[awPodPhase] Listing podList found for Namespace: %s resulting in no podList found that could match AppWrapper: %s \n",
+// 				aw.Namespace, aw.Name)
+// 		}
+
+// 		readyTaskNum := 0
+// 		for _, pod := range podList.Items {
+// 			if awn, found := pod.Labels["appwrapper.mcad.ibm.com"]; !found || awn != aw.Name {
+// 				if !quite {
+// 					fmt.Fprintf(os.Stdout, "[awPodPhase] Pod %s not part of AppWrapper: %s, labels: %s\n", pod.Name, aw.Name, pod.Labels)
+// 				}
+// 				continue
+// 			}
+
+// 			for _, p := range phase {
+// 				if pod.Status.Phase == p {
+// 					//DEBUGif quite {
+// 					//DEBUG	fmt.Fprintf(os.Stdout, "[awPodPhase] Found pod %s of AppWrapper: %s, phase: %v\n", pod.Name, aw.Name, p)
+// 					//DEBUG}
+// 					readyTaskNum++
+// 					break
+// 				} else {
+// 					pMsg := pod.Status.Message
+// 					if len(pMsg) > 0 {
+// 						pReason := pod.Status.Reason
+// 						fmt.Fprintf(os.Stdout, "[awPodPhase] pod: %s, phase: %s, reason: %s, message: %s\n", pod.Name, p, pReason, pMsg)
+// 					}
+// 					containerStatuses := pod.Status.ContainerStatuses
+// 					for _, containerStatus := range containerStatuses {
+// 						waitingState := containerStatus.State.Waiting
+// 						if waitingState != nil {
+// 							wMsg := waitingState.Message
+// 							if len(wMsg) > 0 {
+// 								wReason := waitingState.Reason
+// 								containerName := containerStatus.Name
+// 								fmt.Fprintf(os.Stdout, "[awPodPhase] condition for pod: %s, phase: %s, container name: %s, "+
+// 									"reason: %s, message: %s\n", pod.Name, p, containerName, wReason, wMsg)
+// 							}
+// 						}
+// 					}
+// 				}
+// 			}
+// 		}
+
+// 		//DEBUGif taskNum <= readyTaskNum && quite {
+// 		//DEBUG	fmt.Fprintf(os.Stdout, "[awPodPhase] Successfully found %v podList of AppWrapper: %s, state: %s\n", readyTaskNum, aw.Name, aw.Status.State)
+// 		//DEBUG}
+
+// 		return taskNum <= readyTaskNum, nil
+// 	}
+// }
+
+func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum int, quite bool, debug bool) wait.ConditionFunc {
 	return func() (bool, error) {
 		defer GinkgoRecover()
 
@@ -487,9 +549,9 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 
 			for _, p := range phase {
 				if pod.Status.Phase == p {
-					//DEBUGif quite {
-					//DEBUG	fmt.Fprintf(os.Stdout, "[awPodPhase] Found pod %s of AppWrapper: %s, phase: %v\n", pod.Name, aw.Name, p)
-					//DEBUG}
+					if quite {
+						fmt.Fprintf(os.Stdout, "[awPodPhase] Found pod %s of AppWrapper: %s, phase: %v\n", pod.Name, aw.Name, p)
+					}
 					readyTaskNum++
 					break
 				} else {
@@ -515,9 +577,9 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 			}
 		}
 
-		//DEBUGif taskNum <= readyTaskNum && quite {
-		//DEBUG	fmt.Fprintf(os.Stdout, "[awPodPhase] Successfully found %v podList of AppWrapper: %s, state: %s\n", readyTaskNum, aw.Name, aw.Status.State)
-		//DEBUG}
+		if taskNum <= readyTaskNum && quite {
+			fmt.Fprintf(os.Stdout, "[awPodPhase] Successfully found %v podList of AppWrapper: %s, state: %s\n", readyTaskNum, aw.Name, aw.Status.State)
+		}
 
 		return taskNum <= readyTaskNum, nil
 	}
@@ -608,6 +670,9 @@ func awNamespacePhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.NamespacePh
 func waitAWPodsReady(ctx *context, aw *arbv1.AppWrapper) error {
 	return waitAWPodsReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), false)
 }
+func waitAWPodsReadyDebug(ctx *context, aw *arbv1.AppWrapper) error {
+	return waitAWPodsReadyExDebug(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), false)
+}
 
 func waitAWReadyQuiet(ctx *context, aw *arbv1.AppWrapper) error {
 	return waitAWPodsReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), true)
@@ -636,7 +701,12 @@ func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
 
 func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
 	return wait.Poll(100*time.Millisecond, ninetySeconds, awPodPhase(ctx, aw,
-		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite))
+		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite, false))
+}
+
+func waitAWPodsReadyExDebug(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
+	return wait.Poll(100*time.Millisecond, ninetySeconds, awPodPhase(ctx, aw,
+		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite, false))
 }
 
 func waitAWPodsTerminatedEx(ctx *context, namespace string, name string, pods []*v1.Pod, taskNum int) error {
