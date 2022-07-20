@@ -53,6 +53,15 @@ type NodeInfo struct {
 	Allocatable *Resource
 	Capability  *Resource
 
+	// Track labels for potential filtering
+	Labels map[string]string
+
+	// Track Schedulable flag for potential filtering
+	Unschedulable bool
+
+	// Taints for potential filtering
+	Taints []v1.Taint
+
 	Tasks map[TaskID]*TaskInfo
 }
 
@@ -65,6 +74,10 @@ func NewNodeInfo(node *v1.Node) *NodeInfo {
 
 			Allocatable: EmptyResource(),
 			Capability:  EmptyResource(),
+
+			Labels: make(map[string]string),
+			Unschedulable: false,
+			Taints: []v1.Taint{},
 
 			Tasks: make(map[TaskID]*TaskInfo),
 		}
@@ -80,6 +93,10 @@ func NewNodeInfo(node *v1.Node) *NodeInfo {
 
 		Allocatable: NewResource(node.Status.Allocatable),
 		Capability:  NewResource(node.Status.Capacity),
+
+		Labels: node.GetLabels(),
+		Unschedulable: node.Spec.Unschedulable,
+		Taints: node.Spec.Taints,
 
 		Tasks: make(map[TaskID]*TaskInfo),
 	}
@@ -113,6 +130,9 @@ func (ni *NodeInfo) SetNode(node *v1.Node) {
 	ni.Node = node
 	ni.Allocatable = NewResource(node.Status.Allocatable)
 	ni.Capability = NewResource(node.Status.Capacity)
+	ni.Labels = NewStringsMap(node.Labels)
+	ni.Unschedulable = node.Spec.Unschedulable
+	ni.Taints = NewTaints(node.Spec.Taints)
 }
 
 func (ni *NodeInfo) PipelineTask(task *TaskInfo) error {
