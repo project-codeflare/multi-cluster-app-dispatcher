@@ -547,37 +547,72 @@ func (qjm *XController) GetAggregatedResourcesPerGenericItem(cqj *arbv1.AppWrapp
 	// Get all pods and related resources
 	for _, genericItem := range cqj.Spec.AggrResources.GenericItems {
 		itemsList, _ := genericresource.GetListOfPodResourcesFromOneGenericItem(&genericItem)
-		for i :=0; i < len(itemsList); i++ {
+		for i := 0; i < len(itemsList); i++ {
 			retVal = append(retVal, itemsList[i])
 		}
 	}
 
 	return retVal
 }
+
+func (qjm *XController) GetAllObjectsOwned(cqj *arbv1.AppWrapper) {
+
+	// Get all pods and related resources
+	countCompletedItems := 0
+	countCompletionRequired := 0
+	ignoredItems := 0
+	for _, genericItem := range cqj.Spec.AggrResources.GenericItems {
+		objectName := genericItem.GenericTemplate
+		var unstruct unstructured.Unstructured
+		unstruct.Object = make(map[string]interface{})
+		var blob interface{}
+		if err := jsons.Unmarshal(objectName.Raw, &blob); err != nil {
+			klog.Errorf("Error unmarshalling, err=%#v", err)
+		}
+		if len(genericItem.CompletionStatus) > 0 {
+			countCompletionRequired = countCompletionRequired + 1
+		}
+		status := qjm.genericresources.GetGenericItemKindStatus(&genericItem, cqj.Namespace)
+		if status == "true" {
+			countCompletedItems = countCompletedItems + 1
+		}
+		//ignore service and podgroups since these items do not have status
+		if status == "ignore" {
+			ignoredItems = ignoredItems + 1
+		}
+	}
+	if countCompletedItems == countCompletionRequired && countCompletedItems != 0 && countCompletedItems == (len(cqj.Spec.AggrResources.GenericItems)-ignoredItems) {
+		cqj.Status.State = arbv1.AppWrapperStateCompleted
+	} else if ((countCompletedItems < countCompletionRequired) && (countCompletedItems != 0)) ||
+		(countCompletedItems < len(cqj.Spec.AggrResources.GenericItems) && countCompletedItems != 0) {
+		cqj.Status.State = arbv1.AppWrapperStateRunningHoldCompletion
+	}
+}
+
 func (qjm *XController) GetAggregatedResources(cqj *arbv1.AppWrapper) *clusterstateapi.Resource {
 	//todo: deprecate resource controllers
 	allocated := clusterstateapi.EmptyResource()
-        for _, resctrl := range qjm.qjobResControls {
-                qjv     := resctrl.GetAggregatedResources(cqj)
-                allocated = allocated.Add(qjv)
-        }
+	for _, resctrl := range qjm.qjobResControls {
+		qjv := resctrl.GetAggregatedResources(cqj)
+		allocated = allocated.Add(qjv)
+	}
 
 	for _, genericItem := range cqj.Spec.AggrResources.GenericItems {
 		qjv, err := genericresource.GetResources(&genericItem)
 		if err != nil {
 			klog.V(8).Infof("[GetAggregatedResources] Failure aggregating resources for %s/%s, err=%#v, genericItem=%#v",
-								cqj.Namespace, cqj.Name, err, genericItem)
+				cqj.Namespace, cqj.Name, err, genericItem)
 		}
 		allocated = allocated.Add(qjv)
 	}
 
-        return allocated
+	return allocated
 }
 
 func (qjm *XController) getProposedPreemptions(requestingJob *arbv1.AppWrapper, availableResourcesWithoutPreemption *clusterstateapi.Resource,
-							preemptableAWs map[float64][]string, preemptableAWsMap map[string]*arbv1.AppWrapper) []*arbv1.AppWrapper {
+	preemptableAWs map[float64][]string, preemptableAWsMap map[string]*arbv1.AppWrapper) []*arbv1.AppWrapper {
 
-	if  requestingJob == nil  {
+	if requestingJob == nil {
 		klog.Warning("[getProposedPreemptions] Invalid job to evaluate.  Job is set to nil.")
 		return nil
 	}
