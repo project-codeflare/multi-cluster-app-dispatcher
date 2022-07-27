@@ -88,6 +88,9 @@ import (
 
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	clusterstatecache "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	jsons "encoding/json"
 )
 
 const (
@@ -1566,16 +1569,38 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 			klog.V(10).Infof("[syncQueueJob] AW popped from event queue %s &qj=%p Version=%s Status=%+v", awNew.Name, awNew, awNew.ResourceVersion, awNew.Status)
 
 			// Update etcd conditions if AppWrapper Job has at least 1 running pod and transitioning from dispatched to running.
-			if (awNew.Status.QueueJobState != arbv1.AppWrapperCondRunning ) && (awNew.Status.Running > 0) {
+			if (awNew.Status.QueueJobState != arbv1.AppWrapperCondRunning) && (awNew.Status.Running > 0) {
 				awNew.Status.QueueJobState = arbv1.AppWrapperCondRunning
 				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunning, v1.ConditionTrue, "PodsRunning", "")
 				awNew.Status.Conditions = append(awNew.Status.Conditions, cond)
-				awNew.Status.FilterIgnore = true  // Update AppWrapperCondRunning
+				awNew.Status.FilterIgnore = true // Update AppWrapperCondRunning
 				cc.updateEtcd(awNew, "[syncQueueJob] setRunning")
 			}
 
+			//Set Appwrapper state to complete if all items in Appwrapper
+			//are completed
+			if awNew.Status.State != arbv1.AppWrapperStateCompleted {
+				cc.GetAllObjectsOwned(awNew)
+			}
+
+			if awNew.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
+				awNew.Status.QueueJobState = arbv1.AppWrapperCondRunningHoldCompletion
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
+				awNew.Status.Conditions = append(awNew.Status.Conditions, cond)
+				awNew.Status.FilterIgnore = true // Update AppWrapperCondCompleted
+				cc.updateEtcd(awNew, "[syncQueueJob] setRunningHoldCompletion")
+			}
+
+			if awNew.Status.State == arbv1.AppWrapperStateCompleted {
+				awNew.Status.QueueJobState = arbv1.AppWrapperCondCompleted
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
+				awNew.Status.Conditions = append(awNew.Status.Conditions, cond)
+				awNew.Status.FilterIgnore = true // Update AppWrapperCondCompleted
+				cc.updateEtcd(awNew, "[syncQueueJob] setCompleted")
+			}
+
 			//For debugging?
-			if ! reflect.DeepEqual(awNew.Status, qj.Status) {
+			if !reflect.DeepEqual(awNew.Status, qj.Status) {
 				podPhaseChanges = true
 				// Using DeepCopy before DeepCopyInto as it seems that DeepCopyInto does not alloc a new memory object
 				awNewStatus := awNew.Status.DeepCopy()
@@ -1684,7 +1709,9 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 		}
 
 		// add qj to Etcd for dispatch
-		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive {
+		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive &&
+			qj.Status.State != arbv1.AppWrapperStateCompleted &&
+			qj.Status.State != arbv1.AppWrapperStateRunningHoldCompletion {
 			qj.Status.State = arbv1.AppWrapperStateActive
 			// Bugfix to eliminate performance problem of overloading the event queue.}
 

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"strings"
 	"time"
 
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
@@ -449,4 +450,60 @@ func getContainerResources(container v1.Container, replicas float64) *clustersta
 	req.Memory = req.Memory * float64(replicas)
 	req.GPU = req.GPU * int64(replicas)
 	return req
+}
+
+//return value is a string for flexibility of expression
+func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGenericResource, namespace string) (completed string) {
+	dd := gr.clients.Discovery()
+	apigroups, err := restmapper.GetAPIGroupResources(dd)
+	if err != nil {
+		klog.Errorf("Error getting API resources, err=%#v", err)
+	}
+	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
+	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(aw.GenericTemplate.Raw, nil, nil)
+	if err != nil {
+		klog.Errorf("Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
+	}
+	//service and podgroup has no conditions return ALWAYS true
+	//TODO: make it configurable?
+	if gvk.GroupKind().Kind == "Service" || gvk.GroupKind().Kind == "PodGroup" {
+		return "ignore"
+	}
+
+	mapping, err := restmapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		klog.Errorf("mapping error from raw object: `%v`", err)
+	}
+	restconfig := gr.kubeClientConfig
+	restconfig.GroupVersion = &schema.GroupVersion{
+		Group:   mapping.GroupVersionKind.Group,
+		Version: mapping.GroupVersionKind.Version,
+	}
+	rsrc := mapping.Resource
+	dclient, err := dynamic.NewForConfig(restconfig)
+	if err != nil {
+		klog.Errorf("Error creating new dynamic client, err=%#v", err)
+	}
+
+	inEtcd, err := dclient.Resource(rsrc).Namespace(namespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		klog.Errorf("Error listing object: ", err)
+	}
+	for _, job := range inEtcd.Items {
+		completionRequiredBlock := aw.CompletionStatus
+		if len(completionRequiredBlock) > 0 {
+			conditions := job.Object["status"].(map[string]interface{})["conditions"].([]interface{})
+			for _, item := range conditions {
+				completionType := fmt.Sprint(item.(map[string]interface{})["type"])
+				//Move this to utils package?
+				userSpecfiedCompletionConditions := strings.Split(aw.CompletionStatus, ",")
+				for _, condition := range userSpecfiedCompletionConditions {
+					if strings.Contains(strings.ToLower(completionType), strings.ToLower(condition)) {
+						return "true"
+					}
+				}
+			}
+		}
+	}
+	return ""
 }
