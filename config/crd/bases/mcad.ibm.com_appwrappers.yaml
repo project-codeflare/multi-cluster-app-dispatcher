@@ -60,6 +60,30 @@ spec:
                             recognized schemas to the latest internal value, and may
                             reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                           type: string
+                        completionstatus:
+                          description: Optional section that drives completion status of appwrapper
+                            an item in Appwrapper should be a candidate to complete an appwrapper.
+                            this block should contain statuspath ie path in the yaml from where the status 
+                            should be picked up (typically it is the conditions section for most kubernetes object),
+                            completionrequired which is a boolean attribute for the item and completionconditions ["Complete", "Failed"]
+                          #Type of completion status is array of array
+                          items:
+                            properties:
+                              statuspath:
+                                type: string
+                              completionrequired:
+                                type: boolean
+                              completionconditions:
+                              #Type of completion conditions field
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - statuspath
+                            - completionrequired
+                            - completionconditions
+                            type: object
+                          type: array
                         custompodresources:
                           description: Optional section that specifies resource requirements
                             for non-standard k8s resources, follows same format as
