@@ -263,6 +263,13 @@ func (sc *ClusterStateCache) updateState() error {
 
 	firstNode :=  true
 	for _, value := range cluster.Nodes {
+		// Do not use any Unschedulable nodes in calculations
+		if value.Unschedulable == true {
+			klog.V(6).Infof("[updateState] %s is marked as unschedulable node Total: %v, Used: %v, and Idle: %v will not be included in cluster state calculation.",
+				value.Name, value.Allocatable, value.Used, value.Idle)
+			continue
+		}
+
 		total = total.Add(value.Allocatable)
 		used = used.Add(value.Used)
 		idle = idle.Add(value.Idle)

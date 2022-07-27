@@ -124,3 +124,37 @@ func JobTerminated(job *JobInfo) bool {
 
 	return false
 }
+
+
+func NewStringsMap(source map[string]string) map[string]string {
+	target := make(map[string]string)
+
+	if source != nil {
+		for k, v := range source {
+			target[k] = v
+		}
+	}
+
+	return target
+}
+
+func NewTaints(source []v1.Taint) []v1.Taint {
+	var target []v1.Taint
+	if source == nil {
+		target = make([]v1.Taint, 0)
+		return target
+	}
+
+	target = make([]v1.Taint, len(source))
+	for _, t := range source {
+
+		newTaint := v1.Taint{
+			Key:  t.Key,
+			Value: t.Value,
+			Effect: t.Effect,
+			TimeAdded: t.TimeAdded,
+		}
+		target = append(target, newTaint)
+	}
+	return target
+}

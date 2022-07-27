@@ -7,7 +7,7 @@ spec:
     GenericItems:
     - replicas: 1
       generictemplate:
-        apiVersion: apps/v1beta1
+        apiVersion: apps/v1
         kind: Deployment
         metadata:
           name: 0001-aw-generic-deployment-3
@@ -28,3 +28,10 @@ spec:
                  image: k8s.gcr.io/echoserver:1.4
                  ports:
                  - containerPort: 80
+                 resources:
+                   requests:
+                     cpu: 100m
+                     memory: 32Mi
+                   limits:
+                     cpu: 100m
+                     memory: 32Mi
