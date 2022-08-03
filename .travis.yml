@@ -30,3 +30,9 @@ script:
   # Process 'make push-images' when NOT a pull request
   - 'if [ "$TRAVIS_PULL_REQUEST"  = "false" ]; then make push-images; fi'
   - make run-e2e
+
+# safelist
+branches:
+  only:
+  - master
+  - quota-management
