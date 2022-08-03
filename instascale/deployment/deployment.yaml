@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: instascale
+  name: instascale
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: instascale
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: instascale
+    spec:
+      containers:
+      - image: asm582/instascale:latest
+        name: instascale
+        resources: {}
+      serviceAccountName: instascale-sa
+status: {}
