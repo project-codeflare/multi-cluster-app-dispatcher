@@ -1,3 +1,4 @@
+//go:build !private
 // +build !private
 
 /*
@@ -34,11 +35,12 @@ package e2e
 
 import (
 	"fmt"
+	"os"
+	"time"
+
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"os"
-	"time"
 )
 
 var _ = Describe("AppWrapper E2E Test", func() {
@@ -313,7 +315,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		//defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		const (
-			awCount = 100
+			awCount           = 100
 			reportingInterval = 10
 		)
 
