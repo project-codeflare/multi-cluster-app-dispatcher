@@ -1,0 +1,15 @@
+domain: my.domain
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: instascale-1
+repo: github.ibm.com/asmalvan/instascale-1
+resources:
+- controller: true
+  domain: my.domain
+  group: mcad.ibm.com
+  kind: AppWrapper
+  version: v1beta1
+version: "3"
