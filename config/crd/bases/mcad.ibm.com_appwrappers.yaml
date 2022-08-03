@@ -63,7 +63,7 @@ spec:
                         completionstatus:
                           description: Optional section that drives completion status of appwrapper
                             an item in Appwrapper should be a candidate to complete an appwrapper.
-                            this field should contain conditions that make appwrapper complete, for instance :-
+                            This field should contain conditions that make appwrapper complete, for instance :-
                             completionconditions could be "Complete", "Failed" to make appwrapper completes.
                             To compare status we look at level .status.conditions[0].type.
                           type: string
