@@ -82,7 +82,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
 		klog.Errorf("Error getting API resources, err=%#v", err)
-		return  []*v1.Pod{}, err
+		return []*v1.Pod{}, err
 	}
 	ext := awr.GenericTemplate
 	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
@@ -108,13 +108,13 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	dclient, err := dynamic.NewForConfig(restconfig)
 	if err != nil {
 		klog.Errorf("Error creating new dynamic client, err=%#v", err)
-		return  []*v1.Pod{}, err
+		return []*v1.Pod{}, err
 	}
 
 	_, apiresourcelist, err := dd.ServerGroupsAndResources()
 	if err != nil {
 		klog.Errorf("Error getting supported groups and resources, err=%#v", err)
-		return  []*v1.Pod{}, err
+		return []*v1.Pod{}, err
 	}
 
 	rsrc := mapping.Resource
@@ -133,7 +133,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	var blob interface{}
 	if err = json.Unmarshal(ext.Raw, &blob); err != nil {
 		klog.Errorf("Error unmarshalling, err=%#v", err)
-		return  []*v1.Pod{}, err
+		return []*v1.Pod{}, err
 	}
 	ownerRef := metav1.NewControllerRef(aw, appWrapperKind)
 	unstruct.Object = blob.(map[string]interface{}) //set object to the content of the blob after Unmarshalling
