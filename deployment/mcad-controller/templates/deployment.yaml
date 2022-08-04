@@ -7027,6 +7027,12 @@ spec:
                             recognized schemas to the latest internal value, and may
                             reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
                           type: string
+                        completionstatus:
+                          description: Optional section that drives completion status of appwrapper
+                              an item in Appwrapper should be a candidate to complete an appwrapper.
+                              This field should contain conditions that make appwrapper complete, for instance :-
+                              completionconditions could be "Complete", "Failed" to make appwrapper complete
+                          type: string
                         custompodresources:
                           description: Optional section that specifies resource requirements
                             for non-standard k8s resources, follows same format as
