@@ -600,9 +600,7 @@ func (qjm *XController) GetAllObjectsOwned(caw *arbv1.AppWrapper) arbv1.AppWrapp
 		if err := jsons.Unmarshal(objectName.Raw, &blob); err != nil {
 			klog.Errorf("Error unmarshalling, err=%#v", err)
 		}
-		if len(genericItem.CompletionStatus) > 0 {
-			countCompletionRequired = countCompletionRequired + 1
-		}
+
 		status := qjm.genericresources.GetGenericItemKindStatus(&genericItem, caw.Namespace)
 		if status == "true" {
 			countCompletedItems = countCompletedItems + 1
@@ -610,8 +608,12 @@ func (qjm *XController) GetAllObjectsOwned(caw *arbv1.AppWrapper) arbv1.AppWrapp
 		//ignore service and podgroups since these items do not have status
 		if status == "ignore" {
 			ignoredItems = ignoredItems + 1
+			//only consider count completion required for valid items
+		} else if len(genericItem.CompletionStatus) > 0 {
+			countCompletionRequired = countCompletionRequired + 1
 		}
 	}
+	klog.Infof("countCompletedItems %v, countCompletionRequired %v, ignoredItems %v, totalItems %v ", countCompletedItems, countCompletionRequired, ignoredItems, len(caw.Spec.AggrResources.GenericItems))
 	if countCompletedItems == countCompletionRequired && countCompletedItems != 0 && countCompletedItems == (len(caw.Spec.AggrResources.GenericItems)-ignoredItems) {
 		return arbv1.AppWrapperStateCompleted
 	}
@@ -1656,25 +1658,6 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 				cc.updateEtcd(awNew, "[syncQueueJob] setRunning")
 			}
 
-			//Set Appwrapper state to complete if all items in Appwrapper
-			//are completed
-
-			if awNew.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
-				awNew.Status.QueueJobState = arbv1.AppWrapperCondRunningHoldCompletion
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
-				awNew.Status.Conditions = append(awNew.Status.Conditions, cond)
-				awNew.Status.FilterIgnore = true // Update AppWrapperCondCompleted
-				cc.updateEtcd(awNew, "[syncQueueJob] setRunningHoldCompletion")
-			}
-
-			if awNew.Status.State == arbv1.AppWrapperStateCompleted {
-				awNew.Status.QueueJobState = arbv1.AppWrapperCondCompleted
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
-				awNew.Status.Conditions = append(awNew.Status.Conditions, cond)
-				awNew.Status.FilterIgnore = true // Update AppWrapperCondCompleted
-				cc.updateEtcd(awNew, "[syncQueueJob] setCompleted")
-			}
-
 			//For debugging?
 			if !reflect.DeepEqual(awNew.Status, qj.Status) {
 				podPhaseChanges = true
@@ -1726,6 +1709,31 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 			//return cc.arbclients.Put().
 			//	Namespace(qj.Namespace).Resource(arbv1.QueueJobPlural).
 			//	Name(qj.Name).Body(qj).Do().Into(&result)
+		}
+
+		//set appwrapper status to Complete or RunningHoldCompletion
+		if qj.Status.State != arbv1.AppWrapperStateCompleted {
+			klog.Infof("checking the status of all objects")
+			qj.Status.State = cc.GetAllObjectsOwned(qj)
+		}
+
+		//Set Appwrapper state to complete if all items in Appwrapper
+		//are completed
+
+		if qj.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
+			qj.Status.QueueJobState = arbv1.AppWrapperCondRunningHoldCompletion
+			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
+			qj.Status.Conditions = append(qj.Status.Conditions, cond)
+			qj.Status.FilterIgnore = true // Update AppWrapperCondCompleted
+			cc.updateEtcd(qj, "[syncQueueJob] setRunningHoldCompletion")
+		}
+
+		if qj.Status.State == arbv1.AppWrapperStateCompleted {
+			qj.Status.QueueJobState = arbv1.AppWrapperCondCompleted
+			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
+			qj.Status.Conditions = append(qj.Status.Conditions, cond)
+			qj.Status.FilterIgnore = true // Update AppWrapperCondCompleted
+			cc.updateEtcd(qj, "[syncQueueJob] setCompleted")
 		}
 
 		// First execution of qj to set Status.State = Enqueued
@@ -1851,10 +1859,6 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 				klog.V(3).Infof("[worker-manageQJ] %s 4Delay=%.6f seconds AllResourceDispatchedToEtcd Version=%s Status=%+v",
 					qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qj.ResourceVersion, qj.Status)
 
-				//set appwrapper status to Complete or RunningHoldCompletion
-				if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateCompleted {
-					qj.Status.State = cc.GetAllObjectsOwned(qj)
-				}
 			} else {
 				qj.Status.State = arbv1.AppWrapperStateFailed
 				qj.Status.QueueJobState = arbv1.AppWrapperCondFailed
@@ -1871,6 +1875,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 				klog.Errorf("[manageQueueJob] Error updating etc for AW job=%s Status=%+v err=%+v", qj.Name, qj.Status, err)
 				return err
 			}
+
 			// Bugfix to eliminate performance problem of overloading the event queue.
 		} else if podPhaseChanges { // Continued bug fix
 			// Only update etcd if AW status has changed.  This can happen for periodic

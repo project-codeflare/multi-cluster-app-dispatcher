@@ -1511,6 +1511,333 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
+						CompletionStatus: "Progressing",
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createGenericDeploymentAWWithStatus(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "apps/v1",
+		"kind": "Deployment", 
+	"metadata": {
+		"name": "aw-deployment-1-status",
+		"namespace": "test",
+		"labels": {
+			"app": "aw-deployment-1-status"
+		}
+	},
+	"spec": {
+		"replicas": 1,
+		"selector": {
+			"matchLabels": {
+				"app": "aw-deployment-1-status"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "aw-deployment-1-status"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-1-status"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "aw-deployment-1-status",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `)
+	var schedSpecMin int = 1
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "test",
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "aw-deployment-1-status"),
+							Namespace: "test",
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+						CompletionStatus: "Progressing",
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createGenericDeploymentAWWithMultipleItems(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "apps/v1",
+		"kind": "Deployment", 
+	"metadata": {
+		"name": "aw-deployment-2-status",
+		"namespace": "test",
+		"labels": {
+			"app": "aw-deployment-2-status"
+		}
+	},
+	"spec": {
+		"replicas": 1,
+		"selector": {
+			"matchLabels": {
+				"app": "aw-deployment-2-status"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "aw-deployment-2-status"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-status"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "aw-deployment-2-status",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `)
+
+	rb1 := []byte(`{"apiVersion": "apps/v1",
+	"kind": "Deployment", 
+"metadata": {
+	"name": "aw-deployment-3-status",
+	"namespace": "test",
+	"labels": {
+		"app": "aw-deployment-3-status"
+	}
+},
+"spec": {
+	"replicas": 1,
+	"selector": {
+		"matchLabels": {
+			"app": "aw-deployment-3-status"
+		}
+	},
+	"template": {
+		"metadata": {
+			"labels": {
+				"app": "aw-deployment-3-status"
+			},
+			"annotations": {
+				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-3-status"
+			}
+		},
+		"spec": {
+			"containers": [
+				{
+					"name": "aw-deployment-3-status",
+					"image": "k8s.gcr.io/echoserver:1.4",
+					"ports": [
+						{
+							"containerPort": 80
+						}
+					]
+				}
+			]
+		}
+	}
+}} `)
+
+	var schedSpecMin int = 1
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "test",
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "aw-deployment-2-status"),
+							Namespace: "test",
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+						CompletionStatus: "Progressing",
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "aw-deployment-3-status"),
+							Namespace: "test",
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb1,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createGenericDeploymentAWWithService(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "apps/v1",
+		"kind": "Deployment", 
+	"metadata": {
+		"name": "aw-deployment-3-status",
+		"namespace": "test",
+		"labels": {
+			"app": "aw-deployment-3-status"
+		}
+	},
+	"spec": {
+		"replicas": 1,
+		"selector": {
+			"matchLabels": {
+				"app": "aw-deployment-3-status"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "aw-deployment-3-status"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-3-status"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "aw-deployment-3-status",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `)
+
+	rb1 := []byte(`{
+		"apiVersion": "v1",
+		"kind": "Service",
+		"metadata": {
+			"name": "my-service",
+			"namespace": "test"
+		},
+		"spec": {
+			"clusterIP": "10.96.76.247",
+			"clusterIPs": [
+				"10.96.76.247"
+			],
+			"ipFamilies": [
+				"IPv4"
+			],
+			"ipFamilyPolicy": "SingleStack",
+			"ports": [
+				{
+					"port": 80,
+					"protocol": "TCP",
+					"targetPort": 9376
+				}
+			],
+			"selector": {
+				"app.kubernetes.io/name": "MyApp"
+			},
+			"sessionAffinity": "None",
+			"type": "ClusterIP"
+		},
+		"status": {
+			"loadBalancer": {}
+		}
+	}`)
+
+	var schedSpecMin int = 1
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "test",
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "aw-deployment-3-status"),
+							Namespace: "test",
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+						CompletionStatus: "Progressing",
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "my-service"),
+							Namespace: "test",
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb1,
+						},
+						CompletionStatus: "bogus",
 					},
 				},
 			},
