@@ -34,7 +34,7 @@ import (
 	"fmt"
 	"math"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 type Resource struct {
@@ -82,6 +82,14 @@ func NewResource(rl v1.ResourceList) *Resource {
 		}
 	}
 	return r
+}
+
+func GetCondition(nodeStatus v1.Node) v1.ConditionStatus {
+	var currentNodeStatus v1.ConditionStatus = v1.ConditionFalse
+	for len(nodeStatus.Status.Conditions) > 0 {
+		currentNodeStatus = nodeStatus.Status.Conditions[0].Status
+	}
+	return currentNodeStatus
 }
 
 func (r *Resource) IsEmpty() bool {
