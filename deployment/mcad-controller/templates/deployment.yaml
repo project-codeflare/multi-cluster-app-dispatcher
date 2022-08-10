@@ -15,7 +15,7 @@ spec:
     app: custom-metrics-apiserver
 ---
 #{{ if .Values.configMap.multiCluster }}
-apiVersion: apiregistration.k8s.io/v1beta1
+apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
   name: v1beta1.external.metrics.k8s.io
@@ -29,7 +29,7 @@ spec:
   groupPriorityMinimum: 100 
   versionPriority: 100 
 ---
-apiVersion: apiregistration.k8s.io/v1beta1
+apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
   name: v1beta1.custom.metrics.k8s.io
@@ -82,7 +82,7 @@ subjects:
   name: horizontal-pod-autoscaler
   namespace: kube-system
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: schedulingspecs.mcad.ibm.com
@@ -94,9 +94,12 @@ spec:
     plural: schedulingspecs
     singular: schedulingspec
   scope: Namespaced
-  version: v1alpha1
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: queuejobs.mcad.ibm.com
@@ -108,9 +111,12 @@ spec:
     plural: queuejobs
     singular: queuejob
   scope: Namespaced
-  version: v1alpha1
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: xqueuejobs.mcad.ibm.com
@@ -122,9 +128,12 @@ spec:
     plural: xqueuejobs
     singular: xqueuejob
   scope: Namespaced
-  version: v1alpha1
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: appwrappers.mcad.ibm.com
@@ -136,7 +145,10 @@ spec:
     plural: appwrappers
     singular: appwrapper
   scope: Namespaced
-  version: v1alpha1
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
