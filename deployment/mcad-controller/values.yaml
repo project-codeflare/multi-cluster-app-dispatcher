@@ -48,7 +48,7 @@ configMap:
   dispatcherMode: '"false"'
   preemptionEnabled: '"false"'
   agentConfigs: ""
-  quoteRestUrl: ""
+  quotaRestUrl: ""
 
 volumes:
   hostPath:
