@@ -95,10 +95,15 @@ or
 ```
 ### 2. Navigate to the Helm Deployment Directory.
 ```
-cd multi-cluster-app-wrapper/deployment/mcad-controller
+cd multi-cluster-app-dispatcher/deployment/mcad-controller
+```
+### 3.a. Optional : Installation using Helm3
+Checkout quota management branch using:
+```
+git clone https://github.com/IBM/multi-cluster-app-dispatcher.git -b quota-management
 ```
 
-### 3. Run the installation using Helm.
+### 3.b. Run the installation using Helm.
 Install the __Multi-Cluster-App-Dispatcher Controller__ using the commands below.  The `--wait` parameter in the Helm command below is  used to ensure all pods of the helm chart are running and will not return unless the default timeout expires (*typically 300 seconds*) or all the pods are in `Running` state.
 
 
@@ -108,18 +113,7 @@ All Helm parameters are described in the table at the bottom of this section.
 #### 3.a)  Start the Multi-Cluster-App-Dispatcher Controller on All Target Deployment Clusters (*Agent Mode*).
 __Agent Mode__: Install and set up the `multi-cluster-app-dispatcher` controller (_MCAD_) in *Agent Mode* for each clusters that will orchestrate the resources defined within an _AppWrapper_ using Helm.  *Agent Mode* is the default mode when deploying the _MCAD_ controller.
 ```
-helm upgrade --install --wait mcad-controller . \ 
---namespace kube-system \ 
---set image.repository=<image repository and name> \
---set image.tag=<image tag> \ 
---set imagePullSecret.name=<Name of image pull kubernetes secret> \ 
---set imagePullSecret.password=<REPLACE_WITH_REGISTRY_TOKEN_GENERATED_IN_PREREQs_STAGE1_REGISTRY.d)>  \
---set localConfigName=<Local Kubernetes Config File for Current Cluster>  \
---set volumes.hostPath=<Host_Path_location_of_local_Kubernetes_config_file> \
---set configMap.name=mcad-controller-configmap \
---set configMap.quotaEnabled='"false"' \
---set coscheduler.rbac.apiGroup="scheduling.sigs.k8s.io" \
---set coscheduler.rbac.resource="podgroups"
+helm upgrade --install --wait mcad . --namespace kube-system --wait --set image.repository=<image repository and name> --set image.tag=<image tag> --set imagePullSecret.name=<Name of image pull kubernetes secret> --set imagePullSecret.password=<REPLACE_WITH_REGISTRY_TOKEN_GENERATED_IN_PREREQs_STAGE1_REGISTRY.d)>  --set localConfigName=<Local Kubernetes Config File for Current Cluster>  --set volumes.hostPath=<Host_Path_location_of_local_Kubernetes_config_file>
 ```
 
 ##### Example 1
@@ -144,15 +138,18 @@ helm upgrade --install --wait mcad . --namespace kube-system --set image.pullPol
 To adjust the cpu and memory demands of the deployment with command line overrides example:
 
 ```
-helm upgrade --install --wait mcad . --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=myDockerReegistry/mcad-controller --set image.tag=latest --set image.pullPolicy=Always
+helm upgrade --install --wait mcad . --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=myDockerRegistry/mcad-controller --set image.tag=latest --set image.pullPolicy=Always
 ```
 
 ##### Example 5
 MCAD supports bring-you-own scheduler use case. To install MCAD with co-scheduler use the follwing command:
 
 ```
+export IMAGE=darroyo/mcad-controller
+
 helm upgrade --install --wait mcad . --namespace kube-system  --set loglevel=4  --set image.repository=$IMAGE  --set image.tag=quota-management-v1.29.40  --set image.pullPolicy=IfNotPresent  --set configMap.name=mcad-controller-configmap  --set configMap.quotaEnabled='"false"'  --set coscheduler.rbac.apiGroup="scheduling.sigs.k8s.io"  --set coscheduler.rbac.resource="podgroups"
 ```
+
 #### 3.b)  Start the Multi-Cluster-App-Dispatcher Controller on the Controller Cluster (*Dispatcher Mode*).
 _Dispatcher Mode__: Install and set up the Multi-Cluster-App-Dispatcher Controler (_MCAD_) in *Dispatcher Mode* for the control cluster that will dispatch the _MCAD_ controller to an *Agent* cluster using Helm.
 
@@ -191,7 +188,8 @@ The following table lists the configurable parameters of the helm chart and thei
 | `resources.requests.memory`     | Memory Request for _MCAD_ Controller Deployment (must be less than Memory Limit)   | `2048Mi`  | `1024Mi`      |
 | `serviceAccount`    | Name of service account of _MCAD_ Controller   | `mcad-controller`  | `my-service-account`      |
 | `volumes.hostPath`    | Full path on the host location where the `localConfigName` file is stored  |   | `/etc/kubernetes`      |
-
+| `coscheduler.rbac.apiGroup` | API group to be added to create podgroups | `scheduling.sigs.k8s.io`| `scheduling.sigs.k8s.io`|
+| `coscheduler.rbac.resource` | Resource allowed to be created by co-scheduler | `podgroups`| `podgroups` |
 
 ### 4. Verify the installation.
 List the Helm installation using command `helm ls --all-namespaces--all` .  The `STATUS` should be `DEPLOYED`.  
@@ -200,7 +198,7 @@ NOTE: The `--wait` parameter in the helm installation command from [Step 3](#3-r
 
 The `STATUS` value of `FAILED` indicates all resources were not created and running before the timeout occurred.  Usually this indicates a pod creation failure is due to insufficient resources to create the Multi-Cluster-App-Dispatcher Controller pod.  Example instructions on how to adjust the resources requested for the Helm chart are described in the `NOTE` comment of *step #4* above.
 ```
-$ helm ls --all-namespaces--all
+$ helm ls --all-namespaces --all
 NAME                	REVISION	UPDATED                 	STATUS  	CHART                	NAMESPACE  
 mcad	1       	Mon Jan 21 00:52:39 2019	DEPLOYED	mcad-controller-0.1.0	kube-system
 
@@ -219,11 +217,11 @@ Since no `appwrapper` jobs have yet to be deployed into the current cluster you 
 
 List the deployed Helm charts and identify the name of the Multi-Cluster-App-Dispatcher Controller installation.
 ```bash
-helm ls --all-namespaces--all
+helm ls --all-namespaces --all
 ```
 For Example
 ```
-$ helm ls --all-namespaces--all
+$ helm ls --all-namespaces --all
 NAME                	REVISION	UPDATED                 	STATUS  	CHART                	NAMESPACE  
 mcad	1       	Mon Jan 21 00:52:39 2019	DEPLOYED	mcad-controller-0.1.0	kube-system
 
