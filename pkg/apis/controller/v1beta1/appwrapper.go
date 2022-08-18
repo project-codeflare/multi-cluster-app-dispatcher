@@ -206,6 +206,10 @@ type AppWrapperStatus struct {
 	// +optional
 	Pending int32 `json:"pending,omitempty" protobuf:"bytes,1,opt,name=pending"`
 
+	// The number of pending pods that failed scheduling
+	// +optional
+	PendingPodsFailedSchd int32 `json:"pending,omitempty" protobuf:"bytes,1,opt,name=pending"`
+
 	// +optional
 	Running int32 `json:"running,omitempty" protobuf:"bytes,1,opt,name=running"`
 

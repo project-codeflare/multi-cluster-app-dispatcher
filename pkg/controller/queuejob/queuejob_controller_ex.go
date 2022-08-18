@@ -505,7 +505,7 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 					continue
 				}
 
-				if replicas > 0 {
+				if replicas > 0 || value.Status.PendingPodsFailedSchd <= int32(replicas) {
 					klog.V(3).Infof("AppWrapper %s is eligible for preemption %v - %v , %v !!! \n", value.Name, value.Status.Running, replicas, value.Status.Succeeded)
 					qjobs = append(qjobs, value)
 				}
