@@ -38,13 +38,26 @@ import (
 
 // filterPods returns pods based on their phase.
 func FilterPods(pods []*v1.Pod, phase v1.PodPhase) int {
-        result := 0
-        for i := range pods {
-                if phase == pods[i].Status.Phase {
-                        result++
-                }
-        }
-        return result
+	result := 0
+	for i := range pods {
+		if phase == pods[i].Status.Phase {
+			result++
+		}
+	}
+	return result
+}
+
+//check if pods pending are failed scheduling
+func PendingPodsFailedSchd(pods []*v1.Pod) int {
+	result := 0
+	for i := range pods {
+		for _, cond := range pods[i].Status.Conditions {
+			if cond.Type == v1.PodScheduled && cond.Status == v1.ConditionFalse && cond.Reason == v1.PodReasonUnschedulable {
+				result++
+			}
+		}
+	}
+	return result
 }
 
 // filterPods returns pods based on their phase.
