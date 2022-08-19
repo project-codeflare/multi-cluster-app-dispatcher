@@ -85,11 +85,11 @@ func NewResource(rl v1.ResourceList) *Resource {
 }
 
 func GetCondition(nodeStatus v1.Node) v1.ConditionStatus {
-	var currentNodeStatus v1.ConditionStatus = v1.ConditionFalse
+	var currentNodeStatus v1.ConditionStatus = v1.ConditionTrue
 	condition := 0
 	for condition < len(nodeStatus.Status.Conditions) {
 		// return status of Ready condition.type only
-		if nodeStatus.Status.Conditions[condition].Type == "Ready" {
+		if nodeStatus.Status.Conditions[condition].Type == v1.NodeReady {
 			currentNodeStatus = nodeStatus.Status.Conditions[condition].Status
 			return currentNodeStatus
 		}

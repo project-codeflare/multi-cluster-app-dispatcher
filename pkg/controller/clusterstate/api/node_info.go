@@ -83,7 +83,7 @@ func NewNodeInfo(node *v1.Node) *NodeInfo {
 			Taints:        []v1.Taint{},
 
 			Tasks:   make(map[TaskID]*TaskInfo),
-			IsReady: "True",
+			IsReady: v1.ConditionTrue,
 		}
 	}
 
@@ -138,7 +138,7 @@ func (ni *NodeInfo) SetNode(node *v1.Node) {
 	ni.Labels = NewStringsMap(node.Labels)
 	ni.Unschedulable = node.Spec.Unschedulable
 	ni.Taints = NewTaints(node.Spec.Taints)
-	ni.IsReady = node.Status.Conditions[0].Status
+	ni.IsReady = GetCondition(*node)
 }
 
 func (ni *NodeInfo) PipelineTask(task *TaskInfo) error {
