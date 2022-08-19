@@ -206,9 +206,10 @@ type AppWrapperStatus struct {
 	// +optional
 	Pending int32 `json:"pending,omitempty" protobuf:"bytes,1,opt,name=pending"`
 
-	// The number of pending pods that failed scheduling
+	// The number of pending pods that failed scheduling.
+	// This is a subset of all pending pods count.
 	// +optional
-	PendingPodsFailedSchd int32 `json:"pending,omitempty" protobuf:"bytes,1,opt,name=pending"`
+	PendingPodsFailedSchd int32 `json:"pendingpodsfailedschd,omitempty" protobuf:"bytes,1,opt,name=pendingpodsfailedschd"`
 
 	// +optional
 	Running int32 `json:"running,omitempty" protobuf:"bytes,1,opt,name=running"`
@@ -258,6 +259,9 @@ type AppWrapperStatus struct {
 
 	// Represents the latest available observations of a appwrapper's current condition.
 	Conditions []AppWrapperCondition `json:"conditions,omitempty"`
+
+	// Represents the latest available observations of pods under appwrapper
+	PendingPodConditions map[string][]v1.PodCondition `json:"pendingpodconditions,omitempty"`
 }
 
 type AppWrapperState string
