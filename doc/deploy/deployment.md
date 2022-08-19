@@ -15,8 +15,7 @@ Server Version: v1.11.9
 #
 ```
 ### - Install the Helm Package Manager
-Install the Helm Client on your local machine and the Helm Cerver on your kubernetes cluster.  Helm installation documentation is [here]
-(https://helm.sh/docs/intro/install/).  After you install Helm you can list the Help packages installed with the following command:
+Install the Helm Client on your local machine and the Helm Cerver on your kubernetes cluster.  Helm installation documentation is [here](https://helm.sh/docs/intro/install/).  After you install Helm you can list the Help packages installed with the following command:
 ```
 # helm ls --all-namespaces --all
 #
@@ -97,7 +96,7 @@ or
 ```
 cd multi-cluster-app-dispatcher/deployment/mcad-controller
 ```
-### 3.a. Optional : Installation using Helm3
+### 3.a. Branch checkout
 Checkout quota management branch using:
 ```
 git clone https://github.com/IBM/multi-cluster-app-dispatcher.git -b quota-management
@@ -107,10 +106,10 @@ git clone https://github.com/IBM/multi-cluster-app-dispatcher.git -b quota-manag
 Install the __Multi-Cluster-App-Dispatcher Controller__ using the commands below.  The `--wait` parameter in the Helm command below is  used to ensure all pods of the helm chart are running and will not return unless the default timeout expires (*typically 300 seconds*) or all the pods are in `Running` state.
 
 
-Before submitting the command below you should ensure you have enough resources in your cluster to deploy the helm chart (*see __Pre-Reqs__ section above*).  If you do not have enough compute resources in your cluster to run with the default allocation, you can adjust the resource request via the command line by using the optional parameters `--resources.*.*`.  See an example [*Example 3*](#example-3) in section __3.a.__ below.
+Before submitting the command below you should ensure you have enough resources in your cluster to deploy the helm chart (*see __Pre-Reqs__ section above*).  If you do not have enough compute resources in your cluster to run with the default allocation, you can adjust the resource request via the command line by using the optional parameters `--resources.*.*`.  See an example [*Example 3*](#example-3) in section __3.b.i__ below.
 
 All Helm parameters are described in the table at the bottom of this section.
-#### 3.a)  Start the Multi-Cluster-App-Dispatcher Controller on All Target Deployment Clusters (*Agent Mode*).
+#### 3.b.i)  Start the Multi-Cluster-App-Dispatcher Controller on All Target Deployment Clusters (*Agent Mode*).
 __Agent Mode__: Install and set up the `multi-cluster-app-dispatcher` controller (_MCAD_) in *Agent Mode* for each clusters that will orchestrate the resources defined within an _AppWrapper_ using Helm.  *Agent Mode* is the default mode when deploying the _MCAD_ controller.
 ```
 helm upgrade --install --wait mcad . --namespace kube-system --wait --set image.repository=<image repository and name> --set image.tag=<image tag> --set imagePullSecret.name=<Name of image pull kubernetes secret> --set imagePullSecret.password=<REPLACE_WITH_REGISTRY_TOKEN_GENERATED_IN_PREREQs_STAGE1_REGISTRY.d)>  --set localConfigName=<Local Kubernetes Config File for Current Cluster>  --set volumes.hostPath=<Host_Path_location_of_local_Kubernetes_config_file>
@@ -150,13 +149,13 @@ export IMAGE=darroyo/mcad-controller
 helm upgrade --install --wait mcad . --namespace kube-system  --set loglevel=4  --set image.repository=$IMAGE  --set image.tag=quota-management-v1.29.40  --set image.pullPolicy=IfNotPresent  --set configMap.name=mcad-controller-configmap  --set configMap.quotaEnabled='"false"'  --set coscheduler.rbac.apiGroup="scheduling.sigs.k8s.io"  --set coscheduler.rbac.resource="podgroups"
 ```
 
-#### 3.b)  Start the Multi-Cluster-App-Dispatcher Controller on the Controller Cluster (*Dispatcher Mode*).
+#### 3.b.ii)  Start the Multi-Cluster-App-Dispatcher Controller on the Controller Cluster (*Dispatcher Mode*).
 _Dispatcher Mode__: Install and set up the Multi-Cluster-App-Dispatcher Controler (_MCAD_) in *Dispatcher Mode* for the control cluster that will dispatch the _MCAD_ controller to an *Agent* cluster using Helm.
 
 
 __Dispatcher Mode__: Installing the Multi-Cluster-App-Dispatcher Controler in *Dispatcher Mode*.
 ```
-helm install mcad-controller --namespace kube-system --wait --set image.repository=<image repository and name> --set image.tag=<image tag> --set configMap.name=<Config> --set configMap.dispatcherMode='"true"' --set configMap.agentConfigs=agent101config:uncordon --set volumes.hostPath=<Host_Path_location_of_all_agent_Kubernetes_config_files>
+helm upgrade --install --wait mcad . --namespace kube-system --wait --set image.repository=<image repository and name> --set image.tag=<image tag> --set configMap.name=<Config> --set configMap.dispatcherMode='"true"' --set configMap.agentConfigs=agent101config:uncordon --set volumes.hostPath=<Host_Path_location_of_all_agent_Kubernetes_config_files>
 ```
 
 For example:
