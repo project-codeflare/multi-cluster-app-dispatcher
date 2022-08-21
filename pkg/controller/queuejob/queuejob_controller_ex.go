@@ -429,7 +429,7 @@ func (qjm *XController) PreemptQueueJobs() {
 			}
 			newjob.Status.CanRun = false
 
-			message := fmt.Sprintf("Pods failed scheduling failed=%v, running=%v.", q.Status.Running, q.Status.PendingPodsFailedSchd)
+			message := fmt.Sprintf("Pods failed scheduling failed=%v, running=%v.", q.Status.PendingPodsFailedSchd, q.Status.Running)
 			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)
 			newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
 
