@@ -1720,6 +1720,9 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 
 		// add qj to Etcd for dispatch
 		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive {
+			//keep conditions until the appwrapper is re-dispatched
+			qj.Status.PendingPodConditions = map[string][]v1.PodCondition{}
+
 			qj.Status.State = arbv1.AppWrapperStateActive
 			// Bugfix to eliminate performance problem of overloading the event queue.}
 
