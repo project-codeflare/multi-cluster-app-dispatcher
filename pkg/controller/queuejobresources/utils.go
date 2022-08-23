@@ -50,20 +50,22 @@ func FilterPods(pods []*v1.Pod, phase v1.PodPhase) int {
 }
 
 //check if pods pending are failed scheduling
-func PendingPodsFailedSchd(pods []*v1.Pod) map[string][]v1.PodCondition {
-	var podCondition = map[string][]v1.PodCondition{}
+func PendingPodsFailedSchd(pods []*v1.Pod) map[string]v1.PodCondition {
+	var podCondition = map[string]v1.PodCondition{}
 	for i := range pods {
-		var coSchedulerFailedEvents = false
-		for _, cond := range pods[i].Status.Conditions {
-			// Hack: ignore pending pods due to co-scheduler FailedScheduling event
-			if strings.Contains(cond.Message, "pgName") && strings.Contains(cond.Message, "last") && strings.Contains(cond.Message, "failed") && strings.Contains(cond.Message, "deny") {
-				coSchedulerFailedEvents = true
-			}
-
-			if cond.Type == v1.PodScheduled && cond.Status == v1.ConditionFalse && cond.Reason == v1.PodReasonUnschedulable && !coSchedulerFailedEvents {
-				podName := pods[i].Name
-				podConditionBlock := pods[i].Status.Conditions
-				podCondition[podName] = podConditionBlock
+		if pods[i].Status.Phase == v1.PodPending {
+			for _, cond := range pods[i].Status.Conditions {
+				// Hack: ignore pending pods due to co-scheduler FailedScheduling event
+				// this exists until coscheduler performance issue is resolved.
+				if cond.Type == v1.PodScheduled && cond.Status == v1.ConditionFalse && cond.Reason == v1.PodReasonUnschedulable {
+					if strings.Contains(cond.Message, "pgName") && strings.Contains(cond.Message, "last") && strings.Contains(cond.Message, "failed") && strings.Contains(cond.Message, "deny") {
+						//ignore co-scheduled pending pods for coscheduler version:0.22.6
+						continue
+					} else {
+						podName := pods[i].Name
+						podCondition[podName] = cond
+					}
+				}
 			}
 		}
 	}

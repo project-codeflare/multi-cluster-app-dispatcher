@@ -700,6 +700,10 @@ spec:
                 description: State of QueueJob - Init, Queueing, HeadOfLine, Rejoining,
                   ...
                 type: string
+              pendingpodconditions:
+                description: Represents failure condition of a pod
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
               running:
                 format: int32
                 type: integer

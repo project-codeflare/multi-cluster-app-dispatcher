@@ -421,16 +421,17 @@ func (qjm *XController) PreemptQueueJobs() {
 	qjobs := qjm.GetQueueJobsEligibleForPreemption()
 	for _, q := range qjobs {
 		//If pods failed scheduling generate new preempt condition
-		//ignore co-scheduler failed scheduling events.
-		if q.Status.PendingPodsFailedSchd > 0 {
+		//ignore co-scheduler failed scheduling events. This is a temp
+		//work around until co-scheduler perf issues are resolved.
+		if q.Status.Running < int32(q.Spec.SchedSpec.MinAvailable) {
 			newjob, e := qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
 			if e != nil {
 				continue
 			}
 			newjob.Status.CanRun = false
 
-			message := fmt.Sprintf("Pods failed scheduling failed=%v, running=%v.", q.Status.PendingPodsFailedSchd, q.Status.Running)
-			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)
+			message := fmt.Sprintf("Insufficient number of Running pods, minimum=%d, running=%v.", q.Spec.SchedSpec.MinAvailable, q.Status.Running)
+			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
 			newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
 
 			if err := qjm.updateEtcd(newjob, "PreemptQueueJobs - CanRun: false"); err != nil {
@@ -444,10 +445,12 @@ func (qjm *XController) PreemptQueueJobs() {
 				continue
 			}
 			newjob.Status.CanRun = false
-
-			message := fmt.Sprintf("Insufficient number of Running pods, minimum=%d, running=%v.", q.Spec.SchedSpec.MinAvailable, q.Status.Running)
-			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
-			newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
+			message := fmt.Sprintf("Pods failed scheduling failed=%v, running=%v.", q.Status.PendingPodsFailedSchd, q.Status.Running)
+			klog.Infof("Pod failed conditions are:%v",q.Status.PendingPodConditions)
+			if !isLastConditionDuplicate(q, arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message) {
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)
+				newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
+			}
 
 			if err := qjm.updateEtcd(newjob, "PreemptQueueJobs - CanRun: false"); err != nil {
 				klog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
@@ -529,12 +532,14 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 					klog.V(3).Infof("AppWrapper %s is eligible for preemption %v - %v , %v !!! \n", value.Name, value.Status.Running, replicas, value.Status.Succeeded)
 					qjobs = append(qjobs, value)
 				}
-			}
-			//Preempt when schedulingSpec stanza is not set but pods fails scheduling.
-			//ignore co-scheduler pods
-			if value.Status.PendingPodsFailedSchd > 0 {
-				klog.V(3).Infof("AppWrapper %s is eligible for preemption %v - %v , %v due to failed scheduling !!! \n", value.Name, value.Status.Running, replicas, value.Status.Succeeded)
-				qjobs = append(qjobs, value)
+			} else {
+				//Preempt when schedulingSpec stanza is not set but pods fails scheduling.
+				//ignore co-scheduler pods
+				if value.Status.PendingPodsFailedSchd > 0 {
+					klog.V(3).Infof("AppWrapper %s is eligible for preemption %v - %v , %v due to failed scheduling !!! \n", value.Name, value.Status.Running, replicas, value.Status.Succeeded)
+					qjobs = append(qjobs, value)
+				}
+
 			}
 		}
 	}
@@ -1721,7 +1726,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 		// add qj to Etcd for dispatch
 		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive {
 			//keep conditions until the appwrapper is re-dispatched
-			qj.Status.PendingPodConditions = map[string][]v1.PodCondition{}
+			qj.Status.PendingPodConditions = map[string]v1.PodCondition{}
 
 			qj.Status.State = arbv1.AppWrapperStateActive
 			// Bugfix to eliminate performance problem of overloading the event queue.}

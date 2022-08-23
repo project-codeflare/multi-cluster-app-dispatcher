@@ -261,7 +261,7 @@ type AppWrapperStatus struct {
 	Conditions []AppWrapperCondition `json:"conditions,omitempty"`
 
 	// Represents the latest available observations of pods under appwrapper
-	PendingPodConditions map[string][]v1.PodCondition `json:"pendingpodconditions,omitempty"`
+	PendingPodConditions map[string]v1.PodCondition `json:"pendingpodconditions"`
 }
 
 type AppWrapperState string
