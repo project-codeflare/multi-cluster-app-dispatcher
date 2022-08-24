@@ -420,9 +420,6 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 func (qjm *XController) PreemptQueueJobs() {
 	qjobs := qjm.GetQueueJobsEligibleForPreemption()
 	for _, q := range qjobs {
-		//If pods failed scheduling generate new preempt condition
-		//ignore co-scheduler failed scheduling events. This is a temp
-		//work around until co-scheduler perf issues are resolved.
 		if q.Status.Running < int32(q.Spec.SchedSpec.MinAvailable) {
 			newjob, e := qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
 			if e != nil {
@@ -438,7 +435,9 @@ func (qjm *XController) PreemptQueueJobs() {
 				klog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
 					q.Namespace, q.Name, err)
 			}
-
+			//If pods failed scheduling generate new preempt condition
+			//ignore co-scheduler failed scheduling events. This is a temp
+			//work around until co-scheduler perf issues are resolved.
 		} else {
 			newjob, e := qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
 			if e != nil {
