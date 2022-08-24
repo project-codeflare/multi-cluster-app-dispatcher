@@ -446,7 +446,8 @@ func (qjm *XController) PreemptQueueJobs() {
 			}
 			newjob.Status.CanRun = false
 			message := fmt.Sprintf("Pods failed scheduling failed=%v, running=%v.", q.Status.PendingPodsFailedSchd, q.Status.Running)
-			klog.Infof("Pod failed conditions are:%v",q.Status.PendingPodConditions)
+			failedSchedulingReason := fmt.Sprintf("%v", q.Status.PendingPodConditions)
+			q.Status.FailedSchedulingReason = failedSchedulingReason
 			if !isLastConditionDuplicate(q, arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message) {
 				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)
 				newjob.Status.Conditions = append(newjob.Status.Conditions, cond)

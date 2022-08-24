@@ -262,6 +262,9 @@ type AppWrapperStatus struct {
 
 	// Represents the latest available observations of pods under appwrapper
 	PendingPodConditions map[string]v1.PodCondition `json:"pendingpodconditions"`
+
+	// Represents reason object string for pending pods
+	FailedSchedulingReason string `json:"failedschedulingreason,omitempty"`
 }
 
 type AppWrapperState string
