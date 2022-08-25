@@ -447,10 +447,22 @@ func (qjm *XController) PreemptQueueJobs() {
 			}
 			newjob.Status.CanRun = false
 			message := fmt.Sprintf("Pods failed scheduling failed=%v, running=%v.", len(q.Status.PendingPodConditions), q.Status.Running)
-			klog.Infof("Abhishek the contents of PendingPodConditions are %v", q.Status.PendingPodConditions)
-			if !isLastConditionDuplicate(q, arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message) {
+			//var creatNewCond bool = true
+			index := getIndexOfMatchedCondition(newjob, arbv1.AppWrapperCondPreemptCandidate, "PodsFailedScheduling")
+			// for i, cond := range newjob.Status.Conditions {
+			// 	if cond.Type == arbv1.AppWrapperCondPreemptCandidate && cond.Reason == "PodsFailedScheduling" {
+			// 		creatNewCond = false
+			// 		cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)
+			// 		newjob.Status.Conditions[i] = *cond.DeepCopy()
+			// 	}
+			// }
+			//creatNewCond
+			if index < 0 {
 				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)
 				newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
+			} else {
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)
+				newjob.Status.Conditions[index] = *cond.DeepCopy()
 			}
 			if err := qjm.updateEtcd(newjob, "PreemptQueueJobs - CanRun: false"); err != nil {
 				klog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
@@ -1691,9 +1703,15 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 				klog.V(10).Infof("[worker-manageQJ] leaving %s to qjqueue.UnschedulableQ activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 			} else {
 				klog.V(10).Infof("[worker-manageQJ] before add to activeQ %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
-				qj.Status.QueueJobState = arbv1.AppWrapperCondQueueing
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "AwaitingHeadOfLine", "")
-				qj.Status.Conditions = append(qj.Status.Conditions, cond)
+				index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondQueueing, "AwaitingHeadOfLine")
+				if index < 0 {
+					qj.Status.QueueJobState = arbv1.AppWrapperCondQueueing
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "AwaitingHeadOfLine", "")
+					qj.Status.Conditions = append(qj.Status.Conditions, cond)
+				} else {
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "AwaitingHeadOfLine", "")
+					qj.Status.Conditions[index] = *cond.DeepCopy()
+				}
 
 				qj.Status.FilterIgnore = true // Update Queueing status, add to qjqueue for ScheduleNext
 				cc.updateEtcd(qj, "manageQueueJob - setQueueing")
@@ -1771,8 +1789,14 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 
 			if dispatched { // set AppWrapperCondRunning if all resources are successfully dispatched
 				qj.Status.QueueJobState = arbv1.AppWrapperCondDispatched
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondDispatched, v1.ConditionTrue, "AppWrapperRunnable", "")
-				qj.Status.Conditions = append(qj.Status.Conditions, cond)
+				index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondDispatched, "AppWrapperRunnable")
+				if index < 0 {
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondDispatched, v1.ConditionTrue, "AppWrapperRunnable", "")
+					qj.Status.Conditions = append(qj.Status.Conditions, cond)
+				} else {
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondDispatched, v1.ConditionTrue, "AppWrapperRunnable", "")
+					qj.Status.Conditions[index] = *cond.DeepCopy()
+				}
 
 				klog.V(3).Infof("[worker-manageQJ] %s 4Delay=%.6f seconds AllResourceDispatchedToEtcd Version=%s Status=%+v",
 					qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qj.ResourceVersion, qj.Status)

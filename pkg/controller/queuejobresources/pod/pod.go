@@ -254,6 +254,8 @@ func (qjrPod *QueueJobResPod) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) e
 	queuejob.Status.Running = running
 	queuejob.Status.Succeeded = succeeded
 	queuejob.Status.Failed = failed
+
+	queuejob.Status.PendingPodConditions = nil
 	for podName, cond := range podsConditionMap {
 		podCond := GeneratePodFailedCondition(podName, cond)
 		queuejob.Status.PendingPodConditions = append(queuejob.Status.PendingPodConditions, podCond)

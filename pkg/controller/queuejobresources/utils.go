@@ -62,7 +62,7 @@ func PendingPodsFailedSchd(pods []*v1.Pod) map[string][]v1.PodCondition {
 						//ignore co-scheduled pending pods for coscheduler version:0.22.6
 						continue
 					} else {
-						podName := pods[i].Name
+						podName := string(pods[i].Name)
 						podCondition[podName] = append(podCondition[podName], *cond.DeepCopy())
 					}
 				}

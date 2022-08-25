@@ -7642,7 +7642,7 @@ spec:
                 items:
                   description: Describes scheduling failed condition(s) of a pod
                   properties:
-                    podName:
+                    podname:
                       description: Name of the pod
                       type: string
                     conditions:
