@@ -1990,7 +1990,7 @@ func createPodCheckFailedStatusAW(context *context, name string) *arbv1.AppWrapp
 			]
 		}
 	}} `)
-	var schedSpecMin int = 2
+	var schedSpecMin int = 1
 
 	aw := &arbv1.AppWrapper{
 		ObjectMeta: metav1.ObjectMeta{
@@ -2008,7 +2008,7 @@ func createPodCheckFailedStatusAW(context *context, name string) *arbv1.AppWrapp
 							Name:      fmt.Sprintf("%s-%s", name, "item"),
 							Namespace: context.namespace,
 						},
-						Replicas: 2,
+						Replicas: 1,
 						Type:     arbv1.ResourceTypePod,
 						Template: runtime.RawExtension{
 							Raw: rb,

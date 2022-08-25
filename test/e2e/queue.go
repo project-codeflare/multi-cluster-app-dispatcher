@@ -236,7 +236,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			pass = true
 		}
 		Expect(pass).To(BeTrue())
-		appwrappers = append(appwrappers, aw)
 	})
 
 	It("Create AppWrapper  - Generic Pod Only - 1 Pod", func() {
