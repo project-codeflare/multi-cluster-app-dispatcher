@@ -246,19 +246,19 @@ func (qjrPod *QueueJobResPod) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) e
 	pending := int32(queuejobresources.FilterPods(pods, v1.PodPending))
 	succeeded := int32(queuejobresources.FilterPods(pods, v1.PodSucceeded))
 	failed := int32(queuejobresources.FilterPods(pods, v1.PodFailed))
-	pendingDueToSchedIssue := int32(0)
 	podsConditionMap := queuejobresources.PendingPodsFailedSchd(pods)
-	pendingDueToSchedIssue = int32(len(podsConditionMap))
 	klog.Infof("[UpdateQueueJobStatus] There are %d pods of AppWrapper %s:  pending %d, running %d, succeeded %d, failed %d, pendingpodsfailedschd %d",
-		len(pods), queuejob.Name, pending, running, succeeded, failed, pendingDueToSchedIssue)
+		len(pods), queuejob.Name, pending, running, succeeded, failed, len(podsConditionMap))
 
 	queuejob.Status.Pending = pending
 	queuejob.Status.Running = running
 	queuejob.Status.Succeeded = succeeded
 	queuejob.Status.Failed = failed
-	queuejob.Status.PendingPodsFailedSchd = pendingDueToSchedIssue
+	for podName, cond := range podsConditionMap {
+		podCond := GeneratePodFailedCondition(podName, cond)
+		queuejob.Status.PendingPodConditions = append(queuejob.Status.PendingPodConditions, podCond)
+	}
 
-	queuejob.Status.PendingPodConditions = podsConditionMap
 	return nil
 }
 
@@ -640,4 +640,12 @@ func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, 
 func (qjrPod *QueueJobResPod) Cleanup(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 
 	return qjrPod.terminatePodsForQueueJob(queuejob)
+}
+
+// AppWrapperCondition returns condition of a AppWrapper condition.
+func GeneratePodFailedCondition(podName string, podCondition []v1.PodCondition) arbv1.PendingPodSpec {
+	return arbv1.PendingPodSpec{
+		PodName:    podName,
+		Conditions: podCondition,
+	}
 }
