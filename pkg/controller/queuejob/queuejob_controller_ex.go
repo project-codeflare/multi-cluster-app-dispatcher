@@ -451,11 +451,12 @@ func (qjm *XController) PreemptQueueJobs() {
 				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)
 				newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
 			}
+			if err := qjm.updateEtcd(newjob, "PreemptQueueJobs - CanRun: false"); err != nil {
+				klog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
+					q.Namespace, q.Name, err)
+			}
 		}
-		if err := qjm.updateEtcd(newjob, "PreemptQueueJobs - CanRun: false"); err != nil {
-			klog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
-				q.Namespace, q.Name, err)
-		}
+
 	}
 }
 func (qjm *XController) preemptAWJobs(preemptAWs []*arbv1.AppWrapper) {
@@ -1725,7 +1726,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 		// add qj to Etcd for dispatch
 		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive {
 			//keep conditions until the appwrapper is re-dispatched
-			qj.Status.PendingPodConditions = make(map[string]v1.PodCondition)
+			qj.Status.PendingPodConditions = nil
 
 			qj.Status.State = arbv1.AppWrapperStateActive
 			// Bugfix to eliminate performance problem of overloading the event queue.}
