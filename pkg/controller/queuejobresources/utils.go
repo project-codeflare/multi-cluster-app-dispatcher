@@ -63,7 +63,7 @@ func PendingPodsFailedSchd(pods []*v1.Pod) map[string][]v1.PodCondition {
 						continue
 					} else {
 						podName := pods[i].Name
-						podCondition[podName][i] = *cond.DeepCopy()
+						podCondition[podName] = append(podCondition[podName], *cond.DeepCopy())
 					}
 				}
 			}

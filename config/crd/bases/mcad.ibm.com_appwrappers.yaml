@@ -712,7 +712,7 @@ spec:
                         type: object
                       type: array
                   type: object
-                type: object
+                type: array
               controllerfirsttimestamp:
                 description: Microsecond level timestamp when controller first sees
                   QueueJob (by Informer)
