@@ -301,6 +301,6 @@ type AppWrapperCondition struct {
 }
 
 type PendingPodSpec struct {
-	PodName    string
-	Conditions []v1.PodCondition
+	PodName    string            `json:"podname,omitempty"`
+	Conditions []v1.PodCondition `json:"conditions,omitempty"`
 }

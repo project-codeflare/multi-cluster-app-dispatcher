@@ -50,8 +50,8 @@ func FilterPods(pods []*v1.Pod, phase v1.PodPhase) int {
 }
 
 //check if pods pending are failed scheduling
-func PendingPodsFailedSchd(pods []*v1.Pod) map[string]v1.PodCondition {
-	var podCondition = map[string]v1.PodCondition{}
+func PendingPodsFailedSchd(pods []*v1.Pod) map[string][]v1.PodCondition {
+	var podCondition = make(map[string][]v1.PodCondition)
 	for i := range pods {
 		if pods[i].Status.Phase == v1.PodPending {
 			for _, cond := range pods[i].Status.Conditions {
@@ -63,7 +63,7 @@ func PendingPodsFailedSchd(pods []*v1.Pod) map[string]v1.PodCondition {
 						continue
 					} else {
 						podName := pods[i].Name
-						podCondition[podName] = cond
+						podCondition[podName][i] = *cond.DeepCopy()
 					}
 				}
 			}
