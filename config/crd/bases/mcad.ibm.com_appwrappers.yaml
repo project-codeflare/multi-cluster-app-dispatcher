@@ -670,6 +670,49 @@ spec:
                   - type
                   type: object
                 type: array
+              pendingpodconditions:
+                description: Represent conditions of pod(s) that failed scheduling.
+                items:
+                  description: Describes scheduling failed condition(s) of a pod
+                  properties:
+                    podName:
+                      description: Name of the pod
+                      type: string
+                    conditions:
+                      description: Failed condition(s) of a pod
+                      items:
+                        description: DeploymentCondition describes the state of a deployment
+                          at a certain point.
+                        properties:
+                          LastProbeTime:
+                            description: Last time the condition transitioned from one status
+                              to another.
+                            format: date-time
+                            type: string
+                          LastTransitionTime:
+                            description: The last time this condition was updated.
+                            format: date-time
+                            type: string
+                          message:
+                            description: A human readable message indicating details about
+                              the transition.
+                            type: string
+                          reason:
+                            description: The reason for the condition's last transition.
+                            type: string
+                          status:
+                            description: Status of the condition, one of True, False, Unknown.
+                            type: string
+                          type:
+                            description: Type of appwrapper condition.
+                            type: string
+                        required:
+                        - status
+                        - type
+                        type: object
+                      type: array
+                  type: object
+                type: object
               controllerfirsttimestamp:
                 description: Microsecond level timestamp when controller first sees
                   QueueJob (by Informer)
@@ -699,9 +742,6 @@ spec:
               queuejobstate:
                 description: State of QueueJob - Init, Queueing, HeadOfLine, Rejoining,
                   ...
-                type: string
-              failedschedulingreason:
-                description: Reason pod(s) failed to schedule
                 type: string
               running:
                 format: int32

@@ -41,6 +41,7 @@ import (
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = Describe("AppWrapper E2E Test", func() {
@@ -210,6 +211,32 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("Create AppWrapper  - Check failed pod status", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper  - Check failed pod status - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		aw := createPodCheckFailedStatusAW(context, "aw-checkfailedstatus-1")
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+		time.Sleep(2 * time.Minute)
+		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "Error getting status")
+		}
+		pass := false
+		fmt.Fprintf(os.Stdout, "[e2e] status of AW %v.\n", aw1.Status.State)
+		if len(aw1.Status.PendingPodConditions) == 0 {
+			pass = true
+		}
+		Expect(pass).To(BeTrue())
+		appwrappers = append(appwrappers, aw)
 	})
 
 	It("Create AppWrapper  - Generic Pod Only - 1 Pod", func() {
