@@ -210,3 +210,15 @@ func isLastConditionDuplicate(aw *arbv1.AppWrapper, condType arbv1.AppWrapperCon
 		return false
 	}
 }
+
+// AppWrapperCondition returns condition of a AppWrapper condition.
+func getIndexOfMatchedCondition(aw *arbv1.AppWrapper, condType arbv1.AppWrapperConditionType, condReason string) int {
+	var index = -1
+
+	for i, cond := range aw.Status.Conditions {
+		if cond.Type == condType && cond.Reason == condReason {
+			return i
+		}
+	}
+	return index
+}

@@ -419,11 +419,10 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 
 func (qjm *XController) PreemptQueueJobs() {
 	qjobs := qjm.GetQueueJobsEligibleForPreemption()
-	var newjob *arbv1.AppWrapper
-	var e error
+	var updateNewJob *arbv1.AppWrapper
 	for _, q := range qjobs {
 		if q.Status.Running < int32(q.Spec.SchedSpec.MinAvailable) {
-			newjob, e = qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
+			newjob, e := qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
 			if e != nil {
 				continue
 			}
@@ -432,31 +431,19 @@ func (qjm *XController) PreemptQueueJobs() {
 			message := fmt.Sprintf("Insufficient number of Running pods, minimum=%d, running=%v.", q.Spec.SchedSpec.MinAvailable, q.Status.Running)
 			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
 			newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
+			updateNewJob = newjob.DeepCopy()
 
-			if err := qjm.updateEtcd(newjob, "PreemptQueueJobs - CanRun: false"); err != nil {
-				klog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
-					q.Namespace, q.Name, err)
-			}
 			//If pods failed scheduling generate new preempt condition
 			//ignore co-scheduler failed scheduling events. This is a temp
 			//work around until co-scheduler perf issues are resolved.
 		} else {
-			newjob, e = qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
+			newjob, e := qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
 			if e != nil {
 				continue
 			}
 			newjob.Status.CanRun = false
 			message := fmt.Sprintf("Pods failed scheduling failed=%v, running=%v.", len(q.Status.PendingPodConditions), q.Status.Running)
-			//var creatNewCond bool = true
 			index := getIndexOfMatchedCondition(newjob, arbv1.AppWrapperCondPreemptCandidate, "PodsFailedScheduling")
-			// for i, cond := range newjob.Status.Conditions {
-			// 	if cond.Type == arbv1.AppWrapperCondPreemptCandidate && cond.Reason == "PodsFailedScheduling" {
-			// 		creatNewCond = false
-			// 		cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)
-			// 		newjob.Status.Conditions[i] = *cond.DeepCopy()
-			// 	}
-			// }
-			//creatNewCond
 			if index < 0 {
 				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)
 				newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
@@ -464,10 +451,11 @@ func (qjm *XController) PreemptQueueJobs() {
 				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)
 				newjob.Status.Conditions[index] = *cond.DeepCopy()
 			}
-			if err := qjm.updateEtcd(newjob, "PreemptQueueJobs - CanRun: false"); err != nil {
-				klog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
-					q.Namespace, q.Name, err)
-			}
+
+			updateNewJob = newjob.DeepCopy()
+		}
+		if err := qjm.updateEtcd(updateNewJob, "PreemptQueueJobs - CanRun: false"); err != nil {
+			klog.Errorf("Failed to update status of AppWrapper %v/%v: %v", q.Namespace, q.Name, err)
 		}
 
 	}
@@ -1931,6 +1919,12 @@ func (cc *XController) Cleanup(queuejob *arbv1.AppWrapper) error {
 				cc.qjobResControls[ar.Type].Cleanup(queuejob, &ar)
 			}
 		}
+		// if queuejob.Spec.AggrResources.GenericItems != nil {
+		// 	// we call clean-up for each controller
+		// 	for _, ar := range queuejob.Spec.AggrResources.GenericItems {
+		// 		cc.qjobResControls[ar.Type].Cleanup(queuejob, &ar)
+		// 	}
+		// }
 	} else {
 		// klog.Infof("[Dispatcher] Cleanup: State=%s\n", queuejob.Status.State)
 		//if ! queuejob.Status.CanRun && queuejob.Status.IsDispatched {
