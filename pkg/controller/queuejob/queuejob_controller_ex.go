@@ -549,7 +549,7 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 				//Preempt when schedulingSpec stanza is not set but pods fails scheduling.
 				//ignore co-scheduler pods
 				if len(value.Status.PendingPodConditions) > 0 {
-					klog.V(3).Infof("AppWrapper %s is eligible for preemption %v - %v , %v due to failed scheduling !!! \n", value.Name, value.Status.Running, replicas, value.Status.Succeeded)
+					klog.V(3).Infof("AppWrapper %s is eligible for preemption Running: %v , Succeeded: %v due to failed scheduling !!! \n", value.Name, value.Status.Running, value.Status.Succeeded)
 					qjobs = append(qjobs, value)
 				}
 
