@@ -130,7 +130,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// This should fit on cluster, initially queued because of aw2 above but should eventually
 		// run after prevention of aw2 above.
-		aw3 := createDeploymentAWwith426CPU(context, "aw-deployment-2-425cpu")
+		aw3 := createDeploymentAWwith425CPU(context, "aw-deployment-2-425cpu")
 		appwrappers = append(appwrappers, aw3)
 
 		// Since preemption takes some time, increasing timeout wait time to 2 minutes
