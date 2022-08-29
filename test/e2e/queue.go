@@ -133,7 +133,8 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw3 := createDeploymentAWwith426CPU(context, "aw-deployment-2-425cpu")
 		appwrappers = append(appwrappers, aw3)
 
-		err = waitAWAnyPodsExists(context, aw3)
+		// Since preemption takes some time, increasing timeout wait time to 2 minutes
+		err = waitAWPodsExists(context, aw3, 120000*time.Millisecond)
 		Expect(err).NotTo(HaveOccurred())
 	})
 

@@ -614,7 +614,11 @@ func waitAWReadyQuiet(ctx *context, aw *arbv1.AppWrapper) error {
 }
 
 func waitAWAnyPodsExists(ctx *context, aw *arbv1.AppWrapper) error {
-	return wait.Poll(100*time.Millisecond, ninetySeconds, anyPodsExist(ctx, aw.Namespace, aw.Name))
+	return waitAWPodsExists(ctx, aw, ninetySeconds)
+}
+
+func waitAWPodsExists(ctx *context, aw *arbv1.AppWrapper, timeout time.Duration) error {
+	return wait.Poll(100*time.Millisecond, timeout, anyPodsExist(ctx, aw.Namespace, aw.Name))
 }
 
 func waitAWDeleted(ctx *context, aw *arbv1.AppWrapper, pods []*v1.Pod) error {
