@@ -69,6 +69,122 @@ func join(strs ...string) string {
 	return result
 }
 
+func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperGenericResource) (genericResourceName string, groupversionkind *schema.GroupVersionKind, erro error) {
+	var err error
+	err = nil
+
+	// Default generic source group-version-kind
+	default_gvk := &schema.GroupVersionKind{
+		Group:	 "unknown",
+		Version: "unknown",
+		Kind:	 "unknown",
+	}
+	// Default generic resource name
+	name :=""
+
+	namespaced := true
+	//todo:DELETEME	dd := common.KubeClient.Discovery()
+	dd := gr.clients.Discovery()
+	apigroups, err := restmapper.GetAPIGroupResources(dd)
+	if err != nil {
+		klog.Errorf("[Cleanup] Error getting API resources, err=%#v", err)
+		return name, default_gvk, err
+	}
+	ext := awr.GenericTemplate
+	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
+	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, default_gvk, nil)
+	if err != nil {
+		klog.Errorf("Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
+		return name, gvk, err
+	}
+
+	mapping, err := restmapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		klog.Errorf("mapping error from raw object: `%v`", err)
+		return name, gvk, err
+	}
+
+	//todo:DELETEME		restconfig := common.KubeConfig
+	restconfig := gr.kubeClientConfig
+	restconfig.GroupVersion = &schema.GroupVersion{
+		Group:   mapping.GroupVersionKind.Group,
+		Version: mapping.GroupVersionKind.Version,
+	}
+	dclient, err := dynamic.NewForConfig(restconfig)
+	if err != nil {
+		klog.Errorf("[Cleanup] Error creating new dynamic client, err=%#v.", err)
+		return name, gvk, err
+	}
+
+	_, apiresourcelist, err := dd.ServerGroupsAndResources()
+	if err != nil {
+		klog.Errorf("Error getting supported groups and resources, err=%#v", err)
+		return name, gvk, err
+	}
+	rsrc := mapping.Resource
+	for _, apiresourcegroup := range apiresourcelist {
+		if apiresourcegroup.GroupVersion == join(mapping.GroupVersionKind.Group, "/", mapping.GroupVersionKind.Version) {
+			for _, apiresource := range apiresourcegroup.APIResources {
+				if apiresource.Name == mapping.Resource.Resource && apiresource.Kind == mapping.GroupVersionKind.Kind {
+					rsrc = mapping.Resource
+					namespaced = apiresource.Namespaced
+				}
+			}
+		}
+	}
+
+	// Unmarshal generic item raw object
+	var unstruct unstructured.Unstructured
+	unstruct.Object = make(map[string]interface{})
+	var blob interface{}
+	if err = json.Unmarshal(ext.Raw, &blob); err != nil {
+		klog.Errorf("[Cleanup] Error unmarshalling, err=%#v", err)
+		return name, gvk, err
+	}
+
+	unstruct.Object = blob.(map[string]interface{}) //set object to the content of the blob after Unmarshalling
+	namespace := ""
+	if md, ok := unstruct.Object["metadata"]; ok {
+
+		metadata := md.(map[string]interface{})
+		if objectName, ok := metadata["name"]; ok {
+			name = objectName.(string)
+		}
+		if objectns, ok := metadata["namespace"]; ok {
+			namespace = objectns.(string)
+		}
+	}
+
+	// Get the resource to see if it exists
+	labelSelector := fmt.Sprintf("%s=%s, %s=%s", appwrapperJobName, aw.Name, resourceName, unstruct.GetName())
+	inEtcd, err := dclient.Resource(rsrc).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
+	if err != nil {
+		return name, gvk, err
+	}
+
+	// Check to see if object already exists in etcd, if not, create the object.
+	if inEtcd != nil || len(inEtcd.Items) > 0 {
+		newName := name
+		if len(newName) > 63 {
+			newName = newName[:63]
+		}
+
+		err = deleteObject(namespaced, namespace, newName, rsrc, dclient)
+		if err != nil {
+			if errors.IsAlreadyExists(err) {
+				klog.V(4).Infof("%v\n", err.Error())
+			} else {
+				klog.Errorf("[Cleanup] Error deleting the object `%v`, the error is `%v`.", newName, errors.ReasonForError(err))
+				return name, gvk, err
+			}
+		}
+	} else {
+		klog.Warningf("[Cleanup] %s/%s not found using label selector: %s.\n", name, namespace, labelSelector)
+	}
+
+	return name, gvk, err
+}
+
 func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperGenericResource) (podList []*v1.Pod, err error) {
 	startTime := time.Now()
 	defer func() {
@@ -337,6 +453,25 @@ func createObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 			return nil
 
 		}
+	}
+}
+
+func deleteObject(namespaced bool, namespace string, name string, rsrc schema.GroupVersionResource, dclient dynamic.Interface) (erro error) {
+	var err error
+	if !namespaced {
+		res := dclient.Resource(rsrc)
+		err = res.Delete(context.Background(), name, metav1.DeleteOptions{})
+	} else {
+		res := dclient.Resource(rsrc).Namespace(namespace)
+		err = res.Delete(context.Background(), name, metav1.DeleteOptions{})
+	}
+
+	if err != nil {
+		klog.Errorf("[deleteObject] Error deleting the object `%v`, the error is `%v`.", name, errors.ReasonForError(err))
+		return err
+	} else {
+		klog.V(4).Infof("[deleteObject] Resource `%v` deleted.\n", name)
+		return nil
 	}
 }
 
