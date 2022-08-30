@@ -1596,6 +1596,94 @@ func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand s
 	return appwrapper
 }
 
+func createGenericDeploymentCustomPodResourcesWithCPUAW(context *context, name string, customPodCpuDemand string, cpuDemand string, replicas int) *arbv1.AppWrapper {
+	rb := []byte(fmt.Sprintf(`{
+	"apiVersion": "apps/v1",
+	"kind": "Deployment", 
+	"metadata": {
+		"name": "%s",
+		"namespace": "test",
+		"labels": {
+			"app": "%s"
+		}
+	},
+	"spec": {
+		"replicas": %d,
+		"selector": {
+			"matchLabels": {
+				"app": "%s"
+			}
+		},
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "%s"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "%s"
+				}
+			},
+			"spec": {
+				"containers": [
+					{
+						"name": "%s",
+						"image": "k8s.gcr.io/echoserver:1.4",
+						"resources": {
+							"requests": {
+								"cpu": "%s"
+							}
+						},
+						"ports": [
+							{
+								"containerPort": 80
+							}
+						]
+					}
+				]
+			}
+		}
+	}} `, name, name, replicas, name, name, name, name, cpuDemand))
+
+	var schedSpecMin int = replicas
+	var customCpuResource = v1.ResourceList{"cpu": resource.MustParse(customPodCpuDemand)}
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item1"),
+							Namespace: context.namespace,
+						},
+						CustomPodResources: []arbv1.CustomPodResourceTemplate{
+							{
+								Replicas: replicas,
+								Requests: customCpuResource,
+							},
+						},
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "v1",
 		"kind": "Namespace", 
