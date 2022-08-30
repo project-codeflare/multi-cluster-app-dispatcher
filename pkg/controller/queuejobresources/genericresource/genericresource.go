@@ -380,21 +380,13 @@ func GetResources(awr *arbv1.AppWrapperGenericResource) (resource *clusterstatea
 	var err error
 	err = nil
 	if awr.GenericTemplate.Raw != nil {
-		hasContainer, replicas, containers := hasFields(awr.GenericTemplate)
-		if hasContainer {
-			for _, item := range containers {
-				res := getContainerResources(item, replicas)
-				totalresource = totalresource.Add(res)
-			}
-			klog.V(8).Infof("[GetResources] Requested total allocation resource from containers `%v`.\n", totalresource)
-		} else {
-			podresources := awr.CustomPodResources
-			for _, item := range podresources {
-				res := getPodResources(item)
-				totalresource = totalresource.Add(res)
-			}
-			klog.V(8).Infof("[GetResources] Requested total allocation resource from pods `%v`.\n", totalresource)
+		podresources := awr.CustomPodResources
+		for _, item := range podresources {
+			res := getPodResources(item)
+			totalresource = totalresource.Add(res)
 		}
+		klog.V(4).Infof("[GetResources] Requested total allocation resource from pods `%v`.\n", totalresource)
+
 	} else {
 		err = fmt.Errorf("generic template raw object is not defined (nil)")
 	}
