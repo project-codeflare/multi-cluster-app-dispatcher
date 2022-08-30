@@ -284,6 +284,79 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
+	It("MCAD Custom Pod Resources Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Custom Pod Resources Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		// This should fit on cluster with customPodResources matching deployment resource demands so AW pods are created
+		aw := createGenericDeploymentCustomPodResourcesWithCPUAW(
+			context, "aw-deployment-2-550-vs-550-cpu", "550m", "550m", 2)
+
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWAnyPodsExists(context, aw)
+		Expect(err).To(HaveOccurred())
+
+		err = waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+
+	It("MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Not Queuing Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Not Queuing Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		// This should fill up the worker node and most of the master node
+		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+		// This should not fit on cluster but customPodResources is incorrect so AW pods are created
+		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
+			context, "aw-deployment-2-425-vs-426-cpu", "425m", "426m", 2)
+
+		appwrappers = append(appwrappers, aw2)
+
+		err = waitAWAnyPodsExists(context, aw2)
+		Expect(err).To(HaveOccurred())
+
+		err = waitAWPodsReady(context, aw2)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Queuing Test 2", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Queuing Test 2 - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		// This should fill up the worker node and most of the master node
+		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+		// This should fit on cluster but customPodResources is incorrect so AW pods are not created
+		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
+			context, "aw-deployment-2-426-vs-425-cpu", "426m", "425m", 2)
+
+		appwrappers = append(appwrappers, aw2)
+
+		err = waitAWAnyPodsExists(context, aw2)
+		Expect(err).NotTo(HaveOccurred())
+
+	})
+
 	It("MCAD CPU Accounting Queuing Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Accounting Queuing Test - Started.\n")
 		context := initTestContext()
