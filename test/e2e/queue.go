@@ -298,7 +298,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappers = append(appwrappers, aw)
 
 		err := waitAWAnyPodsExists(context, aw)
-		Expect(err).To(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 
 		err = waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
@@ -326,10 +326,10 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappers = append(appwrappers, aw2)
 
 		err = waitAWAnyPodsExists(context, aw2)
-		Expect(err).To(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 
 		err = waitAWPodsReady(context, aw2)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).To(HaveOccurred())
 	})
 
 	It("MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Queuing Test 2", func() {
@@ -353,7 +353,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappers = append(appwrappers, aw2)
 
 		err = waitAWAnyPodsExists(context, aw2)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).To(HaveOccurred())
 
 	})
 
