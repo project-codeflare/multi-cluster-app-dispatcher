@@ -108,6 +108,37 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
+	It("MCAD CPU Preemption Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Preemption Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		// This should fill up the worker node and most of the master node
+		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+		// This should not fit on cluster
+		aw2 := createDeploymentAWwith426CPU(context, "aw-deployment-2-426cpu")
+		appwrappers = append(appwrappers, aw2)
+
+		err = waitAWAnyPodsExists(context, aw2)
+		Expect(err).To(HaveOccurred())
+
+		// This should fit on cluster, initially queued because of aw2 above but should eventually
+		// run after prevention of aw2 above.
+		aw3 := createDeploymentAWwith425CPU(context, "aw-deployment-2-425cpu")
+		appwrappers = append(appwrappers, aw3)
+
+		// Since preemption takes some time, increasing timeout wait time to 2 minutes
+		err = waitAWPodsExists(context, aw3, 120000*time.Millisecond)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - StatefulSet Only - 2 Pods - Started.\n")
 
@@ -307,6 +338,79 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		err := waitAWNonComputeResourceActive(context, aw)
 		Expect(err).NotTo(HaveOccurred())
+
+	})
+
+	It("MCAD Custom Pod Resources Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Custom Pod Resources Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		// This should fit on cluster with customPodResources matching deployment resource demands so AW pods are created
+		aw := createGenericDeploymentCustomPodResourcesWithCPUAW(
+			context, "aw-deployment-2-550-vs-550-cpu", "550m", "550m", 2)
+
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWAnyPodsExists(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+
+	It("MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Not Queuing Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Not Queuing Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		// This should fill up the worker node and most of the master node
+		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+		// This should not fit on cluster but customPodResources is incorrect so AW pods are created
+		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
+			context, "aw-deployment-2-425-vs-426-cpu", "425m", "426m", 2)
+
+		appwrappers = append(appwrappers, aw2)
+
+		err = waitAWAnyPodsExists(context, aw2)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = waitAWPodsReady(context, aw2)
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Queuing Test 2", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Queuing Test 2 - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		// This should fill up the worker node and most of the master node
+		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+		// This should fit on cluster but customPodResources is incorrect so AW pods are not created
+		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
+			context, "aw-deployment-2-426-vs-425-cpu", "426m", "425m", 2)
+
+		appwrappers = append(appwrappers, aw2)
+
+		err = waitAWAnyPodsExists(context, aw2)
+		Expect(err).To(HaveOccurred())
 
 	})
 
