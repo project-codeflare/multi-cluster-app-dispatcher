@@ -420,14 +420,14 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 func (qjm *XController) PreemptQueueJobs() {
 	qjobs := qjm.GetQueueJobsEligibleForPreemption()
 	for _, aw := range qjobs {
-    var updateNewJob *arbv1.AppWrapper
-	  var message string   
-    newjob, e := qjm.queueJobLister.AppWrappers(aw.Namespace).Get(aw.Name)
+		var updateNewJob *arbv1.AppWrapper
+		var message string
+		newjob, e := qjm.queueJobLister.AppWrappers(aw.Namespace).Get(aw.Name)
 		if e != nil {
-				continue
+			continue
 		}
-    newjob.Status.CanRun = false
-    
+		newjob.Status.CanRun = false
+
 		if aw.Status.Running < int32(aw.Spec.SchedSpec.MinAvailable) {
 			message = fmt.Sprintf("Insufficient number of Running pods, minimum=%d, running=%v.", aw.Spec.SchedSpec.MinAvailable, aw.Status.Running)
 			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
@@ -438,7 +438,7 @@ func (qjm *XController) PreemptQueueJobs() {
 		} else {
 			message = fmt.Sprintf("Pods failed scheduling failed=%v, running=%v.", len(aw.Status.PendingPodConditions), aw.Status.Running)
 			index := getIndexOfMatchedCondition(newjob, arbv1.AppWrapperCondPreemptCandidate, "PodsFailedScheduling")
-      //ignore co-scheduler failed scheduling events. This is a temp
+			//ignore co-scheduler failed scheduling events. This is a temp
 			//work around until co-scheduler version 0.22.X perf issues are resolved.
 			if index < 0 {
 				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)

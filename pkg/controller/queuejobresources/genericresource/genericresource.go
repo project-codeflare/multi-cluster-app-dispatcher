@@ -458,12 +458,14 @@ func createObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 
 func deleteObject(namespaced bool, namespace string, name string, rsrc schema.GroupVersionResource, dclient dynamic.Interface) (erro error) {
 	var err error
+	backGround := metav1.DeletePropagationBackground
+	delOptions := metav1.DeleteOptions{PropagationPolicy: &backGround}
 	if !namespaced {
 		res := dclient.Resource(rsrc)
-		err = res.Delete(context.Background(), name, metav1.DeleteOptions{})
+		err = res.Delete(context.Background(), name, delOptions)
 	} else {
 		res := dclient.Resource(rsrc).Namespace(namespace)
-		err = res.Delete(context.Background(), name, metav1.DeleteOptions{})
+		err = res.Delete(context.Background(), name, delOptions)
 	}
 
 	if err != nil {
