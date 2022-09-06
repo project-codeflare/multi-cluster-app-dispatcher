@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 /*
-Copyright 2019, 2021 The Multi-Cluster App Dispatcher Authors.
+Copyright 2019, 2021, 2022 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -420,15 +420,16 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 func (qjm *XController) PreemptQueueJobs() {
 	qjobs := qjm.GetQueueJobsEligibleForPreemption()
 	var updateNewJob *arbv1.AppWrapper
-	for _, q := range qjobs {
-		if q.Status.Running < int32(q.Spec.SchedSpec.MinAvailable) {
-			newjob, e := qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
+	var message string
+	for _, aw := range qjobs {
+		if aw.Status.Running < int32(aw.Spec.SchedSpec.MinAvailable) {
+			newjob, e := qjm.queueJobLister.AppWrappers(aw.Namespace).Get(aw.Name)
 			if e != nil {
 				continue
 			}
 			newjob.Status.CanRun = false
 
-			message := fmt.Sprintf("Insufficient number of Running pods, minimum=%d, running=%v.", q.Spec.SchedSpec.MinAvailable, q.Status.Running)
+			message = fmt.Sprintf("Insufficient number of Running pods, minimum=%d, running=%v.", aw.Spec.SchedSpec.MinAvailable, aw.Status.Running)
 			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
 			newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
 			updateNewJob = newjob.DeepCopy()
@@ -437,12 +438,12 @@ func (qjm *XController) PreemptQueueJobs() {
 			//ignore co-scheduler failed scheduling events. This is a temp
 			//work around until co-scheduler perf issues are resolved.
 		} else {
-			newjob, e := qjm.queueJobLister.AppWrappers(q.Namespace).Get(q.Name)
+			newjob, e := qjm.queueJobLister.AppWrappers(aw.Namespace).Get(aw.Name)
 			if e != nil {
 				continue
 			}
 			newjob.Status.CanRun = false
-			message := fmt.Sprintf("Pods failed scheduling failed=%v, running=%v.", len(q.Status.PendingPodConditions), q.Status.Running)
+			message = fmt.Sprintf("Pods failed scheduling failed=%v, running=%v.", len(aw.Status.PendingPodConditions), aw.Status.Running)
 			index := getIndexOfMatchedCondition(newjob, arbv1.AppWrapperCondPreemptCandidate, "PodsFailedScheduling")
 			if index < 0 {
 				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)
@@ -455,9 +456,11 @@ func (qjm *XController) PreemptQueueJobs() {
 			updateNewJob = newjob.DeepCopy()
 		}
 		if err := qjm.updateEtcd(updateNewJob, "PreemptQueueJobs - CanRun: false"); err != nil {
-			klog.Errorf("Failed to update status of AppWrapper %v/%v: %v", q.Namespace, q.Name, err)
+			klog.Errorf("Failed to update status of AppWrapper %v/%v: %v", aw.Namespace, aw.Name, err)
 		}
-
+		klog.V(4).Infof("[PreemptQueueJobs] Adding preempted AppWrapper %s/%s to backoff queue.",
+			aw.Name, aw.Namespace)
+		go qjm.backoff(aw, "PreemptionTriggered", string(message))
 	}
 }
 func (qjm *XController) preemptAWJobs(preemptAWs []*arbv1.AppWrapper) {
@@ -1909,43 +1912,50 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 }
 
 //Cleanup function
-func (cc *XController) Cleanup(queuejob *arbv1.AppWrapper) error {
-	klog.V(3).Infof("[Cleanup] begin AppWrapper %s Version=%s Status=%+v\n", queuejob.Name, queuejob.ResourceVersion, queuejob.Status)
+func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
+	klog.V(3).Infof("[Cleanup] begin AppWrapper %s Version=%s Status=%+v\n", appwrapper.Name, appwrapper.ResourceVersion, appwrapper.Status)
 
 	if !cc.isDispatcher {
-		if queuejob.Spec.AggrResources.Items != nil {
+		if appwrapper.Spec.AggrResources.Items != nil {
 			// we call clean-up for each controller
-			for _, ar := range queuejob.Spec.AggrResources.Items {
-				cc.qjobResControls[ar.Type].Cleanup(queuejob, &ar)
+			for _, ar := range appwrapper.Spec.AggrResources.Items {
+				err00 := cc.qjobResControls[ar.Type].Cleanup(appwrapper, &ar)
+				if err00 != nil {
+					klog.Errorf("[Cleanup] Error deleting item %s from job=%s Status=%+v err=%+v.",
+						ar.Type, appwrapper.Name, appwrapper.Status, err00)
+				}
 			}
 		}
-		// if queuejob.Spec.AggrResources.GenericItems != nil {
-		// 	// we call clean-up for each controller
-		// 	for _, ar := range queuejob.Spec.AggrResources.GenericItems {
-		// 		cc.qjobResControls[ar.Type].Cleanup(queuejob, &ar)
-		// 	}
-		// }
-	} else {
-		// klog.Infof("[Dispatcher] Cleanup: State=%s\n", queuejob.Status.State)
-		//if ! queuejob.Status.CanRun && queuejob.Status.IsDispatched {
-		if queuejob.Status.IsDispatched {
-			queuejobKey, _ := GetQueueJobKey(queuejob)
-			if obj, ok := cc.dispatchMap[queuejobKey]; ok {
-				cc.agentMap[obj].DeleteJob(queuejob)
+		if appwrapper.Spec.AggrResources.GenericItems != nil {
+			for _, ar := range appwrapper.Spec.AggrResources.GenericItems {
+				genericResourceName, gvk, err00 := cc.genericresources.Cleanup(appwrapper, &ar)
+				if err00 != nil {
+					klog.Errorf("[Cleanup] Error deleting generic item %s, GVK=%s.%s.%s from job=%s Status=%+v err=%+v.",
+						genericResourceName, gvk.Group, gvk.Version, gvk.Kind, appwrapper.Name, appwrapper.Status, err00)
+				}
 			}
-			queuejob.Status.IsDispatched = false
+		}
+	} else {
+		// klog.Infof("[Dispatcher] Cleanup: State=%s\n", appwrapper.Status.State)
+		//if ! appwrapper.Status.CanRun && appwrapper.Status.IsDispatched {
+		if appwrapper.Status.IsDispatched {
+			queuejobKey, _ := GetQueueJobKey(appwrapper)
+			if obj, ok := cc.dispatchMap[queuejobKey]; ok {
+				cc.agentMap[obj].DeleteJob(appwrapper)
+			}
+			appwrapper.Status.IsDispatched = false
 		}
 	}
 
 	// Release quota if quota is enabled and quota manager instance exists
 	if cc.serverOption.QuotaEnabled && cc.quotaManager != nil {
-		cc.quotaManager.Release(queuejob)
+		cc.quotaManager.Release(appwrapper)
 	}
-	queuejob.Status.Pending = 0
-	queuejob.Status.Running = 0
-	queuejob.Status.Succeeded = 0
-	queuejob.Status.Failed = 0
-	klog.V(10).Infof("[Cleanup] end AppWrapper %s Version=%s Status=%+v\n", queuejob.Name, queuejob.ResourceVersion, queuejob.Status)
+	appwrapper.Status.Pending = 0
+	appwrapper.Status.Running = 0
+	appwrapper.Status.Succeeded = 0
+	appwrapper.Status.Failed = 0
+	klog.V(10).Infof("[Cleanup] end AppWrapper %s Version=%s Status=%+v\n", appwrapper.Name, appwrapper.ResourceVersion, appwrapper.Status)
 
 	return nil
 }
