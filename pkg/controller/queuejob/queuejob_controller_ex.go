@@ -419,32 +419,27 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 
 func (qjm *XController) PreemptQueueJobs() {
 	qjobs := qjm.GetQueueJobsEligibleForPreemption()
-	var updateNewJob *arbv1.AppWrapper
-	var message string
 	for _, aw := range qjobs {
-		if aw.Status.Running < int32(aw.Spec.SchedSpec.MinAvailable) {
-			newjob, e := qjm.queueJobLister.AppWrappers(aw.Namespace).Get(aw.Name)
-			if e != nil {
+    var updateNewJob *arbv1.AppWrapper
+	  var message string   
+    newjob, e := qjm.queueJobLister.AppWrappers(aw.Namespace).Get(aw.Name)
+		if e != nil {
 				continue
-			}
-			newjob.Status.CanRun = false
-
+		}
+    newjob.Status.CanRun = false
+    
+		if aw.Status.Running < int32(aw.Spec.SchedSpec.MinAvailable) {
 			message = fmt.Sprintf("Insufficient number of Running pods, minimum=%d, running=%v.", aw.Spec.SchedSpec.MinAvailable, aw.Status.Running)
 			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
 			newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
 			updateNewJob = newjob.DeepCopy()
 
 			//If pods failed scheduling generate new preempt condition
-			//ignore co-scheduler failed scheduling events. This is a temp
-			//work around until co-scheduler perf issues are resolved.
 		} else {
-			newjob, e := qjm.queueJobLister.AppWrappers(aw.Namespace).Get(aw.Name)
-			if e != nil {
-				continue
-			}
-			newjob.Status.CanRun = false
 			message = fmt.Sprintf("Pods failed scheduling failed=%v, running=%v.", len(aw.Status.PendingPodConditions), aw.Status.Running)
 			index := getIndexOfMatchedCondition(newjob, arbv1.AppWrapperCondPreemptCandidate, "PodsFailedScheduling")
+      //ignore co-scheduler failed scheduling events. This is a temp
+			//work around until co-scheduler version 0.22.X perf issues are resolved.
 			if index < 0 {
 				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)
 				newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
@@ -461,6 +456,7 @@ func (qjm *XController) PreemptQueueJobs() {
 		klog.V(4).Infof("[PreemptQueueJobs] Adding preempted AppWrapper %s/%s to backoff queue.",
 			aw.Name, aw.Namespace)
 		go qjm.backoff(aw, "PreemptionTriggered", string(message))
+
 	}
 }
 func (qjm *XController) preemptAWJobs(preemptAWs []*arbv1.AppWrapper) {
@@ -1935,6 +1931,7 @@ func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 				}
 			}
 		}
+
 	} else {
 		// klog.Infof("[Dispatcher] Cleanup: State=%s\n", appwrapper.Status.State)
 		//if ! appwrapper.Status.CanRun && appwrapper.Status.IsDispatched {
