@@ -390,7 +390,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fit on cluster after AW aw-deployment-1-700-cpu above is automatically preempted on
 		// scheduling failure
 		aw3 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-ff-deployment-2-425-cpu", "425m", "425m", 2)
+			context, "aw-ff-deployment-2-340-cpu", "340m", "340m", 2)
 
 		appwrappers = append(appwrappers, aw3)
 
