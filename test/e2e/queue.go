@@ -361,6 +361,52 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("MCAD Scheduling Failure Preemption Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Not Queuing Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		// This should fill up the worker node and most of the master node
+		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+		// This should not fit on any node but should dispatch because there is enough aggregated resources.
+		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
+			context, "aw-deployment-1-700-cpu", "700m", "700m", 1)
+
+		appwrappers = append(appwrappers, aw2)
+
+		err = waitAWAnyPodsExists(context, aw2)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = waitAWPodsPending(context, aw2)
+		Expect(err).NotTo(HaveOccurred())
+		
+		// This should fit on cluster after AW aw-deployment-1-700-cpu above is automatically preempted on
+		// scheduling failure
+		aw3 := createGenericDeploymentCustomPodResourcesWithCPUAW(
+			context, "aw-deployment-2-425-cpu", "425m", "425m", 2)
+
+		appwrappers = append(appwrappers, aw3)
+
+		// Wait for pods to get created, assumes preemption around 1 minute
+		err = waitAWPodsExists(context, aw3, 120000*time.Millisecond)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Make sure they are running
+		err = waitAWPodsReady(context, aw3)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Make sure pods from AW aw-deployment-1-700-cpu above do not exist proving preemption
+		err = waitAWAnyPodsExists(context, aw2)
+		Expect(err).To(HaveOccurred())
+
+	})
 
 	It("MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Not Queuing Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Not Queuing Test - Started.\n")

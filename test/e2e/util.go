@@ -643,6 +643,15 @@ func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bo
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite))
 }
 
+func waitAWPodsPending(ctx *context, aw *arbv1.AppWrapper) error {
+	return waitAWPodsPendingEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), false)
+}
+
+func waitAWPodsPendingEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
+	return wait.Poll(100*time.Millisecond, ninetySeconds, awPodPhase(ctx, aw,
+		[]v1.PodPhase{v1.PodPending}, taskNum, quite))
+}
+
 func waitAWPodsTerminatedEx(ctx *context, namespace string, name string, pods []*v1.Pod, taskNum int) error {
 	return waitAWPodsTerminatedExVerbose(ctx, namespace, name, pods, taskNum, true)
 }
