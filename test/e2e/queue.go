@@ -369,7 +369,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		// This should fill up the worker node and most of the master node
-		aw := createDeploymentAWwith550CPU(context, "aw-ff-deployment-2-550cpu")
+		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
 		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
