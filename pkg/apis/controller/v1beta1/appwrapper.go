@@ -254,6 +254,9 @@ type AppWrapperStatus struct {
 
 	// Represents the latest available observations of a appwrapper's current condition.
 	Conditions []AppWrapperCondition `json:"conditions,omitempty"`
+
+	// Represents the latest available observations of pods under appwrapper
+	PendingPodConditions []PendingPodSpec `json:"pendingpodconditions"`
 }
 
 type AppWrapperState string
@@ -295,4 +298,9 @@ type AppWrapperCondition struct {
 	Reason string `json:"reason,omitempty"`
 	// A human readable message indicating details about the transition.
 	Message string `json:"message,omitempty"`
+}
+
+type PendingPodSpec struct {
+	PodName    string            `json:"podname,omitempty"`
+	Conditions []v1.PodCondition `json:"conditions,omitempty"`
 }

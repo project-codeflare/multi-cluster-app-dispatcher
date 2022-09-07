@@ -643,6 +643,15 @@ func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bo
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite))
 }
 
+func waitAWPodsPending(ctx *context, aw *arbv1.AppWrapper) error {
+	return waitAWPodsPendingEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), false)
+}
+
+func waitAWPodsPendingEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
+	return wait.Poll(100*time.Millisecond, ninetySeconds, awPodPhase(ctx, aw,
+		[]v1.PodPhase{v1.PodPending}, taskNum, quite))
+}
+
 func waitAWPodsTerminatedEx(ctx *context, namespace string, name string, pods []*v1.Pod, taskNum int) error {
 	return waitAWPodsTerminatedExVerbose(ctx, namespace, name, pods, taskNum, true)
 }
@@ -2027,6 +2036,80 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 							Namespace: context.namespace,
 						},
 						Replicas: 2,
+						Type:     arbv1.ResourceTypePod,
+						Template: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createPodCheckFailedStatusAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"metadata": 
+	{
+		"name": "aw-checkfailedstatus-1",
+		"namespace": "test",
+		"labels": {
+			"app": "aw-checkfailedstatus-1"
+		}
+	},
+	"template": {
+		"metadata": {
+			"labels": {
+				"app": "aw-checkfailedstatus-1"
+			},
+			"annotations": {
+				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-checkfailedstatus-1"
+			}
+		},
+		"spec": {
+			"containers": [
+				{
+					"name": "aw-checkfailedstatus-1",
+					"image": "k8s.gcr.io/echoserver:1.4",
+					"ports": [
+						{
+							"containerPort": 80
+						}
+					]
+				}
+			],
+			"tolerations": [
+				{
+					"effect": "NoSchedule",
+					"key": "key1",
+					"operator": "Exists"
+				}
+			]
+		}
+	}} `)
+	var schedSpecMin int = 1
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				Items: []arbv1.AppWrapperResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item"),
+							Namespace: context.namespace,
+						},
+						Replicas: 1,
 						Type:     arbv1.ResourceTypePod,
 						Template: runtime.RawExtension{
 							Raw: rb,

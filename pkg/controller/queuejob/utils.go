@@ -32,16 +32,17 @@ package queuejob
 
 import (
 	"fmt"
-        corev1 "k8s.io/api/core/v1"
-        apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-        apierrors "k8s.io/apimachinery/pkg/api/errors"
-        "k8s.io/apimachinery/pkg/api/meta"
-        metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-        "k8s.io/apimachinery/pkg/util/uuid"
+
+	corev1 "k8s.io/api/core/v1"
+	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/rest"
 
-        arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
-        "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
+	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
+	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
 )
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("QueueJob")
@@ -56,16 +57,16 @@ func GetQJFullName(qj *arbv1.QueueJob) string {
 }
 
 func GetXQJFullName(qj *arbv1.AppWrapper) string {
-        // Use underscore as the delimiter because it is not allowed in qj name
-        // (DNS subdomain format).
-        return qj.Name + "_" + qj.Namespace
+	// Use underscore as the delimiter because it is not allowed in qj name
+	// (DNS subdomain format).
+	return qj.Name + "_" + qj.Namespace
 }
 
-func HigherPriorityQJ(qj1, qj2 interface{} ) bool {
+func HigherPriorityQJ(qj1, qj2 interface{}) bool {
 	return (qj1.(*arbv1.AppWrapper).Spec.Priority > qj2.(*arbv1.AppWrapper).Spec.Priority)
 }
 
-func HigherSystemPriorityQJ(qj1, qj2 interface{} ) bool {
+func HigherSystemPriorityQJ(qj1, qj2 interface{}) bool {
 	return (qj1.(*arbv1.AppWrapper).Status.SystemPriority > qj2.(*arbv1.AppWrapper).Status.SystemPriority)
 }
 
@@ -116,18 +117,17 @@ func createQueueJobSchedulingSpec(qj *arbv1.QueueJob) *arbv1.SchedulingSpec {
 }
 
 func createXQueueJobSchedulingSpec(qj *arbv1.AppWrapper) *arbv1.SchedulingSpec {
-        return &arbv1.SchedulingSpec{
-                ObjectMeta: metav1.ObjectMeta{
-                        Name:      qj.Name,
-                        Namespace: qj.Namespace,
-                        OwnerReferences: []metav1.OwnerReference{
-                                *metav1.NewControllerRef(qj, queueJobKind),
-                        },
-                },
-                Spec: qj.Spec.SchedSpec,
-        }
+	return &arbv1.SchedulingSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      qj.Name,
+			Namespace: qj.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(qj, queueJobKind),
+			},
+		},
+		Spec: qj.Spec.SchedSpec,
+	}
 }
-
 
 func createQueueJobPod(qj *arbv1.QueueJob, template *corev1.PodTemplateSpec, ix int32) *corev1.Pod {
 	templateCopy := template.DeepCopy()
@@ -209,4 +209,16 @@ func isLastConditionDuplicate(aw *arbv1.AppWrapper, condType arbv1.AppWrapperCon
 	} else {
 		return false
 	}
+}
+
+// AppWrapperCondition returns condition of a AppWrapper condition.
+func getIndexOfMatchedCondition(aw *arbv1.AppWrapper, condType arbv1.AppWrapperConditionType, condReason string) int {
+	var index = -1
+
+	for i, cond := range aw.Status.Conditions {
+		if cond.Type == condType && cond.Reason == condReason {
+			return i
+		}
+	}
+	return index
 }

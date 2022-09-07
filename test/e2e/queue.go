@@ -41,6 +41,7 @@ import (
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = Describe("AppWrapper E2E Test", func() {
@@ -243,6 +244,31 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("Create AppWrapper  - Check failed pod status", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper  - Check failed pod status - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		aw := createPodCheckFailedStatusAW(context, "aw-checkfailedstatus-1")
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+		time.Sleep(2 * time.Minute)
+		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "Error getting status")
+		}
+		pass := false
+		fmt.Fprintf(os.Stdout, "[e2e] status of AW %v.\n", aw1.Status.State)
+		if len(aw1.Status.PendingPodConditions) == 0 {
+			pass = true
+		}
+		Expect(pass).To(BeTrue())
+	})
+
 	It("Create AppWrapper  - Generic Pod Only - 1 Pod", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper  - Generic Pod Only - 1 Pod - Started.\n")
 		context := initTestContext()
@@ -335,6 +361,52 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
+	It("MCAD Scheduling Fail Fast Preemption Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		// This should fill up the worker node and most of the master node
+		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+		// This should not fit on any node but should dispatch because there is enough aggregated resources.
+		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
+			context, "aw-ff-deployment-1-700-cpu", "700m", "700m", 1)
+
+		appwrappers = append(appwrappers, aw2)
+
+		err = waitAWAnyPodsExists(context, aw2)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = waitAWPodsPending(context, aw2)
+		Expect(err).NotTo(HaveOccurred())
+		
+		// This should fit on cluster after AW aw-deployment-1-700-cpu above is automatically preempted on
+		// scheduling failure
+		aw3 := createGenericDeploymentCustomPodResourcesWithCPUAW(
+			context, "aw-ff-deployment-2-340-cpu", "340m", "340m", 2)
+
+		appwrappers = append(appwrappers, aw3)
+
+		// Wait for pods to get created, assumes preemption around 1 minute
+		err = waitAWPodsExists(context, aw3, 120000*time.Millisecond)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Make sure they are running
+		err = waitAWPodsReady(context, aw3)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Make sure pods from AW aw-deployment-1-700-cpu above do not exist proving preemption
+		err = waitAWAnyPodsExists(context, aw2)
+		Expect(err).To(HaveOccurred())
+
+	})
 
 	It("MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Not Queuing Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Not Queuing Test - Started.\n")

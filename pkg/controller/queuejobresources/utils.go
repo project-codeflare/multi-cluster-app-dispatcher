@@ -31,6 +31,8 @@ limitations under the License.
 package queuejobresources
 
 import (
+	"strings"
+
 	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
@@ -38,13 +40,36 @@ import (
 
 // filterPods returns pods based on their phase.
 func FilterPods(pods []*v1.Pod, phase v1.PodPhase) int {
-        result := 0
-        for i := range pods {
-                if phase == pods[i].Status.Phase {
-                        result++
-                }
-        }
-        return result
+	result := 0
+	for i := range pods {
+		if phase == pods[i].Status.Phase {
+			result++
+		}
+	}
+	return result
+}
+
+//check if pods pending are failed scheduling
+func PendingPodsFailedSchd(pods []*v1.Pod) map[string][]v1.PodCondition {
+	var podCondition = make(map[string][]v1.PodCondition)
+	for i := range pods {
+		if pods[i].Status.Phase == v1.PodPending {
+			for _, cond := range pods[i].Status.Conditions {
+				// Hack: ignore pending pods due to co-scheduler FailedScheduling event
+				// this exists until coscheduler performance issue is resolved.
+				if cond.Type == v1.PodScheduled && cond.Status == v1.ConditionFalse && cond.Reason == v1.PodReasonUnschedulable {
+					if strings.Contains(cond.Message, "pgName") && strings.Contains(cond.Message, "last") && strings.Contains(cond.Message, "failed") && strings.Contains(cond.Message, "deny") {
+						//ignore co-scheduled pending pods for coscheduler version:0.22.6
+						continue
+					} else {
+						podName := string(pods[i].Name)
+						podCondition[podName] = append(podCondition[podName], *cond.DeepCopy())
+					}
+				}
+			}
+		}
+	}
+	return podCondition
 }
 
 // filterPods returns pods based on their phase.

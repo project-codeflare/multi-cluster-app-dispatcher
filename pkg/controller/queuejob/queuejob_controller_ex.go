@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 /*
-Copyright 2019, 2021 The Multi-Cluster App Dispatcher Authors.
+Copyright 2019, 2021, 2022 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -420,23 +420,42 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 func (qjm *XController) PreemptQueueJobs() {
 	qjobs := qjm.GetQueueJobsEligibleForPreemption()
 	for _, aw := range qjobs {
+		var updateNewJob *arbv1.AppWrapper
+		var message string
 		newjob, e := qjm.queueJobLister.AppWrappers(aw.Namespace).Get(aw.Name)
 		if e != nil {
 			continue
 		}
 		newjob.Status.CanRun = false
 
-		message := fmt.Sprintf("Insufficient number of Running pods, minimum=%d, running=%v.", aw.Spec.SchedSpec.MinAvailable, aw.Status.Running)
-		cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
-		newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
+		if aw.Status.Running < int32(aw.Spec.SchedSpec.MinAvailable) {
+			message = fmt.Sprintf("Insufficient number of Running pods, minimum=%d, running=%v.", aw.Spec.SchedSpec.MinAvailable, aw.Status.Running)
+			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
+			newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
+			updateNewJob = newjob.DeepCopy()
 
-		if err := qjm.updateEtcd(newjob, "PreemptQueueJobs - CanRun: false"); err != nil {
-			klog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
-				aw.Namespace, aw.Name, err)
+			//If pods failed scheduling generate new preempt condition
+		} else {
+			message = fmt.Sprintf("Pods failed scheduling failed=%v, running=%v.", len(aw.Status.PendingPodConditions), aw.Status.Running)
+			index := getIndexOfMatchedCondition(newjob, arbv1.AppWrapperCondPreemptCandidate, "PodsFailedScheduling")
+			//ignore co-scheduler failed scheduling events. This is a temp
+			//work around until co-scheduler version 0.22.X perf issues are resolved.
+			if index < 0 {
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)
+				newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
+			} else {
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "PodsFailedScheduling", message)
+				newjob.Status.Conditions[index] = *cond.DeepCopy()
+			}
+
+			updateNewJob = newjob.DeepCopy()
+		}
+		if err := qjm.updateEtcd(updateNewJob, "PreemptQueueJobs - CanRun: false"); err != nil {
+			klog.Errorf("Failed to update status of AppWrapper %v/%v: %v", aw.Namespace, aw.Name, err)
 		}
 		klog.V(4).Infof("[PreemptQueueJobs] Adding preempted AppWrapper %s/%s to backoff queue.",
 			aw.Name, aw.Namespace)
-		go qjm.backoff(aw, "PreemptionTriggered", message)
+		go qjm.backoff(aw, "PreemptionTriggered", string(message))
 
 	}
 }
@@ -513,6 +532,14 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 					klog.V(3).Infof("AppWrapper %s is eligible for preemption %v - %v , %v !!! \n", value.Name, value.Status.Running, replicas, value.Status.Succeeded)
 					qjobs = append(qjobs, value)
 				}
+			} else {
+				//Preempt when schedulingSpec stanza is not set but pods fails scheduling.
+				//ignore co-scheduler pods
+				if len(value.Status.PendingPodConditions) > 0 {
+					klog.V(3).Infof("AppWrapper %s is eligible for preemption Running: %v , Succeeded: %v due to failed scheduling !!! \n", value.Name, value.Status.Running, value.Status.Succeeded)
+					qjobs = append(qjobs, value)
+				}
+
 			}
 		}
 	}
@@ -1663,9 +1690,15 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 				klog.V(10).Infof("[worker-manageQJ] leaving %s to qjqueue.UnschedulableQ activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 			} else {
 				klog.V(10).Infof("[worker-manageQJ] before add to activeQ %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
-				qj.Status.QueueJobState = arbv1.AppWrapperCondQueueing
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "AwaitingHeadOfLine", "")
-				qj.Status.Conditions = append(qj.Status.Conditions, cond)
+				index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondQueueing, "AwaitingHeadOfLine")
+				if index < 0 {
+					qj.Status.QueueJobState = arbv1.AppWrapperCondQueueing
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "AwaitingHeadOfLine", "")
+					qj.Status.Conditions = append(qj.Status.Conditions, cond)
+				} else {
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "AwaitingHeadOfLine", "")
+					qj.Status.Conditions[index] = *cond.DeepCopy()
+				}
 
 				qj.Status.FilterIgnore = true // Update Queueing status, add to qjqueue for ScheduleNext
 				cc.updateEtcd(qj, "manageQueueJob - setQueueing")
@@ -1698,6 +1731,9 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 
 		// add qj to Etcd for dispatch
 		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive {
+			//keep conditions until the appwrapper is re-dispatched
+			qj.Status.PendingPodConditions = nil
+
 			qj.Status.State = arbv1.AppWrapperStateActive
 			// Bugfix to eliminate performance problem of overloading the event queue.}
 
@@ -1740,8 +1776,14 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 
 			if dispatched { // set AppWrapperCondRunning if all resources are successfully dispatched
 				qj.Status.QueueJobState = arbv1.AppWrapperCondDispatched
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondDispatched, v1.ConditionTrue, "AppWrapperRunnable", "")
-				qj.Status.Conditions = append(qj.Status.Conditions, cond)
+				index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondDispatched, "AppWrapperRunnable")
+				if index < 0 {
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondDispatched, v1.ConditionTrue, "AppWrapperRunnable", "")
+					qj.Status.Conditions = append(qj.Status.Conditions, cond)
+				} else {
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondDispatched, v1.ConditionTrue, "AppWrapperRunnable", "")
+					qj.Status.Conditions[index] = *cond.DeepCopy()
+				}
 
 				klog.V(3).Infof("[worker-manageQJ] %s 4Delay=%.6f seconds AllResourceDispatchedToEtcd Version=%s Status=%+v",
 					qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qj.ResourceVersion, qj.Status)
