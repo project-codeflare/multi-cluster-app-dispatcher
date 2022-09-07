@@ -361,15 +361,15 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("MCAD Scheduling Failure Preemption Test", func() {
-		fmt.Fprintf(os.Stdout, "[e2e] MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Not Queuing Test - Started.\n")
+	It("MCAD Scheduling Fail Fast Preemption Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Started.\n")
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
 		appwrappersPtr := &appwrappers
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		// This should fill up the worker node and most of the master node
-		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		aw := createDeploymentAWwith550CPU(context, "aw-ff-deployment-2-550cpu")
 		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
@@ -377,7 +377,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// This should not fit on any node but should dispatch because there is enough aggregated resources.
 		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-deployment-1-700-cpu", "700m", "700m", 1)
+			context, "aw-ff-deployment-1-700-cpu", "700m", "700m", 1)
 
 		appwrappers = append(appwrappers, aw2)
 
@@ -390,7 +390,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fit on cluster after AW aw-deployment-1-700-cpu above is automatically preempted on
 		// scheduling failure
 		aw3 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-deployment-2-425-cpu", "425m", "425m", 2)
+			context, "aw-ff-deployment-2-425-cpu", "425m", "425m", 2)
 
 		appwrappers = append(appwrappers, aw3)
 
