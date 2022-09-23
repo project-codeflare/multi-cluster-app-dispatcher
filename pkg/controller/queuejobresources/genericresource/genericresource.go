@@ -76,12 +76,12 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 
 	// Default generic source group-version-kind
 	default_gvk := &schema.GroupVersionKind{
-		Group:	 "unknown",
+		Group:   "unknown",
 		Version: "unknown",
-		Kind:	 "unknown",
+		Kind:    "unknown",
 	}
 	// Default generic resource name
-	name :=""
+	name := ""
 
 	namespaced := true
 	//todo:DELETEME	dd := common.KubeClient.Discovery()
@@ -594,7 +594,7 @@ func getContainerResources(container v1.Container, replicas float64) *clustersta
 }
 
 //return value is a string for flexibility of expression
-func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGenericResource, namespace string) (completed string) {
+func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGenericResource, namespace string) (completed bool) {
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
@@ -605,10 +605,10 @@ func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGeneric
 	if err != nil {
 		klog.Errorf("Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
 	}
-	//service and podgroup has no conditions return ALWAYS true
+	//service and podgroup has no conditions return and ignore
 	//TODO: make it configurable?
 	if gvk.GroupKind().Kind == "Service" || gvk.GroupKind().Kind == "PodGroup" {
-		return "ignore"
+		return false
 	}
 
 	mapping, err := restmapper.RESTMapping(gvk.GroupKind(), gvk.Version)
@@ -630,21 +630,27 @@ func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGeneric
 	if err != nil {
 		klog.Errorf("Error listing object: ", err)
 	}
+
 	for _, job := range inEtcd.Items {
 		completionRequiredBlock := aw.CompletionStatus
 		if len(completionRequiredBlock) > 0 {
-			conditions := job.Object["status"].(map[string]interface{})["conditions"].([]interface{})
+			conditions, err := job.Object["status"].(map[string]interface{})["conditions"].([]interface{})
+			//if condition not found skip for this interation
+			if err {
+				klog.Infof("Error processing unstructured object, status block not created")
+			}
+
 			for _, item := range conditions {
 				completionType := fmt.Sprint(item.(map[string]interface{})["type"])
 				//Move this to utils package?
 				userSpecfiedCompletionConditions := strings.Split(aw.CompletionStatus, ",")
 				for _, condition := range userSpecfiedCompletionConditions {
 					if strings.Contains(strings.ToLower(completionType), strings.ToLower(condition)) {
-						return "true"
+						return true
 					}
 				}
 			}
 		}
 	}
-	return ""
+	return false
 }

@@ -591,7 +591,6 @@ func (qjm *XController) GetAllObjectsOwned(caw *arbv1.AppWrapper) arbv1.AppWrapp
 	// Get all pods and related resources
 	countCompletedItems := 0
 	countCompletionRequired := 0
-	ignoredItems := 0
 	for _, genericItem := range caw.Spec.AggrResources.GenericItems {
 		objectName := genericItem.GenericTemplate
 		var unstruct unstructured.Unstructured
@@ -602,23 +601,22 @@ func (qjm *XController) GetAllObjectsOwned(caw *arbv1.AppWrapper) arbv1.AppWrapp
 		}
 
 		status := qjm.genericresources.GetGenericItemKindStatus(&genericItem, caw.Namespace)
-		if status == "true" {
+		if status {
 			countCompletedItems = countCompletedItems + 1
 		}
-		//ignore service and podgroups since these items do not have status
-		if status == "ignore" {
-			ignoredItems = ignoredItems + 1
-			//only consider count completion required for valid items
-		} else if len(genericItem.CompletionStatus) > 0 {
+
+		//only consider count completion required for valid items
+		if len(genericItem.CompletionStatus) > 0 {
 			countCompletionRequired = countCompletionRequired + 1
 		}
 	}
-	klog.Infof("countCompletedItems %v, countCompletionRequired %v, ignoredItems %v, totalItems %v ", countCompletedItems, countCompletionRequired, ignoredItems, len(caw.Spec.AggrResources.GenericItems))
-	if countCompletedItems == countCompletionRequired && countCompletedItems != 0 && countCompletedItems == (len(caw.Spec.AggrResources.GenericItems)-ignoredItems) {
+	klog.Infof("countCompletedItems %v, countCompletionRequired %v, podsRunning %v, podsPending %v", countCompletedItems, countCompletionRequired, caw.Status.Running, caw.Status.Pending)
+
+	if countCompletedItems == countCompletionRequired && caw.Status.Running == 0 && caw.Status.Pending == 0 {
 		return arbv1.AppWrapperStateCompleted
 	}
-	if ((countCompletedItems < countCompletionRequired) && (countCompletedItems != 0)) ||
-		(countCompletedItems < len(caw.Spec.AggrResources.GenericItems) && countCompletedItems != 0) {
+
+	if countCompletedItems == countCompletionRequired && (caw.Status.Pending > 0 || caw.Status.Running > 0) {
 		return arbv1.AppWrapperStateRunningHoldCompletion
 	}
 	//return previous condition
@@ -1713,27 +1711,43 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 
 		//set appwrapper status to Complete or RunningHoldCompletion
 		if qj.Status.State != arbv1.AppWrapperStateCompleted {
-			klog.Infof("checking the status of all objects")
 			qj.Status.State = cc.GetAllObjectsOwned(qj)
 		}
 
 		//Set Appwrapper state to complete if all items in Appwrapper
 		//are completed
-
 		if qj.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
-			qj.Status.QueueJobState = arbv1.AppWrapperCondRunningHoldCompletion
-			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
-			qj.Status.Conditions = append(qj.Status.Conditions, cond)
-			qj.Status.FilterIgnore = true // Update AppWrapperCondCompleted
-			cc.updateEtcd(qj, "[syncQueueJob] setRunningHoldCompletion")
+			var updateQj *arbv1.AppWrapper
+			index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondRunningHoldCompletion, "SomeItemsCompleted")
+			if index < 0 {
+				qj.Status.QueueJobState = arbv1.AppWrapperCondRunningHoldCompletion
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
+				qj.Status.Conditions = append(qj.Status.Conditions, cond)
+				qj.Status.FilterIgnore = true // Update AppWrapperCondRunningHoldCompletion
+				updateQj = qj.DeepCopy()
+			} else {
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
+				qj.Status.Conditions[index] = *cond.DeepCopy()
+				updateQj = qj.DeepCopy()
+			}
+			cc.updateEtcd(updateQj, "[syncQueueJob] setRunningHoldCompletion")
 		}
-
+		//Set appwrapper status to complete
 		if qj.Status.State == arbv1.AppWrapperStateCompleted {
-			qj.Status.QueueJobState = arbv1.AppWrapperCondCompleted
-			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
-			qj.Status.Conditions = append(qj.Status.Conditions, cond)
-			qj.Status.FilterIgnore = true // Update AppWrapperCondCompleted
-			cc.updateEtcd(qj, "[syncQueueJob] setCompleted")
+			var updateQj *arbv1.AppWrapper
+			index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondCompleted, "PodsCompleted")
+			if index < 0 {
+				qj.Status.QueueJobState = arbv1.AppWrapperCondCompleted
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
+				qj.Status.Conditions = append(qj.Status.Conditions, cond)
+				qj.Status.FilterIgnore = true // Update AppWrapperCondCompleted
+				updateQj = qj.DeepCopy()
+			} else {
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
+				qj.Status.Conditions[index] = *cond.DeepCopy()
+				updateQj = qj.DeepCopy()
+			}
+			cc.updateEtcd(updateQj, "[syncQueueJob] setCompleted")
 		}
 
 		// First execution of qj to set Status.State = Enqueued
