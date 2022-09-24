@@ -1524,48 +1524,55 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 	return appwrapper
 }
 
-func createGenericDeploymentAWWithStatus(context *context, name string) *arbv1.AppWrapper {
-	rb := []byte(`{"apiVersion": "apps/v1",
-		"kind": "Deployment", 
-	"metadata": {
-		"name": "aw-deployment-1-status",
-		"namespace": "test",
-		"labels": {
-			"app": "aw-deployment-1-status"
-		}
-	},
-	"spec": {
-		"replicas": 1,
-		"selector": {
-			"matchLabels": {
-				"app": "aw-deployment-1-status"
-			}
+func createGenericJobAWWithStatus(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{
+		"apiVersion": "batch/v1",
+		"kind": "Job",
+		"metadata": {
+			"name": "aw-test-job-with-comp-1",
+			"namespace": "test"
 		},
-		"template": {
-			"metadata": {
-				"labels": {
-					"app": "aw-deployment-1-status"
-				},
-				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-1-status"
-				}
-			},
-			"spec": {
-				"containers": [
-					{
-						"name": "aw-deployment-1-status",
-						"image": "k8s.gcr.io/echoserver:1.4",
-						"ports": [
-							{
-								"containerPort": 80
-							}
-						]
+		"spec": {
+			"completions": 1,
+			"parallelism": 1,
+			"template": {
+				"metadata": {
+					"labels": {
+						"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-1"
 					}
-				]
+				},
+				"spec": {
+					"containers": [
+						{
+							"args": [
+								"sleep 5"
+							],
+							"command": [
+								"/bin/bash",
+								"-c",
+								"--"
+							],
+							"image": "ubuntu:latest",
+							"imagePullPolicy": "IfNotPresent",
+							"name": "aw-test-job-with-comp-1",
+							"resources": {
+								"limits": {
+									"cpu": "100m",
+									"memory": "256M"
+								},
+								"requests": {
+									"cpu": "100m",
+									"memory": "256M"
+								}
+							}
+						}
+					],
+					"restartPolicy": "Never"
+				}
 			}
 		}
-	}} `)
-	var schedSpecMin int = 1
+	}`)
+	//var schedSpecMin int = 1
 
 	aw := &arbv1.AppWrapper{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1574,20 +1581,20 @@ func createGenericDeploymentAWWithStatus(context *context, name string) *arbv1.A
 		},
 		Spec: arbv1.AppWrapperSpec{
 			SchedSpec: arbv1.SchedulingSpecTemplate{
-				MinAvailable: schedSpecMin,
+				//MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
 				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-%s", name, "aw-deployment-1-status"),
+							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-comp-1"),
 							Namespace: "test",
 						},
 						DesiredAvailable: 1,
 						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
-						CompletionStatus: "Progressing",
+						CompletionStatus: "Complete",
 					},
 				},
 			},
