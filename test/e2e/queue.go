@@ -387,7 +387,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		err = waitAWPodsPending(context, aw2)
 		Expect(err).NotTo(HaveOccurred())
-		
+
 		// This should fit on cluster after AW aw-deployment-1-700-cpu above is automatically preempted on
 		// scheduling failure
 		aw3 := createGenericDeploymentCustomPodResourcesWithCPUAW(
@@ -461,27 +461,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
-	It("MCAD CPU Accounting Queuing Test", func() {
-		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Accounting Queuing Test - Started.\n")
-		context := initTestContext()
-		var appwrappers []*arbv1.AppWrapper
-		appwrappersPtr := &appwrappers
-		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
-		// This should fill up the worker node and most of the master node
-		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
-		appwrappers = append(appwrappers, aw)
-
-		err := waitAWPodsReady(context, aw)
-		Expect(err).NotTo(HaveOccurred())
-
-		// This should not fit on cluster
-		aw2 := createDeploymentAWwith426CPU(context, "aw-deployment-2-426cpu")
-		appwrappers = append(appwrappers, aw2)
-
-		err = waitAWAnyPodsExists(context, aw2)
-		Expect(err).To(HaveOccurred())
-	})
 
 	It("MCAD Deployment Completion Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Deployment Completion Test - Started.\n")
@@ -508,6 +488,28 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappers = append(appwrappers, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Deployment Completion Test - Completed.\n")
 
+	})
+
+	It("MCAD CPU Accounting Queuing Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Accounting Queuing Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		// This should fill up the worker node and most of the master node
+		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWPodsReady(context, aw)
+		Expect(err).NotTo(HaveOccurred())
+
+		// This should not fit on cluster
+		aw2 := createDeploymentAWwith426CPU(context, "aw-deployment-2-426cpu")
+		appwrappers = append(appwrappers, aw2)
+
+		err = waitAWAnyPodsExists(context, aw2)
+		Expect(err).To(HaveOccurred())
 	})
 
 	It("MCAD Deployment RuningHoldCompletion Test", func() {
