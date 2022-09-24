@@ -613,7 +613,9 @@ func (qjm *XController) GetAllObjectsOwned(caw *arbv1.AppWrapper) arbv1.AppWrapp
 	klog.Infof("countCompletedItems %v, countCompletionRequired %v, podsRunning %v, podsPending %v", countCompletedItems, countCompletionRequired, caw.Status.Running, caw.Status.Pending)
 
 	if countCompletedItems == countCompletionRequired && caw.Status.Running == 0 && caw.Status.Pending == 0 {
-		return arbv1.AppWrapperStateCompleted
+		if countCompletedItems > 0 && countCompletionRequired > 0 {
+			return arbv1.AppWrapperStateCompleted
+		}
 	}
 
 	if countCompletedItems == countCompletionRequired && (caw.Status.Pending > 0 || caw.Status.Running > 0) {
@@ -1708,46 +1710,16 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 			//	Namespace(qj.Namespace).Resource(arbv1.QueueJobPlural).
 			//	Name(qj.Name).Body(qj).Do().Into(&result)
 		}
-
-		//set appwrapper status to Complete or RunningHoldCompletion
-		if qj.Status.State != arbv1.AppWrapperStateCompleted {
-			qj.Status.State = cc.GetAllObjectsOwned(qj)
-		}
-
-		//Set Appwrapper state to complete if all items in Appwrapper
-		//are completed
-		if qj.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
-			var updateQj *arbv1.AppWrapper
-			index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondRunningHoldCompletion, "SomeItemsCompleted")
-			if index < 0 {
-				qj.Status.QueueJobState = arbv1.AppWrapperCondRunningHoldCompletion
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
-				qj.Status.Conditions = append(qj.Status.Conditions, cond)
-				qj.Status.FilterIgnore = true // Update AppWrapperCondRunningHoldCompletion
-				updateQj = qj.DeepCopy()
-			} else {
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
-				qj.Status.Conditions[index] = *cond.DeepCopy()
-				updateQj = qj.DeepCopy()
+		//Job is Complete only update pods if needed.
+		if qj.Status.State == arbv1.AppWrapperStateCompleted || qj.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
+			if podPhaseChanges {
+				// Only update etcd if AW status has changed.  This can happen for periodic
+				// updates of pod phase counts done in caller of this function.
+				if err := cc.updateEtcd(qj, "manageQueueJob - podPhaseChanges"); err != nil {
+					klog.Errorf("[manageQueueJob] Error updating etc for AW job=%s Status=%+v err=%+v", qj.Name, qj.Status, err)
+				}
 			}
-			cc.updateEtcd(updateQj, "[syncQueueJob] setRunningHoldCompletion")
-		}
-		//Set appwrapper status to complete
-		if qj.Status.State == arbv1.AppWrapperStateCompleted {
-			var updateQj *arbv1.AppWrapper
-			index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondCompleted, "PodsCompleted")
-			if index < 0 {
-				qj.Status.QueueJobState = arbv1.AppWrapperCondCompleted
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
-				qj.Status.Conditions = append(qj.Status.Conditions, cond)
-				qj.Status.FilterIgnore = true // Update AppWrapperCondCompleted
-				updateQj = qj.DeepCopy()
-			} else {
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
-				qj.Status.Conditions[index] = *cond.DeepCopy()
-				updateQj = qj.DeepCopy()
-			}
-			cc.updateEtcd(updateQj, "[syncQueueJob] setCompleted")
+			return nil
 		}
 
 		// First execution of qj to set Status.State = Enqueued
@@ -1896,6 +1868,49 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 			// updates of pod phase counts done in caller of this function.
 			if err := cc.updateEtcd(qj, "manageQueueJob - podPhaseChanges"); err != nil {
 				klog.Errorf("[manageQueueJob] Error updating etc for AW job=%s Status=%+v err=%+v", qj.Name, qj.Status, err)
+			}
+		} else if qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateActive {
+			//set appwrapper status to Complete or RunningHoldCompletion
+
+			derivedAwStatus := cc.GetAllObjectsOwned(qj)
+
+			//Set Appwrapper state to complete if all items in Appwrapper
+			//are completed
+			if derivedAwStatus == arbv1.AppWrapperStateRunningHoldCompletion {
+				qj.Status.State = derivedAwStatus
+				var updateQj *arbv1.AppWrapper
+				index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondRunningHoldCompletion, "SomeItemsCompleted")
+				if index < 0 {
+					qj.Status.QueueJobState = arbv1.AppWrapperCondRunningHoldCompletion
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
+					qj.Status.Conditions = append(qj.Status.Conditions, cond)
+					qj.Status.FilterIgnore = true // Update AppWrapperCondRunningHoldCompletion
+					updateQj = qj.DeepCopy()
+				} else {
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
+					qj.Status.Conditions[index] = *cond.DeepCopy()
+					updateQj = qj.DeepCopy()
+				}
+				cc.updateEtcd(updateQj, "[syncQueueJob] setRunningHoldCompletion")
+			}
+			//Set appwrapper status to complete
+			if derivedAwStatus == arbv1.AppWrapperStateCompleted {
+				qj.Status.State = derivedAwStatus
+				qj.Status.CanRun = false
+				var updateQj *arbv1.AppWrapper
+				index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondCompleted, "PodsCompleted")
+				if index < 0 {
+					qj.Status.QueueJobState = arbv1.AppWrapperCondCompleted
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
+					qj.Status.Conditions = append(qj.Status.Conditions, cond)
+					qj.Status.FilterIgnore = true // Update AppWrapperCondCompleted
+					updateQj = qj.DeepCopy()
+				} else {
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
+					qj.Status.Conditions[index] = *cond.DeepCopy()
+					updateQj = qj.DeepCopy()
+				}
+				cc.updateEtcd(updateQj, "[syncQueueJob] setCompleted")
 			}
 		}
 		// Finish adding qj to Etcd for dispatch

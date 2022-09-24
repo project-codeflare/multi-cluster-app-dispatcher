@@ -637,7 +637,7 @@ func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGeneric
 			conditions, err := job.Object["status"].(map[string]interface{})["conditions"].([]interface{})
 			//if condition not found skip for this interation
 			if err {
-				klog.Infof("Error processing unstructured object, status block not created")
+				klog.Errorf("Error processing unstructured object")
 			}
 
 			for _, item := range conditions {
