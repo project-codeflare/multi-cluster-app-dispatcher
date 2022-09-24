@@ -612,14 +612,15 @@ func (qjm *XController) GetAllObjectsOwned(caw *arbv1.AppWrapper) arbv1.AppWrapp
 	}
 	klog.Infof("countCompletedItems %v, countCompletionRequired %v, podsRunning %v, podsPending %v", countCompletedItems, countCompletionRequired, caw.Status.Running, caw.Status.Pending)
 
-	if countCompletedItems == countCompletionRequired && caw.Status.Running == 0 && caw.Status.Pending == 0 {
-		if countCompletedItems > 0 && countCompletionRequired > 0 {
+	//Set new status only when completion required flag is present in genericitems array
+	if countCompletedItems > 0 && countCompletionRequired > 0 {
+		if countCompletedItems == countCompletionRequired && caw.Status.Running == 0 && caw.Status.Pending == 0 {
 			return arbv1.AppWrapperStateCompleted
 		}
-	}
 
-	if countCompletedItems == countCompletionRequired && (caw.Status.Pending > 0 || caw.Status.Running > 0) {
-		return arbv1.AppWrapperStateRunningHoldCompletion
+		if countCompletedItems == countCompletionRequired && (caw.Status.Pending > 0 || caw.Status.Running > 0) {
+			return arbv1.AppWrapperStateRunningHoldCompletion
+		}
 	}
 	//return previous condition
 	return caw.Status.State
