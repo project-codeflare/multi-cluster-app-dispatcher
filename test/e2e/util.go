@@ -1607,6 +1607,81 @@ func createGenericJobAWWithStatus(context *context, name string) *arbv1.AppWrapp
 	return appwrapper
 }
 
+func createGenericServiceAWWithNoStatus(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{
+		"apiVersion": "v1",
+		"kind": "Service",
+		"metadata": {
+			"labels": {
+				"appwrapper.mcad.ibm.com": "test-dep-job-item",
+				"resourceName": "test-dep-job-item-svc"
+			},
+			"name": "test-dep-job-item-svc",
+			"namespace": "test"
+		},
+		"spec": {
+			"ports": [
+				{
+					"name": "client",
+					"port": 10001,
+					"protocol": "TCP",
+					"targetPort": 10001
+				},
+				{
+					"name": "dashboard",
+					"port": 8265,
+					"protocol": "TCP",
+					"targetPort": 8265
+				},
+				{
+					"name": "redis",
+					"port": 6379,
+					"protocol": "TCP",
+					"targetPort": 6379
+				}
+			],
+			"selector": {
+				"component": "test-dep-job-item-svc"
+			},
+			"sessionAffinity": "None",
+			"type": "ClusterIP"
+		}
+	}`)
+	//var schedSpecMin int = 1
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "test",
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				//MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-comp-1"),
+							Namespace: "test",
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+						CompletionStatus: "Complete",
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 func createGenericDeploymentAWWithMultipleItems(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "Deployment", 

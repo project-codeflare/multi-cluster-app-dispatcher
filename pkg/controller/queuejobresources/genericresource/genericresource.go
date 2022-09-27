@@ -593,7 +593,7 @@ func getContainerResources(container v1.Container, replicas float64) *clustersta
 	return req
 }
 
-//return value is a string for flexibility of expression
+//returns status of an item present in etcd
 func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGenericResource, namespace string) (completed bool) {
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
@@ -604,11 +604,6 @@ func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGeneric
 	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(aw.GenericTemplate.Raw, nil, nil)
 	if err != nil {
 		klog.Errorf("Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
-	}
-	//service and podgroup has no conditions return and ignore
-	//TODO: make it configurable?
-	if gvk.GroupKind().Kind == "Service" || gvk.GroupKind().Kind == "PodGroup" {
-		return false
 	}
 
 	mapping, err := restmapper.RESTMapping(gvk.GroupKind(), gvk.Version)
@@ -636,6 +631,7 @@ func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGeneric
 		if len(completionRequiredBlock) > 0 {
 			conditions, err := job.Object["status"].(map[string]interface{})["conditions"].([]interface{})
 			//if condition not found skip for this interation
+			//TODO: process error gracefully as error could be due to user error
 			if err {
 				klog.Errorf("Error processing unstructured object")
 			}

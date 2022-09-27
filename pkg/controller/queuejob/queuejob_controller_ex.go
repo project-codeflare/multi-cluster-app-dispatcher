@@ -610,7 +610,7 @@ func (qjm *XController) GetAllObjectsOwned(caw *arbv1.AppWrapper) arbv1.AppWrapp
 			countCompletionRequired = countCompletionRequired + 1
 		}
 	}
-	klog.Infof("countCompletedItems %v, countCompletionRequired %v, podsRunning %v, podsPending %v", countCompletedItems, countCompletionRequired, caw.Status.Running, caw.Status.Pending)
+	klog.V(4).Infof("countCompletedItems %v, countCompletionRequired %v, podsRunning %v, podsPending %v", countCompletedItems, countCompletionRequired, caw.Status.Running, caw.Status.Pending)
 
 	//Set new status only when completion required flag is present in genericitems array
 	if countCompletedItems > 0 && countCompletionRequired > 0 {
@@ -1863,16 +1863,8 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 				return err
 			}
 
-			// Bugfix to eliminate performance problem of overloading the event queue.
-		} else if podPhaseChanges { // Continued bug fix
-			// Only update etcd if AW status has changed.  This can happen for periodic
-			// updates of pod phase counts done in caller of this function.
-			if err := cc.updateEtcd(qj, "manageQueueJob - podPhaseChanges"); err != nil {
-				klog.Errorf("[manageQueueJob] Error updating etc for AW job=%s Status=%+v err=%+v", qj.Name, qj.Status, err)
-			}
 		} else if qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateActive {
 			//set appwrapper status to Complete or RunningHoldCompletion
-
 			derivedAwStatus := cc.GetAllObjectsOwned(qj)
 
 			//Set Appwrapper state to complete if all items in Appwrapper
@@ -1912,6 +1904,14 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 					updateQj = qj.DeepCopy()
 				}
 				cc.updateEtcd(updateQj, "[syncQueueJob] setCompleted")
+			}
+
+			// Bugfix to eliminate performance problem of overloading the event queue.
+		} else if podPhaseChanges { // Continued bug fix
+			// Only update etcd if AW status has changed.  This can happen for periodic
+			// updates of pod phase counts done in caller of this function.
+			if err := cc.updateEtcd(qj, "manageQueueJob - podPhaseChanges"); err != nil {
+				klog.Errorf("[manageQueueJob] Error updating etc for AW job=%s Status=%+v err=%+v", qj.Name, qj.Status, err)
 			}
 		}
 		// Finish adding qj to Etcd for dispatch
