@@ -10,7 +10,7 @@ This integration will help in queuing on [kuberay](https://github.com/ray-projec
 
 #### Steps
 
-- Install kuberay operator from [link] (https://docs.ray.io/en/latest/cluster/kubernetes/getting-started.html#deploying-the-kuberay-operator)
-- Submit ray cluster to MCAD as appwrapper using the config file `aw-raycluster.yaml` present in the same directory using command `kubectl create -f aw-raycluster.yaml.yaml`
+- Install kuberay operator from [link](https://docs.ray.io/en/latest/cluster/kubernetes/getting-started.html#deploying-the-kuberay-operator)
+- Submit ray cluster to MCAD as appwrapper using the config file `aw-raycluster.yaml` present in the `config` directory using command `kubectl create -f aw-raycluster.yaml`
 - Check the status of the appwrapper using command `kubectl describe appwrapper <your-appwrapper-name>`
 - Check running pods using command `kubectl get pods -n <your-name-space>`
