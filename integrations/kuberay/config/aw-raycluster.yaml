@@ -1,0 +1,130 @@
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: raycluster-autoscaler
+  namespace: default
+spec:
+  resources:
+    Items: []
+    GenericItems:
+    - replicas: 1
+      custompodresources:
+      - replicas: 2
+        requests:
+          cpu: 1
+          memory: 512Mi
+        limits:
+          cpu: 1
+          memory: 1G
+      generictemplate:
+        apiVersion: v1
+        items:
+        - apiVersion: ray.io/v1alpha1
+          kind: RayCluster
+          metadata:
+            labels:
+              controller-tools.k8s.io: "1.0"
+            name: raycluster-autoscaler
+            namespace: default
+          spec:
+            autoscalerOptions:
+              idleTimeoutSeconds: 60
+              imagePullPolicy: Always
+              resources:
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+                requests:
+                  cpu: 500m
+                  memory: 512Mi
+              upscalingMode: Default
+            enableInTreeAutoscaling: true
+            headGroupSpec:
+              rayStartParams:
+                block: "true"
+                dashboard-host: 0.0.0.0
+              serviceType: ClusterIP
+              template:
+                spec:
+                  containers:
+                  - image: rayproject/ray:2.0.0
+                    imagePullPolicy: Always
+                    lifecycle:
+                      preStop:
+                        exec:
+                          command:
+                          - /bin/sh
+                          - -c
+                          - ray stop
+                    name: ray-head
+                    ports:
+                    - containerPort: 6379
+                      name: gcs
+                      protocol: TCP
+                    - containerPort: 8265
+                      name: dashboard
+                      protocol: TCP
+                    - containerPort: 10001
+                      name: client
+                      protocol: TCP
+                    resources:
+                      limits:
+                        cpu: "1"
+                        memory: 1G
+                      requests:
+                        cpu: 500m
+                        memory: 512Mi
+            rayVersion: 2.0.0
+            workerGroupSpecs:
+            - groupName: small-group
+              maxReplicas: 300
+              minReplicas: 1
+              rayStartParams:
+                block: "true"
+              replicas: 1
+              template:
+                metadata:
+                  annotations:
+                    key: value
+                  labels:
+                    key: value
+                spec:
+                  containers:
+                  - image: rayproject/ray:2.0.0
+                    lifecycle:
+                      preStop:
+                        exec:
+                          command:
+                          - /bin/sh
+                          - -c
+                          - ray stop
+                    name: machine-learning
+                    resources:
+                      limits:
+                        cpu: "1"
+                        memory: 512Mi
+                      requests:
+                        cpu: 500m
+                        memory: 256Mi
+                  initContainers:
+                  - command:
+                    - sh
+                    - -c
+                    - until nslookup $RAY_IP.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local;
+                      do echo waiting for myservice; sleep 2; done
+                    image: busybox:1.28
+                    name: init-myservice
+          status:
+            availableWorkerReplicas: 2
+            desiredWorkerReplicas: 1
+            endpoints:
+              client: "10001"
+              dashboard: "8265"
+              gcs: "6379"
+            lastUpdateTime: "2022-09-26T14:17:54Z"
+            maxWorkerReplicas: 300
+            minWorkerReplicas: 1
+            state: ready
+        kind: List
+        metadata:
+          resourceVersion: ""
