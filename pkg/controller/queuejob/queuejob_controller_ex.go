@@ -592,22 +592,26 @@ func (qjm *XController) GetAllObjectsOwned(caw *arbv1.AppWrapper) arbv1.AppWrapp
 	countCompletedItems := 0
 	countCompletionRequired := 0
 	for _, genericItem := range caw.Spec.AggrResources.GenericItems {
-		objectName := genericItem.GenericTemplate
-		var unstruct unstructured.Unstructured
-		unstruct.Object = make(map[string]interface{})
-		var blob interface{}
-		if err := jsons.Unmarshal(objectName.Raw, &blob); err != nil {
-			klog.Errorf("Error unmarshalling, err=%#v", err)
-		}
-
-		status := qjm.genericresources.GetGenericItemKindStatus(&genericItem, caw.Namespace)
-		if status {
-			countCompletedItems = countCompletedItems + 1
-		}
-
-		//only consider count completion required for valid items
 		if len(genericItem.CompletionStatus) > 0 {
+			objectName := genericItem.GenericTemplate
+			var unstruct unstructured.Unstructured
+			unstruct.Object = make(map[string]interface{})
+			var blob interface{}
+			if err := jsons.Unmarshal(objectName.Raw, &blob); err != nil {
+				klog.Errorf("Error unmarshalling, err=%#v", err)
+			}
+
+			status := qjm.genericresources.GetGenericItemKindStatus(&genericItem, caw.Namespace)
+			if status {
+				countCompletedItems = countCompletedItems + 1
+				//early termination because a required item is not completed
+			} else {
+				return caw.Status.State
+			}
+
+			//only consider count completion required for valid items
 			countCompletionRequired = countCompletionRequired + 1
+
 		}
 	}
 	klog.V(4).Infof("countCompletedItems %v, countCompletionRequired %v, podsRunning %v, podsPending %v", countCompletedItems, countCompletionRequired, caw.Status.Running, caw.Status.Pending)

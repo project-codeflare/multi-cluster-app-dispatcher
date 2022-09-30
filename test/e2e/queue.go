@@ -535,7 +535,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
-	FIt("MCAD Service no RuningHoldCompletion or Complete Test", func() {
+	It("MCAD Service no RuningHoldCompletion or Complete Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Service no RuningHoldCompletion or Complete Test - Started.\n")
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
