@@ -363,4 +363,4 @@ kube-test-env-up
 cd ${ROOT_DIR}
 
 echo "==========================>>>>> Running E2E tests... <<<<<=========================="
-go test ./test/e2e -v -timeout 30m
+go test ./test/e2e -v -timeout 35m
