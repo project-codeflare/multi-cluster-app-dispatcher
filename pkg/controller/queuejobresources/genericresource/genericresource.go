@@ -594,7 +594,7 @@ func getContainerResources(container v1.Container, replicas float64) *clustersta
 }
 
 //returns status of an item present in etcd
-func (gr *GenericResources) GetGenericItemKindStatus(aw *arbv1.AppWrapperGenericResource, namespace string) (completed bool) {
+func (gr *GenericResources) IsItemCompleted(aw *arbv1.AppWrapperGenericResource, namespace string) (completed bool) {
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
