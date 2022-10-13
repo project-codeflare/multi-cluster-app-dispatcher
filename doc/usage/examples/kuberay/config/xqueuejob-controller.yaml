@@ -1,0 +1,76 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    meta.helm.sh/release-name: mcad
+    meta.helm.sh/release-namespace: kube-system
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  creationTimestamp: "2022-09-26T14:38:29Z"
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: system:controller:xqueuejob-controller
+  resourceVersion: "516188"
+  uid: cff865b6-db8f-4bf5-ae28-c281e5599b91
+rules:
+- apiGroups:
+  - mcad.ibm.com
+  resources:
+  - xqueuejobs
+  - queuejobs
+  - schedulingspecs
+  - appwrappers
+  - appwrappers/finalizers
+  - appwrappers/status
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumes
+  - namespaces
+#for ray resources
+  - lists
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - scheduling.sigs.k8s.io
+  resources:
+  - podgroups
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+#for ray resources
+- apiGroups:
+  - ray.io
+  resources:
+  - rayclusters
+  - rayclusters/finalizers
+  - rayclusters/status
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
