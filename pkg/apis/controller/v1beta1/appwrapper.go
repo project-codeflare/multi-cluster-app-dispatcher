@@ -171,6 +171,9 @@ type AppWrapperGenericResource struct {
 	//Optional section that specifies resource requirements for non-standard k8s resources, follows same format as that
 	// of standard k8s resources
 	CustomPodResources []CustomPodResourceTemplate `json:"custompodresources,omitempty"`
+
+	//Optional field for users to determine completion status of item
+	CompletionStatus string `json:"completionstatus,omitempty"`
 }
 
 type CustomPodResourceTemplate struct {
@@ -263,25 +266,29 @@ type AppWrapperState string
 
 //enqueued, active, deleting, succeeded, failed
 const (
-	AppWrapperStateEnqueued AppWrapperState = "Pending"
-	AppWrapperStateActive   AppWrapperState = "Running"
-	AppWrapperStateDeleted  AppWrapperState = "Deleted"
-	AppWrapperStateFailed   AppWrapperState = "Failed"
+	AppWrapperStateEnqueued              AppWrapperState = "Pending"
+	AppWrapperStateActive                AppWrapperState = "Running"
+	AppWrapperStateDeleted               AppWrapperState = "Deleted"
+	AppWrapperStateFailed                AppWrapperState = "Failed"
+	AppWrapperStateCompleted             AppWrapperState = "Completed"
+	AppWrapperStateRunningHoldCompletion AppWrapperState = "RunningHoldCompletion"
 )
 
 type AppWrapperConditionType string
 
 const (
-	AppWrapperCondInit             AppWrapperConditionType = "Init"
-	AppWrapperCondQueueing         AppWrapperConditionType = "Queueing"
-	AppWrapperCondHeadOfLine       AppWrapperConditionType = "HeadOfLine"
-	AppWrapperCondBackoff          AppWrapperConditionType = "Backoff"
-	AppWrapperCondDispatched       AppWrapperConditionType = "Dispatched"
-	AppWrapperCondRunning          AppWrapperConditionType = "Running"
-	AppWrapperCondPreemptCandidate AppWrapperConditionType = "PreemptCandidate"
-	AppWrapperCondPreempted        AppWrapperConditionType = "Preempted"
-	AppWrapperCondDeleted          AppWrapperConditionType = "Deleted"
-	AppWrapperCondFailed           AppWrapperConditionType = "Failed"
+	AppWrapperCondInit                  AppWrapperConditionType = "Init"
+	AppWrapperCondQueueing              AppWrapperConditionType = "Queueing"
+	AppWrapperCondHeadOfLine            AppWrapperConditionType = "HeadOfLine"
+	AppWrapperCondBackoff               AppWrapperConditionType = "Backoff"
+	AppWrapperCondDispatched            AppWrapperConditionType = "Dispatched"
+	AppWrapperCondRunning               AppWrapperConditionType = "Running"
+	AppWrapperCondPreemptCandidate      AppWrapperConditionType = "PreemptCandidate"
+	AppWrapperCondPreempted             AppWrapperConditionType = "Preempted"
+	AppWrapperCondDeleted               AppWrapperConditionType = "Deleted"
+	AppWrapperCondFailed                AppWrapperConditionType = "Failed"
+	AppWrapperCondCompleted             AppWrapperConditionType = "Completed"
+	AppWrapperCondRunningHoldCompletion AppWrapperConditionType = "RunningHoldCompletion"
 )
 
 // DeploymentCondition describes the state of a deployment at a certain point.

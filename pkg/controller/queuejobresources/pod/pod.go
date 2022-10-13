@@ -247,7 +247,7 @@ func (qjrPod *QueueJobResPod) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) e
 	succeeded := int32(queuejobresources.FilterPods(pods, v1.PodSucceeded))
 	failed := int32(queuejobresources.FilterPods(pods, v1.PodFailed))
 	podsConditionMap := queuejobresources.PendingPodsFailedSchd(pods)
-	klog.Infof("[UpdateQueueJobStatus] There are %d pods of AppWrapper %s:  pending %d, running %d, succeeded %d, failed %d, pendingpodsfailedschd %d",
+	klog.V(10).Infof("[UpdateQueueJobStatus] There are %d pods of AppWrapper %s:  pending %d, running %d, succeeded %d, failed %d, pendingpodsfailedschd %d",
 		len(pods), queuejob.Name, pending, running, succeeded, failed, len(podsConditionMap))
 
 	queuejob.Status.Pending = pending
