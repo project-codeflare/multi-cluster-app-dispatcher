@@ -34,7 +34,8 @@ import (
 	"fmt"
 	"math"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/klog/v2"
 )
 
 type Resource struct {
@@ -97,7 +98,8 @@ func (r *Resource) IsZero(rn v1.ResourceName) bool {
 	case GPUResourceName:
 		return r.GPU == 0
 	default:
-		panic("unknown resource")
+		klog.Error("unknown resource %v", rn)
+		return false
 	}
 }
 
@@ -117,15 +119,7 @@ func (r *Resource) Replace(rr *Resource) *Resource {
 
 //Sub subtracts two Resource objects.
 func (r *Resource) Sub(rr *Resource) *Resource {
-	if rr.LessEqual(r) {
-		r.MilliCPU -= rr.MilliCPU
-		r.Memory -= rr.Memory
-		r.GPU -= rr.GPU
-		return r
-	}
-
-	panic(fmt.Errorf("Resource is not sufficient to do operation: <%v> sub <%v>",
-		r, rr))
+	return r.NonNegSub(rr)
 }
 
 //Sub subtracts two Resource objects and return zero for negative subtractions.
@@ -174,7 +168,8 @@ func (r *Resource) Get(rn v1.ResourceName) float64 {
 	case GPUResourceName:
 		return float64(r.GPU)
 	default:
-		panic("not support resource.")
+		klog.Error("not supported resource %v", rn)
+		return 0.0
 	}
 }
 
