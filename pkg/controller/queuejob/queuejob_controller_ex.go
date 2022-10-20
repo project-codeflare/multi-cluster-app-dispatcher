@@ -1644,7 +1644,7 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 		//Make a copy first to not update cache object and to use for comparing
 		awNew := qj.DeepCopy()
 		// we call sync to update pods running, pending,...
-		if qj.Status.State == arbv1.AppWrapperStateActive {
+		if qj.Status.State == arbv1.AppWrapperStateActive || qj.Status.State == arbv1.AppWrapperStateRunningHoldCompletion || qj.Status.State == arbv1.AppWrapperStateCompleted {
 			err := cc.qjobResControls[arbv1.ResourceTypePod].UpdateQueueJobStatus(awNew)
 			if err != nil {
 				klog.Errorf("[syncQueueJob] Error updating pod status counts for AppWrapper job: %s, err=%+v", qj.Name, err)
