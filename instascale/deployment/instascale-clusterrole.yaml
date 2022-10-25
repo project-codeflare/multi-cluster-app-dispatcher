@@ -1,9 +1,21 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: instascale-cr
 rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - list
+  - watch
+  - get
+  - create
+  - update
+  - delete
+  - patch
+
 - apiGroups:
   - apps
   resources:
@@ -15,7 +27,7 @@ rules:
 - apiGroups:
   - machine.openshift.io
   resources:
-  - machinesets
+  - "*"
   verbs:
   - list
   - watch
@@ -24,6 +36,7 @@ rules:
   - update
   - delete
   - patch
+
 - apiGroups:
   - mcad.ibm.com
   resources:

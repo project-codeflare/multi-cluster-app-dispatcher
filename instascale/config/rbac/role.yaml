@@ -6,6 +6,24 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - apps
+  resources:
+  - machineset
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - machineset/status
+  verbs:
+  - get
+- apiGroups:
   - instascale.ibm.com.instascale.ibm.com
   resources:
   - appwrappers
