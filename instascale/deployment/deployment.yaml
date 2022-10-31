@@ -1,7 +1,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   labels:
     app: instascale
   name: instascale
@@ -11,16 +10,19 @@ spec:
   selector:
     matchLabels:
       app: instascale
-  strategy: {}
   template:
     metadata:
-      creationTimestamp: null
       labels:
         app: instascale
     spec:
       containers:
       - image: asm582/instascale:latest
         name: instascale
-        resources: {}
+        resources:
+          limits:
+            cpu: "2"
+            memory: "2G"
+          requests:
+            cpu: "2"
+            memory: "2G"
       serviceAccountName: instascale-sa
-status: {}
