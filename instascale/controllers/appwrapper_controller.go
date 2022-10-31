@@ -19,9 +19,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"os"
-	"sort"
 	"strings"
 	"time"
 
@@ -54,17 +54,14 @@ type AppWrapperReconciler struct {
 
 //var nodeCache []string
 var scaledAppwrapper []string
-var (
-	instanceTypeGPUMap = make(map[int]string)
-)
 
 const (
-	namespaceToList    = "openshift-machine-api"
-	minResyncPeriod    = 10 * time.Minute
-	kubeconfig         = ""
-	maxScaleOutAllowed = 11
+	namespaceToList = "openshift-machine-api"
+	minResyncPeriod = 10 * time.Minute
+	kubeconfig      = ""
 )
 
+var maxScaleNodesAllowed int
 var msLister v1beta1.MachineSetLister
 var msInformerHasSynced bool
 var machineClient mapiclientset.Interface
@@ -119,7 +116,17 @@ func (r *AppWrapperReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	factory := machineinformersv1beta1.NewSharedInformerFactoryWithOptions(machineClient, resyncPeriod()(), machineinformersv1beta1.WithNamespace(""))
 	informer := factory.Machine().V1beta1().MachineSets().Informer()
 	msLister = factory.Machine().V1beta1().MachineSets().Lister()
-
+	nodesTobeadded, err := kubeClient.CoreV1().ConfigMaps("kube-system").Get(ctx, "instascale-config", metav1.GetOptions{})
+	if err != nil {
+		klog.Infof("Config map named instascale-config is not available in namespace kube-system")
+	}
+	for _, v := range nodesTobeadded.Data {
+		if maxScaleNodesAllowed, err = strconv.Atoi(v); err != nil {
+			klog.Infof("Error configuring value of configmap %v using value  3", maxScaleNodesAllowed)
+			maxScaleNodesAllowed = 3
+		}
+	}
+	klog.Infof("Got config map named: %v that configures max nodes in cluster to value %v", nodesTobeadded.Name, maxScaleNodesAllowed)
 	stopper := make(chan struct{})
 	defer close(stopper)
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -180,27 +187,31 @@ func addAppwrappersThatNeedScaling() {
 	defer close(stopCh)
 	go queueJobInformer.Informer().Run(stopCh)
 	cache.WaitForCacheSync(stopCh, queueJobSynced)
-	queuedJobs, err := queueJobLister.AppWrappers("").List(labels.Everything())
-	if err != nil {
-		klog.Fatalf("Error listing: %v", err)
-	}
+	// queuedJobs, err := queueJobLister.AppWrappers("").List(labels.Everything())
+	// if err != nil {
+	// 	klog.Fatalf("Error listing: %v", err)
+	// }
 
-	klog.Infof("length of queued AW is: %d", len(queuedJobs))
+	//klog.Infof("length of queued AW is: %d", len(queuedJobs))
 
 	<-stopCh
 }
 
 func canScale(demandPerInstanceType map[string]int) bool {
-	var totalReplicas int32
-	allMachineSet, _ := msLister.MachineSets("").List(labels.Everything())
-	for _, aMachineSet := range allMachineSet {
-		totalReplicas += *(aMachineSet.Spec.Replicas)
+	//init for 3 since cluster has 3 master nodes
+	var totalNodes int32 = 3
+	allMachineSet, err := msLister.MachineSets("").List(labels.Everything())
+	if err != nil {
+		klog.Infof("Error listing a machineset, %v", err)
 	}
-	for _, v := range demandPerInstanceType {
-		totalReplicas += int32(v)
+	for _, aMachine := range allMachineSet {
+		totalNodes += *aMachine.Spec.Replicas
 	}
-	klog.Infof("The nodes allowed: %v and total nodes in cluster after node scale-out %v", maxScaleOutAllowed, totalReplicas)
-	return totalReplicas < maxScaleOutAllowed
+	for _, count := range demandPerInstanceType {
+		totalNodes += int32(count)
+	}
+	klog.Infof("The nodes allowed: %v and total nodes in cluster after node scale-out %v", maxScaleNodesAllowed, totalNodes)
+	return totalNodes < int32(maxScaleNodesAllowed)
 }
 
 // onAdd is the function executed when the kubernetes informer notified the
@@ -208,13 +219,15 @@ func canScale(demandPerInstanceType map[string]int) bool {
 func onAdd(obj interface{}) {
 	aw, ok := obj.(*arbv1.AppWrapper)
 	if ok {
-		klog.Infof("Added Appwrapper named %s", aw.Name)
-		//scaledAppwrapper = append(scaledAppwrapper, aw.Name)
-		demandPerInstanceType := discoverInstanceTypes(aw)
-		if canScale(demandPerInstanceType) {
-			scaleUp(aw, demandPerInstanceType)
-		} else {
-			klog.Infof("Cannot scale up replicas max replicas allowed is %v", maxScaleOutAllowed)
+		klog.Infof("Found Appwrapper named %s that has status %v", aw.Name, aw.Status.State)
+		if aw.Status.State == arbv1.AppWrapperStateEnqueued || aw.Status.State == "" {
+			//scaledAppwrapper = append(scaledAppwrapper, aw.Name)
+			demandPerInstanceType := discoverInstanceTypes(aw)
+			if canScale(demandPerInstanceType) {
+				scaleUp(aw, demandPerInstanceType)
+			} else {
+				klog.Infof("Cannot scale up replicas max replicas allowed is %v", maxScaleNodesAllowed)
+			}
 		}
 
 	}
@@ -249,7 +262,7 @@ func onUpdate(old, new interface{}) {
 			if canScale(demandPerInstanceType) {
 				scaleUp(aw, demandPerInstanceType)
 			} else {
-				klog.Infof("Cannot scale up replicas max replicas allowed is %v", maxScaleOutAllowed)
+				klog.Infof("Cannot scale up replicas max replicas allowed is %v", maxScaleNodesAllowed)
 			}
 		}
 
@@ -259,139 +272,103 @@ func onUpdate(old, new interface{}) {
 
 func discoverInstanceTypes(aw *arbv1.AppWrapper) map[string]int {
 	demandMapPerInstanceType := make(map[string]int)
-	//Init Machineset
-	instanceTypeGPUMap[1] = "g4dn.xlarge"
-	instanceTypeGPUMap[4] = "p3.8xlarge"
-	instanceTypeGPUMap[8] = "p3.16xlarge"
-
-	for _, genericItem := range aw.Spec.AggrResources.GenericItems {
-		itemsList, _ := GetListOfPodResourcesFromOneGenericItem(&genericItem)
-		//klog.Infof("The custompod resources in item list are: %v", itemsList)
-		for i := 0; i < len(itemsList); i++ {
-			if itemsList[i].GPU == 0 {
-				//TODO need to consider CPU resource for scaling
-				//klog.Info("Found CPU only container or pod")
-				//hard-coding CPU instance type to one
-				demandMapPerInstanceType["m4.large"] = 1
-			} else {
-				//klog.Info("Found GPU container or pod")
-				//klog.Infof("The length of instance GPU map is: %d", len(instanceTypeGPUMap))
-				keys := make([]int, 0, len(instanceTypeGPUMap))
-				for k := range instanceTypeGPUMap {
-					keys = append(keys, k)
-				}
-				sort.Ints(keys)
-				//var foundMatchingInstanceType bool
-				for _, k := range keys {
-					//klog.Infof("GPU from  yaml %d and GPU from instance %d", itemsList[i].GPU, numGpuPerInstance)
-					if itemsList[i].GPU <= int64(k) {
-						instanceName := instanceTypeGPUMap[k]
-						//klog.Infof("Need instance type: %s", instanceName)
-						if val, ok := demandMapPerInstanceType[instanceName]; ok {
-							demandMapPerInstanceType[instanceName] = val + 1
-						} else {
-							demandMapPerInstanceType[instanceName] = 1
-						}
-						//Need one instance type, stop if found one
-						//foundMatchingInstanceType = true
-						break
-					}
-
-				}
-			}
+	var instanceRequired []string
+	for k, v := range aw.Labels {
+		if k == "orderedinstance" {
+			instanceRequired = strings.Split(v, "_")
 		}
 	}
-	//klog.Infof("The demand vector is %v", demandMapPerInstanceType)
+	//instanceRequired := res[len(res)-1]
+	//klog.Infof("Extracting instance name from AW name %v and using %v", aw.Name, instanceRequired)
+
+	for _, genericItem := range aw.Spec.AggrResources.GenericItems {
+		for idx, val := range genericItem.CustomPodResources {
+			instanceName := instanceRequired[idx]
+			demandMapPerInstanceType[instanceName] = val.Replicas
+		}
+	}
+	//klog.Infof("the demand map is %v", demandMapPerInstanceType)
 	return demandMapPerInstanceType
 }
 
 func scaleUp(aw *arbv1.AppWrapper, demandMapPerInstanceType map[string]int) {
-	//Demand
-	for _, numReplicas := range demandMapPerInstanceType {
-		//klog.Infof("The key : %s and value: %d", instanceName, numReplicas)
-		if msInformerHasSynced {
-			allMachineSet, err := msLister.MachineSets("").List(labels.Everything())
-			if err != nil {
-				klog.Infof("Error listing a machineset, %v", err)
+	if msInformerHasSynced {
+		//Assumption is made that the cluster has machineset configure that AW needs
+		for userRequestedInstanceType := range demandMapPerInstanceType {
+			//TODO: get unique machineset
+			replicas := demandMapPerInstanceType[userRequestedInstanceType]
+			scaleMachineSet(aw, userRequestedInstanceType, replicas)
+		}
+		klog.Infof("Completed Scaling for %v", aw.Name)
+		scaledAppwrapper = append(scaledAppwrapper, aw.Name)
+	}
+
+}
+
+func scaleMachineSet(aw *arbv1.AppWrapper, userRequestedInstanceType string, replicas int) {
+	allMachineSet, err := msLister.MachineSets("").List(labels.Everything())
+	if err != nil {
+		klog.Infof("Error listing a machineset, %v", err)
+	}
+	for _, aMachineSet := range allMachineSet {
+		providerConfig, err := ProviderSpecFromRawExtension(aMachineSet.Spec.Template.Spec.ProviderSpec.Value)
+		if err != nil {
+			klog.Infof("Error retrieving provider config %v", err)
+		}
+		if userRequestedInstanceType == providerConfig.InstanceType {
+			//klog.Infof("working on %v", userRequestedInstanceType)
+			copyOfaMachineSet := aMachineSet.DeepCopy()
+			//updatedReplicas := currentReplicas + replicas
+			replicas := int32(replicas)
+			copyOfaMachineSet.Spec.Replicas = &replicas
+			copyOfaMachineSet.ResourceVersion = ""
+			copyOfaMachineSet.Spec.Template.Spec.Taints = []corev1.Taint{{Key: aw.Name, Value: "value1", Effect: "PreferNoSchedule"}}
+			copyOfaMachineSet.Name = aw.Name + "-" + userRequestedInstanceType
+			copyOfaMachineSet.Spec.Template.Labels = map[string]string{
+				aw.Name: aw.Name,
 			}
-			for _, aMachineSet := range allMachineSet {
-				// providerConfig, err := ProviderSpecFromRawExtension(aMachineSet.Spec.Template.Spec.ProviderSpec.Value)
-				// if err != nil {
-				// 	klog.Info(err)
-				// }
-				// if aMachineSet.Name == aw.Name {
-				// 	klog.Infof("already scaled-up for appwrapper")
-				// 	continue
-				// }
-				//klog.Infof("The providerspec is %v", providerConfig.InstanceType)
-				//klog.Infof("Got replicas %d", numReplicas)
-				//currentReplicas := *aMachineSet.Spec.Replicas
-				//klog.Infof("Current machine count for %s machineset is %v", aMachineSet.Name, *aMachineSet.Spec.Replicas)
-				//make copy of object from lister and update, NOTE not going to API server
-				copyOfaMachineSet := aMachineSet.DeepCopy()
-				//updatedReplicas := currentReplicas + replicas
-				replicas := int32(numReplicas)
-				copyOfaMachineSet.Spec.Replicas = &replicas
-				copyOfaMachineSet.ResourceVersion = ""
-				copyOfaMachineSet.Spec.Template.Spec.Taints = []corev1.Taint{{Key: aw.Name, Value: "value1", Effect: "PreferNoSchedule"}}
-				copyOfaMachineSet.Name = aw.Name
-				copyOfaMachineSet.Spec.Template.Labels = map[string]string{
-					"role": aw.Name,
-				}
-				workerLabels := map[string]string{
-					"role": aw.Name,
-				}
-				copyOfaMachineSet.Spec.Selector = metav1.LabelSelector{
-					MatchLabels: workerLabels,
-				}
-				copyOfaMachineSet.Labels["aw"] = aw.Name
-				//klog.Infof("Lables are %v", copyOfaMachineSet.Labels)
-				ms, err := machineClient.MachineV1beta1().MachineSets(namespaceToList).Create(context.Background(), copyOfaMachineSet, metav1.CreateOptions{})
-				if err != nil {
-					klog.Infof("Error creating machineset %v", err)
-					return
-				}
-				//wait until all replicas are available
-				for (replicas - ms.Status.AvailableReplicas) != 0 {
-					//TODO: user can delete appwrapper work on triggering scale-down
-					klog.Infof("waiting for machines to be in state Ready. replicas needed: %v and replicas available: %v", replicas, ms.Status.AvailableReplicas)
-					time.Sleep(1 * time.Minute)
-					ms, _ = machineClient.MachineV1beta1().MachineSets(namespaceToList).Get(context.Background(), copyOfaMachineSet.Name, metav1.GetOptions{})
-					klog.Infof("Querying machinset %v to get updated replicas", ms.Name)
-				}
-				klog.Infof("Machines are available. replicas needed: %v and replicas available: %v", replicas, ms.Status.AvailableReplicas)
-				//allMachines := &machinev1.MachineList{}
-				allMachines, errm := machineClient.MachineV1beta1().Machines(namespaceToList).List(context.Background(), metav1.ListOptions{})
-				if errm != nil {
-					klog.Infof("Error creating machineset: %v", errm)
-				}
-				klog.Infof("Total number of machines %v in the cluster are", len(allMachines.Items))
-				//map machines to machinesets?
-				for idx := range allMachines.Items {
-					//klog.Infof("Inside for loop ")
-					machine := &allMachines.Items[idx]
-					for k, _ := range machine.Labels {
-						if k == "role" {
-							nodeName := machine.Status.NodeRef.Name
-							labelPatch := fmt.Sprintf(`[{"op":"add","path":"/metadata/labels/%s","value":"%s" }]`, "role", aw.Name)
-							ms, err := kubeClient.CoreV1().Nodes().Patch(context.Background(), nodeName, types.JSONPatchType, []byte(labelPatch), metav1.PatchOptions{})
-							//klog.Infof("The error is %v", err)
-							//klog.Infof("Got ms %v", ms)
-							if len(ms.Labels) > 0 && err == nil {
-								klog.Infof("label added to node %v, for scaling %v", nodeName, copyOfaMachineSet.Name)
-							}
+			workerLabels := map[string]string{
+				aw.Name: aw.Name,
+			}
+			copyOfaMachineSet.Spec.Selector = metav1.LabelSelector{
+				MatchLabels: workerLabels,
+			}
+			copyOfaMachineSet.Labels["aw"] = aw.Name
+			ms, err := machineClient.MachineV1beta1().MachineSets(namespaceToList).Create(context.Background(), copyOfaMachineSet, metav1.CreateOptions{})
+			if err != nil {
+				klog.Infof("Error creating machineset %v", err)
+				return
+			}
+			//wait until all replicas are available
+			for (replicas - ms.Status.AvailableReplicas) != 0 {
+				//TODO: user can delete appwrapper work on triggering scale-down
+				klog.Infof("waiting for machines to be in state Ready. replicas needed: %v and replicas available: %v", replicas, ms.Status.AvailableReplicas)
+				time.Sleep(1 * time.Minute)
+				ms, _ = machineClient.MachineV1beta1().MachineSets(namespaceToList).Get(context.Background(), copyOfaMachineSet.Name, metav1.GetOptions{})
+				klog.Infof("Querying machinset %v to get updated replicas", ms.Name)
+			}
+			klog.Infof("Machines are available. replicas needed: %v and replicas available: %v", replicas, ms.Status.AvailableReplicas)
+			allMachines, errm := machineClient.MachineV1beta1().Machines(namespaceToList).List(context.Background(), metav1.ListOptions{})
+			if errm != nil {
+				klog.Infof("Error creating machineset: %v", errm)
+			}
+			//map machines to machinesets?
+			for idx := range allMachines.Items {
+				machine := &allMachines.Items[idx]
+				for k, _ := range machine.Labels {
+					if k == aw.Name {
+						nodeName := machine.Status.NodeRef.Name
+						labelPatch := fmt.Sprintf(`[{"op":"add","path":"/metadata/labels/%s","value":"%s" }]`, aw.Name, aw.Name)
+						ms, err := kubeClient.CoreV1().Nodes().Patch(context.Background(), nodeName, types.JSONPatchType, []byte(labelPatch), metav1.PatchOptions{})
+						if len(ms.Labels) > 0 && err == nil {
+							klog.Infof("label added to node %v, for scaling %v", nodeName, copyOfaMachineSet.Name)
 						}
 					}
 				}
-				klog.Infof("Completed Scaling")
-				scaledAppwrapper = append(scaledAppwrapper, aw.Name)
-				break
 			}
-
+			return
 		}
-		break
 	}
-
 }
 
 // func addLabelsToNodes(ms machinev1.MachineSet, aw *arbv1.AppWrapper) {
@@ -416,7 +393,6 @@ func IsAwPending() (false bool, aw *arbv1.AppWrapper) {
 	if err != nil {
 		klog.Fatalf("Error listing: %v", err)
 	}
-	klog.Infof("The queuedJobs array is %v", queuedJobs)
 	for _, aw := range queuedJobs {
 		//skip
 		if contains(scaledAppwrapper, aw.Name) {
@@ -429,7 +405,7 @@ func IsAwPending() (false bool, aw *arbv1.AppWrapper) {
 		//klog.Infof("The conditions are %v", allconditions)
 		for _, condition := range allconditions {
 			if status == "Pending" && strings.Contains(condition.Message, "Insufficient") {
-				klog.Infof("Returning AW name %v", aw.Name)
+				klog.Infof("Pending AppWrapper %v needs scaling", aw.Name)
 				return true, aw
 			}
 		}
@@ -471,9 +447,9 @@ func deleteMachineSet(aw *arbv1.AppWrapper) {
 	allMachineSet, _ := msLister.MachineSets("").List(labels.Everything())
 	for _, aMachineSet := range allMachineSet {
 		//klog.Infof("%v.%v", aMachineSet.Name, aw.Name)
-		if aMachineSet.Name == aw.Name {
+		if strings.Contains(aMachineSet.Name, aw.Name) {
 			//klog.Infof("Deleting machineset named %v", aw.Name)
-			err = machineClient.MachineV1beta1().MachineSets(namespaceToList).Delete(context.Background(), aw.Name, metav1.DeleteOptions{})
+			err = machineClient.MachineV1beta1().MachineSets(namespaceToList).Delete(context.Background(), aMachineSet.Name, metav1.DeleteOptions{})
 			if err == nil {
 				klog.Infof("Delete successful")
 			}
@@ -482,7 +458,7 @@ func deleteMachineSet(aw *arbv1.AppWrapper) {
 }
 
 func scaleDown(aw *arbv1.AppWrapper) {
-	klog.Infof("Inside scale down")
+	//klog.Infof("Inside scale down")
 	deleteMachineSet(aw)
 	//make a seperate slice
 	for idx := range scaledAppwrapper {
