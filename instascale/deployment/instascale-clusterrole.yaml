@@ -7,6 +7,7 @@ rules:
   - ""
   resources:
   - nodes
+  - configmaps
   verbs:
   - list
   - watch
