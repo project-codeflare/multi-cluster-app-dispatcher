@@ -198,20 +198,21 @@ func addAppwrappersThatNeedScaling() {
 }
 
 func canScale(demandPerInstanceType map[string]int) bool {
-	//init for 3 since cluster has 3 master nodes
-	var totalNodes int32 = 3
+	//control plane can include any number of nodes
+	//we count how many additional nodes can be added to the cluster
+	var totalNodesAddedByMachinesets int32 = 0
 	allMachineSet, err := msLister.MachineSets("").List(labels.Everything())
 	if err != nil {
 		klog.Infof("Error listing a machineset, %v", err)
 	}
 	for _, aMachine := range allMachineSet {
-		totalNodes += *aMachine.Spec.Replicas
+		totalNodesAddedByMachinesets += *aMachine.Spec.Replicas
 	}
 	for _, count := range demandPerInstanceType {
-		totalNodes += int32(count)
+		totalNodesAddedByMachinesets += int32(count)
 	}
-	klog.Infof("The nodes allowed: %v and total nodes in cluster after node scale-out %v", maxScaleNodesAllowed, totalNodes)
-	return totalNodes < int32(maxScaleNodesAllowed)
+	klog.Infof("The nodes allowed: %v and total nodes in cluster after node scale-out %v", maxScaleNodesAllowed, totalNodesAddedByMachinesets)
+	return totalNodesAddedByMachinesets < int32(maxScaleNodesAllowed)
 }
 
 // onAdd is the function executed when the kubernetes informer notified the
