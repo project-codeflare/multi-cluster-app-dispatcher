@@ -125,21 +125,28 @@ func (r *Resource) Sub(rr *Resource) *Resource {
 //Sub subtracts two Resource objects and return zero for negative subtractions.
 func (r *Resource) NonNegSub(rr *Resource) *Resource {
 	// Check for negative calculation
+	var isNegative bool
 	if r.MilliCPU < rr.MilliCPU {
 		r.MilliCPU = 0
+		isNegative = true
 	} else {
 		r.MilliCPU -= rr.MilliCPU
 	}
 	if r.Memory < rr.Memory {
 		r.Memory = 0
+		isNegative = true
 	} else {
 		r.Memory -= rr.Memory
 	}
 
 	if r.GPU < rr.GPU {
 		r.GPU = 0
+		isNegative = true
 	} else {
 		r.GPU -= rr.GPU
+	}
+	if isNegative {
+		klog.Error("Resource subtraction resulted in negative value, requested resource: %v, available resource: %v", r, rr)
 	}
 	return r
 }
