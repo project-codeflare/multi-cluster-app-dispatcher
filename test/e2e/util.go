@@ -2965,11 +2965,13 @@ func clusterSize(ctx *context, req v1.ResourceList) int32 {
 
 		// Removed used resources.
 		if res, found := used[node.Name]; found {
-			alloc.Sub(res)
+			_, err := alloc.Sub(res)
+			Expect(err).NotTo(HaveOccurred())
 		}
 
 		for slot.LessEqual(alloc) {
-			alloc.Sub(slot)
+			_, err := alloc.Sub(slot)
+			Expect(err).NotTo(HaveOccurred())
 			res++
 		}
 	}
@@ -3033,11 +3035,13 @@ func computeNode(ctx *context, req v1.ResourceList) (string, int32) {
 
 		// Removed used resources.
 		if res, found := used[node.Name]; found {
-			alloc.Sub(res)
+			_, err := alloc.Sub(res)
+			Expect(err).NotTo(HaveOccurred())
 		}
 
 		for slot.LessEqual(alloc) {
-			alloc.Sub(slot)
+			_, err := alloc.Sub(slot)
+			Expect(err).NotTo(HaveOccurred())
 			res++
 		}
 

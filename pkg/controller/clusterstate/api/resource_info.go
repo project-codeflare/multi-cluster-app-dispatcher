@@ -35,7 +35,6 @@ import (
 	"math"
 
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/klog/v2"
 )
 
 type Resource struct {
@@ -89,17 +88,17 @@ func (r *Resource) IsEmpty() bool {
 	return r.MilliCPU < minMilliCPU && r.Memory < minMemory && r.GPU == 0
 }
 
-func (r *Resource) IsZero(rn v1.ResourceName) bool {
+func (r *Resource) IsZero(rn v1.ResourceName) (bool, error) {
 	switch rn {
 	case v1.ResourceCPU:
-		return r.MilliCPU < minMilliCPU
+		return r.MilliCPU < minMilliCPU, nil
 	case v1.ResourceMemory:
-		return r.Memory < minMemory
+		return r.Memory < minMemory, nil
 	case GPUResourceName:
-		return r.GPU == 0
+		return r.GPU == 0, nil
 	default:
-		klog.Error("unknown resource %v", rn)
-		return false
+		e := fmt.Errorf("unknown resource %v", rn)
+		return false, e
 	}
 }
 
@@ -118,23 +117,29 @@ func (r *Resource) Replace(rr *Resource) *Resource {
 }
 
 //Sub subtracts two Resource objects.
-func (r *Resource) Sub(rr *Resource) *Resource {
+func (r *Resource) Sub(rr *Resource) (*Resource, error) {
 	return r.NonNegSub(rr)
 }
 
 //Sub subtracts two Resource objects and return zero for negative subtractions.
-func (r *Resource) NonNegSub(rr *Resource) *Resource {
+func (r *Resource) NonNegSub(rr *Resource) (*Resource, error) {
 	// Check for negative calculation
 	var isNegative bool
+	var err error = nil
+	var rCopy *Resource = nil
 	if r.MilliCPU < rr.MilliCPU {
 		r.MilliCPU = 0
 		isNegative = true
+		rCopy = r.Clone()
 	} else {
 		r.MilliCPU -= rr.MilliCPU
 	}
 	if r.Memory < rr.Memory {
 		r.Memory = 0
 		isNegative = true
+		if rCopy == nil {
+			rCopy = r.Clone()
+		}
 	} else {
 		r.Memory -= rr.Memory
 	}
@@ -142,13 +147,16 @@ func (r *Resource) NonNegSub(rr *Resource) *Resource {
 	if r.GPU < rr.GPU {
 		r.GPU = 0
 		isNegative = true
+		if rCopy == nil {
+			rCopy = r.Clone()
+		}
 	} else {
 		r.GPU -= rr.GPU
 	}
 	if isNegative {
-		klog.Error("Resource subtraction resulted in negative value, requested resource: %v, available resource: %v", r, rr)
+		err = fmt.Errorf("resource subtraction resulted in negative value, total resource: %v, subtracting resource: %v", rCopy, rr)
 	}
-	return r
+	return r, err
 }
 
 func (r *Resource) Less(rr *Resource) bool {
@@ -166,17 +174,17 @@ func (r *Resource) String() string {
 		r.MilliCPU, r.Memory, r.GPU)
 }
 
-func (r *Resource) Get(rn v1.ResourceName) float64 {
+func (r *Resource) Get(rn v1.ResourceName) (float64, error) {
 	switch rn {
 	case v1.ResourceCPU:
-		return r.MilliCPU
+		return r.MilliCPU, nil
 	case v1.ResourceMemory:
-		return r.Memory
+		return r.Memory, nil
 	case GPUResourceName:
-		return float64(r.GPU)
+		return float64(r.GPU), nil
 	default:
-		klog.Error("not supported resource %v", rn)
-		return 0.0
+		err := fmt.Errorf("resource not supported %v", rn)
+		return 0.0, err
 	}
 }
 

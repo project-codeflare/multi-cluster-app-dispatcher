@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 
 	"github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/utils"
 	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
@@ -224,10 +225,16 @@ func (ps *JobInfo) deleteTaskIndex(ti *TaskInfo) {
 
 func (ps *JobInfo) DeleteTaskInfo(pi *TaskInfo) error {
 	if task, found := ps.Tasks[pi.UID]; found {
-		ps.TotalRequest.Sub(task.Resreq)
+		_, err := ps.TotalRequest.Sub(task.Resreq)
+		if err != nil {
+			klog.Warningf("[DeleteTaskInfo] Total requested subtraction err=%v", err)
+		}
 
 		if AllocatedStatus(task.Status) {
-			ps.Allocated.Sub(task.Resreq)
+			_, err := ps.Allocated.Sub(task.Resreq)
+			if err != nil {
+				klog.Warningf("[DeleteTaskInfo] Allocated subtraction err=%v", err)
+			}
 		}
 
 		delete(ps.Tasks, task.UID)
