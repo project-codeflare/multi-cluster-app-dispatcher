@@ -494,7 +494,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappersPtr := &appwrappers
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
-		aw := createGenericJobAWWithStatus(context, "aw-test-job-with-large-comp-1")
+		aw := createGenericJobAWtWithLargeCompute(context, "aw-test-job-with-large-comp-1")
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred())
 		time.Sleep(1 * time.Minute)
