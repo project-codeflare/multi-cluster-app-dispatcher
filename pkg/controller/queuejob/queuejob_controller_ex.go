@@ -880,7 +880,7 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 
 	klog.V(6).Infof("[getAggAvaiResPri] Schedulable idle cluster resources: %+v, subtracting dispatched resources: %+v and adding preemptable cluster resources: %+v", r, pending, preemptable)
 	r = r.Add(preemptable)
-	r = r.NonNegSub(pending)
+	r, _ = r.NonNegSub(pending)
 
 	klog.V(3).Infof("[getAggAvaiResPri] %+v available resources to schedule", r)
 	return r, proposedPremptions

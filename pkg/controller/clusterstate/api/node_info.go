@@ -121,7 +121,11 @@ func (ni *NodeInfo) SetNode(node *v1.Node) {
 				ni.Releasing.Add(task.Resreq)
 			}
 
-			ni.Idle.Sub(task.Resreq)
+			_, err := ni.Idle.Sub(task.Resreq)
+			if err != nil {
+				klog.Warningf("[SetNode] Node idle amount subtraction err=%v", err)
+			}
+
 			ni.Used.Add(task.Resreq)
 		}
 	}
@@ -145,7 +149,11 @@ func (ni *NodeInfo) PipelineTask(task *TaskInfo) error {
 	ti := task.Clone()
 
 	if ni.Node != nil {
-		ni.Releasing.Sub(ti.Resreq)
+		_, err := ni.Releasing.Sub(ti.Resreq)
+		if err != nil {
+			klog.Warningf("[PipelineTask] Node release subtraction err=%v", err)
+		}
+
 		ni.Used.Add(ti.Resreq)
 	}
 
@@ -169,7 +177,11 @@ func (ni *NodeInfo) AddTask(task *TaskInfo) error {
 		if ti.Status == Releasing {
 			ni.Releasing.Add(ti.Resreq)
 		}
-		ni.Idle.Sub(ti.Resreq)
+		_, err := ni.Idle.Sub(ti.Resreq)
+		if err != nil {
+			klog.Warningf("[AddTask] Idle resource subtract err=%v", err)
+		}
+
 		ni.Used.Add(ti.Resreq)
 	}
 
@@ -192,11 +204,17 @@ func (ni *NodeInfo) RemoveTask(ti *TaskInfo) error {
 	if ni.Node != nil {
 		klog.V(10).Infof("Found node for task: %s, node: %s, task status: %v", task.Name,  ni.Name, task.Status)
 		if task.Status == Releasing {
-			ni.Releasing.Sub(task.Resreq)
+			_, err := ni.Releasing.Sub(task.Resreq)
+			if err != nil {
+				klog.Warningf("[RemoveTask] Node release subtraction err=%v", err)
+			}
 		}
 
 		ni.Idle.Add(task.Resreq)
-		ni.Used.Sub(task.Resreq)
+		_, err := ni.Used.Sub(task.Resreq)
+		if err != nil {
+			klog.Warningf("[RemoveTask] Node usage subtraction err=%v", err)
+		}
 	} else {
 		klog.V(10).Infof("No node info found for task: %s, node: %s", task.Name,  ni.Name)
 	}

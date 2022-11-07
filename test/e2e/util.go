@@ -1607,6 +1607,91 @@ func createGenericJobAWWithStatus(context *context, name string) *arbv1.AppWrapp
 	return appwrapper
 }
 
+func createGenericJobAWtWithLargeCompute(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{
+		"apiVersion": "batch/v1",
+		"kind": "Job",
+		"metadata": {
+			"name": "aw-test-job-with-large-comp-1",
+			"namespace": "test"
+		},
+		"spec": {
+			"completions": 1,
+			"parallelism": 1,
+			"template": {
+				"metadata": {
+					"labels": {
+						"appwrapper.mcad.ibm.com": "aw-test-job-with-large-comp-1"
+					}
+				},
+				"spec": {
+					"containers": [
+						{
+							"args": [
+								"sleep 5"
+							],
+							"command": [
+								"/bin/bash",
+								"-c",
+								"--"
+							],
+							"image": "ubuntu:latest",
+							"imagePullPolicy": "IfNotPresent",
+							"name": "aw-test-job-with-comp-1",
+							"resources": {
+								"limits": {
+									"cpu": "10000m",
+									"memory": "256M",
+									"nvidia.com/gpu": "100"
+								},
+								"requests": {
+									"cpu": "100000m",
+									"memory": "256M",
+									"nvidia.com/gpu": "100"
+								}
+							}
+						}
+					],
+					"restartPolicy": "Never"
+				}
+			}
+		}
+	}`)
+	//var schedSpecMin int = 1
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "test",
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				//MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-large-comp-1"),
+							Namespace: "test",
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+						//CompletionStatus: "Complete",
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 func createGenericServiceAWWithNoStatus(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{
 		"apiVersion": "v1",
@@ -2965,11 +3050,13 @@ func clusterSize(ctx *context, req v1.ResourceList) int32 {
 
 		// Removed used resources.
 		if res, found := used[node.Name]; found {
-			alloc.Sub(res)
+			_, err := alloc.Sub(res)
+			Expect(err).NotTo(HaveOccurred())
 		}
 
 		for slot.LessEqual(alloc) {
-			alloc.Sub(slot)
+			_, err := alloc.Sub(slot)
+			Expect(err).NotTo(HaveOccurred())
 			res++
 		}
 	}
@@ -3033,11 +3120,13 @@ func computeNode(ctx *context, req v1.ResourceList) (string, int32) {
 
 		// Removed used resources.
 		if res, found := used[node.Name]; found {
-			alloc.Sub(res)
+			_, err := alloc.Sub(res)
+			Expect(err).NotTo(HaveOccurred())
 		}
 
 		for slot.LessEqual(alloc) {
-			alloc.Sub(slot)
+			_, err := alloc.Sub(slot)
+			Expect(err).NotTo(HaveOccurred())
 			res++
 		}
 
