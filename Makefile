@@ -1,3 +1,10 @@
+# Check for 'docker' or 'podman'
+ifneq ($(shell command -v 2 docker 2> /dev/null),)
+	DOCKER=docker
+else
+	DOCKER=podman
+endif
+
 BIN_DIR=_output/bin
 CAT_CMD=$(if $(filter $(OS),Windows_NT),type,cat)
 VERSION_FILE=./CONTROLLER_VERSION
@@ -60,7 +67,7 @@ images: verify-tag-name
 	$(info branch: ${GIT_BRANCH})
 	ls -l ${CURRENT_DIR}/_output/bin
 	$(info Build the docker image)
-	docker build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
+	${DOCKER} build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
 
 push-images: verify-tag-name
 ifeq ($(strip $(dockerhub_repository)),)
@@ -69,11 +76,11 @@ ifeq ($(strip $(dockerhub_repository)),)
 	$(info variables do not need to be set for github Travis CICD.)
 else
 	$(info Log into dockerhub)
-	docker login -u ${dockerhub_id} --password ${dockerhub_token}
+	${DOCKER} login -u ${dockerhub_id} --password ${dockerhub_token}
 	$(info Tag the latest image)
-	docker tag mcad-controller:${TAG}  ${dockerhub_repository}/mcad-controller:${TAG}
+	${DOCKER} tag mcad-controller:${TAG}  ${dockerhub_repository}/mcad-controller:${TAG}
 	$(info Push the docker image to registry)
-	docker push ${dockerhub_repository}/mcad-controller:${TAG}
+	${DOCKER} push ${dockerhub_repository}/mcad-controller:${TAG}
 endif
 
 run-test:
