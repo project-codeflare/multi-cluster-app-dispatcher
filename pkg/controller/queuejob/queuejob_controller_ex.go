@@ -1278,10 +1278,11 @@ func (cc *XController) updateStatusInEtcd(qj *arbv1.AppWrapper, at string) error
 	return nil
 }
 
-func (qjm *XController) waitForPodCountUpdates(dispatchedCond *arbv1.AppWrapperCondition) bool {
+func (qjm *XController) waitForPodCountUpdates(searchCond *arbv1.AppWrapperCondition) bool {
 
 	// Continue reserviing resourses if dispatched condition not found
-	if dispatchedCond == nil {
+	if searchCond == nil {
+		klog.V(10).Infof("[waitForPodCountUpdates] No condition not found.")
 		return true
 	}
 
@@ -1290,7 +1291,7 @@ func (qjm *XController) waitForPodCountUpdates(dispatchedCond *arbv1.AppWrapperC
 	nowPtr := &now
 
 	// Last time AW was dispatched
-	dispactedTS := dispatchedCond.LastUpdateMicroTime
+	dispactedTS := searchCond.LastUpdateMicroTime
 	dispactedTSPtr := &dispactedTS
 
 	// Error checking
@@ -1309,9 +1310,11 @@ func (qjm *XController) waitForPodCountUpdates(dispatchedCond *arbv1.AppWrapperC
 	// Don't reserve resources if timeout is hit
 	if timeSinceDispatched.Microseconds() > timeoutMicroSeconds {
 		return false
+		klog.V(10).Infof("[waitForPodCountUpdates] Dispatch duration time %d microseconds has reached timeout value of %d ms",
+			timeSinceDispatched.Microseconds(), qjm.serverOption.DispatchResourceReservationTimeout)
 	}
 
-	klog.V(10).Infof("[waitForPodCountUpdates] Dispatch duration time %d ms has not reached timeout value of of %d ms",
+	klog.V(10).Infof("[waitForPodCountUpdates] Dispatch duration time %d microseconds has not reached timeout value of %d ms",
 			timeSinceDispatched.Microseconds(), qjm.serverOption.DispatchResourceReservationTimeout)
 	return true
 }
