@@ -5,6 +5,7 @@ deploymentName: mcad-controller
 namespace: kube-system
 replicaCount: 1
 loglevel: 4
+
 image:
   repository: mcad-controller
   tag: latest
@@ -49,6 +50,8 @@ configMap:
   preemptionEnabled: '"false"'
   agentConfigs: ""
   quotaRestUrl: ""
+  # String timeout in milliseconds
+  podCreationTimeout:
 
 volumes:
   hostPath:
