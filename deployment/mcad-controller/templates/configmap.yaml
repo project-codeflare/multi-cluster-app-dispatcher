@@ -10,4 +10,5 @@ data:
   {{ if .Values.configMap.agentConfigs }}DISPATCHER_AGENT_CONFIGS: {{ .Values.configMap.agentConfigs }}{{ end }}
   PREEMPTION: {{ .Values.configMap.preemptionEnabled }}
   {{ if .Values.configMap.quotaRestUrl }}QUOTA_REST_URL: {{ .Values.configMap.quotaRestUrl }}{{ end }}
+  {{ if .Values.configMap.podCreationTimeout }}DISPATCH_RESOURCE_RESERVATION_TIMEOUT: {{ .Values.configMap.podCreationTimeout }}{{ end }}
 #{{ end }}

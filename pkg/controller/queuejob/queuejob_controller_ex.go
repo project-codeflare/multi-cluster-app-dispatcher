@@ -854,19 +854,38 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 					klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but %v pod(s) are pending.", qjv, genericItem, value.Name, value.Status.CanRun, value.Status.State, value.Status.Pending)
 				}
 			} else {
-				// TODO: Hack to handle race condition when Running jobs have not yet updated the pod counts
+				// TODO: Hack to handle race condition when Running jobs have not yet updated the pod counts (In-Flight AW Jobs)
 				// This hack uses the golang struct implied behavior of defining the object without a value.  In this case
 				// of using 'int32' novalue and value of 0 are the same.
 				if value.Status.Pending == 0 && value.Status.Running == 0 && value.Status.Succeeded == 0 && value.Status.Failed == 0 {
-					for _, resctrl := range qjm.qjobResControls {
-						qjv := resctrl.GetAggregatedResources(value)
-						pending = pending.Add(qjv)
-						klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", qjv, resctrl, value.Name, value.Status.CanRun, value.Status.State)
-					}
-					for _, genericItem := range value.Spec.AggrResources.GenericItems {
-						qjv, _ := genericresource.GetResources(&genericItem)
-						pending = pending.Add(qjv)
-						klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", qjv, genericItem, value.Name, value.Status.CanRun, value.Status.State)
+
+					// In some cases the object wrapped in the appwrapper never creates pod.  This likely  happens
+					// in a custom resource that does some processing and errors occur before creating the pod or
+					// even there is not a problem within the CR controler but when the K8s quota is hit not
+					// allowing pods to get create due the admission controller.  This check will now put a timeout
+					// on reserving these resources that are "in-flight")
+					dispatchedCond := qjm.getLatestStatusConditionType(value, arbv1.AppWrapperCondDispatched)
+
+					// If pod counts for AW have not updated within the timeout window, account for
+					// this object's resources to give the object controller more time to start creating
+					// pods.  This matters when resources are scare.  Once the timeout expires,
+					// resources for this object will not be held and other AW may be dispatched which
+					// could consume resources initially allocated for this object.  This is to handle
+					// object controllers (essentially custom resource controllers) that do not work as
+					// expected by creating pods.
+					if qjm.waitForPodCountUpdates(dispatchedCond) {
+						for _, resctrl := range qjm.qjobResControls {
+							qjv := resctrl.GetAggregatedResources(value)
+							pending = pending.Add(qjv)
+							klog.V(4).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", qjv, resctrl, value.Name, value.Status.CanRun, value.Status.State)
+						}
+						for _, genericItem := range value.Spec.AggrResources.GenericItems {
+							qjv, _ := genericresource.GetResources(&genericItem)
+							pending = pending.Add(qjv)
+							klog.V(4).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", qjv, genericItem, value.Name, value.Status.CanRun, value.Status.State)
+						}
+					} else {
+						klog.V(4).Infof("[getAggAvaiResPri] Resources will no longer be reserved for %s/%s due to timeout of %d ms for pod creating.", value.Name, value.Namespace, qjm.serverOption.DispatchResourceReservationTimeout)
 					}
 				}
 			}
@@ -1257,6 +1276,75 @@ func (cc *XController) updateStatusInEtcd(qj *arbv1.AppWrapper, at string) error
 	klog.V(10).Infof("[updateEtcd] AppWrapperUpdate success %s at %s &qj=%p qj=%+v",
 		apiCacheAWJob.Name, at, apiCacheAWJob, apiCacheAWJob)
 	return nil
+}
+
+func (qjm *XController) waitForPodCountUpdates(dispatchedCond *arbv1.AppWrapperCondition) bool {
+
+	// Continue reserviing resourses if dispatched condition not found
+	if dispatchedCond == nil {
+		return true
+	}
+
+	// Current time
+	now := metav1.NowMicro()
+	nowPtr := &now
+
+	// Last time AW was dispatched
+	dispactedTS := dispatchedCond.LastUpdateMicroTime
+	dispactedTSPtr := &dispactedTS
+
+	// Error checking
+	if nowPtr.Before(dispactedTSPtr) {
+		klog.Errorf("[waitForPodCountUpdates] Current timestamp: %s is before condition latest update timestamp: %s",
+			now.String(), dispactedTS.String())
+		return true
+	}
+
+	// Duration since last time AW was dispatched
+	timeSinceDispatched := now.Sub(dispactedTS.Time)
+
+	// Don't reserve resources if timeout is hit
+	if timeSinceDispatched.Microseconds() > qjm.serverOption.DispatchResourceReservationTimeout{
+		return false
+	}
+
+	klog.V(10).Infof("[waitForPodCountUpdates] Dispatch duration time %d ms has not reached timeout value of of %d ms",
+			timeSinceDispatched.Microseconds(), qjm.serverOption.DispatchResourceReservationTimeout)
+	return true
+}
+
+func (qjm *XController) getLatestStatusConditionType(aw *arbv1.AppWrapper, condType arbv1.AppWrapperConditionType) *arbv1.AppWrapperCondition {
+	var latestConditionBasedOnType arbv1.AppWrapperCondition
+	if aw.Status.Conditions != nil && len(aw.Status.Conditions) > 0 {
+		// Find the latest matching condition based on type not related other condition fields
+		for _, condition := range aw.Status.Conditions {
+			// Matching condition?
+			if condition.Type == condType {
+				//First time match?
+				if  (arbv1.AppWrapperCondition{} == latestConditionBasedOnType) {
+					latestConditionBasedOnType = condition
+				} else {
+					// Compare current condition to last match and get keep the later condition
+					currentCondLastUpdate := condition.LastUpdateMicroTime
+					currentCondLastUpdatePtr := &currentCondLastUpdate
+					lastCondLastUpdate := latestConditionBasedOnType.LastUpdateMicroTime
+					lastCondLastUpdatePtr := &lastCondLastUpdate
+					if lastCondLastUpdatePtr.Before(currentCondLastUpdatePtr) {
+						latestConditionBasedOnType = condition
+					}
+				}
+			} // Condition type match check
+		} // Loop through conditions of AW
+	}  // AW has conditions?
+
+	// If no matching condition found return nil otherwise return matching latest condition
+	if  (arbv1.AppWrapperCondition{} == latestConditionBasedOnType) {
+		klog.V(10).Infof("[getLatestStatusConditionType] No disptach condition found for AppWrapper=%s/%s.",
+			aw.Name, aw.Namespace)
+		return nil
+	} else {
+		return &latestConditionBasedOnType
+	}
 }
 
 func (qjm *XController) addOrUpdateCondition(aw *arbv1.AppWrapper, condType arbv1.AppWrapperConditionType,
