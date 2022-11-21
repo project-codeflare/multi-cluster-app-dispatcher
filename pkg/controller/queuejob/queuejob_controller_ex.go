@@ -1310,12 +1310,12 @@ func (qjm *XController) waitForPodCountUpdates(searchCond *arbv1.AppWrapperCondi
 	// Don't reserve resources if timeout is hit
 	if timeSinceDispatched.Microseconds() > timeoutMicroSeconds {
 		return false
-		klog.V(10).Infof("[waitForPodCountUpdates] Dispatch duration time %d microseconds has reached timeout value of %d ms",
-			timeSinceDispatched.Microseconds(), qjm.serverOption.DispatchResourceReservationTimeout)
+		klog.V(10).Infof("[waitForPodCountUpdates] Dispatch duration time %d microseconds has reached timeout value of %d microseconds",
+			timeSinceDispatched.Microseconds(), timeoutMicroSeconds)
 	}
 
-	klog.V(10).Infof("[waitForPodCountUpdates] Dispatch duration time %d microseconds has not reached timeout value of %d ms",
-			timeSinceDispatched.Microseconds(), qjm.serverOption.DispatchResourceReservationTimeout)
+	klog.V(10).Infof("[waitForPodCountUpdates] Dispatch duration time %d microseconds has not reached timeout value of %d microseconds",
+			timeSinceDispatched.Microseconds(), timeoutMicroSeconds)
 	return true
 }
 
