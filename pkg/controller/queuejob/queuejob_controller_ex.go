@@ -1303,8 +1303,11 @@ func (qjm *XController) waitForPodCountUpdates(dispatchedCond *arbv1.AppWrapperC
 	// Duration since last time AW was dispatched
 	timeSinceDispatched := now.Sub(dispactedTS.Time)
 
+	// Convert timeout default from milli-seconds to microseconds
+	timeoutMicroSeconds := qjm.serverOption.DispatchResourceReservationTimeout * 1000
+
 	// Don't reserve resources if timeout is hit
-	if timeSinceDispatched.Microseconds() > qjm.serverOption.DispatchResourceReservationTimeout{
+	if timeSinceDispatched.Microseconds() > timeoutMicroSeconds {
 		return false
 	}
 
