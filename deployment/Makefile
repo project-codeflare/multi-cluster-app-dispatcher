@@ -1,10 +1,3 @@
-# Check for 'docker' or 'podman'
-ifneq ($(shell command -v 2 docker 2> /dev/null),)
-	DOCKER=docker
-else
-	DOCKER=podman
-endif
-
 .PHONY: check_delete_operator delete_operator create_new_operator build_operator_image push_operator 
 .PHONY: check_delete_csv delete_csv create_new_csv 
 .PHONY: clean_bundle build_operator_bundle_image push_operator_bundle
@@ -43,7 +36,7 @@ build_operator_image:
 	cd ./mcad-operator && operator-sdk-v0.18.1 build --image-build-args --no-cache darroyo/mcad-operator:${OPERATOR_VER}
 
 push_operator: build_operator_image
-	${DOCKER} push darroyo/mcad-operator:${OPERATOR_VER}
+	docker push darroyo/mcad-operator:${OPERATOR_VER}
 
 check_delete_csv:
 	@echo "******************************************************************************************************"
@@ -72,19 +65,19 @@ clean_bundle:
 
 build_operator_bundle_image: clean_bundle
 	cd ./mcad-operator && operator-sdk-v0.18.1 bundle create --generate-only -o ./bundle
-	${DOCKER} build --no-cache -f ./mcad-operator/bundle.Dockerfile -t darroyo/mcad-operator-bundle:${OPERATOR_VER} ./mcad-operator
+	docker build --no-cache -f ./mcad-operator/bundle.Dockerfile -t darroyo/mcad-operator-bundle:${OPERATOR_VER} ./mcad-operator
 
 push_operator_bundle: build_operator_bundle_image
-	${DOCKER} push darroyo/mcad-operator-bundle:${OPERATOR_VER}
-	operator-sdk-v0.18.1 bundle validate -b ${DOCKER} --verbose  darroyo/mcad-operator-bundle:${OPERATOR_VER}
+	docker push darroyo/mcad-operator-bundle:${OPERATOR_VER}
+	operator-sdk-v0.18.1 bundle validate -b docker --verbose  darroyo/mcad-operator-bundle:${OPERATOR_VER}
 
 clean_catalog:
 	if [ -d "./mcad-operator/database" ]; then cd ./mcad-operator && rm -rf database; fi
 	if [ -f "./mcad-operator/catalog.Dockerfile" ]; then cd ./mcad-operator && rm catalog.Dockerfile; fi
 
 build_operator_catalog_image: clean_catalog
-	cd ./mcad-operator && opm-v1.13.8 index add -c ${DOCKER} --bundles darroyo/mcad-operator-bundle:${OPERATOR_VER} --generate -d catalog.Dockerfile
-	${DOCKER} build --no-cache -f ./mcad-operator/catalog.Dockerfile -t darroyo/mcad-operator-catalog:${OPERATOR_VER} ./mcad-operator
+	cd ./mcad-operator && opm-v1.13.8 index add -c docker --bundles darroyo/mcad-operator-bundle:${OPERATOR_VER} --generate -d catalog.Dockerfile
+	docker build --no-cache -f ./mcad-operator/catalog.Dockerfile -t darroyo/mcad-operator-catalog:${OPERATOR_VER} ./mcad-operator
 
 push_operator_catalog: build_operator_catalog_image
-	${DOCKER} push darroyo/mcad-operator-catalog:${OPERATOR_VER}
+	docker push darroyo/mcad-operator-catalog:${OPERATOR_VER}
