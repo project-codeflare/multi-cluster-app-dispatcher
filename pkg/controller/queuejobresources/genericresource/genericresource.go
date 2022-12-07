@@ -189,8 +189,10 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperGenericResource) (podList []*v1.Pod, err error) {
 	startTime := time.Now()
 	defer func() {
+		if pErr := recover(); pErr != nil {
+			klog.Errorf("[SyncQueueJob] Panic occurred: %v", pErr)
+		}
 		klog.V(4).Infof("Finished syncing AppWrapper job resource %s (%v)", aw.Name, time.Now().Sub(startTime))
-		// klog.V(4).Infof("Finished syncing AppWrapper job resource %q (%v)", awobRes.Template, time.Now().Sub(startTime))
 	}()
 
 	namespaced := true
@@ -277,7 +279,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	labels[resourceName] = unstruct.GetName()
 	unstruct.SetLabels(labels)
 
-	// Add labels to pod templete if one exists.
+	// Add labels to pod template if one exists.
 	podTemplateFound := addLabelsToPodTemplateField(&unstruct, labels)
 	if !podTemplateFound {
 		klog.V(4).Infof("[SyncQueueJob] No pod template spec exists for resource: %s to add labels.", name)
@@ -317,7 +319,8 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 		thisObj, err1 = dclient.Resource(rsrc).Get(context.Background(), name, metav1.GetOptions{})
 	}
 	if err1 != nil {
-		klog.Errorf("Could not get created resource with error %v", err)
+		klog.Errorf("Could not get created resource with error %v", err1)
+		return []*v1.Pod{}, err1
 	}
 	thisOwnerRef := metav1.NewControllerRef(thisObj, thisObj.GroupVersionKind())
 
