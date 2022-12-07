@@ -62,6 +62,14 @@ images: verify-tag-name
 	$(info Build the docker image)
 	docker build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
 
+images-podman: verify-tag-name
+	$(info List executable directory)
+	$(info repo id: ${git_repository_id})
+	$(info branch: ${GIT_BRANCH})
+	ls -l ${CURRENT_DIR}/_output/bin
+	$(info Build the docker image)
+	podman build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
+
 push-images: verify-tag-name
 ifeq ($(strip $(dockerhub_repository)),)
 	$(info No registry information provide.  To push images to a docker registry please set)
