@@ -64,6 +64,7 @@ import (
 )
 
 var ninetySeconds = 90 * time.Second
+var threeMinutes = 180 * time.Second
 var threeHundredSeconds = 300 * time.Second
 
 var oneCPU = v1.ResourceList{"cpu": resource.MustParse("1000m")}
@@ -605,8 +606,17 @@ func awNamespacePhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.NamespacePh
 		return 0 < readyTaskNum, nil
 	}
 }
+
 func waitAWPodsReady(ctx *context, aw *arbv1.AppWrapper) error {
 	return waitAWPodsReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), false)
+}
+
+func waitAWPodsCompleted(ctx *context, aw *arbv1.AppWrapper) error {
+	return waitAWPodsCompletedEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), false)
+}
+
+func waitAWPodsNotCompleted(ctx *context, aw *arbv1.AppWrapper) error {
+	return waitAWPodsNotCompletedEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), false)
 }
 
 func waitAWReadyQuiet(ctx *context, aw *arbv1.AppWrapper) error {
@@ -641,6 +651,16 @@ func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
 func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
 	return wait.Poll(100*time.Millisecond, ninetySeconds, awPodPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite))
+}
+
+func waitAWPodsCompletedEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
+	return wait.Poll(100*time.Millisecond, ninetySeconds, awPodPhase(ctx, aw,
+		[]v1.PodPhase{v1.PodSucceeded}, taskNum, quite))
+}
+
+func waitAWPodsNotCompletedEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
+	return wait.Poll(100*time.Millisecond, threeMinutes, awPodPhase(ctx, aw,
+		[]v1.PodPhase{v1.PodPending, v1.PodRunning, v1.PodFailed, v1.PodUnknown}, taskNum, quite))
 }
 
 func waitAWPodsPending(ctx *context, aw *arbv1.AppWrapper) error {
@@ -1595,6 +1615,88 @@ func createGenericJobAWWithStatus(context *context, name string) *arbv1.AppWrapp
 							Raw: rb,
 						},
 						CompletionStatus: "Complete",
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createGenericJobAWWithScheduleSpec(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{
+		"apiVersion": "batch/v1",
+		"kind": "Job",
+		"metadata": {
+			"name": "aw-test-job-with-scheduling-spec",
+			"namespace": "test"
+		},
+		"spec": {
+			"completions": 2,
+			"parallelism": 2,
+			"template": {
+				"metadata": {
+					"labels": {
+						"appwrapper.mcad.ibm.com": "aw-test-job-with-scheduling-spec"
+					}
+				},
+				"spec": {
+					"containers": [
+						{
+							"command": [
+								"/bin/bash",
+								"-c",
+								"--"
+							],
+							"args": [
+								"sleep 5"
+							],
+							"image": "ubuntu:latest",
+							"imagePullPolicy": "IfNotPresent",
+							"name": "aw-test-job-with-scheduling-spec",
+							"resources": {
+								"limits": {
+									"cpu": "100m",
+									"memory": "256M"
+								},
+								"requests": {
+									"cpu": "100m",
+									"memory": "256M"
+								}
+							}
+						}
+					],
+					"restartPolicy": "Never"
+				}
+			}
+		}
+	}`)
+
+	var schedSpecMin int = 2
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "test",
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-scheduling-spec"),
+							Namespace: "test",
+						},
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
 					},
 				},
 			},

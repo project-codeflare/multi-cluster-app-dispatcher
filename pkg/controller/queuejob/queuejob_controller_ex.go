@@ -431,7 +431,7 @@ func (qjm *XController) PreemptQueueJobs() {
 		}
 		newjob.Status.CanRun = false
 
-		if aw.Status.Running < int32(aw.Spec.SchedSpec.MinAvailable) {
+		if (aw.Status.Running + aw.Status.Succeeded) < int32(aw.Spec.SchedSpec.MinAvailable) {
 			message = fmt.Sprintf("Insufficient number of Running pods, minimum=%d, running=%v.", aw.Spec.SchedSpec.MinAvailable, aw.Status.Running)
 			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
 			newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
@@ -495,19 +495,12 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 		for _, value := range queueJobs {
 			replicas := value.Spec.SchedSpec.MinAvailable
 
-			if int(value.Status.Succeeded) == replicas {
-				if replicas > 0 {
-					qjm.arbclients.ArbV1().AppWrappers(value.Namespace).Delete(value.Name, &metav1.DeleteOptions{})
-					continue
-				}
-			}
-
 			// Skip if AW Pending or just entering the system and does not have a state yet.
 			if (value.Status.State == arbv1.AppWrapperStateEnqueued) || (value.Status.State == "") {
 				continue
 			}
 
-			if int(value.Status.Running) < replicas {
+			if (int(value.Status.Running) + int(value.Status.Succeeded)) < replicas {
 
 				//Check to see if if this AW job has been dispatched for a time window before preempting
 				conditionsLen := len(value.Status.Conditions)
@@ -532,7 +525,7 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 				}
 
 				if replicas > 0 {
-					klog.V(3).Infof("AppWrapper %s is eligible for preemption %v - %v , %v !!! \n", value.Name, value.Status.Running, replicas, value.Status.Succeeded)
+					klog.V(3).Infof("AppWrapper %s is eligible for preemption Running: %v - minAvailable: %v , Succeeded: %v !!! \n", value.Name, value.Status.Running, replicas, value.Status.Succeeded)
 					qjobs = append(qjobs, value)
 				}
 			} else {
@@ -1785,6 +1778,8 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 
 		if qj.DeletionTimestamp != nil {
 
+			klog.V(4).Infof("[manageQueueJob] AW job=%s/%s set for deletion.", qj.Name, qj.Namespace)
+
 			// cleanup resources for running job
 			err = cc.Cleanup(qj)
 			if err != nil {
@@ -1801,10 +1796,6 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 			cc.qjqueue.Delete(qj)
 
 			return nil
-			//var result arbv1.AppWrapper
-			//return cc.arbclients.Put().
-			//	Namespace(qj.Namespace).Resource(arbv1.QueueJobPlural).
-			//	Name(qj.Name).Body(qj).Do().Into(&result)
 		}
 		//Job is Complete only update pods if needed.
 		if qj.Status.State == arbv1.AppWrapperStateCompleted || qj.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
