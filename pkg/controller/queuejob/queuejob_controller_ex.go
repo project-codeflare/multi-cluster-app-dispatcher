@@ -432,7 +432,7 @@ func (qjm *XController) PreemptQueueJobs() {
 		newjob.Status.CanRun = false
 
 		if (aw.Status.Running + aw.Status.Succeeded) < int32(aw.Spec.SchedSpec.MinAvailable) {
-			message = fmt.Sprintf("Insufficient number of Running pods, minimum=%d, running=%v.", aw.Spec.SchedSpec.MinAvailable, aw.Status.Running)
+			message = fmt.Sprintf("Insufficient number of Running and Completed pods, minimum=%d, running=%d, completed=%d.", aw.Spec.SchedSpec.MinAvailable, aw.Status.Running, aw.Status.Succeeded)
 			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
 			newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
 			updateNewJob = newjob.DeepCopy()
