@@ -487,6 +487,29 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
+	It("MCAD Job Completion No-requeue Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Job Completion No-requeue Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		aw := createGenericJobAWWithScheduleSpec(context, "aw-test-job-with-scheduling-spec")
+		err1 := waitAWPodsReady(context, aw)
+		Expect(err1).NotTo(HaveOccurred())
+		err2 := waitAWPodsCompleted(context, aw)
+		Expect(err2).NotTo(HaveOccurred())
+
+		// Once pods are completed, we wait for them to see if they change their status to anything BUT "Completed"
+		// which SHOULD NOT happen because the job is done
+		err3 := waitAWPodsNotCompleted(context, aw)
+		Expect(err3).To(HaveOccurred())
+
+		appwrappers = append(appwrappers, aw)
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Job Completion No-requeue Test - Completed.\n")
+
+	})
+
 	It("MCAD Job Large Compute Requirement Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Job Large Compute Requirement Test - Started.\n")
 		context := initTestContext()
