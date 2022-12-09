@@ -20,12 +20,6 @@ jobs:
         with:
           go-version: 1.16
 
-      - name: GOPATH setup
-        run: |
-          echo "::set-env name=GOPATH::$(go env GOPATH)"
-          echo "::add-path::$(go env GOPATH)/bin"
-        shell: bash
-
       - name: Install Dependencies
         run: |
           go get -u golang.org/x/lint/golint
@@ -34,6 +28,7 @@ jobs:
       - name: Export Env Vars
         run: |
           export HOME=/home/runner/work/multi-cluster-app-dispatcher/
+          export GOPATH=/home/runner/go
           export TEST_LOG_LEVEL=4
 
       - name: Build and Push
