@@ -31,7 +31,7 @@ jobs:
           mkdir $GOPATH/src/github.com
           mkdir $GOPATH/src/github.com/project-codeflare
           cp -r . $GOPATH/src/github.com/project-codeflare/multi-cluster-app-dispatcher
-          ll $GOPATH/src/github.com/project-codeflare/multi-cluster-app-dispatcher
+          ls -alF $GOPATH/src/github.com/project-codeflare/multi-cluster-app-dispatcher
           make mcad-controller
           make run-test
         env:
