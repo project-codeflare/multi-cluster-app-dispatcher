@@ -13,16 +13,16 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      - name: Send Code to a Go-Compatible Dir
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-          path: go/src/github.com/project-codeflare/multi-cluster-app-dispatcher
-
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version: 1.16
+
+      - name: Send Code to a Go-Compatible Dir
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+          path: /home/runner/go/src/github.com/project-codeflare/multi-cluster-app-dispatcher
 
       - name: Install Dependencies
         run: |
@@ -31,7 +31,7 @@ jobs:
 
       - name: Build and Push
         run: | 
-          cd $GOPATH
+          cd $GOPATH/src/github.com/project-codeflare/multi-cluster-app-dispatcher
           make mcad-controller
           make run-test
         env:
