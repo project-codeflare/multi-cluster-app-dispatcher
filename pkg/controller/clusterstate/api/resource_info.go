@@ -84,6 +84,20 @@ func NewResource(rl v1.ResourceList) *Resource {
 	return r
 }
 
+func GetCondition(nodeStatus v1.Node) v1.ConditionStatus {
+	var currentNodeStatus v1.ConditionStatus = v1.ConditionTrue
+	condition := 0
+	for condition < len(nodeStatus.Status.Conditions) {
+		// return status of Ready condition.type only
+		if nodeStatus.Status.Conditions[condition].Type == v1.NodeReady {
+			currentNodeStatus = nodeStatus.Status.Conditions[condition].Status
+			return currentNodeStatus
+		}
+		condition = condition + 1
+	}
+	return currentNodeStatus
+}
+
 func (r *Resource) IsEmpty() bool {
 	return r.MilliCPU < minMilliCPU && r.Memory < minMemory && r.GPU == 0
 }

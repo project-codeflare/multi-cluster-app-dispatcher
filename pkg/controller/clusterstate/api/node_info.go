@@ -63,6 +63,9 @@ type NodeInfo struct {
 	Taints []v1.Taint
 
 	Tasks map[TaskID]*TaskInfo
+	//Node status
+
+	IsReady v1.ConditionStatus
 }
 
 func NewNodeInfo(node *v1.Node) *NodeInfo {
@@ -75,11 +78,12 @@ func NewNodeInfo(node *v1.Node) *NodeInfo {
 			Allocatable: EmptyResource(),
 			Capability:  EmptyResource(),
 
-			Labels: make(map[string]string),
+			Labels:        make(map[string]string),
 			Unschedulable: false,
-			Taints: []v1.Taint{},
+			Taints:        []v1.Taint{},
 
-			Tasks: make(map[TaskID]*TaskInfo),
+			Tasks:   make(map[TaskID]*TaskInfo),
+			IsReady: v1.ConditionTrue,
 		}
 	}
 
@@ -94,11 +98,12 @@ func NewNodeInfo(node *v1.Node) *NodeInfo {
 		Allocatable: NewResource(node.Status.Allocatable),
 		Capability:  NewResource(node.Status.Capacity),
 
-		Labels: node.GetLabels(),
+		Labels:        node.GetLabels(),
 		Unschedulable: node.Spec.Unschedulable,
-		Taints: node.Spec.Taints,
+		Taints:        node.Spec.Taints,
 
-		Tasks: make(map[TaskID]*TaskInfo),
+		Tasks:   make(map[TaskID]*TaskInfo),
+		IsReady: GetCondition(*node),
 	}
 }
 
@@ -137,6 +142,7 @@ func (ni *NodeInfo) SetNode(node *v1.Node) {
 	ni.Labels = NewStringsMap(node.Labels)
 	ni.Unschedulable = node.Spec.Unschedulable
 	ni.Taints = NewTaints(node.Spec.Taints)
+	ni.IsReady = GetCondition(*node)
 }
 
 func (ni *NodeInfo) PipelineTask(task *TaskInfo) error {
@@ -191,7 +197,7 @@ func (ni *NodeInfo) AddTask(task *TaskInfo) error {
 }
 
 func (ni *NodeInfo) RemoveTask(ti *TaskInfo) error {
-	klog.V(10).Infof("Attempting to remove task: %s on node: %s", ti.Name,  ni.Name)
+	klog.V(10).Infof("Attempting to remove task: %s on node: %s", ti.Name, ni.Name)
 
 	key := PodKey(ti.Pod)
 
@@ -202,7 +208,7 @@ func (ni *NodeInfo) RemoveTask(ti *TaskInfo) error {
 	}
 
 	if ni.Node != nil {
-		klog.V(10).Infof("Found node for task: %s, node: %s, task status: %v", task.Name,  ni.Name, task.Status)
+		klog.V(10).Infof("Found node for task: %s, node: %s, task status: %v", task.Name, ni.Name, task.Status)
 		if task.Status == Releasing {
 			_, err := ni.Releasing.Sub(task.Resreq)
 			if err != nil {
@@ -216,7 +222,7 @@ func (ni *NodeInfo) RemoveTask(ti *TaskInfo) error {
 			klog.Warningf("[RemoveTask] Node usage subtraction err=%v", err)
 		}
 	} else {
-		klog.V(10).Infof("No node info found for task: %s, node: %s", task.Name,  ni.Name)
+		klog.V(10).Infof("No node info found for task: %s, node: %s", task.Name, ni.Name)
 	}
 
 	delete(ni.Tasks, key)
@@ -225,7 +231,7 @@ func (ni *NodeInfo) RemoveTask(ti *TaskInfo) error {
 }
 
 func (ni *NodeInfo) UpdateTask(ti *TaskInfo) error {
-	klog.V(10).Infof("Attempting to update task: %s on node: %s", ti.Name,  ni.Name)
+	klog.V(10).Infof("Attempting to update task: %s on node: %s", ti.Name, ni.Name)
 	if err := ni.RemoveTask(ti); err != nil {
 		return err
 	}

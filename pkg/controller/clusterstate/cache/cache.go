@@ -33,10 +33,11 @@ package cache
 import (
 	"context"
 	"fmt"
-	"github.com/golang/protobuf/proto"
-	dto "github.com/prometheus/client_model/go"
 	"sync"
 	"time"
+
+	"github.com/golang/protobuf/proto"
+	dto "github.com/prometheus/client_model/go"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -210,7 +211,6 @@ func (sc *ClusterStateCache) GetUnallocatedResources() *api.Resource {
 	return r.Add(sc.availableResources)
 }
 
-
 func (sc *ClusterStateCache) GetUnallocatedHistograms() map[string]*dto.Metric {
 	sc.Mutex.Lock()
 	defer sc.Mutex.Unlock()
@@ -238,7 +238,7 @@ func (sc *ClusterStateCache) GetResourceCapacities() *api.Resource {
 
 // Save the cluster state.
 func (sc *ClusterStateCache) saveState(available *api.Resource, capacity *api.Resource,
-								availableHistogram *api.ResourceHistogram) error {
+	availableHistogram *api.ResourceHistogram) error {
 	klog.V(12).Infof("Saving Cluster State")
 
 	sc.Mutex.Lock()
@@ -261,11 +261,11 @@ func (sc *ClusterStateCache) updateState() error {
 	idleMin := api.EmptyResource()
 	idleMax := api.EmptyResource()
 
-	firstNode :=  true
+	firstNode := true
 	for _, value := range cluster.Nodes {
 		// Do not use any Unschedulable nodes in calculations
-		if value.Unschedulable == true {
-			klog.V(6).Infof("[updateState] %s is marked as unschedulable node Total: %v, Used: %v, and Idle: %v will not be included in cluster state calculation.",
+		if value.Unschedulable || value.IsReady == v1.ConditionFalse {
+			klog.V(6).Infof("[updateState] %s is marked as unschedulable or not ready node Total: %v, Used: %v, and Idle: %v will not be included in cluster state calculation.",
 				value.Name, value.Allocatable, value.Used, value.Idle)
 			continue
 		}
@@ -277,12 +277,12 @@ func (sc *ClusterStateCache) updateState() error {
 		// Collect Min and Max for histogram
 		if firstNode {
 			idleMin.MilliCPU = idle.MilliCPU
-			idleMin.Memory   = idle.Memory
-			idleMin.GPU      = idle.GPU
+			idleMin.Memory = idle.Memory
+			idleMin.GPU = idle.GPU
 
 			idleMax.MilliCPU = idle.MilliCPU
-			idleMax.Memory   = idle.Memory
-			idleMax.GPU      = idle.GPU
+			idleMax.Memory = idle.Memory
+			idleMax.GPU = idle.GPU
 			firstNode = false
 		} else {
 			if value.Idle.MilliCPU < idleMin.MilliCPU {
@@ -293,7 +293,7 @@ func (sc *ClusterStateCache) updateState() error {
 
 			if value.Idle.Memory < idleMin.Memory {
 				idleMin.Memory = value.Idle.Memory
-			} else if value.Idle.Memory > idleMax.Memory{
+			} else if value.Idle.Memory > idleMax.Memory {
 				idleMax.Memory = value.Idle.Memory
 			}
 
