@@ -29,7 +29,7 @@
 # limitations under the License.
 
 # The golang package that we are building.
-readonly KUBE_GO_PACKAGE=github.com/IBM/multi-cluster-app-dispatcher
+readonly KUBE_GO_PACKAGE=github.com/project-codeflare/multi-cluster-app-dispatcher
 readonly KUBE_GOPATH="${GOPATH}"
 
 # The set of server targets that we are only building for Linux
