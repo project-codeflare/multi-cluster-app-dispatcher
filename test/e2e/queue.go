@@ -609,6 +609,32 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Service no RuningHoldCompletion or Complete Test - Completed.\n")
 
 	})
+	//dummy test
+	It("MCAD Service no RuningHoldCompletion or Complete Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Service no RuningHoldCompletion or Complete Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		aw := createGenericServiceAWWithNoStatus(context, "aw-deployment-2-status")
+		time.Sleep(1 * time.Minute)
+		err1 := waitAWPodsReady(context, aw)
+		Expect(err1).NotTo(HaveOccurred())
+		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "Error getting status")
+		}
+		pass := false
+		fmt.Fprintf(os.Stdout, "[e2e] status of AW %v.\n", aw1.Status.State)
+		if aw1.Status.State == arbv1.AppWrapperStateActive {
+			pass = true
+		}
+		Expect(pass).To(BeTrue())
+		appwrappers = append(appwrappers, aw)
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Service no RuningHoldCompletion or Complete Test - Completed.\n")
+
+	})
 
 	It("Create AppWrapper - Generic 100 Deployment Only - 2 pods each", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Generic 100 Deployment Only - 2 pods each - Started.\n")
