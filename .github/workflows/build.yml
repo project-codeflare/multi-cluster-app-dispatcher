@@ -31,7 +31,9 @@ jobs:
 
       - name: Build and Push
         run: | 
-          export GOPATH=/home/runner/go
-          export TEST_LOG_LEVEL=4
+          cd $GOPATH
           make mcad-controller
           make run-test
+        env: |
+          GOPATH: /home/runner/go
+          TEST_LOG_LEVEL: 4
