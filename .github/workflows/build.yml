@@ -23,7 +23,7 @@ jobs:
       - name: Install Dependencies
         run: |
           go get -u golang.org/x/lint/golint
-          apt install docker
+          sudo apt install docker
 
       - name: Build and Push
         run: |
