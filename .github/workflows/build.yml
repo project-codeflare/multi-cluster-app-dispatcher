@@ -33,5 +33,7 @@ jobs:
 
       - name: Build and Push
         run: |
+          export GOPATH=/home/runner/go
+          export TEST_LOG_LEVEL=4
           make mcad-controller
           make run-test
