@@ -25,6 +25,11 @@ jobs:
           go get -u golang.org/x/lint/golint
           sudo apt install docker
 
+      - name: Export Env Vars
+        run: |
+          export HOME=/home/runner/work/multi-cluster-app-dispatcher/
+          export TEST_LOG_LEVEL=4
+
       - name: Build and Push
         run: |
           make mcad-controller
