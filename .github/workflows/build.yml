@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
-          path: /home/runner/go/src/github.com/project-codeflare/multi-cluster-app-dispatcher
+          path: go/src/github.com/project-codeflare/multi-cluster-app-dispatcher
 
       - name: Install Dependencies
         run: |
@@ -35,5 +35,5 @@ jobs:
           make mcad-controller
           make run-test
         env:
-          GOPATH: /home/runner/go
+          GOPATH: /home/runner/work/multi-cluster-app-dispatcher/multi-cluster-app-dispatcher/go
           TEST_LOG_LEVEL: 4
