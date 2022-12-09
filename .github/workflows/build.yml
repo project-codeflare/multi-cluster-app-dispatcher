@@ -28,6 +28,7 @@ jobs:
       - name: Build and Push
         run: | 
           #export HOME=/home/runner/work/multi-cluster-app-dispatcher/
+          mkdir /home/runner/go/src
           mkdir /home/runner/go/src/github.com
           mkdir /home/runner/go/src/github.com/project-codeflare
           mkdir /home/runner/go/src/github.com/project-codeflare/multi-cluster-app-dispatcher/
