@@ -35,8 +35,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/internalinterfaces"
-	arbclient "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/v1"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/internalinterfaces"
+	arbclient "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"

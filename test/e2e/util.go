@@ -58,9 +58,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
-	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
-	versioned "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
-	csapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
+	versioned "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
+	csapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 )
 
 var ninetySeconds = 90 * time.Second

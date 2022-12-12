@@ -16,7 +16,7 @@ package resplanmgr
 import (
 	"k8s.io/klog/v2"
 	rpv1 "sigs.k8s.io/scheduler-plugins/pkg/apis/resourceplan/v1"
-	//rpv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/resourceplan/v1"
+	//rpv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/resourceplan/v1"
 )
 
 func (rpm *ResourcePlanManager) addRP(obj interface{}) {

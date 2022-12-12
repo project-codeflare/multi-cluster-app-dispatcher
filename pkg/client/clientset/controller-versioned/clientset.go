@@ -31,7 +31,7 @@ limitations under the License.
 package controller_versioned
 
 import (
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/typed/v1"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/typed/v1"
 
 	"k8s.io/client-go/rest"
 )

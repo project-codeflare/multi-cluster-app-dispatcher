@@ -45,7 +45,7 @@ import (
 	"reflect"
 	"sync"
 
-	qjobv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
+	qjobv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 )

@@ -20,7 +20,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/qm_lib_backend_with_resplan_mgr/resplanmgr/util"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/qm_lib_backend_with_resplan_mgr/resplanmgr/util"
 	qmlib "github.ibm.com/ai-foundation/quota-manager/quota"
 	qmlibutils "github.ibm.com/ai-foundation/quota-manager/quota/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

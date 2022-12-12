@@ -34,8 +34,8 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app"
-	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 
 	"os"
 )

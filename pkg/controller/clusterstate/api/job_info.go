@@ -36,8 +36,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/utils"
-	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/utils"
+	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 )
 
 type TaskID types.UID
