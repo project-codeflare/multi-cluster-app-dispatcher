@@ -33,7 +33,7 @@ package util
 import (
 	"container/heap"
 
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 )
 
 type PriorityQueue struct {

@@ -35,9 +35,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"net/http"
 
-	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejob"
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/health"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejob"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/health"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )

@@ -47,10 +47,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 
-	client "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
-	informerfactory "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion"
-	arbclient "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/v1"
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	client "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
+	informerfactory "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion"
+	arbclient "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/v1"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 )
 
 // New returns a Cache implementation.

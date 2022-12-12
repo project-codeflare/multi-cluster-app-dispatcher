@@ -50,7 +50,7 @@ import (
 	"k8s.io/metrics/pkg/apis/custom_metrics"
 	"k8s.io/metrics/pkg/apis/external_metrics"
 
-	clusterstatecache "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
+	clusterstatecache "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
 	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/provider"
 	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/provider/helpers"
 )

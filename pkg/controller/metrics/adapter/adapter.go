@@ -32,7 +32,7 @@ package adapter
 
 import (
 	"flag"
-	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	openapinamer "k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"net/http"
@@ -43,13 +43,13 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
-	adapterprov "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter/provider"
+	adapterprov "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter/provider"
 	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/apiserver"
 	basecmd "github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/cmd"
 	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/provider"
 	generatedopenapi "github.com/kubernetes-sigs/custom-metrics-apiserver/test-adapter/generated/openapi"
 
-	clusterstatecache "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
+	clusterstatecache "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
 )
 
 // New returns a Cache implementation.

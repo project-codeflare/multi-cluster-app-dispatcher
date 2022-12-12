@@ -31,7 +31,7 @@ limitations under the License.
 package cache
 
 import (
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	dto "github.com/prometheus/client_model/go"
 )
 

@@ -31,13 +31,13 @@ import (
 	"context"
 	"fmt"
 
-	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
+	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
 
 	"sync"
 	"time"
 
-	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -53,7 +53,7 @@ import (
 	ssinformer "k8s.io/client-go/informers/apps/v1"
 	sslister "k8s.io/client-go/listers/apps/v1"
 
-	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
+	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )

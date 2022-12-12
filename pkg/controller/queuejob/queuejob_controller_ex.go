@@ -40,13 +40,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager"
 	dto "github.com/prometheus/client_model/go"
 
-	"github.com/IBM/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter"
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota"
-	qmutils "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/util"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota"
+	qmutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/util"
 	"k8s.io/apimachinery/pkg/api/equality"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -65,33 +65,33 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
-	resconfigmap "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/configmap" // ConfigMap
-	resdeployment "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/deployment"
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/genericresource"
-	resnamespace "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/namespace"                         // NP
-	resnetworkpolicy "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/networkpolicy"                 // NetworkPolicy
-	respersistentvolume "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/persistentvolume"           // PV
-	respersistentvolumeclaim "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/persistentvolumeclaim" // PVC
-	respod "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/pod"
-	ressecret "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/secret" // Secret
-	resservice "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/service"
-	resstatefulset "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/statefulset"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
+	resconfigmap "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/configmap" // ConfigMap
+	resdeployment "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/deployment"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/genericresource"
+	resnamespace "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/namespace"                         // NP
+	resnetworkpolicy "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/networkpolicy"                 // NetworkPolicy
+	respersistentvolume "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/persistentvolume"           // PV
+	respersistentvolumeclaim "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/persistentvolumeclaim" // PVC
+	respod "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/pod"
+	ressecret "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/secret" // Secret
+	resservice "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/service"
+	resstatefulset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/statefulset"
 	"k8s.io/apimachinery/pkg/labels"
 
-	arbv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
-	clientset "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
-	arbinformers "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion"
-	informersv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/v1"
-	listersv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
+	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
+	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
+	arbinformers "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion"
+	informersv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/v1"
+	listersv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
 
-	"github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/queuejobdispatch"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobdispatch"
 
 	jsons "encoding/json"
 
-	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
-	clusterstatecache "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
+	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	clusterstatecache "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
 )
 
 const (

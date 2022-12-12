@@ -33,7 +33,7 @@ package queuejobresources
 import (
 	"sync"
 
-	qjobv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
+	qjobv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 )

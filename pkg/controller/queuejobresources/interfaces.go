@@ -31,8 +31,8 @@ limitations under the License.
 package queuejobresources
 
 import (
-	qjobv1 "github.com/IBM/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
-	clusterstateapi "github.com/IBM/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	qjobv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
+	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 )
 
 // Interface is an abstract interface for queue job resource management.
