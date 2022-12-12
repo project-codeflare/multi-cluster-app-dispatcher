@@ -1,4 +1,4 @@
-module github.com/IBM/multi-cluster-app-dispatcher
+module github.com/project-codeflare/multi-cluster-app-dispatcher
 
 go 1.16
 
