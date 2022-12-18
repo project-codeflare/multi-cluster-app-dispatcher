@@ -7,8 +7,8 @@ replicaCount: 1
 loglevel: 4
 
 image:
-  repository: mcad-controller
-  tag: latest
+  repository: darroyo/mcad-controller
+  tag: quota-management-v1.29.40
   pullPolicy: Always
 
 crd:
