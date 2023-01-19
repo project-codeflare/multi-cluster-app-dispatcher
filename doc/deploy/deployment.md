@@ -25,6 +25,8 @@ Install the Helm Client on your local machine and the Helm Cerver on your kubern
 ### Access to a Docker Registry with the Multi-Cluster-App-Wrapper docker image.
 Follow the build instructions [here](../build/build.md) to build the `multi-cluster-app-dispatcher` controller docker image and push the image to a docker registry.
 
+Alternatively, the image is already available on [quay](quay.io/project-codeflare/mcad-controller)
+
 
 ### Determine Resources for Installing the Helm Chart for the Multi-Cluster-App-Dispatcher.
 
@@ -84,13 +86,13 @@ In the example above, there is only one node (`minikube`) in the cluster with th
 
 #### 1.a.  Option 1: Download this github project to your local machine via HTTPS
 ```bash
-# git clone https://github.com/IBM/multi-cluster-app-dispatcher.git
+# git clone https://github.com/project-codeflare/multi-cluster-app-dispatcher.git
 #
 ```
 or
 #### 1.b. Option 2: Download this github project to your local machine via SSH
 ```
-# git clone git@github.com:IBM/multi-cluster-app-dispatcher.git
+# git clone git@github.com:project-codeflare/multi-cluster-app-dispatcher.git
 #
 ```
 ### 2. Navigate to the Helm Deployment Directory.
