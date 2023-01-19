@@ -14,7 +14,7 @@ Clone this repo in your local environment:
 
 __Option 1__: Clone this github project to your local machine via HTTPS
 ```
-$ git clone https://github.com/IBM/multi-cluster-app-dispatcher.git
+$ git clone https://github.com/project-codeflare/multi-cluster-app-dispatcher.git
 Cloning into 'multi-cluster-app-dispatcher'...
 Checking connectivity... done.
 Checking out files: 100% (####/####), done.
@@ -23,7 +23,7 @@ $
 
 __Option 2__: Clone this github project to your local machine via SSH
 ```
-$ git clone git@github.com:IBM/multi-cluster-app-dispatcher.git
+$ git clone git@github.com:project-codeflare/multi-cluster-app-dispatcher.git
 Cloning into 'multi-cluster-app-dispatcher'...
 Checking connectivity... done.
 Checking out files: 100% (####/####), done.
@@ -100,6 +100,12 @@ The following example assumes an available `<repository>/mcad-controller` on [Do
 ```
 $ docker login
 $ docker push <respository>/mcad-controller:v1.14
+```
+
+The same can be done with [Quay](quay.io)
+```
+$ docker login quay.io
+$ docker push <quay_respository>/mcad-controller:v1.14
 ```
 
 Refer to [deployment](../deploy/deployment.md) on how to deploy the `multi-cluster-app-dispatcher` as a controller in Kubernetes.
