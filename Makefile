@@ -71,17 +71,17 @@ images-podman: verify-tag-name
 	podman build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
 
 push-images: verify-tag-name
-ifeq ($(strip $(dockerhub_repository)),)
+ifeq ($(strip $(quay_repository)),)
 	$(info No registry information provide.  To push images to a docker registry please set)
-	$(info environment variables: dockerhub_repository, dockerhub_token, and dockerhub_id.  Environment)
+	$(info environment variables: quay_repository, quay_token, and quay_id.  Environment)
 	$(info variables do not need to be set for github Travis CICD.)
 else
-	$(info Log into dockerhub)
-	docker login -u ${dockerhub_id} --password ${dockerhub_token}
+	$(info Log into quay)
+	docker login quay.io -u ${quay_id} --password ${quay_token}
 	$(info Tag the latest image)
-	docker tag mcad-controller:${TAG}  ${dockerhub_repository}/mcad-controller:${TAG}
+	docker tag mcad-controller:${TAG}  ${quay_repository}/mcad-controller:${TAG}
 	$(info Push the docker image to registry)
-	docker push ${dockerhub_repository}/mcad-controller:${TAG}
+	docker push ${quay_repository}/mcad-controller:${TAG}
 endif
 
 run-test:
@@ -89,12 +89,12 @@ run-test:
 	hack/make-rules/test.sh $(WHAT) $(TESTS)
 
 run-e2e: mcad-controller verify-tag-name
-ifeq ($(strip $(dockerhub_repository)),)
+ifeq ($(strip $(quay_repository)),)
 	echo "Running e2e with MCAD local image: mcad-controller ${TAG} IfNotPresent."
 	hack/run-e2e-kind.sh mcad-controller ${TAG} IfNotPresent
 else
-	echo "Running e2e with MCAD registry image image: ${dockerhub_repository}/mcad-controller ${TAG}."
-	hack/run-e2e-kind.sh ${dockerhub_repository}/mcad-controller ${TAG}
+	echo "Running e2e with MCAD registry image image: ${quay_repository}/mcad-controller ${TAG}."
+	hack/run-e2e-kind.sh ${quay_repository}/mcad-controller ${TAG}
 endif
 
 mcad-controller-private: init generate-code

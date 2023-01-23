@@ -26,7 +26,7 @@ script:
   # Process 'make images' when NOT a pull request
   - 'if [ "$TRAVIS_PULL_REQUEST"  = "false" ]; then make images; fi'
   # Process 'make images' when running as a pull request
-  - 'if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then unset dockerhub_repository && make images; fi'
+  - 'if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then unset quay_repository && make images; fi'
   # Process 'make push-images' when NOT a pull request
   - 'if [ "$TRAVIS_PULL_REQUEST"  = "false" ]; then make push-images; fi'
   - make run-e2e

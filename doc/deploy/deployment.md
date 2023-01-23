@@ -22,8 +22,10 @@ Install the Helm Client on your local machine and the Helm Cerver on your kubern
 #
 ```
 
-### Access to a Docker Registry with the Multi-Cluster-App-Wrapper docker image.
-Follow the build instructions [here](../build/build.md) to build the `multi-cluster-app-dispatcher` controller docker image and push the image to a docker registry.
+### Access to a Container Registry with the Multi-Cluster-App-Wrapper docker image.
+Follow the build instructions [here](../build/build.md) to build the `multi-cluster-app-dispatcher` controller docker image and push the image to a container registry.
+
+Alternatively, the image is already available on [quay](quay.io/project-codeflare/mcad-controller)
 
 
 ### Determine Resources for Installing the Helm Chart for the Multi-Cluster-App-Dispatcher.
@@ -84,13 +86,13 @@ In the example above, there is only one node (`minikube`) in the cluster with th
 
 #### 1.a.  Option 1: Download this github project to your local machine via HTTPS
 ```bash
-# git clone https://github.com/IBM/multi-cluster-app-dispatcher.git
+# git clone https://github.com/project-codeflare/multi-cluster-app-dispatcher.git
 #
 ```
 or
 #### 1.b. Option 2: Download this github project to your local machine via SSH
 ```
-# git clone git@github.com:IBM/multi-cluster-app-dispatcher.git
+# git clone git@github.com:project-codeflare/multi-cluster-app-dispatcher.git
 #
 ```
 ### 2. Navigate to the Helm Deployment Directory.
@@ -125,7 +127,7 @@ helm install mcad-controller --namespace kube-system --wait --set image.pullPoli
 To adjust the cpu and memory demands of the deployment with command line overrides example:
 
 ```
-helm install mcad-controller --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=myDockerReegistry/mcad-controller --set image.tag=latest --set image.pullPolicy=Always
+helm install mcad-controller --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=myContainerRegistry/mcad-controller --set image.tag=latest --set image.pullPolicy=Always
 ```
 #### 3.b)  Start the Multi-Cluster-App-Dispatcher Controller on the Controller Cluster (*Dispatcher Mode*).
 _Dispatcher Mode__: Install and set up the Multi-Cluster-App-Dispatcher Controler (_MCAD_) in *Dispatcher Mode* for the control cluster that will dispatch the _MCAD_ controller to an *Agent* cluster using Helm.
