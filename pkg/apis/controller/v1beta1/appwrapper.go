@@ -240,6 +240,10 @@ type AppWrapperStatus struct {
 	// +kubebuilder:validation:Format=float
 	SystemPriority float64 `json:"systempriority,omitempty"`
 
+	//field to guarantee runtime when preemption enabled
+
+	DispatchedRuntimeRemaining float64 `json:"dispatchedruntimeremaining,omitempty"`
+
 	// State of QueueJob - Init, Queueing, HeadOfLine, Rejoining, ...
 	QueueJobState AppWrapperConditionType `json:"queuejobstate,omitempty"`
 

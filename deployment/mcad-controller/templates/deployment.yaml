@@ -7733,6 +7733,10 @@ spec:
                 description: System defined Priority
                 format: float
                 type: number
+              dispatchedruntimeremaining:
+                description: runtime remaining after preemption
+                format: float
+                type: number
               template:
                 description: The minimal available resources to run for this AppWrapper
                   (is this different from the MinAvailable from JobStatus)

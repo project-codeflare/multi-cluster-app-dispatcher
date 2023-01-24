@@ -60,7 +60,7 @@ type ScheduleTimeSpec struct {
 	Max     metav1.Time `json:"maxTimestamp,omitempty"`
 }
 
-type RuntimeDurationSpec struct {
+type DispatchDurationSpec struct {
 	Expected metav1.Duration `json:"expected,omitempty"`
 	Limit    metav1.Duration `json:"limit,omitempty"`
 }
@@ -75,7 +75,7 @@ type SchedulingSpecTemplate struct {
 	MinAvailable      int                   `json:"minAvailable,omitempty" protobuf:"bytes,2,rep,name=minAvailable"`
 	ClusterScheduling ClusterSchedulingSpec `json:"clusterScheduling,omitempty"`
 	DispatchingWindow DispatchingWindowSpec `json:"dispatchingWindow,omitempty"`
-	RuntimeDuration   RuntimeDurationSpec   `json:"runtimeDuration,omitempty"`
+	DispatchDuration  DispatchDurationSpec  `json:"dispatchDuration,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
