@@ -628,13 +628,18 @@ func (gr *GenericResources) IsItemCompleted(aw *arbv1.AppWrapperGenericResource,
 	if err != nil {
 		klog.Errorf("Error listing object: ", err)
 	}
+	//ignore if object listing failed
+	if inEtcd == nil {
+		klog.Errorf("Unable to retrieve unstructured objects to check completion status")
+		return false
+	}
 
 	for _, job := range inEtcd.Items {
 		completionRequiredBlock := aw.CompletionStatus
 		//klog.V(4).Infof("Checking completion status for genericItem: %v in namespace: %v with labels: %v", aw.Name, namespace, aw.Labels)
 		unstructuredObjectName := job.GetName()
-		//ignore nil objects
-		if len(completionRequiredBlock) > 0 && len(unstructuredObjectName) > 0 && job.Object["status"] != nil {
+		//ignore nil object
+		if len(completionRequiredBlock) > 0 && len(unstructuredObjectName) > 0 {
 			klog.V(4).Infof("Unmarshalling object %v for checking completion status", unstructuredObjectName)
 			conditions, err := job.Object["status"].(map[string]interface{})["conditions"].([]interface{})
 			//if condition not found skip for this interation
