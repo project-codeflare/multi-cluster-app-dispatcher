@@ -631,7 +631,11 @@ func (gr *GenericResources) IsItemCompleted(aw *arbv1.AppWrapperGenericResource,
 
 	for _, job := range inEtcd.Items {
 		completionRequiredBlock := aw.CompletionStatus
-		if len(completionRequiredBlock) > 0 {
+		//klog.V(4).Infof("Checking completion status for genericItem: %v in namespace: %v with labels: %v", aw.Name, namespace, aw.Labels)
+		unstructuredObjectName := job.GetName()
+		//ignore nil objects
+		if len(completionRequiredBlock) > 0 && len(unstructuredObjectName) > 0 && job.Object["status"] != nil {
+			klog.V(4).Infof("Unmarshalling object %v for checking completion status", unstructuredObjectName)
 			conditions, err := job.Object["status"].(map[string]interface{})["conditions"].([]interface{})
 			//if condition not found skip for this interation
 			//TODO: process error gracefully as error could be due to user error
@@ -639,13 +643,15 @@ func (gr *GenericResources) IsItemCompleted(aw *arbv1.AppWrapperGenericResource,
 				klog.Errorf("Error processing unstructured object")
 			}
 
-			for _, item := range conditions {
-				completionType := fmt.Sprint(item.(map[string]interface{})["type"])
-				//Move this to utils package?
-				userSpecfiedCompletionConditions := strings.Split(aw.CompletionStatus, ",")
-				for _, condition := range userSpecfiedCompletionConditions {
-					if strings.Contains(strings.ToLower(completionType), strings.ToLower(condition)) {
-						return true
+			if len(conditions) > 0 {
+				for _, item := range conditions {
+					completionType := fmt.Sprint(item.(map[string]interface{})["type"])
+					//Move this to utils package?
+					userSpecfiedCompletionConditions := strings.Split(aw.CompletionStatus, ",")
+					for _, condition := range userSpecfiedCompletionConditions {
+						if strings.Contains(strings.ToLower(completionType), strings.ToLower(condition)) {
+							return true
+						}
 					}
 				}
 			}
