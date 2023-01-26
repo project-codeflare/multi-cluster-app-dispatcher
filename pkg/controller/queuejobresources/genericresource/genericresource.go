@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -190,7 +191,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	startTime := time.Now()
 	defer func() {
 		if pErr := recover(); pErr != nil {
-			klog.Errorf("[SyncQueueJob] Panic occurred: %v", pErr)
+			klog.Errorf("[SyncQueueJob] Panic occurred: %v, stacktrace: %s", pErr, string(debug.Stack()))
 		}
 		klog.V(4).Infof("Finished syncing AppWrapper job resource %s (%v)", aw.Name, time.Now().Sub(startTime))
 	}()
@@ -597,21 +598,24 @@ func getContainerResources(container v1.Container, replicas float64) *clustersta
 }
 
 //returns status of an item present in etcd
-func (gr *GenericResources) IsItemCompleted(aw *arbv1.AppWrapperGenericResource, namespace string) (completed bool) {
+func (gr *GenericResources) IsItemCompleted(aw *arbv1.AppWrapperGenericResource, namespace string, appwrapperName string, genericItemName string) (completed bool) {
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
-		klog.Errorf("Error getting API resources, err=%#v", err)
+		klog.Errorf("[IsItemCompleted] Error getting API resources, err=%#v", err)
+		return false
 	}
 	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
 	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(aw.GenericTemplate.Raw, nil, nil)
 	if err != nil {
-		klog.Errorf("Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
+		klog.Errorf("[IsItemCompleted] Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
+		return false
 	}
 
 	mapping, err := restmapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err != nil {
-		klog.Errorf("mapping error from raw object: `%v`", err)
+		klog.Errorf("[IsItemCompleted] mapping error from raw object: `%v`", err)
+		return false
 	}
 	restconfig := gr.kubeClientConfig
 	restconfig.GroupVersion = &schema.GroupVersion{
@@ -621,35 +625,64 @@ func (gr *GenericResources) IsItemCompleted(aw *arbv1.AppWrapperGenericResource,
 	rsrc := mapping.Resource
 	dclient, err := dynamic.NewForConfig(restconfig)
 	if err != nil {
-		klog.Errorf("Error creating new dynamic client, err=%#v", err)
+		klog.Errorf("[IsItemCompleted] Error creating new dynamic client, err %v", err)
+		return false
 	}
 
-	inEtcd, err := dclient.Resource(rsrc).Namespace(namespace).List(context.Background(), metav1.ListOptions{})
+	labelSelector := fmt.Sprintf("%s=%s", appwrapperJobName, appwrapperName)
+	inEtcd, err := dclient.Resource(rsrc).Namespace(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
-		klog.Errorf("Error listing object: ", err)
+		klog.Errorf("[IsItemCompleted] Error listing object: %v", err)
+		return false
 	}
 
 	for _, job := range inEtcd.Items {
-		completionRequiredBlock := aw.CompletionStatus
-		if len(completionRequiredBlock) > 0 {
-			conditions, err := job.Object["status"].(map[string]interface{})["conditions"].([]interface{})
-			//if condition not found skip for this interation
-			//TODO: process error gracefully as error could be due to user error
-			if err {
-				klog.Errorf("Error processing unstructured object")
+		//job.UnstructuredContent() has status information
+		unstructuredObjectName := job.GetName()
+		if unstructuredObjectName != genericItemName {
+			continue
+		}
+		jobOwnerRef := job.GetOwnerReferences()
+		validAwOwnerRef := false
+		for _, val := range jobOwnerRef {
+			if val.Name == appwrapperName {
+				validAwOwnerRef = true
 			}
+		}
+		if !validAwOwnerRef {
+			klog.Warningf("[IsItemCompleted] Item owner name %v does match appwrappper name %v in namespace %v", unstructuredObjectName, appwrapperName, namespace)
+			continue
+		}
 
-			for _, item := range conditions {
-				completionType := fmt.Sprint(item.(map[string]interface{})["type"])
-				//Move this to utils package?
-				userSpecfiedCompletionConditions := strings.Split(aw.CompletionStatus, ",")
-				for _, condition := range userSpecfiedCompletionConditions {
-					if strings.Contains(strings.ToLower(completionType), strings.ToLower(condition)) {
-						return true
+		//check with a false status field
+		//check also conditions object
+		jobMap := job.UnstructuredContent()
+		if jobMap == nil {
+			continue
+		}
+
+		if job.Object["status"] != nil {
+			status := job.Object["status"].(map[string]interface{})
+			if status["conditions"] != nil {
+				conditions, err := status["conditions"].([]interface{})
+				//if condition not found skip for this interation
+				if err {
+					klog.Errorf("[IsItemCompleted] Error processing unstructured object %v in namespace %v with labels %v, err: %v", job.GetName(), job.GetNamespace(), job.GetLabels(), err)
+					continue
+				}
+				for _, item := range conditions {
+					completionType := fmt.Sprint(item.(map[string]interface{})["type"])
+					//Move this to utils package?
+					userSpecfiedCompletionConditions := strings.Split(aw.CompletionStatus, ",")
+					for _, condition := range userSpecfiedCompletionConditions {
+						if strings.Contains(strings.ToLower(completionType), strings.ToLower(condition)) {
+							return true
+						}
 					}
 				}
 			}
 		}
+
 	}
 	return false
 }

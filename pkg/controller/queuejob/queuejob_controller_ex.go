@@ -35,6 +35,7 @@ import (
 	"math"
 	"math/rand"
 	"reflect"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -518,8 +519,8 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 				}
 
 				// Now check for 0 running pods and for the minimum age and then
-				// skip preempt if current time is not beyond minimum age
-				minAge := condition.LastTransitionMicroTime.Add(60 * time.Second)
+				// skip preempt if current time is not beyond minimum age ie 10 mins
+				minAge := condition.LastTransitionMicroTime.Add(600 * time.Second)
 				if (value.Status.Running <= 0) && (dispatchConditionExists && (time.Now().Before(minAge))) {
 					continue
 				}
@@ -592,8 +593,17 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arb
 			if err := jsons.Unmarshal(objectName.Raw, &blob); err != nil {
 				klog.Errorf("Error unmarshalling, err=%#v", err)
 			}
+			unstruct.Object = blob.(map[string]interface{}) //set object to the content of the blob after Unmarshalling
+			name := ""
+			if md, ok := unstruct.Object["metadata"]; ok {
 
-			status := qjm.genericresources.IsItemCompleted(&genericItem, caw.Namespace)
+				metadata := md.(map[string]interface{})
+				if objectName, ok := metadata["name"]; ok {
+					name = objectName.(string)
+				}
+			}
+			klog.Infof("Checking items completed for appwrapper: %v in namespace: %v", caw.Name, caw.Namespace)
+			status := qjm.genericresources.IsItemCompleted(&genericItem, caw.Namespace, caw.Name, name)
 			if !status {
 				//early termination because a required item is not completed
 				return caw.Status.State
@@ -1308,7 +1318,7 @@ func (qjm *XController) waitForPodCountUpdates(searchCond *arbv1.AppWrapperCondi
 	}
 
 	klog.V(10).Infof("[waitForPodCountUpdates] Dispatch duration time %d microseconds has not reached timeout value of %d microseconds",
-			timeSinceDispatched.Microseconds(), timeoutMicroSeconds)
+		timeSinceDispatched.Microseconds(), timeoutMicroSeconds)
 	return true
 }
 
@@ -1320,7 +1330,7 @@ func (qjm *XController) getLatestStatusConditionType(aw *arbv1.AppWrapper, condT
 			// Matching condition?
 			if condition.Type == condType {
 				//First time match?
-				if  (arbv1.AppWrapperCondition{} == latestConditionBasedOnType) {
+				if (arbv1.AppWrapperCondition{} == latestConditionBasedOnType) {
 					latestConditionBasedOnType = condition
 				} else {
 					// Compare current condition to last match and get keep the later condition
@@ -1334,10 +1344,10 @@ func (qjm *XController) getLatestStatusConditionType(aw *arbv1.AppWrapper, condT
 				}
 			} // Condition type match check
 		} // Loop through conditions of AW
-	}  // AW has conditions?
+	} // AW has conditions?
 
 	// If no matching condition found return nil otherwise return matching latest condition
-	if  (arbv1.AppWrapperCondition{} == latestConditionBasedOnType) {
+	if (arbv1.AppWrapperCondition{} == latestConditionBasedOnType) {
 		klog.V(10).Infof("[getLatestStatusConditionType] No disptach condition found for AppWrapper=%s/%s.",
 			aw.Name, aw.Namespace)
 		return nil
@@ -1668,6 +1678,11 @@ func (cc *XController) updateQueueJobStatus(queueJobFromAgent *arbv1.AppWrapper)
 }
 
 func (cc *XController) worker() {
+	defer func() {
+		if pErr := recover(); pErr != nil {
+			klog.Errorf("[worker] Panic occurred error: %v, stacktrace: %s", pErr, string(debug.Stack()))
+		}
+	}()
 	if _, err := cc.eventQueue.Pop(func(obj interface{}) error {
 		var queuejob *arbv1.AppWrapper
 		switch v := obj.(type) {
