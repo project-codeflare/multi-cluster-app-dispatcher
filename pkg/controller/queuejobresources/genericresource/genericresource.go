@@ -598,7 +598,7 @@ func getContainerResources(container v1.Container, replicas float64) *clustersta
 }
 
 //returns status of an item present in etcd
-func (gr *GenericResources) IsItemCompleted(aw *arbv1.AppWrapperGenericResource, namespace string, appwrapperName string, genericItemName string) (completed bool) {
+func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResource, namespace string, appwrapperName string, genericItemName string) (completed bool) {
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
@@ -606,7 +606,7 @@ func (gr *GenericResources) IsItemCompleted(aw *arbv1.AppWrapperGenericResource,
 		return false
 	}
 	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
-	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(aw.GenericTemplate.Raw, nil, nil)
+	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(awgr.GenericTemplate.Raw, nil, nil)
 	if err != nil {
 		klog.Errorf("[IsItemCompleted] Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
 		return false
@@ -673,7 +673,7 @@ func (gr *GenericResources) IsItemCompleted(aw *arbv1.AppWrapperGenericResource,
 				for _, item := range conditions {
 					completionType := fmt.Sprint(item.(map[string]interface{})["type"])
 					//Move this to utils package?
-					userSpecfiedCompletionConditions := strings.Split(aw.CompletionStatus, ",")
+					userSpecfiedCompletionConditions := strings.Split(awgr.CompletionStatus, ",")
 					for _, condition := range userSpecfiedCompletionConditions {
 						if strings.Contains(strings.ToLower(completionType), strings.ToLower(condition)) {
 							return true
@@ -681,6 +681,8 @@ func (gr *GenericResources) IsItemCompleted(aw *arbv1.AppWrapperGenericResource,
 					}
 				}
 			}
+		} else {
+			klog.Errorf("[IsItemCompleted] Found item with name %v that has status nil in namespace %v with labels %v", job.GetName(), job.GetNamespace(), job.GetLabels())
 		}
 
 	}
