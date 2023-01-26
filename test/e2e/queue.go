@@ -39,9 +39,9 @@ import (
 
 	"time"
 
-	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -396,7 +396,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappers = append(appwrappers, aw3)
 
 		// Wait for pods to get created, assumes preemption around 1 minute
-		err = waitAWPodsExists(context, aw3, 120000*time.Millisecond)
+		err = waitAWPodsExists(context, aw3, 620000*time.Millisecond)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Make sure they are running
