@@ -664,10 +664,10 @@ func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResourc
 		if job.Object["status"] != nil {
 			status := job.Object["status"].(map[string]interface{})
 			if status["conditions"] != nil {
-				conditions, err := status["conditions"].([]interface{})
+				conditions, ok := job.Object["status"].(map[string]interface{})["conditions"].([]interface{})
 				//if condition not found skip for this interation
-				if err {
-					klog.Errorf("[IsItemCompleted] Error processing unstructured object %v in namespace %v with labels %v, err: %v", job.GetName(), job.GetNamespace(), job.GetLabels(), err)
+				if !ok {
+					klog.Errorf("[IsItemCompleted] Error processing of unstructured object %v in namespace %v with labels %v, err: %v", job.GetName(), job.GetNamespace(), job.GetLabels(), err)
 					continue
 				}
 				for _, item := range conditions {
