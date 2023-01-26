@@ -591,7 +591,7 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arb
 			unstruct.Object = make(map[string]interface{})
 			var blob interface{}
 			if err := jsons.Unmarshal(objectName.Raw, &blob); err != nil {
-				klog.Errorf("Error unmarshalling, err=%#v", err)
+				klog.Errorf("[getAppWrapperCompletionStatus] Error unmarshalling, err=%#v", err)
 			}
 			unstruct.Object = blob.(map[string]interface{}) //set object to the content of the blob after Unmarshalling
 			name := ""
@@ -602,9 +602,9 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arb
 				}
 			}
 			if len(name) == 0 {
-				klog.Warningf("object name not present for appwrapper: %v in namespace: %v", caw.Name, caw.Namespace)
+				klog.Warningf("[getAppWrapperCompletionStatus] object name not present for appwrapper: %v in namespace: %v", caw.Name, caw.Namespace)
 			}
-			klog.Infof("Checking items completed for appwrapper: %v in namespace: %v", caw.Name, caw.Namespace)
+			klog.Infof("[getAppWrapperCompletionStatus] Checking items completed for appwrapper: %v in namespace: %v", caw.Name, caw.Namespace)
 
 			status := qjm.genericresources.IsItemCompleted(&genericItem, caw.Namespace, caw.Name, name)
 			if !status {
@@ -617,7 +617,7 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arb
 
 		}
 	}
-	klog.V(4).Infof("countCompletionRequired %v, podsRunning %v, podsPending %v", countCompletionRequired, caw.Status.Running, caw.Status.Pending)
+	klog.V(4).Infof("[getAppWrapperCompletionStatus] countCompletionRequired %v, podsRunning %v, podsPending %v", countCompletionRequired, caw.Status.Running, caw.Status.Pending)
 
 	//Set new status only when completion required flag is present in genericitems array
 	if countCompletionRequired > 0 {
