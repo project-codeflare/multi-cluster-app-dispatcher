@@ -596,13 +596,16 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arb
 			unstruct.Object = blob.(map[string]interface{}) //set object to the content of the blob after Unmarshalling
 			name := ""
 			if md, ok := unstruct.Object["metadata"]; ok {
-
 				metadata := md.(map[string]interface{})
 				if objectName, ok := metadata["name"]; ok {
 					name = objectName.(string)
 				}
 			}
+			if len(name) == 0 {
+				klog.Warningf("object name not present for appwrapper: %v in namespace: %v", caw.Name, caw.Namespace)
+			}
 			klog.Infof("Checking items completed for appwrapper: %v in namespace: %v", caw.Name, caw.Namespace)
+
 			status := qjm.genericresources.IsItemCompleted(&genericItem, caw.Namespace, caw.Name, name)
 			if !status {
 				//early termination because a required item is not completed

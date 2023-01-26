@@ -684,7 +684,6 @@ func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResourc
 		} else {
 			klog.Errorf("[IsItemCompleted] Found item with name %v that has status nil in namespace %v with labels %v", job.GetName(), job.GetNamespace(), job.GetLabels())
 		}
-
 	}
 	return false
 }
