@@ -3003,6 +3003,42 @@ func createBadGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 
 	return appwrapper
 }
+
+func createBadGenericItemAW(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(` `)
+	var schedSpecMin int = 1
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item"),
+							Namespace: context.namespace,
+						},
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 func createBadGenericPodTemplateAW(context *context, name string) (*arbv1.AppWrapper, error) {
 	rb := []byte(`{"metadata": 
 	{

@@ -313,6 +313,21 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
+	It("Create AppWrapper  - Bad Generic Item Only", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper  - Bad Generic Item Only - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		aw := createBadGenericItemAW(context, "aw-bad-generic-item-1")
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWPodsReady(context, aw)
+		Expect(err).To(HaveOccurred())
+
+	})
+
 	It("Create AppWrapper - Namespace Only - 0 Pods", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - Started.\n")
 		context := initTestContext()
