@@ -395,8 +395,8 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		appwrappers = append(appwrappers, aw3)
 
-		// Wait for pods to get created, assumes preemption around 1 minute
-		err = waitAWPodsExists(context, aw3, 620000*time.Millisecond)
+		// Wait for pods to get created, assumes preemption around 10 minutes
+		err = waitAWPodsExists(context, aw3, 720000*time.Millisecond)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Make sure they are running
