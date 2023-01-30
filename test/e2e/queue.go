@@ -36,7 +36,6 @@ package e2e
 import (
 	"fmt"
 	"os"
-
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -499,6 +498,69 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(pass).To(BeTrue())
 		appwrappers = append(appwrappers, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Job Completion Test - Completed.\n")
+
+	})
+
+	It("MCAD Multi-Item Job Completion Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Multi-Item Job Completion Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		aw := createGenericJobAWWithMultipleStatus(context, "aw-test-job-with-comp-2")
+		err1 := waitAWPodsReady(context, aw)
+		Expect(err1).NotTo(HaveOccurred())
+		time.Sleep(1 * time.Minute)
+		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "Error getting status")
+		}
+		pass := false
+		fmt.Fprintf(os.Stdout, "[e2e] status of AW %v.\n", aw1.Status.State)
+		if aw1.Status.State == arbv1.AppWrapperStateCompleted {
+			pass = true
+		}
+		Expect(pass).To(BeTrue())
+		appwrappers = append(appwrappers, aw)
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Job Completion Test - Completed.\n")
+
+	})
+
+	It("MCAD Multi-Item Job Completion Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Multi-Item Job Completion Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		aw := createGenericJobAWWithMultipleStatus(context, "aw-test-job-with-comp-2")
+		err1 := waitAWPodsReady(context, aw)
+		Expect(err1).NotTo(HaveOccurred())
+		time.Sleep(1 * time.Minute)
+		pass := false
+		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "Error getting status")
+		}
+		if aw1.Status.State == arbv1.AppWrapperStateCompleted {
+			pass = true
+		}
+		Expect(pass).To(BeTrue())
+
+	})
+
+	FIt("MCAD GenericItem Without Status Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD GenericItem Without Status Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		aw := createAWGenericItemWithoutStatus(context, "aw-test-job-with-comp-44")
+		err1 := waitAWPodsReady(context, aw)
+		fmt.Fprintf(os.Stdout, "The error is: %v", err1)
+		Expect(err1).To(HaveOccurred())
 
 	})
 

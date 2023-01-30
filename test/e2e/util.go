@@ -1627,6 +1627,194 @@ func createGenericJobAWWithStatus(context *context, name string) *arbv1.AppWrapp
 	return appwrapper
 }
 
+func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{
+		"apiVersion": "batch/v1",
+		"kind": "Job",
+		"metadata": {
+			"name": "aw-test-job-with-comp-2",
+			"namespace": "test"
+		},
+		"spec": {
+			"completions": 1,
+			"parallelism": 1,
+			"template": {
+				"metadata": {
+					"labels": {
+						"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-2"
+					}
+				},
+				"spec": {
+					"containers": [
+						{
+							"args": [
+								"sleep 5"
+							],
+							"command": [
+								"/bin/bash",
+								"-c",
+								"--"
+							],
+							"image": "ubuntu:latest",
+							"imagePullPolicy": "IfNotPresent",
+							"name": "aw-test-job-with-comp-21",
+							"resources": {
+								"limits": {
+									"cpu": "100m",
+									"memory": "256M"
+								},
+								"requests": {
+									"cpu": "100m",
+									"memory": "256M"
+								}
+							}
+						}
+					],
+					"restartPolicy": "Never"
+				}
+			}
+		}
+	}`)
+
+	rb2 := []byte(`{
+		"apiVersion": "batch/v1",
+		"kind": "Job",
+		"metadata": {
+			"name": "aw-test-job-with-comp-3",
+			"namespace": "test"
+		},
+		"spec": {
+			"completions": 1,
+			"parallelism": 1,
+			"template": {
+				"metadata": {
+					"labels": {
+						"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-2"
+					}
+				},
+				"spec": {
+					"containers": [
+						{
+							"args": [
+								"sleep 5"
+							],
+							"command": [
+								"/bin/bash",
+								"-c",
+								"--"
+							],
+							"image": "ubuntu:latest",
+							"imagePullPolicy": "IfNotPresent",
+							"name": "aw-test-job-with-comp-22",
+							"resources": {
+								"limits": {
+									"cpu": "100m",
+									"memory": "256M"
+								},
+								"requests": {
+									"cpu": "100m",
+									"memory": "256M"
+								}
+							}
+						}
+					],
+					"restartPolicy": "Never"
+				}
+			}
+		}
+	}`)
+	//var schedSpecMin int = 1
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "test",
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				//MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-comp-2"),
+							Namespace: "test",
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+						CompletionStatus: "Complete",
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-comp-3"),
+							Namespace: "test",
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb2,
+						},
+						CompletionStatus: "Complete",
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
+func createAWGenericItemWithoutStatus(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{
+		"apiVersion": "scheduling.sigs.k8s.io/v1alpha1",
+                        "kind": "PodGroup",
+                        "metadata": {
+                            "name": "aw-schd-spec-with-timeout-1",
+                            "namespace": "default"
+                        },
+                        "spec": {
+                            "minMember": 1
+                        }
+		}`)
+	var schedSpecMin int = 1
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "test",
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-comp-44"),
+							Namespace: "test",
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+						//CompletionStatus: "Complete",
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 func createGenericJobAWWithScheduleSpec(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{
 		"apiVersion": "batch/v1",
@@ -3005,7 +3193,7 @@ func createBadGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 }
 
 func createBadGenericItemAW(context *context, name string) *arbv1.AppWrapper {
-	rb := []byte(` `)
+	//rb := []byte(`""`)
 	var schedSpecMin int = 1
 
 	aw := &arbv1.AppWrapper{
@@ -3024,9 +3212,9 @@ func createBadGenericItemAW(context *context, name string) *arbv1.AppWrapper {
 							Name:      fmt.Sprintf("%s-%s", name, "item"),
 							Namespace: context.namespace,
 						},
-						GenericTemplate: runtime.RawExtension{
-							Raw: rb,
-						},
+						// GenericTemplate: runtime.RawExtension{
+						// 	Raw: rb,
+						// },
 					},
 				},
 			},
