@@ -550,7 +550,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
-	FIt("MCAD GenericItem Without Status Test", func() {
+	It("MCAD GenericItem Without Status Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD GenericItem Without Status Test - Started.\n")
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
