@@ -310,7 +310,7 @@ function kube-test-env-up {
 
     helm version 
 
-    cd deployment
+    cd deployment/mcad-controller
 
     # start mcad controller
     echo "Starting MCAD Controller..."
