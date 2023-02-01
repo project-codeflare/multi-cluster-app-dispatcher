@@ -25,7 +25,7 @@ Install the Helm Client on your local machine and the Helm Cerver on your kubern
 ### Access to a Container Registry with the Multi-Cluster-App-Wrapper docker image.
 Follow the build instructions [here](../build/build.md) to build the `multi-cluster-app-dispatcher` controller docker image and push the image to a container registry.
 
-Alternatively, the image is already available on [quay](quay.io/project-codeflare/mcad-controller)
+Alternatively, the image is already available on [quay](https://quay.io/project-codeflare/mcad-controller)
 
 
 ### Determine Resources for Installing the Helm Chart for the Multi-Cluster-App-Dispatcher.
