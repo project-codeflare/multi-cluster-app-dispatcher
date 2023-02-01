@@ -1657,7 +1657,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 							],
 							"image": "ubuntu:latest",
 							"imagePullPolicy": "IfNotPresent",
-							"name": "aw-test-job-with-comp-21",
+							"name": "aw-test-job-with-comp-ms-21",
 							"resources": {
 								"limits": {
 									"cpu": "100m",
@@ -1680,7 +1680,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 		"apiVersion": "batch/v1",
 		"kind": "Job",
 		"metadata": {
-			"name": "aw-test-job-with-comp-ms-3",
+			"name": "aw-test-job-with-comp-ms-22",
 			"namespace": "test"
 		},
 		"spec": {
@@ -1705,7 +1705,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 							],
 							"image": "ubuntu:latest",
 							"imagePullPolicy": "IfNotPresent",
-							"name": "aw-test-job-with-comp-22",
+							"name": "aw-test-job-with-comp-ms-22",
 							"resources": {
 								"limits": {
 									"cpu": "100m",
