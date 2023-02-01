@@ -1632,7 +1632,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 		"apiVersion": "batch/v1",
 		"kind": "Job",
 		"metadata": {
-			"name": "aw-test-job-with-comp-2",
+			"name": "aw-test-job-with-comp-ms-21",
 			"namespace": "test"
 		},
 		"spec": {
@@ -1641,7 +1641,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 			"template": {
 				"metadata": {
 					"labels": {
-						"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-2"
+						"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-ms-2"
 					}
 				},
 				"spec": {
@@ -1680,7 +1680,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 		"apiVersion": "batch/v1",
 		"kind": "Job",
 		"metadata": {
-			"name": "aw-test-job-with-comp-3",
+			"name": "aw-test-job-with-comp-ms-3",
 			"namespace": "test"
 		},
 		"spec": {
@@ -1689,7 +1689,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 			"template": {
 				"metadata": {
 					"labels": {
-						"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-2"
+						"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-ms-2"
 					}
 				},
 				"spec": {
@@ -1738,7 +1738,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-comp-2"),
+							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-comp-21"),
 							Namespace: "test",
 						},
 						DesiredAvailable: 1,
@@ -1749,7 +1749,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 					},
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-comp-3"),
+							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-comp-22"),
 							Namespace: "test",
 						},
 						DesiredAvailable: 1,
