@@ -34,7 +34,7 @@ spec:
             type: object
           spec:
             description: Specification of the desired behavior of a cron job, including
-              the minAvailable
+              the minAvailable and the requeuingTimeMinutes
             properties:
               schedulerName:
                 type: string
@@ -43,6 +43,9 @@ spec:
                 properties:
                   minAvailable:
                     type: integer
+                  requeuingTimeMinutes:
+                    type: integer
+                    default: 5
                   nodeSelector:
                     additionalProperties:
                       type: string

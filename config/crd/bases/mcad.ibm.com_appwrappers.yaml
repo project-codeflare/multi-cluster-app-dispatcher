@@ -257,6 +257,9 @@ spec:
                 properties:
                   minAvailable:
                     type: integer
+                  requeuingTimeMinutes:
+                    type: integer
+                    default: 5
                   nodeSelector:
                     additionalProperties:
                       type: string
