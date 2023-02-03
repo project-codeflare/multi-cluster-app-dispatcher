@@ -436,6 +436,7 @@ func (qjm *XController) PreemptQueueJobs() {
 			message = fmt.Sprintf("Insufficient number of Running and Completed pods, minimum=%d, running=%d, completed=%d.", aw.Spec.SchedSpec.MinAvailable, aw.Status.Running, aw.Status.Succeeded)
 			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
 			newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
+			newjob.Spec.SchedSpec.RequeuingTimeMinutes = 2 * aw.Spec.SchedSpec.RequeuingTimeMinutes // Grow the requeuing waiting time exponentially
 			updateNewJob = newjob.DeepCopy()
 
 			//If pods failed scheduling generate new preempt condition
@@ -460,9 +461,9 @@ func (qjm *XController) PreemptQueueJobs() {
 		klog.V(4).Infof("[PreemptQueueJobs] Adding preempted AppWrapper %s/%s to backoff queue.",
 			aw.Name, aw.Namespace)
 		go qjm.backoff(aw, "PreemptionTriggered", string(message))
-
 	}
 }
+
 func (qjm *XController) preemptAWJobs(preemptAWs []*arbv1.AppWrapper) {
 	if preemptAWs == nil {
 		return
@@ -503,25 +504,15 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 
 			if (int(value.Status.Running) + int(value.Status.Succeeded)) < replicas {
 
-				//Check to see if if this AW job has been dispatched for a time window before preempting
-				conditionsLen := len(value.Status.Conditions)
-				var dispatchConditionExists bool
-				dispatchConditionExists = false
-				var condition arbv1.AppWrapperCondition
-				// Get the last time the AppWrapper was dispatched
-				for i := (conditionsLen - 1); i > 0; i-- {
-					condition = value.Status.Conditions[i]
-					if condition.Type != arbv1.AppWrapperCondDispatched {
-						continue
-					}
-					dispatchConditionExists = true
-					break
-				}
+				// Check for the minimum age and then skip preempt if current time is not beyond minimum age
+				// The minimum age is controlled by the requeuingTimeMinutes stanza
+				// For preemption, the time is compared to the last condition in the AppWrapper
+				condition := value.Status.Conditions[len(value.Status.Conditions) - 1]
+				requeuingTimeMinutes := value.Spec.SchedSpec.RequeuingTimeMinutes
+				minAge := condition.LastTransitionMicroTime.Add(time.Duration(requeuingTimeMinutes) * time.Minute)
+				currentTime := time.Now()
 
-				// Now check for 0 running pods and for the minimum age and then
-				// skip preempt if current time is not beyond minimum age ie 10 mins
-				minAge := condition.LastTransitionMicroTime.Add(600 * time.Second)
-				if (value.Status.Running <= 0) && (dispatchConditionExists && (time.Now().Before(minAge))) {
+				if currentTime.Before(minAge) {
 					continue
 				}
 
@@ -530,16 +521,16 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 					qjobs = append(qjobs, value)
 				}
 			} else {
-				//Preempt when schedulingSpec stanza is not set but pods fails scheduling.
-				//ignore co-scheduler pods
+				// Preempt when schedulingSpec stanza is not set but pods fails scheduling.
+				// ignore co-scheduler pods
 				if len(value.Status.PendingPodConditions) > 0 {
 					klog.V(3).Infof("AppWrapper %s is eligible for preemption Running: %v , Succeeded: %v due to failed scheduling !!! \n", value.Name, value.Status.Running, value.Status.Succeeded)
 					qjobs = append(qjobs, value)
 				}
-
 			}
 		}
 	}
+
 	return qjobs
 }
 

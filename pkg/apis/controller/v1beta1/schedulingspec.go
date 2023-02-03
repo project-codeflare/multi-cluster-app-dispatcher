@@ -48,6 +48,7 @@ type SchedulingSpec struct {
 type SchedulingSpecTemplate struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" protobuf:"bytes,1,rep,name=nodeSelector"`
 	MinAvailable int               `json:"minAvailable,omitempty" protobuf:"bytes,2,rep,name=minAvailable"`
+	RequeuingTimeMinutes int       `json:"requeuingTimeMinutes,omitempty" protobuf:"bytes,2,rep,name=requeuingTimeMinutes"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
