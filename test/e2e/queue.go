@@ -106,7 +106,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// Using quite mode due to creating of pods in earlier step.
 		err = waitAWReadyQuiet(context, aw2)
 		Expect(err).NotTo(HaveOccurred())
-
 	})
 
 	It("MCAD CPU Preemption Test", func() {
@@ -130,13 +129,15 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		err = waitAWAnyPodsExists(context, aw2)
 		Expect(err).To(HaveOccurred())
 
-		// This should fit on cluster, initially queued because of aw2 above but should eventually
-		// run after prevention of aw2 above.
-		aw3 := createDeploymentAWwith425CPU(context, "aw-deployment-2-425cpu")
+		// Create a job with init containers that need 200 seconds to be ready before the container starts.
+		// The requeuing mechanism is set to start at 1 minute, which is not enough time for the PODs to be completed.
+		// The job should be requeued 3 times before it finishes since the wait time is doubled each time the job is requeued (i.e., initially it waits
+		// for 1 minutes before requeuing, then 2 minutes, and then 4 minutes). Since the init containers take 3 minutes
+		// and 20 seconds to finish, a 4 minute wait should be long enough to finish the job successfully
+		aw3 := createJobAWWithInitContainer(context, "aw-deployment-3-init-container")
 		appwrappers = append(appwrappers, aw3)
 
-		// Since preemption takes some time, increasing timeout wait time to 2 minutes
-		err = waitAWPodsExists(context, aw3, 120000*time.Millisecond)
+		err = waitAWPodsCompleted(context, aw3) // This test waits for 10 minutes to make sure all PODs complete
 		Expect(err).NotTo(HaveOccurred())
 	})
 

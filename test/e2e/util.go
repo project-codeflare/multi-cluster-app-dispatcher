@@ -65,6 +65,7 @@ import (
 
 var ninetySeconds = 90 * time.Second
 var threeMinutes = 180 * time.Second
+var tenMinutes = 600 * time.Second
 var threeHundredSeconds = 300 * time.Second
 
 var oneCPU = v1.ResourceList{"cpu": resource.MustParse("1000m")}
@@ -654,7 +655,7 @@ func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bo
 }
 
 func waitAWPodsCompletedEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
-	return wait.Poll(100*time.Millisecond, ninetySeconds, awPodPhase(ctx, aw,
+	return wait.Poll(100*time.Millisecond, tenMinutes, awPodPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodSucceeded}, taskNum, quite))
 }
 
@@ -742,6 +743,95 @@ func createReplicaSet(context *context, name string, rep int32, img string, req 
 	Expect(err).NotTo(HaveOccurred())
 
 	return deployment
+}
+
+func createJobAWWithInitContainer(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{"apiVersion": "batch/v1",
+		"kind": "Job",
+	"metadata": {
+		"name": "aw-job-3-init-container",
+		"namespace": "test",
+		"labels": {
+			"app": "aw-job-3-init-container"
+		}
+	},
+	"spec": {
+		"parallelism": 3,
+		"template": {
+			"metadata": {
+				"labels": {
+					"app": "aw-job-3-init-container"
+				},
+				"annotations": {
+					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-job-3-init-container"
+				}
+			},
+			"spec": {
+				"terminationGracePeriodSeconds": 1,
+				"restartPolicy": "Never",
+				"initContainers": [
+					{
+						"name": "aw-job-3-init-container",
+						"image": "k8s.gcr.io/busybox:latest",
+						"command": ["sleep", "200"],
+						"resources": {
+							"requests": {
+								"cpu": "500m"
+							}
+						}
+					}
+				],
+				"containers": [
+					{
+						"name": "aw-job-3-container",
+						"image": "k8s.gcr.io/busybox:latest",
+						"command": ["sleep", "10"],
+						"resources": {
+							"requests": {
+								"cpu": "500m"
+							}
+						}
+					}
+				]
+			}
+		}
+	}} `)
+
+	var minAvailable int = 3
+	var requeuingTimeMinutes int = 1
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: context.namespace,
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: minAvailable,
+				RequeuingTimeMinutes: requeuingTimeMinutes,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "aw-job-3-init-container"),
+							Namespace: context.namespace,
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+						CompletionStatus: "Complete",
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
 }
 
 func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
