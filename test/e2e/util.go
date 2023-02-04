@@ -771,7 +771,7 @@ func createJobAWWithInitContainer(context *context, name string) *arbv1.AppWrapp
 				"restartPolicy": "Never",
 				"initContainers": [
 					{
-						"name": "aw-job-3-init-container",
+						"name": "job-init-container",
 						"image": "k8s.gcr.io/busybox:latest",
 						"command": ["sleep", "200"],
 						"resources": {
@@ -783,7 +783,7 @@ func createJobAWWithInitContainer(context *context, name string) *arbv1.AppWrapp
 				],
 				"containers": [
 					{
-						"name": "aw-job-3-container",
+						"name": "job-container",
 						"image": "k8s.gcr.io/busybox:latest",
 						"command": ["sleep", "10"],
 						"resources": {
@@ -814,7 +814,7 @@ func createJobAWWithInitContainer(context *context, name string) *arbv1.AppWrapp
 				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-%s", name, "aw-job-3-init-container"),
+							Name:      name,
 							Namespace: context.namespace,
 						},
 						DesiredAvailable: 1,

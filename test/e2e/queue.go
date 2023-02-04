@@ -134,7 +134,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// The job should be requeued 3 times before it finishes since the wait time is doubled each time the job is requeued (i.e., initially it waits
 		// for 1 minutes before requeuing, then 2 minutes, and then 4 minutes). Since the init containers take 3 minutes
 		// and 20 seconds to finish, a 4 minute wait should be long enough to finish the job successfully
-		aw3 := createJobAWWithInitContainer(context, "aw-deployment-3-init-container")
+		aw3 := createJobAWWithInitContainer(context, "aw-job-3-init-container")
 		appwrappers = append(appwrappers, aw3)
 
 		err = waitAWPodsCompleted(context, aw3) // This test waits for 10 minutes to make sure all PODs complete
