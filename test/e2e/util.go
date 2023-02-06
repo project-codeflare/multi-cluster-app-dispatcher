@@ -2291,7 +2291,7 @@ func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand s
 	return appwrapper
 }
 
-func createGenericDeploymentCustomPodResourcesWithCPUAW(context *context, name string, customPodCpuDemand string, cpuDemand string, replicas int) *arbv1.AppWrapper {
+func createGenericDeploymentCustomPodResourcesWithCPUAW(context *context, name string, customPodCpuDemand string, cpuDemand string, replicas int, requeuingTimeMinutes int) *arbv1.AppWrapper {
 	rb := []byte(fmt.Sprintf(`{
 	"apiVersion": "apps/v1",
 	"kind": "Deployment", 
@@ -2350,6 +2350,7 @@ func createGenericDeploymentCustomPodResourcesWithCPUAW(context *context, name s
 		Spec: arbv1.AppWrapperSpec{
 			SchedSpec: arbv1.SchedulingSpecTemplate{
 				MinAvailable: schedSpecMin,
+				RequeuingTimeMinutes: requeuingTimeMinutes,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
 				GenericItems: []arbv1.AppWrapperGenericResource{

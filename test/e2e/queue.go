@@ -371,7 +371,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// This should fit on cluster with customPodResources matching deployment resource demands so AW pods are created
 		aw := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-deployment-2-550-vs-550-cpu", "550m", "550m", 2)
+			context, "aw-deployment-2-550-vs-550-cpu", "550m", "550m", 2, 1)
 
 		appwrappers = append(appwrappers, aw)
 
@@ -384,6 +384,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	It("MCAD Scheduling Fail Fast Preemption Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Started.\n")
+
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
 		appwrappersPtr := &appwrappers
@@ -398,7 +399,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// This should not fit on any node but should dispatch because there is enough aggregated resources.
 		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-ff-deployment-1-700-cpu", "700m", "700m", 1)
+			context, "aw-ff-deployment-1-700-cpu", "700m", "700m", 1, 1)
 
 		appwrappers = append(appwrappers, aw2)
 
@@ -411,7 +412,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fit on cluster after AW aw-deployment-1-700-cpu above is automatically preempted on
 		// scheduling failure
 		aw3 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-ff-deployment-2-340-cpu", "340m", "340m", 2)
+			context, "aw-ff-deployment-2-340-cpu", "340m", "340m", 2, 1)
 
 		appwrappers = append(appwrappers, aw3)
 
@@ -426,7 +427,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// Make sure pods from AW aw-deployment-1-700-cpu above do not exist proving preemption
 		err = waitAWAnyPodsExists(context, aw2)
 		Expect(err).To(HaveOccurred())
-
 	})
 
 	It("MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Not Queuing Test", func() {
@@ -445,7 +445,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// This should not fit on cluster but customPodResources is incorrect so AW pods are created
 		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-deployment-2-425-vs-426-cpu", "425m", "426m", 2)
+			context, "aw-deployment-2-425-vs-426-cpu", "425m", "426m", 2, 1)
 
 		appwrappers = append(appwrappers, aw2)
 
@@ -472,7 +472,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// This should fit on cluster but customPodResources is incorrect so AW pods are not created
 		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-deployment-2-426-vs-425-cpu", "426m", "425m", 2)
+			context, "aw-deployment-2-426-vs-425-cpu", "426m", "425m", 2, 1)
 
 		appwrappers = append(appwrappers, aw2)
 
