@@ -1627,6 +1627,119 @@ func createGenericJobAWWithStatus(context *context, name string) *arbv1.AppWrapp
 	return appwrapper
 }
 
+func createGenericAWTimeoutWithStatus(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`"apiVersion": "mcad.ibm.com/v1beta1",
+	"kind": "AppWrapper",
+	"metadata": {
+		"name": "aw-test-jobtimeout-with-comp-1",
+		"namespace": "default"
+	},
+	"spec": {
+		"priority": 9,
+		"resources": {
+			"GenericItems": [
+				{
+					"allocated": 0,
+					"custompodresources": [
+						{
+							"limits": {
+								"cpu": "200m",
+								"memory": "256M",
+								"nvidia.com/gpu": "0"
+							},
+							"replicas": 1,
+							"requests": {
+								"cpu": "200m",
+								"memory": "256M",
+								"nvidia.com/gpu": "0"
+							}
+						}
+					],
+					"generictemplate": {
+						"apiVersion": "batch/v1",
+						"kind": "Job",
+						"metadata": {
+							"labels": {
+								"appwrapper.mcad.ibm.com": "aw-test-jobtimeout-with-comp-1"
+							},
+							"name": "pi"
+						},
+						"spec": {
+							"backoffLimit": 4,
+							"completions": 1,
+							"parallelism": 1,
+							"template": {
+								"spec": {
+									"containers": [
+										{
+											"args": [
+												"sleep infinity"
+											],
+											"command": [
+												"/bin/bash",
+												"-c",
+												"--"
+											],
+											"image": "ubuntu:latest",
+											"name": "ubuntu"
+										}
+									],
+									"restartPolicy": "Never"
+								}
+							}
+						}
+					},
+					"metadata": {},
+					"priority": 0,
+					"priorityslope": 0,
+					"replicas": 1
+				}
+			],
+			"Items": [],
+			"metadata": {}
+		},
+		"schedulingSpec": {
+			"dispatchDuration": {
+				"limit": 10
+			}
+		}
+	}
+	}`)
+	var schedSpecMin int = 1
+
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "test",
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "aw-test-jobtimeout-with-comp-1"),
+							Namespace: "test",
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+						CompletionStatus: "Complete",
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 func createGenericJobAWWithScheduleSpec(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{
 		"apiVersion": "batch/v1",
