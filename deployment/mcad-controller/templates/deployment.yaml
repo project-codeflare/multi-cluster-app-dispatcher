@@ -136,6 +136,18 @@ spec:
             properties:
               minAvailable:
                 type: integer
+              # dispatchdurationinseconds:
+              #   type: integer
+              dispatchDuration:
+                description: wall clock duration time of appwrapper
+                properties:
+                  expected:
+                    format: int32
+                    type: integer
+                  limit:
+                    format: int32
+                    type: integer
+                type: object
               nodeSelector:
                 additionalProperties:
                   type: string
@@ -190,9 +202,21 @@ spec:
                 properties:
                   minAvailable:
                     type: integer
+                  # dispatchdurationinseconds:
+                  #   type: integer
                   nodeSelector:
                     additionalProperties:
                       type: string
+                    type: object
+                  dispatchDuration:
+                    description: wall clock duration time of appwrapper
+                    properties:
+                      expected:
+                        format: int32
+                        type: integer
+                      limit:
+                        format: int32
+                        type: integer
                     type: object
                 type: object
               taskSpecs:
@@ -7225,6 +7249,18 @@ spec:
                 properties:
                   minAvailable:
                     type: integer
+                  # dispatchdurationinseconds:
+                  #   type: integer
+                  dispatchDuration:
+                    description: wall clock duration time of appwrapper
+                    properties:
+                      expected:
+                        format: int32
+                        type: integer
+                      limit:
+                        format: int32
+                        type: integer
+                    type: object
                   nodeSelector:
                     additionalProperties:
                       type: string

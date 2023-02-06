@@ -43,6 +43,18 @@ spec:
                 properties:
                   minAvailable:
                     type: integer
+                  # dispatchdurationinseconds:
+                  #   type: integer
+                  dispatchDuration:
+                    description: wall clock duration time of appwrapper
+                    properties:
+                      expected:
+                        format: int32
+                        type: integer
+                      limit:
+                        format: int32
+                        type: integer
+                    type: object
                   nodeSelector:
                     additionalProperties:
                       type: string

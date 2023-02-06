@@ -68,6 +68,7 @@ spec:
                             The associated item's level .status.conditions[].type field is monitored for any one of these conditions.  Once all items with this 
                             option is set and the conditionstatus is met the entire appwrapper state will be changed to one of the valid appwrapper completion state. Note :- this is an AND 
                             operation for all items where this option is set.  See the list of appwrapper states for a list of valid complete states.
+                          type: string
                         custompodresources:
                           description: Optional section that specifies resource requirements
                             for non-standard k8s resources, follows same format as
@@ -257,9 +258,21 @@ spec:
                 properties:
                   minAvailable:
                     type: integer
+                  # dispatchdurationinseconds:
+                  #   type: integer
                   nodeSelector:
                     additionalProperties:
                       type: string
+                    type: object
+                  dispatchDuration:
+                    description: wall clock duration time of appwrapper
+                    properties:
+                      expected:
+                        format: int32
+                        type: integer
+                      limit:
+                        format: int32
+                        type: integer
                     type: object
                 type: object
               selector:
