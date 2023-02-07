@@ -432,7 +432,13 @@ func (qjm *XController) PreemptQueueJobs() {
 		}
 		newjob.Status.CanRun = false
 
-		if aw.Status.State == arbv1.AppWrapperStateActive && aw.Spec.SchedSpec.DispatchDuration.Limit > 0 {
+		if (aw.Status.Running + aw.Status.Succeeded) < int32(aw.Spec.SchedSpec.MinAvailable) {
+			message = fmt.Sprintf("Insufficient number of Running and Completed pods, minimum=%d, running=%d, completed=%d.", aw.Spec.SchedSpec.MinAvailable, aw.Status.Running, aw.Status.Succeeded)
+			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
+			newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
+			updateNewJob = newjob.DeepCopy()
+
+		} else if aw.Status.State == arbv1.AppWrapperStateActive && aw.Spec.SchedSpec.DispatchDuration.Limit > 0 {
 			//TODO: logic already present in qjm.GetQueueJobsEligibleForPreemption() method
 			// need to remove duplication
 			conditionsLen := len(aw.Status.Conditions)
@@ -452,21 +458,14 @@ func (qjm *XController) PreemptQueueJobs() {
 				message = fmt.Sprintf("Dispatch deadline exceeded. current time %v, last Running condition time %v", currentTime, condition.LastTransitionMicroTime)
 				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "DispatchDeadlineExceeded", message)
 				newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
-				newjob.Status.State = arbv1.AppWrapperStateCompleted
+				//newjob.Status.State = arbv1.AppWrapperStateCompleted
 				updateNewJob = newjob.DeepCopy()
-				if err := qjm.updateEtcd(updateNewJob, "PreemptQueueJobs - CanRun: false"); err != nil {
-					klog.Errorf("Failed to update status of AppWrapper %v/%v: %v", aw.Namespace, aw.Name, err)
-				}
+				// if err := qjm.updateEtcd(updateNewJob, "PreemptQueueJobs - CanRun: false"); err != nil {
+				// 	klog.Errorf("Failed to update status of AppWrapper %v/%v: %v", aw.Namespace, aw.Name, err)
+				// }
 			}
 			//Move to next AW
-			continue
-		}
-
-		if (aw.Status.Running + aw.Status.Succeeded) < int32(aw.Spec.SchedSpec.MinAvailable) {
-			message = fmt.Sprintf("Insufficient number of Running and Completed pods, minimum=%d, running=%d, completed=%d.", aw.Spec.SchedSpec.MinAvailable, aw.Status.Running, aw.Status.Succeeded)
-			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
-			newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
-			updateNewJob = newjob.DeepCopy()
+			//continue
 
 			//If pods failed scheduling generate new preempt condition
 		} else {
