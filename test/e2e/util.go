@@ -1628,7 +1628,7 @@ func createGenericJobAWWithStatus(context *context, name string) *arbv1.AppWrapp
 }
 
 func createGenericAWTimeoutWithStatus(context *context, name string) *arbv1.AppWrapper {
-	rb := []byte(`{{
+	rb := []byte(`{
 		"apiVersion": "batch/v1",
 		"kind": "Job",
 		"metadata": {
