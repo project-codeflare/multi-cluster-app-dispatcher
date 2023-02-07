@@ -82,6 +82,11 @@ else
 	docker tag mcad-controller:${TAG}  ${quay_repository}/mcad-controller:${TAG}
 	$(info Push the docker image to registry)
 	docker push ${quay_repository}/mcad-controller:${TAG}
+ifeq ($(strip $(git_repository_id)),main)
+	$(info Update the `latest` tag when built from `main`)
+	docker tag mcad-controller:${TAG}  ${quay_repository}/mcad-controller:latest
+	docker push ${quay_repository}/mcad-controller:latest
+endif
 endif
 
 run-test:
