@@ -1628,82 +1628,52 @@ func createGenericJobAWWithStatus(context *context, name string) *arbv1.AppWrapp
 }
 
 func createGenericAWTimeoutWithStatus(context *context, name string) *arbv1.AppWrapper {
-	rb := []byte(`"apiVersion": "mcad.ibm.com/v1beta1",
-	"kind": "AppWrapper",
-	"metadata": {
-		"name": "aw-test-jobtimeout-with-comp-1",
-		"namespace": "default"
-	},
-	"spec": {
-		"priority": 9,
-		"resources": {
-			"GenericItems": [
-				{
-					"allocated": 0,
-					"custompodresources": [
+	rb := []byte(`{{
+		"apiVersion": "batch/v1",
+		"kind": "Job",
+		"metadata": {
+			"name": "aw-test-jobtimeout-with-comp-1-job",
+			"namespace": "test"
+		},
+		"spec": {
+			"completions": 1,
+			"parallelism": 1,
+			"template": {
+				"metadata": {
+					"labels": {
+						"appwrapper.mcad.ibm.com": "aw-test-jobtimeout-with-comp-1"
+					}
+				},
+				"spec": {
+					"containers": [
 						{
-							"limits": {
-								"cpu": "200m",
-								"memory": "256M",
-								"nvidia.com/gpu": "0"
-							},
-							"replicas": 1,
-							"requests": {
-								"cpu": "200m",
-								"memory": "256M",
-								"nvidia.com/gpu": "0"
-							}
-						}
-					],
-					"generictemplate": {
-						"apiVersion": "batch/v1",
-						"kind": "Job",
-						"metadata": {
-							"labels": {
-								"appwrapper.mcad.ibm.com": "aw-test-jobtimeout-with-comp-1"
-							},
-							"name": "pi"
-						},
-						"spec": {
-							"backoffLimit": 4,
-							"completions": 1,
-							"parallelism": 1,
-							"template": {
-								"spec": {
-									"containers": [
-										{
-											"args": [
-												"sleep infinity"
-											],
-											"command": [
-												"/bin/bash",
-												"-c",
-												"--"
-											],
-											"image": "ubuntu:latest",
-											"name": "ubuntu"
-										}
-									],
-									"restartPolicy": "Never"
+							"args": [
+								"sleep infinity"
+							],
+							"command": [
+								"/bin/bash",
+								"-c",
+								"--"
+							],
+							"image": "ubuntu:latest",
+							"imagePullPolicy": "IfNotPresent",
+							"name": "aw-test-jobtimeout-with-comp-1-job",
+							"resources": {
+								"limits": {
+									"cpu": "100m",
+									"memory": "256M"
+								},
+								"requests": {
+									"cpu": "100m",
+									"memory": "256M"
 								}
 							}
 						}
-					},
-					"metadata": {},
-					"priority": 0,
-					"priorityslope": 0,
-					"replicas": 1
+					],
+					"restartPolicy": "Never"
 				}
-			],
-			"Items": [],
-			"metadata": {}
-		},
-		"schedulingSpec": {
-			"dispatchDuration": {
-				"limit": 10
 			}
 		}
-	}
 	}`)
 	var schedSpecMin int = 1
 

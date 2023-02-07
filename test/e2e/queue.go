@@ -487,7 +487,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
-	FIt("MCAD appwrapper timeout Test", func() {
+	It("MCAD appwrapper timeout Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD appwrapper timeout Test - Started.\n")
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
