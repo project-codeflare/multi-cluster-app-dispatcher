@@ -1686,7 +1686,7 @@ func createGenericAWTimeoutWithStatus(context *context, name string) *arbv1.AppW
 			SchedSpec: arbv1.SchedulingSpecTemplate{
 				MinAvailable: schedSpecMin,
 				dispatchDuration: {
-					limit: dispatchDurationSeconds
+					limit: dispatchDurationSeconds,
 				}
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
