@@ -301,8 +301,14 @@ function kube-test-env-up {
 
     kubectl describe pod ${tiller_pod} -n kube-system
 
-    helm version 
+    helm version
 
+    # Turn off master taints
+    kubectl taint nodes --all node-role.kubernetes.io/master-
+
+}
+
+function mcad-up {
     cd deployment
 
     # start mcad controller
@@ -311,6 +317,9 @@ function kube-test-env-up {
     helm install mcad-controller --namespace kube-system --wait --set loglevel=2 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY
 
     sleep 10
+}
+
+function mcad-env-status {
     echo "Listing MCAD Controller Helm Chart and Pod YAML..."
     helm list
     mcad_pod=$(kubectl get pods -n kube-system | grep mcad-controller | awk '{print $1}')
@@ -318,7 +327,6 @@ function kube-test-env-up {
     then
         kubectl get pod ${mcad_pod} -n kube-system -o yaml
     fi
-
 
     sleep 10
     echo "Listing MCAD Controller Helm Chart and Pod YAML..."
@@ -328,10 +336,6 @@ function kube-test-env-up {
     then
         kubectl get pod ${mcad_pod} -n kube-system -o yaml
     fi
-
-    # Turn off master taints
-    kubectl taint nodes --all node-role.kubernetes.io/master-
-
 
     # This is meant to orchestrate initial cluster configuration such that accounting tests can be consistent
     echo "---"
@@ -360,6 +364,9 @@ kind-up-cluster
 
 kube-test-env-up
 
+mcad-up
+
+mcad-env-status
 cd ${ROOT_DIR}
 
 echo "==========================>>>>> Running E2E tests... <<<<<=========================="
