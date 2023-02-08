@@ -1,0 +1,50 @@
+{
+    "kind": "QuotaTree",
+    "metadata": {
+      "name": "TestTree"
+    },
+    "spec": {
+      "resourceNames": [
+        "cpu",
+        "memory"
+      ],
+      "nodes": {
+
+        "A": {
+          "parent": "nil",
+          "hard": "true",
+          "quota": {
+            "cpu": "10",
+            "memory": "256"
+          }
+        },
+
+        "B": {
+          "parent": "A",
+          "hard": "true",
+          "quota": {
+            "cpu": "2",
+            "memory": "64"
+          }
+        },
+
+        "C": {
+          "parent": "A",
+          "quota": {
+            "cpu": "6",
+            "memory": "64"
+          }
+        },
+
+        "D": {
+          "parent": "A",
+          "hard": "false",
+          "quota": {
+            "cpu": "2",
+            "memory": "128"
+          }
+        }
+
+      }
+    }
+}

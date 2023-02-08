@@ -1,0 +1,43 @@
+{
+  "kind": "QuotaTree",
+  "metadata": {
+    "name": "ServiceTree"
+  },
+  "spec": {
+    "resourceNames": [
+      "cpu",
+      "disk"
+    ],
+    "nodes": {
+      "Root": {
+        "parent": "nil",
+        "quota": {
+          "cpu": "16",
+          "disk": "12"
+        }
+      },
+      "Srvc-X": {
+        "parent": "Root",
+        "hard": "true",
+        "quota": {
+          "cpu": "3",
+          "disk": "4"
+        }
+      },
+      "Srvc-Y": {
+        "parent": "Root",
+        "quota": {
+          "cpu": "4",
+          "disk": "4"
+        }
+      },
+      "Srvc-Z": {
+        "parent": "Root",
+        "quota": {
+          "cpu": "5",
+          "disk": "4"
+        }
+      }
+    }
+  }
+}

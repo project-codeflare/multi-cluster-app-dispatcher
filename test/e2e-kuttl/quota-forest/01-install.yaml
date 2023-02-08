@@ -1,0 +1,29 @@
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: context-root
+  namespace: kube-system
+  labels:
+    tree: quota_context
+spec:
+  children:
+    - name: context-root
+      quotas:
+        requests:
+          cpu: 1075
+          memory: 1045
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: service-root
+  namespace: kube-system
+  labels:
+    tree: quota_service
+spec:
+  children:
+    - name: service-root
+      quotas:
+        requests:
+          cpu: 1075
+          memory: 1045

@@ -1,0 +1,12 @@
+# Verify that quota management is enabled by checking the queuing is happening
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: job2-1replica
+  namespace: test
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: job2-1replica-0
+  namespace: test

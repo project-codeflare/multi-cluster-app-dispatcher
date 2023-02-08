@@ -1,6 +1,6 @@
 // +build !private
 // ------------------------------------------------------ {COPYRIGHT-TOP} ---
-// Copyright 2022 The Multi-Cluster App Dispatcher Authors.
+// Copyright 2022, 2023 The Multi-Cluster App Dispatcher Authors.
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,8 @@ import (
 	listersv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
 	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota"
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/util"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
+
 	"io/ioutil"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
@@ -306,7 +307,7 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 	klog.V(10).Infof("[getQuotaTreeIDs] POST Response dump: %q", dump)
 
 	if err != nil {
-		klog.Errorf("[Fits] Fail to add access quotamanager: %s, err=%#v.", uri, err)
+		klog.Errorf("[Fits] Fail to add access quotaforestmanager: %s, err=%#v.", uri, err)
 		preemptIds = nil
 	} else {
 		body, err := ioutil.ReadAll(response.Body)
