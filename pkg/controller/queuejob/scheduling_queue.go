@@ -57,6 +57,7 @@ type SchedulingQueue interface {
 	Add(qj *qjobv1.AppWrapper) error
 	AddIfNotPresent(qj *qjobv1.AppWrapper) error
 	AddUnschedulableIfNotPresent(qj *qjobv1.AppWrapper) error
+	AddToExpiredQueue(qj *qjobv1.AppWrapper) error
 	Pop() (*qjobv1.AppWrapper, error)
 	Update(oldQJ, newQJ *qjobv1.AppWrapper) error
 	Delete(QJ *qjobv1.AppWrapper) error
@@ -68,12 +69,10 @@ type SchedulingQueue interface {
 	Length() int
 }
 
-
-
 // NewSchedulingQueue initializes a new scheduling queue. If pod priority is
 // enabled a priority queue is returned. If it is disabled, a FIFO is returned.
 func NewSchedulingQueue() SchedulingQueue {
-		return NewPriorityQueue()
+	return NewPriorityQueue()
 }
 
 // UnschedulablePods is an interface for a queue that is used to keep unschedulable
@@ -106,6 +105,8 @@ type PriorityQueue struct {
 	unschedulableQ *UnschedulableQJMap
 
 	receivedMoveRequest bool
+
+	expiredQ *UnschedulableQJMap
 }
 
 // Making sure that PriorityQueue implements SchedulingQueue.
@@ -131,7 +132,7 @@ func (p *PriorityQueue) IfExist(qj *qjobv1.AppWrapper) bool {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	_, exists, _ := p.activeQ.Get(qj)
-	if (p.unschedulableQ.Get(qj)!= nil || exists) {
+	if p.unschedulableQ.Get(qj) != nil || exists {
 		return true
 	}
 	return false
@@ -166,9 +167,6 @@ func (p *PriorityQueue) MoveToActiveQueueIfExists(aw *qjobv1.AppWrapper) error {
 	}
 	return nil
 }
-
-
-
 
 // Add adds a QJ to the active queue. It should be called only when a new QJ
 // is added so there is no chance the QJ is already in either queue.
@@ -237,6 +235,24 @@ func (p *PriorityQueue) AddUnschedulableIfNotPresent(qj *qjobv1.AppWrapper) erro
 		p.cond.Broadcast()
 	}
 	return err
+}
+
+func (p *PriorityQueue) AddToExpiredQueue(qj *qjobv1.AppWrapper) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	if p.expiredQ.Get(qj) != nil {
+		return fmt.Errorf("pod is already present in unschedulableQ")
+	}
+	if _, exists, _ := p.activeQ.Get(qj); exists {
+		return fmt.Errorf("pod is already present in the activeQ")
+	}
+
+	if !p.receivedMoveRequest {
+		p.expiredQ.Add(qj)
+		return nil
+	}
+	return nil
+
 }
 
 // Pop removes the head of the active queue and returns it. It blocks if the

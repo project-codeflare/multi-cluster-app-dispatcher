@@ -63,6 +63,7 @@ type ScheduleTimeSpec struct {
 type DispatchDurationSpec struct {
 	Expected int `json:"expected,omitempty"`
 	Limit    int `json:"limit,omitempty"`
+	Overrun  bool
 }
 
 type DispatchingWindowSpec struct {
@@ -71,9 +72,8 @@ type DispatchingWindowSpec struct {
 }
 
 type SchedulingSpecTemplate struct {
-	NodeSelector map[string]string `json:"nodeSelector,omitempty" protobuf:"bytes,1,rep,name=nodeSelector"`
-	MinAvailable int               `json:"minAvailable,omitempty" protobuf:"bytes,2,rep,name=minAvailable"`
-	//DispatchDurationInSeconds int               `json:"dispatchdurationinseconds" protobuf:"bytes,2,rep,name=dispatchdurationinseconds"`
+	NodeSelector      map[string]string     `json:"nodeSelector,omitempty" protobuf:"bytes,1,rep,name=nodeSelector"`
+	MinAvailable      int                   `json:"minAvailable,omitempty" protobuf:"bytes,2,rep,name=minAvailable"`
 	ClusterScheduling ClusterSchedulingSpec `json:"clusterScheduling,omitempty"`
 	DispatchingWindow DispatchingWindowSpec `json:"dispatchingWindow,omitempty"`
 	DispatchDuration  DispatchDurationSpec  `json:"dispatchDuration,omitempty"`

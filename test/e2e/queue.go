@@ -504,7 +504,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		}
 		pass := false
 		fmt.Fprintf(os.Stdout, "[e2e] status of AW %v.\n", aw1.Status.State)
-		if aw1.Status.State == arbv1.AppWrapperStateCompleted {
+		if aw1.Status.State == arbv1.AppWrapperStateFailed {
 			pass = true
 		}
 		Expect(pass).To(BeTrue())

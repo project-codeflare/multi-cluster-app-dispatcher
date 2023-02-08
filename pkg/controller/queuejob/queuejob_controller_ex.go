@@ -431,42 +431,36 @@ func (qjm *XController) PreemptQueueJobs() {
 			continue
 		}
 		newjob.Status.CanRun = false
+		//If dispatch deadline is exceeded no matter what the state of AW, kill the job.
+		//TODO: If minAvailable continously preempts the AW then dispatch condition will keep changing this WILL cause AW to
+		//overrun, for now relying on exponential back-off feature
+		if (aw.Status.State == arbv1.AppWrapperStateActive) && (aw.Spec.SchedSpec.DispatchDuration.Limit > 0) {
 
-		if (aw.Status.Running + aw.Status.Succeeded) < int32(aw.Spec.SchedSpec.MinAvailable) {
+			if aw.Spec.SchedSpec.DispatchDuration.Overrun {
+				message = fmt.Sprintf("Dispatch deadline exceeded. allowed to run for %v seconds", aw.Spec.SchedSpec.DispatchDuration.Limit)
+				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "DispatchDeadlineExceeded", message)
+				newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
+				//should the AW state be set in this method??
+				newjob.Status.State = arbv1.AppWrapperStateFailed
+				newjob.Status.QueueJobState = arbv1.AppWrapperCondFailed
+				newjob.Status.Running = 0
+				updateNewJob = newjob.DeepCopy()
+				if err := qjm.updateEtcd(updateNewJob, "PreemptQueueJobs - CanRun: false"); err != nil {
+					klog.Errorf("Failed to update status of AppWrapper %v/%v: %v", aw.Namespace, aw.Name, err)
+				}
+
+				go qjm.qjqueue.AddUnschedulableIfNotPresent(updateNewJob)
+
+				//Move to next AW
+				continue
+			}
+		}
+
+		if ((aw.Status.Running + aw.Status.Succeeded) < int32(aw.Spec.SchedSpec.MinAvailable)) && aw.Status.State == arbv1.AppWrapperStateActive {
 			message = fmt.Sprintf("Insufficient number of Running and Completed pods, minimum=%d, running=%d, completed=%d.", aw.Spec.SchedSpec.MinAvailable, aw.Status.Running, aw.Status.Succeeded)
 			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
 			newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
 			updateNewJob = newjob.DeepCopy()
-
-		} else if aw.Status.State == arbv1.AppWrapperStateActive && aw.Spec.SchedSpec.DispatchDuration.Limit > 0 {
-			//TODO: logic already present in qjm.GetQueueJobsEligibleForPreemption() method
-			// need to remove duplication
-			conditionsLen := len(aw.Status.Conditions)
-			var condition arbv1.AppWrapperCondition
-			for i := (conditionsLen - 1); i > 0; i-- {
-				condition = aw.Status.Conditions[i]
-				if condition.Type != arbv1.AppWrapperCondDispatched {
-					continue
-				}
-				break
-			}
-			awDispatchDurationLimit := aw.Spec.SchedSpec.DispatchDuration.Limit
-			dispatchTimeInSeconds := condition.LastTransitionMicroTime.Add(time.Duration(awDispatchDurationLimit))
-			currentTime := time.Now()
-			dispatchTimeExceeded := currentTime.After(dispatchTimeInSeconds)
-			if dispatchTimeExceeded {
-				message = fmt.Sprintf("Dispatch deadline exceeded. current time %v, last Running condition time %v", currentTime, condition.LastTransitionMicroTime)
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "DispatchDeadlineExceeded", message)
-				newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
-				//newjob.Status.State = arbv1.AppWrapperStateCompleted
-				updateNewJob = newjob.DeepCopy()
-				// if err := qjm.updateEtcd(updateNewJob, "PreemptQueueJobs - CanRun: false"); err != nil {
-				// 	klog.Errorf("Failed to update status of AppWrapper %v/%v: %v", aw.Namespace, aw.Name, err)
-				// }
-			}
-			//Move to next AW
-			//continue
-
 			//If pods failed scheduling generate new preempt condition
 		} else {
 			message = fmt.Sprintf("Pods failed scheduling failed=%v, running=%v.", len(aw.Status.PendingPodConditions), aw.Status.Running)
@@ -486,11 +480,16 @@ func (qjm *XController) PreemptQueueJobs() {
 		if err := qjm.updateEtcd(updateNewJob, "PreemptQueueJobs - CanRun: false"); err != nil {
 			klog.Errorf("Failed to update status of AppWrapper %v/%v: %v", aw.Namespace, aw.Name, err)
 		}
+
 		klog.V(4).Infof("[PreemptQueueJobs] Adding preempted AppWrapper %s/%s to backoff queue.",
 			aw.Name, aw.Namespace)
-		go qjm.backoff(aw, "PreemptionTriggered", string(message))
+		//Only back-off AWs that are in state running and not in state Failed
+		if updateNewJob.Status.State != arbv1.AppWrapperStateCompleted {
+			go qjm.backoff(aw, "PreemptionTriggered", string(message))
+		}
 
 	}
+
 }
 func (qjm *XController) preemptAWJobs(preemptAWs []*arbv1.AppWrapper) {
 	if preemptAWs == nil {
@@ -535,15 +534,17 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 					break
 				}
 				awDispatchDurationLimit := value.Spec.SchedSpec.DispatchDuration.Limit
-				dispatchTimeInSeconds := condition.LastTransitionMicroTime.Add(time.Duration(awDispatchDurationLimit))
+				dispatchDuration := condition.LastTransitionMicroTime.Add(time.Duration(awDispatchDurationLimit) * time.Second)
 				currentTime := time.Now()
-				dispatchTimeExceeded := currentTime.After(dispatchTimeInSeconds)
-				if dispatchTimeExceeded {
-					klog.V(8).Infof("Appwrapper Dispatch limit exceeded, currentTime %v, dispatchTimeInSeconds %v", currentTime, dispatchTimeInSeconds)
+				hasDispatchTimeNotExceeded := currentTime.Before(dispatchDuration)
+
+				if !hasDispatchTimeNotExceeded {
+					klog.V(8).Infof("Appwrapper Dispatch limit exceeded, currentTime %v, dispatchTimeInSeconds %v", currentTime, dispatchDuration)
+					value.Spec.SchedSpec.DispatchDuration.Overrun = true
 					qjobs = append(qjobs, value)
+					//Got AW which exceeded dispatch runtime limit, move to next AW
+					continue
 				}
-				//Got AW which exceeded dispatch runtime limit, move to next AW
-				continue
 			}
 
 			replicas := value.Spec.SchedSpec.MinAvailable
