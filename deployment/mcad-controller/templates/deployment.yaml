@@ -136,9 +136,28 @@ spec:
             properties:
               minAvailable:
                 type: integer
-              requeuingTimeMinutes:
-                type: integer
-                default: 5
+              requeuing:
+                description: Specification of the requeuing strategy based on
+                  waiting time
+                properties:
+                  initialTimeInSeconds:
+                    type: integer
+                  timeInSeconds:
+                    type: integer
+                    default: 300
+                  maxTimeInSeconds:
+                    type: integer
+                    default: 0
+                  growthType:
+                    type: string
+                    default: "exponential"
+                  numRequeuings:
+                    type: integer
+                    default: 0
+                  maxNumRequeuings:
+                    type: integer
+                    default: 0
+                type: object
               nodeSelector:
                 additionalProperties:
                   type: string
@@ -184,7 +203,7 @@ spec:
             type: object
           spec:
             description: Specification of the desired behavior of a cron job, including
-              the minAvailable and the requeuingTimeMinutes
+              the minAvailable and the requeuing strategy
             properties:
               schedulerName:
                 type: string
@@ -193,9 +212,28 @@ spec:
                 properties:
                   minAvailable:
                     type: integer
-                  requeuingTimeMinutes:
-                    type: integer
-                    default: 5
+                  requeuing:
+                    description: Specification of the requeuing strategy based on
+                      waiting time
+                    properties:
+                      initialTimeInSeconds:
+                        type: integer
+                      timeInSeconds:
+                        type: integer
+                        default: 300
+                      maxTimeInSeconds:
+                        type: integer
+                        default: 0
+                      growthType:
+                        type: string
+                        default: "exponential"
+                      numRequeuings:
+                        type: integer
+                        default: 0
+                      maxNumRequeuings:
+                        type: integer
+                        default: 0
+                    type: object
                   nodeSelector:
                     additionalProperties:
                       type: string
@@ -7231,9 +7269,28 @@ spec:
                 properties:
                   minAvailable:
                     type: integer
-                  requeuingTimeMinutes:
-                    type: integer
-                    default: 5
+                  requeuing:
+                    description: Specification of the requeuing strategy based on
+                      waiting time
+                    properties:
+                      initialTimeInSeconds:
+                        type: integer
+                      timeInSeconds:
+                        type: integer
+                        default: 300
+                      maxTimeInSeconds:
+                        type: integer
+                        default: 0
+                      growthType:
+                        type: string
+                        default: "exponential"
+                      numRequeuings:
+                        type: integer
+                        default: 0
+                      maxNumRequeuings:
+                        type: integer
+                        default: 0
+                    type: object
                   nodeSelector:
                     additionalProperties:
                       type: string
