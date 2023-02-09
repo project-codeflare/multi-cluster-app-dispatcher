@@ -612,8 +612,8 @@ func waitAWPodsReady(ctx *context, aw *arbv1.AppWrapper) error {
 	return waitAWPodsReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), false)
 }
 
-func waitAWPodsCompleted(ctx *context, aw *arbv1.AppWrapper) error {
-	return waitAWPodsCompletedEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), false)
+func waitAWPodsCompleted(ctx *context, aw *arbv1.AppWrapper, timeout time.Duration) error {
+	return waitAWPodsCompletedEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), false, timeout)
 }
 
 func waitAWPodsNotCompleted(ctx *context, aw *arbv1.AppWrapper) error {
@@ -654,8 +654,8 @@ func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bo
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite))
 }
 
-func waitAWPodsCompletedEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
-	return wait.Poll(100*time.Millisecond, tenMinutes, awPodPhase(ctx, aw,
+func waitAWPodsCompletedEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool, timeout time.Duration ) error {
+	return wait.Poll(100*time.Millisecond, timeout, awPodPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodSucceeded}, taskNum, quite))
 }
 
@@ -745,7 +745,7 @@ func createReplicaSet(context *context, name string, rep int32, img string, req 
 	return deployment
 }
 
-func createJobAWWithInitContainer(context *context, name string) *arbv1.AppWrapper {
+func createJobAWWithInitContainer(context *context, name string, requeuingTimeInSeconds int, requeuingGrowthType string, requeuingMaxNumRequeuings int ) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "batch/v1",
 		"kind": "Job",
 	"metadata": {
@@ -798,7 +798,6 @@ func createJobAWWithInitContainer(context *context, name string) *arbv1.AppWrapp
 	}} `)
 
 	var minAvailable int = 3
-	var requeuingTimeMinutes int = 1
 
 	aw := &arbv1.AppWrapper{
 		ObjectMeta: metav1.ObjectMeta{
@@ -808,7 +807,11 @@ func createJobAWWithInitContainer(context *context, name string) *arbv1.AppWrapp
 		Spec: arbv1.AppWrapperSpec{
 			SchedSpec: arbv1.SchedulingSpecTemplate{
 				MinAvailable: minAvailable,
-				RequeuingTimeMinutes: requeuingTimeMinutes,
+				Requeuing: arbv1.RequeuingTemplate{
+					TimeInSeconds: requeuingTimeInSeconds,
+					GrowthType: requeuingGrowthType,
+					MaxNumRequeuings: requeuingMaxNumRequeuings,
+				},
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
 				GenericItems: []arbv1.AppWrapperGenericResource{
@@ -2291,7 +2294,7 @@ func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand s
 	return appwrapper
 }
 
-func createGenericDeploymentCustomPodResourcesWithCPUAW(context *context, name string, customPodCpuDemand string, cpuDemand string, replicas int, requeuingTimeMinutes int) *arbv1.AppWrapper {
+func createGenericDeploymentCustomPodResourcesWithCPUAW(context *context, name string, customPodCpuDemand string, cpuDemand string, replicas int, requeuingTimeInSeconds int) *arbv1.AppWrapper {
 	rb := []byte(fmt.Sprintf(`{
 	"apiVersion": "apps/v1",
 	"kind": "Deployment", 
@@ -2350,7 +2353,9 @@ func createGenericDeploymentCustomPodResourcesWithCPUAW(context *context, name s
 		Spec: arbv1.AppWrapperSpec{
 			SchedSpec: arbv1.SchedulingSpecTemplate{
 				MinAvailable: schedSpecMin,
-				RequeuingTimeMinutes: requeuingTimeMinutes,
+				Requeuing: arbv1.RequeuingTemplate{
+					TimeInSeconds: requeuingTimeInSeconds,
+				},
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
 				GenericItems: []arbv1.AppWrapperGenericResource{
