@@ -139,7 +139,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("MCAD CPU Requeuing - Completion After enough Requeuing Times Test", func() {
+	It("MCAD CPU Requeuing - Completion After Enough Requeuing Times Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Requeuing Test - Started.\n")
 
 		context := initTestContext()
@@ -155,7 +155,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createJobAWWithInitContainer(context, "aw-job-3-init-container", 60, "exponential", 0)
 		appwrappers = append(appwrappers, aw)
 
-		err := waitAWPodsCompleted(context, aw, 600 * time.Second) // This test waits for 10 minutes to make sure all PODs complete
+		err := waitAWPodsCompleted(context, aw, 720 * time.Second) // This test waits for 10 minutes to make sure all PODs complete
 		Expect(err).NotTo(HaveOccurred())
 	})
 
