@@ -424,6 +424,10 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 func (qjm *XController) PreemptQueueJobs() {
 	qjobs := qjm.GetQueueJobsEligibleForPreemption()
 	for _, aw := range qjobs {
+		if aw.Status.State == arbv1.AppWrapperStateCompleted || aw.Status.State == arbv1.AppWrapperStateDeleted || aw.Status.State == arbv1.AppWrapperStateFailed {
+			continue
+		}
+
 		var updateNewJob *arbv1.AppWrapper
 		var message string
 		newjob, e := qjm.queueJobLister.AppWrappers(aw.Namespace).Get(aw.Name)
@@ -431,16 +435,35 @@ func (qjm *XController) PreemptQueueJobs() {
 			continue
 		}
 		newjob.Status.CanRun = false
+		cleanAppWrapper := false
 
 		if (aw.Status.Running + aw.Status.Succeeded) < int32(aw.Spec.SchedSpec.MinAvailable) {
 			message = fmt.Sprintf("Insufficient number of Running and Completed pods, minimum=%d, running=%d, completed=%d.", aw.Spec.SchedSpec.MinAvailable, aw.Status.Running, aw.Status.Succeeded)
 			cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondPreemptCandidate, v1.ConditionTrue, "MinPodsNotRunning", message)
 			newjob.Status.Conditions = append(newjob.Status.Conditions, cond)
-			newjob.Spec.SchedSpec.RequeuingTimeMinutes = 2 * aw.Spec.SchedSpec.RequeuingTimeMinutes // Grow the requeuing waiting time exponentially
-			updateNewJob = newjob.DeepCopy()
 
-			//If pods failed scheduling generate new preempt condition
+			if aw.Spec.SchedSpec.Requeuing.GrowthType == "exponential" {
+				newjob.Spec.SchedSpec.Requeuing.TimeInSeconds += aw.Spec.SchedSpec.Requeuing.TimeInSeconds
+			} else if aw.Spec.SchedSpec.Requeuing.GrowthType == "linear" {
+				newjob.Spec.SchedSpec.Requeuing.TimeInSeconds += aw.Spec.SchedSpec.Requeuing.InitialTimeInSeconds
+			}
+
+			if aw.Spec.SchedSpec.Requeuing.MaxTimeInSeconds > 0 {
+				if aw.Spec.SchedSpec.Requeuing.MaxTimeInSeconds <= newjob.Spec.SchedSpec.Requeuing.TimeInSeconds {
+					newjob.Spec.SchedSpec.Requeuing.TimeInSeconds = aw.Spec.SchedSpec.Requeuing.MaxTimeInSeconds
+				}
+			}
+
+			if newjob.Spec.SchedSpec.Requeuing.MaxNumRequeuings > 0 && newjob.Spec.SchedSpec.Requeuing.NumRequeuings == newjob.Spec.SchedSpec.Requeuing.MaxNumRequeuings {
+				newjob.Status.State = arbv1.AppWrapperStateDeleted
+				cleanAppWrapper = true
+			} else {
+				newjob.Spec.SchedSpec.Requeuing.NumRequeuings += 1
+			}
+
+			updateNewJob = newjob.DeepCopy()
 		} else {
+			//If pods failed scheduling generate new preempt condition
 			message = fmt.Sprintf("Pods failed scheduling failed=%v, running=%v.", len(aw.Status.PendingPodConditions), aw.Status.Running)
 			index := getIndexOfMatchedCondition(newjob, arbv1.AppWrapperCondPreemptCandidate, "PodsFailedScheduling")
 			//ignore co-scheduler failed scheduling events. This is a temp
@@ -458,9 +481,13 @@ func (qjm *XController) PreemptQueueJobs() {
 		if err := qjm.updateEtcd(updateNewJob, "PreemptQueueJobs - CanRun: false"); err != nil {
 			klog.Errorf("Failed to update status of AppWrapper %v/%v: %v", aw.Namespace, aw.Name, err)
 		}
-		klog.V(4).Infof("[PreemptQueueJobs] Adding preempted AppWrapper %s/%s to backoff queue.",
-			aw.Name, aw.Namespace)
-		go qjm.backoff(aw, "PreemptionTriggered", string(message))
+		if cleanAppWrapper {
+			klog.V(4).Infof("[PreemptQueueJobs] Deleting AppWrapper %s/%s due to maximum number of requeuings exceeded.", aw.Name, aw.Namespace)
+			go qjm.Cleanup(aw)
+		} else {
+			klog.V(4).Infof("[PreemptQueueJobs] Adding preempted AppWrapper %s/%s to backoff queue.", aw.Name, aw.Namespace)
+			go qjm.backoff(aw, "PreemptionTriggered", string(message))
+		}
 	}
 }
 
@@ -504,16 +531,42 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 
 			if (int(value.Status.Running) + int(value.Status.Succeeded)) < replicas {
 
+				// Find the dispatched condition if there is any
+				numConditions := len(value.Status.Conditions)
+				var dispatchedCondition arbv1.AppWrapperCondition
+				dispatchedConditionExists := false
+
+				for i := numConditions - 1; i > 0; i-- {
+					dispatchedCondition = value.Status.Conditions[i]
+					if dispatchedCondition.Type != arbv1.AppWrapperCondDispatched {
+						continue
+					}
+					dispatchedConditionExists = true
+					break
+				}
+
 				// Check for the minimum age and then skip preempt if current time is not beyond minimum age
-				// The minimum age is controlled by the requeuingTimeMinutes stanza
-				// For preemption, the time is compared to the last condition in the AppWrapper
-				condition := value.Status.Conditions[len(value.Status.Conditions) - 1]
-				requeuingTimeMinutes := value.Spec.SchedSpec.RequeuingTimeMinutes
-				minAge := condition.LastTransitionMicroTime.Add(time.Duration(requeuingTimeMinutes) * time.Minute)
+				// The minimum age is controlled by the requeuing.TimeInSeconds stanza
+				// For preemption, the time is compared to the last condition or the dispatched condition in the AppWrapper, whichever happened later
+				lastCondition := value.Status.Conditions[numConditions - 1]
+				var condition arbv1.AppWrapperCondition
+
+				if dispatchedConditionExists && dispatchedCondition.LastTransitionMicroTime.After(lastCondition.LastTransitionMicroTime.Time) {
+					condition = dispatchedCondition
+				} else {
+					condition = lastCondition
+				}
+
+				requeuingTimeInSeconds := value.Spec.SchedSpec.Requeuing.TimeInSeconds
+				minAge := condition.LastTransitionMicroTime.Add(time.Duration(requeuingTimeInSeconds) * time.Second)
 				currentTime := time.Now()
 
 				if currentTime.Before(minAge) {
 					continue
+				}
+
+				if value.Spec.SchedSpec.Requeuing.InitialTimeInSeconds == 0 {
+					value.Spec.SchedSpec.Requeuing.InitialTimeInSeconds = value.Spec.SchedSpec.Requeuing.TimeInSeconds
 				}
 
 				if replicas > 0 {
