@@ -57,7 +57,6 @@ type SchedulingQueue interface {
 	Add(qj *qjobv1.AppWrapper) error
 	AddIfNotPresent(qj *qjobv1.AppWrapper) error
 	AddUnschedulableIfNotPresent(qj *qjobv1.AppWrapper) error
-	AddToExpiredQueue(qj *qjobv1.AppWrapper) error
 	Pop() (*qjobv1.AppWrapper, error)
 	Update(oldQJ, newQJ *qjobv1.AppWrapper) error
 	Delete(QJ *qjobv1.AppWrapper) error
@@ -235,24 +234,6 @@ func (p *PriorityQueue) AddUnschedulableIfNotPresent(qj *qjobv1.AppWrapper) erro
 		p.cond.Broadcast()
 	}
 	return err
-}
-
-func (p *PriorityQueue) AddToExpiredQueue(qj *qjobv1.AppWrapper) error {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	if p.expiredQ.Get(qj) != nil {
-		return fmt.Errorf("pod is already present in unschedulableQ")
-	}
-	if _, exists, _ := p.activeQ.Get(qj); exists {
-		return fmt.Errorf("pod is already present in the activeQ")
-	}
-
-	if !p.receivedMoveRequest {
-		p.expiredQ.Add(qj)
-		return nil
-	}
-	return nil
-
 }
 
 // Pop removes the head of the active queue and returns it. It blocks if the

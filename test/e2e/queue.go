@@ -497,7 +497,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createGenericAWTimeoutWithStatus(context, "aw-test-jobtimeout-with-comp-1")
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred())
-		time.Sleep(1 * time.Minute)
+		time.Sleep(60 * time.Second)
 		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		if err != nil {
 			fmt.Fprintf(os.Stdout, "Error getting status")
@@ -510,7 +510,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(pass).To(BeTrue())
 		appwrappers = append(appwrappers, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD appwrapper timeout Test - Completed.\n")
-
 	})
 
 	It("MCAD Job Completion No-requeue Test", func() {

@@ -1,4 +1,4 @@
-apiVersion: v1
+../../pkg/apis/controller/v1beta1/appwrapper.goapiVersion: v1
 kind: Service
 metadata:
   name: custom-metrics-apiserver
@@ -7728,6 +7728,11 @@ spec:
               controllerfirsttimestamp:
                 description: Microsecond level timestamp when controller first sees
                   QueueJob (by Informer)
+                format: date-time
+                type: string
+              controllerfirstdispatchtimestamp:
+                description: Microsecond level timestamp when controller first sees
+                  Appwrapper in Running state
                 format: date-time
                 type: string
               failed:

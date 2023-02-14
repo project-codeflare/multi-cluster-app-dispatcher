@@ -489,7 +489,6 @@ func (qjm *XController) PreemptQueueJobs() {
 		}
 
 	}
-
 }
 func (qjm *XController) preemptAWJobs(preemptAWs []*arbv1.AppWrapper) {
 	if preemptAWs == nil {
@@ -534,7 +533,7 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 					break
 				}
 				awDispatchDurationLimit := value.Spec.SchedSpec.DispatchDuration.Limit
-				dispatchDuration := condition.LastTransitionMicroTime.Add(time.Duration(awDispatchDurationLimit) * time.Second)
+				dispatchDuration := value.Status.ControllerFirstDispatchTimestamp.Add(time.Duration(awDispatchDurationLimit) * time.Second)
 				currentTime := time.Now()
 				hasDispatchTimeNotExceeded := currentTime.Before(dispatchDuration)
 
@@ -1525,6 +1524,7 @@ func (qjm *XController) UpdateQueueJobs() {
 		klog.Errorf("[UpdateQueueJobs] List of queueJobs err=%+v", err)
 		return
 	}
+
 	for _, newjob := range queueJobs {
 		// UpdateQueueJobs can be the first to see a new AppWrapper job, under heavy load
 		if newjob.Status.QueueJobState == "" {
@@ -1541,6 +1541,10 @@ func (qjm *XController) UpdateQueueJobs() {
 			}
 			klog.V(3).Infof("[UpdateQueueJobs] %s 0Delay=%.6f seconds CreationTimestamp=%s ControllerFirstTimestamp=%s",
 				newjob.Name, time.Now().Sub(newjob.Status.ControllerFirstTimestamp.Time).Seconds(), newjob.CreationTimestamp, newjob.Status.ControllerFirstTimestamp)
+		}
+		//only set if appwrapper is running and dispatch time is not set previously
+		if newjob.Status.QueueJobState == "Running" && newjob.Status.ControllerFirstDispatchTimestamp.String() == "0001-01-01 00:00:00 +0000 UTC" {
+			newjob.Status.ControllerFirstDispatchTimestamp = firstTime
 		}
 		klog.V(10).Infof("[UpdateQueueJobs] %s: qjqueue=%t &qj=%p Version=%s Status=%+v", newjob.Name, qjm.qjqueue.IfExist(newjob), newjob, newjob.ResourceVersion, newjob.Status)
 		// check eventQueue, qjqueue in program sequence to make sure job is not in qjqueue

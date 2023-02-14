@@ -258,14 +258,12 @@ spec:
                 properties:
                   minAvailable:
                     type: integer
-                  # dispatchdurationinseconds:
-                  #   type: integer
                   nodeSelector:
                     additionalProperties:
                       type: string
                     type: object
                   dispatchDuration:
-                    description: wall clock duration time of appwrapper
+                    description: Wall clock duration time of appwrapper
                     properties:
                       expected:
                         format: int32
@@ -737,6 +735,11 @@ spec:
               controllerfirsttimestamp:
                 description: Microsecond level timestamp when controller first sees
                   QueueJob (by Informer)
+                format: date-time
+                type: string
+              controllerfirstdispatchtimestamp:
+                description: Microsecond level timestamp when controller first sees
+                  Appwrapper in Running state
                 format: date-time
                 type: string
               failed:
