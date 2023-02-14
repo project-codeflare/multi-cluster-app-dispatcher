@@ -48,6 +48,16 @@ type SchedulingSpec struct {
 type SchedulingSpecTemplate struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" protobuf:"bytes,1,rep,name=nodeSelector"`
 	MinAvailable int               `json:"minAvailable,omitempty" protobuf:"bytes,2,rep,name=minAvailable"`
+	Requeuing RequeuingTemplate    `json:"requeuing,omitempty" protobuf:"bytes,1,rep,name=requeuing"`
+}
+
+type RequeuingTemplate struct {
+	InitialTimeInSeconds int `json:"initialTimeInSeconds,omitempty" protobuf:"bytes,1,rep,name=initialTimeInSeconds"`
+	TimeInSeconds int        `json:"timeInSeconds,omitempty" protobuf:"bytes,2,rep,name=timeInSeconds"`
+	MaxTimeInSeconds int     `json:"maxTimeInSeconds,omitempty" protobuf:"bytes,3,rep,name=maxTimeInSeconds"`
+	GrowthType string        `json:"growthType,omitempty" protobuf:"bytes,4,rep,name=growthType"`
+	NumRequeuings int        `json:"numRequeuings,omitempty" protobuf:"bytes,5,rep,name=numRequeuings"`
+	MaxNumRequeuings int     `json:"maxNumRequeuings,omitempty" protobuf:"bytes,6,rep,name=maxNumRequeuings"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
