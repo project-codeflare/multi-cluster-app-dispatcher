@@ -431,9 +431,7 @@ func (qjm *XController) PreemptQueueJobs() {
 			continue
 		}
 		newjob.Status.CanRun = false
-		//If dispatch deadline is exceeded no matter what the state of AW, kill the job.
-		//TODO: If minAvailable continously preempts the AW then dispatch condition will keep changing this WILL cause AW to
-		//overrun, for now relying on exponential back-off feature
+		//If dispatch deadline is exceeded no matter what the state of AW, kill the job and set status as Failed.
 		if (aw.Status.State == arbv1.AppWrapperStateActive) && (aw.Spec.SchedSpec.DispatchDuration.Limit > 0) {
 
 			if aw.Spec.SchedSpec.DispatchDuration.Overrun {
@@ -523,15 +521,6 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 		for _, value := range queueJobs {
 
 			if value.Status.State == arbv1.AppWrapperStateActive && value.Spec.SchedSpec.DispatchDuration.Limit > 0 {
-				conditionsLen := len(value.Status.Conditions)
-				var condition arbv1.AppWrapperCondition
-				for i := (conditionsLen - 1); i > 0; i-- {
-					condition = value.Status.Conditions[i]
-					if condition.Type != arbv1.AppWrapperCondDispatched {
-						continue
-					}
-					break
-				}
 				awDispatchDurationLimit := value.Spec.SchedSpec.DispatchDuration.Limit
 				dispatchDuration := value.Status.ControllerFirstDispatchTimestamp.Add(time.Duration(awDispatchDurationLimit) * time.Second)
 				currentTime := time.Now()

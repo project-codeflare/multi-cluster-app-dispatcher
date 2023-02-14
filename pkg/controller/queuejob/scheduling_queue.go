@@ -104,8 +104,6 @@ type PriorityQueue struct {
 	unschedulableQ *UnschedulableQJMap
 
 	receivedMoveRequest bool
-
-	expiredQ *UnschedulableQJMap
 }
 
 // Making sure that PriorityQueue implements SchedulingQueue.
