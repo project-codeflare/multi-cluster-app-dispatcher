@@ -49,6 +49,7 @@ import (
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota"
 	qmutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/util"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/labels"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -67,18 +68,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
-	resconfigmap "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/configmap" // ConfigMap
-	resdeployment "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/deployment"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/genericresource"
-	resnamespace "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/namespace"                         // NP
-	resnetworkpolicy "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/networkpolicy"                 // NetworkPolicy
-	respersistentvolume "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/persistentvolume"           // PV
-	respersistentvolumeclaim "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/persistentvolumeclaim" // PVC
 	respod "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/pod"
-	ressecret "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/secret" // Secret
-	resservice "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/service"
-	resstatefulset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/statefulset"
-	"k8s.io/apimachinery/pkg/labels"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
@@ -184,15 +175,6 @@ func NewJobAndClusterAgent(qjKey string, qaKey string) *JobAndClusterAgent {
 //RegisterAllQueueJobResourceTypes - gegisters all resources
 func RegisterAllQueueJobResourceTypes(regs *queuejobresources.RegisteredResources) {
 	respod.Register(regs)
-	resservice.Register(regs)
-	resdeployment.Register(regs)
-	resstatefulset.Register(regs)
-	respersistentvolume.Register(regs)
-	respersistentvolumeclaim.Register(regs)
-	resnamespace.Register(regs)
-	resconfigmap.Register(regs)
-	ressecret.Register(regs)
-	resnetworkpolicy.Register(regs)
 }
 
 func GetQueueJobAgentKey(obj interface{}) (string, error) {
@@ -554,7 +536,7 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 				// Check for the minimum age and then skip preempt if current time is not beyond minimum age
 				// The minimum age is controlled by the requeuing.TimeInSeconds stanza
 				// For preemption, the time is compared to the last condition or the dispatched condition in the AppWrapper, whichever happened later
-				lastCondition := value.Status.Conditions[numConditions - 1]
+				lastCondition := value.Status.Conditions[numConditions-1]
 				var condition arbv1.AppWrapperCondition
 
 				if dispatchedConditionExists && dispatchedCondition.LastTransitionMicroTime.After(lastCondition.LastTransitionMicroTime.Time) {
