@@ -550,7 +550,8 @@ func (qjrPod *QueueJobResPod) GetPodTemplate(qjobRes *arbv1.AppWrapperResource) 
 	if !ok {
 		return nil, fmt.Errorf("Job resource template item not define as a PodTemplate")
 	}
-
+	//Force nil for go GC
+	obj = nil
 	return &template.Template, nil
 
 }
@@ -618,7 +619,7 @@ func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, 
 	if tmpl == nil {
 		tmpl = make(map[string]string)
 	}
-	
+
 	tmpl[queueJobName] = qj.Name
 
 	// Include pre-defined metadata info, e.g. annotations
@@ -629,12 +630,12 @@ func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, 
 	templateObjMetadata.SetNamespace(qj.Namespace)
 	templateObjMetadata.SetOwnerReferences([]metav1.OwnerReference{
 		*metav1.NewControllerRef(qj, queueJobKind),
-	},)
+	})
 	templateObjMetadata.SetLabels(tmpl)
 
 	return &v1.Pod{
 		ObjectMeta: templateObjMetadata,
-		Spec: templateCopy.Spec,
+		Spec:       templateCopy.Spec,
 	}
 }
 
