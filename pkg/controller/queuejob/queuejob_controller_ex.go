@@ -227,109 +227,6 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	}
 	cc.qjobResControls[arbv1.ResourceTypePod] = resControlPod
 
-	// initialize service sub-resource control
-	resControlService, found, err := cc.qjobRegisteredResources.InitQueueJobResource(arbv1.ResourceTypeService, config)
-	if err != nil {
-		klog.Errorf("fail to create queuejob resource control")
-		return nil
-	}
-	if !found {
-		klog.Errorf("queuejob resource type Service not found")
-		return nil
-	}
-	cc.qjobResControls[arbv1.ResourceTypeService] = resControlService
-
-	// initialize PV sub-resource control
-	resControlPersistentVolume, found, err := cc.qjobRegisteredResources.InitQueueJobResource(arbv1.ResourceTypePersistentVolume, config)
-	if err != nil {
-		klog.Errorf("fail to create queuejob resource control")
-		return nil
-	}
-	if !found {
-		klog.Errorf("queuejob resource type PersistentVolume not found")
-		return nil
-	}
-	cc.qjobResControls[arbv1.ResourceTypePersistentVolume] = resControlPersistentVolume
-
-	resControlPersistentVolumeClaim, found, err := cc.qjobRegisteredResources.InitQueueJobResource(arbv1.ResourceTypePersistentVolumeClaim, config)
-	if err != nil {
-		klog.Errorf("fail to create queuejob resource control")
-		return nil
-	}
-	if !found {
-		klog.Errorf("queuejob resource type PersistentVolumeClaim not found")
-		return nil
-	}
-	cc.qjobResControls[arbv1.ResourceTypePersistentVolumeClaim] = resControlPersistentVolumeClaim
-
-	resControlNamespace, found, err := cc.qjobRegisteredResources.InitQueueJobResource(arbv1.ResourceTypeNamespace, config)
-	if err != nil {
-		klog.Errorf("fail to create queuejob resource control")
-		return nil
-	}
-	if !found {
-		klog.Errorf("queuejob resource type Namespace not found")
-		return nil
-	}
-	cc.qjobResControls[arbv1.ResourceTypeNamespace] = resControlNamespace
-
-	resControlConfigMap, found, err := cc.qjobRegisteredResources.InitQueueJobResource(arbv1.ResourceTypeConfigMap, config)
-	if err != nil {
-		klog.Errorf("fail to create queuejob resource control")
-		return nil
-	}
-	if !found {
-		klog.Errorf("queuejob resource type ConfigMap not found")
-		return nil
-	}
-	cc.qjobResControls[arbv1.ResourceTypeConfigMap] = resControlConfigMap
-
-	resControlSecret, found, err := cc.qjobRegisteredResources.InitQueueJobResource(arbv1.ResourceTypeSecret, config)
-	if err != nil {
-		klog.Errorf("fail to create queuejob resource control")
-		return nil
-	}
-	if !found {
-		klog.Errorf("queuejob resource type Secret not found")
-		return nil
-	}
-	cc.qjobResControls[arbv1.ResourceTypeSecret] = resControlSecret
-
-	resControlNetworkPolicy, found, err := cc.qjobRegisteredResources.InitQueueJobResource(arbv1.ResourceTypeNetworkPolicy, config)
-	if err != nil {
-		klog.Errorf("fail to create queuejob resource control")
-		return nil
-	}
-	if !found {
-		klog.Errorf("queuejob resource type NetworkPolicy not found")
-		return nil
-	}
-	cc.qjobResControls[arbv1.ResourceTypeNetworkPolicy] = resControlNetworkPolicy
-
-	// initialize deployment sub-resource control
-	resControlDeployment, found, err := cc.qjobRegisteredResources.InitQueueJobResource(arbv1.ResourceTypeDeployment, config)
-	if err != nil {
-		klog.Errorf("fail to create queuejob resource control")
-		return nil
-	}
-	if !found {
-		klog.Errorf("queuejob resource type Service not found")
-		return nil
-	}
-	cc.qjobResControls[arbv1.ResourceTypeDeployment] = resControlDeployment
-
-	// initialize SS sub-resource
-	resControlSS, found, err := cc.qjobRegisteredResources.InitQueueJobResource(arbv1.ResourceTypeStatefulSet, config)
-	if err != nil {
-		klog.Errorf("fail to create queuejob resource control")
-		return nil
-	}
-	if !found {
-		klog.Errorf("queuejob resource type StatefulSet not found")
-		return nil
-	}
-	cc.qjobResControls[arbv1.ResourceTypeStatefulSet] = resControlSS
-
 	queueJobClient, _, err := clients.NewClient(cc.config)
 	if err != nil {
 		panic(err)
@@ -1451,15 +1348,6 @@ func (cc *XController) Run(stopCh chan struct{}) {
 	go cc.queueJobInformer.Informer().Run(stopCh)
 
 	go cc.qjobResControls[arbv1.ResourceTypePod].Run(stopCh)
-	go cc.qjobResControls[arbv1.ResourceTypeService].Run(stopCh)
-	go cc.qjobResControls[arbv1.ResourceTypeDeployment].Run(stopCh)
-	go cc.qjobResControls[arbv1.ResourceTypeStatefulSet].Run(stopCh)
-	go cc.qjobResControls[arbv1.ResourceTypePersistentVolume].Run(stopCh)
-	go cc.qjobResControls[arbv1.ResourceTypePersistentVolumeClaim].Run(stopCh)
-	go cc.qjobResControls[arbv1.ResourceTypeNamespace].Run(stopCh)
-	go cc.qjobResControls[arbv1.ResourceTypeConfigMap].Run(stopCh)
-	go cc.qjobResControls[arbv1.ResourceTypeSecret].Run(stopCh)
-	go cc.qjobResControls[arbv1.ResourceTypeNetworkPolicy].Run(stopCh)
 
 	cache.WaitForCacheSync(stopCh, cc.queueJobSynced)
 
