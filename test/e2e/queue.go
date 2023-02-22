@@ -155,7 +155,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createJobAWWithInitContainer(context, "aw-job-3-init-container", 60, "exponential", 0)
 		appwrappers = append(appwrappers, aw)
 
-		err := waitAWPodsCompleted(context, aw, 720 * time.Second) // This test waits for 10 minutes to make sure all PODs complete
+		err := waitAWPodsCompleted(context, aw, 720*time.Second) // This test waits for 10 minutes to make sure all PODs complete
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -173,7 +173,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createJobAWWithInitContainer(context, "aw-job-3-init-container", 1, "none", 3)
 		appwrappers = append(appwrappers, aw)
 
-		err := waitAWPodsCompleted(context, aw, 300 * time.Second)
+		err := waitAWPodsCompleted(context, aw, 300*time.Second)
 		Expect(err).To(HaveOccurred())
 	})
 
@@ -534,7 +534,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createGenericJobAWWithScheduleSpec(context, "aw-test-job-with-scheduling-spec")
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred())
-		err2 := waitAWPodsCompleted(context, aw, 90 * time.Second)
+		err2 := waitAWPodsCompleted(context, aw, 90*time.Second)
 		Expect(err2).NotTo(HaveOccurred())
 
 		// Once pods are completed, we wait for them to see if they change their status to anything BUT "Completed"
