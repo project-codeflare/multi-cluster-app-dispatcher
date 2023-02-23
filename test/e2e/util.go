@@ -1773,7 +1773,7 @@ func createAWGenericItemWithoutStatus(context *context, name string) *arbv1.AppW
                             "name": "aw-schd-spec-with-timeout-1",
                             "namespace": "default",
 							"labels":{
-								appwrapper.mcad.ibm.com: "aw-test-job-with-comp-44"
+								"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-44"
 							}
                         },
                         "spec": {
@@ -1794,7 +1794,7 @@ func createAWGenericItemWithoutStatus(context *context, name string) *arbv1.AppW
 				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      "aw-test-job-with-comp-44",
+							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-comp-44"),
 							Namespace: "test",
 						},
 						DesiredAvailable: 1,
