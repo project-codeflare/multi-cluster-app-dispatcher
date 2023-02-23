@@ -1538,15 +1538,15 @@ func createDeploymentAWwith425CPU(context *context, name string) *arbv1.AppWrapp
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
 							Namespace: context.namespace,
 						},
-						Replicas: 1,
-						Type:     arbv1.ResourceTypeDeployment,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 1,
+						//Type:     arbv1.ResourceTypeDeployment,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
