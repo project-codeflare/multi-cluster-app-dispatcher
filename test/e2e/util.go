@@ -1632,7 +1632,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 		"apiVersion": "batch/v1",
 		"kind": "Job",
 		"metadata": {
-			"name": "aw-test-job-with-comp-ms-21",
+			"name": "aw-test-job-with-comp-ms-21-1",
 			"namespace": "test"
 		},
 		"spec": {
@@ -1641,7 +1641,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 			"template": {
 				"metadata": {
 					"labels": {
-						"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-ms-2"
+						"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-ms-21"
 					}
 				},
 				"spec": {
@@ -1657,7 +1657,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 							],
 							"image": "ubuntu:latest",
 							"imagePullPolicy": "IfNotPresent",
-							"name": "aw-test-job-with-comp-ms-21",
+							"name": "aw-test-job-with-comp-ms-21-1",
 							"resources": {
 								"limits": {
 									"cpu": "100m",
@@ -1680,7 +1680,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 		"apiVersion": "batch/v1",
 		"kind": "Job",
 		"metadata": {
-			"name": "aw-test-job-with-comp-ms-22",
+			"name": "aw-test-job-with-comp-ms-21-2",
 			"namespace": "test"
 		},
 		"spec": {
@@ -1689,7 +1689,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 			"template": {
 				"metadata": {
 					"labels": {
-						"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-ms-2"
+						"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-ms-21"
 					}
 				},
 				"spec": {
@@ -1705,7 +1705,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 							],
 							"image": "ubuntu:latest",
 							"imagePullPolicy": "IfNotPresent",
-							"name": "aw-test-job-with-comp-ms-22",
+							"name": "aw-test-job-with-comp-ms-21-2",
 							"resources": {
 								"limits": {
 									"cpu": "100m",
@@ -1723,7 +1723,6 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 			}
 		}
 	}`)
-	//var schedSpecMin int = 1
 
 	aw := &arbv1.AppWrapper{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1731,14 +1730,11 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 			Namespace: "test",
 		},
 		Spec: arbv1.AppWrapperSpec{
-			SchedSpec: arbv1.SchedulingSpecTemplate{
-				//MinAvailable: schedSpecMin,
-			},
 			AggrResources: arbv1.AppWrapperResourceList{
 				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-comp-21"),
+							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-comp-ms-21-1"),
 							Namespace: "test",
 						},
 						DesiredAvailable: 1,
@@ -1749,7 +1745,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 					},
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-comp-22"),
+							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-comp-ms-21-2"),
 							Namespace: "test",
 						},
 						DesiredAvailable: 1,
@@ -1776,6 +1772,8 @@ func createAWGenericItemWithoutStatus(context *context, name string) *arbv1.AppW
                         "metadata": {
                             "name": "aw-schd-spec-with-timeout-1",
                             "namespace": "default"
+							labels:
+                				appwrapper.mcad.ibm.com: "aw-test-job-with-comp-44"
                         },
                         "spec": {
                             "minMember": 1
@@ -1795,14 +1793,13 @@ func createAWGenericItemWithoutStatus(context *context, name string) *arbv1.AppW
 				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-%s", name, "aw-test-job-with-comp-44"),
+							Name:      name,
 							Namespace: "test",
 						},
 						DesiredAvailable: 1,
 						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
-						//CompletionStatus: "Complete",
 					},
 				},
 			},

@@ -278,29 +278,6 @@ function kube-test-env-up {
       cat $HOME/.kube/config
     fi
 
-    # Install Helm Client
-
-    # echo "---"
-    # echo "Installing Helm Client..."
-    # curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get > install-helm.sh
-    # chmod u+x install-helm.sh
-    # ./install-helm.sh --version v2.17.0
-
-    # Start Helm Server
-    # echo "Installing Helm Server..."
-    # kubectl -n kube-system create serviceaccount tiller
-    # kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
-
-    # echo "Initialize Helm Server..."
-    # helm init --service-account tiller
-    # echo "Wait for Helm Server to complete startup..."
-    # sleep 25
-
-    # echo "Getting Helm Server info..."
-    # tiller_pod=$(kubectl get pods --namespace kube-system | grep tiller | awk '{print $1}')
-
-    # kubectl describe pod ${tiller_pod} -n kube-system
-
     # Installing helm3
 
     curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
