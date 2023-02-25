@@ -274,7 +274,7 @@ func createGenericAWTimeoutWithStatus(context *context, name string) *arbv1.AppW
 				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-%s", name, "aw-test-jobtimeout-with-comp-1"),
+							Name:      fmt.Sprintf("%s-%s", name, "aw-test-jobtimeout-with-comp-1-job"),
 							Namespace: "test",
 						},
 						DesiredAvailable: 1,
