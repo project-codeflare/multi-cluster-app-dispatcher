@@ -213,7 +213,7 @@ func createGenericAWTimeoutWithStatus(context *context, name string) *arbv1.AppW
 		"apiVersion": "batch/v1",
 		"kind": "Job",
 		"metadata": {
-			"name": "aw-test-jobtimeout-with-comp-1-job",
+			"name": "aw-test-jobtimeout-with-comp-1",
 			"namespace": "test"
 		},
 		"spec": {
@@ -238,7 +238,7 @@ func createGenericAWTimeoutWithStatus(context *context, name string) *arbv1.AppW
 							],
 							"image": "ubuntu:latest",
 							"imagePullPolicy": "IfNotPresent",
-							"name": "aw-test-jobtimeout-with-comp-1-job",
+							"name": "aw-test-jobtimeout-with-comp-1",
 							"resources": {
 								"limits": {
 									"cpu": "100m",
