@@ -559,6 +559,11 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 	if !qjm.isDispatcher { // Agent Mode
 		for _, value := range queueJobs {
 
+			// Skip if AW Pending or just entering the system and does not have a state yet.
+			if (value.Status.State == arbv1.AppWrapperStateEnqueued) || (value.Status.State == "") {
+				continue
+			}
+
 			if value.Status.State == arbv1.AppWrapperStateActive && value.Spec.SchedSpec.DispatchDuration.Limit > 0 {
 				awDispatchDurationLimit := value.Spec.SchedSpec.DispatchDuration.Limit
 				dispatchDuration := value.Status.ControllerFirstDispatchTimestamp.Add(time.Duration(awDispatchDurationLimit) * time.Second)
@@ -574,11 +579,6 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 				}
 			}
 			replicas := value.Spec.SchedSpec.MinAvailable
-
-			// Skip if AW Pending or just entering the system and does not have a state yet.
-			if (value.Status.State == arbv1.AppWrapperStateEnqueued) || (value.Status.State == "") {
-				continue
-			}
 
 			if (int(value.Status.Running) + int(value.Status.Succeeded)) < replicas {
 

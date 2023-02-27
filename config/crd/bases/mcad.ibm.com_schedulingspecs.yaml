@@ -59,7 +59,7 @@ spec:
                     default: 0
                 type: object
               dispatchDuration:
-                description: Wall clock duration time of appwrapper
+                description: Wall clock duration time of appwrapper in seconds
                 properties:
                   expected:
                     format: int32

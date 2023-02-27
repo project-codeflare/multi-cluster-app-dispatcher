@@ -163,7 +163,7 @@ spec:
                   type: string
                 type: object
               dispatchDuration:
-                description: Wall clock duration time of appwrapper
+                description: Wall clock duration time of appwrapper in seconds
                 properties:
                   expected:
                     format: int32
@@ -249,7 +249,7 @@ spec:
                       type: string
                     type: object
                   dispatchDuration:
-                    description: Wall clock duration time of appwrapper
+                    description: Wall clock duration time of appwrapper in seconds
                     properties:
                       expected:
                         format: int32
@@ -7316,7 +7316,7 @@ spec:
                       type: string
                     type: object
                   dispatchDuration:
-                    description: Wall clock duration time of appwrapper
+                    description: Wall clock duration time of appwrapper in seconds
                     properties:
                       expected:
                         format: int32
