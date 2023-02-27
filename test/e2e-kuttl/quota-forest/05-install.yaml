@@ -1,0 +1,50 @@
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: job5-1replica
+  namespace: test
+  labels:
+    quota_context: "bronze"
+    quota_service: "service-root"
+spec:
+  service:
+    spec: {}
+  priority: 1000
+  resources:
+    metadata: {}
+    GenericItems:
+      - metadata: {}
+        replicas: 1
+        generictemplate:
+          apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+          kind: StatefulSet
+          metadata:
+            name: job5-1replica
+            namespace: test
+            labels:
+              app: job5-1replica
+          spec:
+            selector:
+              matchLabels:
+                app: job5-1replica
+            replicas: 1
+            template:
+              metadata:
+                labels:
+                  app: job5-1replica
+                  size: "1"
+              spec:
+                containers:
+                  - name: job5-1replica
+                    image: registry.access.redhat.com/ubi8/ubi:latest
+                    command:
+                      - /bin/sh
+                      - -c
+                      - while true; do sleep 10; done
+                    resources:
+                      requests:
+                        cpu: "0.4"
+                        memory: "95Mi"
+                      limits:
+                        cpu: "0.4"
+                        memory: "95Mi"
