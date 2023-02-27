@@ -162,6 +162,16 @@ spec:
                 additionalProperties:
                   type: string
                 type: object
+              dispatchDuration:
+                description: Wall clock duration time of appwrapper in seconds
+                properties:
+                  expected:
+                    format: int32
+                    type: integer
+                  limit:
+                    format: int32
+                    type: integer
+                type: object
             type: object
         required:
         - metadata
@@ -237,6 +247,16 @@ spec:
                   nodeSelector:
                     additionalProperties:
                       type: string
+                    type: object
+                  dispatchDuration:
+                    description: Wall clock duration time of appwrapper in seconds
+                    properties:
+                      expected:
+                        format: int32
+                        type: integer
+                      limit:
+                        format: int32
+                        type: integer
                     type: object
                 type: object
               taskSpecs:
@@ -7294,6 +7314,16 @@ spec:
                   nodeSelector:
                     additionalProperties:
                       type: string
+                    type: object
+                  dispatchDuration:
+                    description: Wall clock duration time of appwrapper in seconds
+                    properties:
+                      expected:
+                        format: int32
+                        type: integer
+                      limit:
+                        format: int32
+                        type: integer
                     type: object
                 type: object
               selector:

@@ -208,6 +208,92 @@ func getNS(context *context, job *jobSpec) string {
 	return context.namespace
 }
 
+func createGenericAWTimeoutWithStatus(context *context, name string) *arbv1.AppWrapper {
+	rb := []byte(`{
+		"apiVersion": "batch/v1",
+		"kind": "Job",
+		"metadata": {
+			"name": "aw-test-jobtimeout-with-comp-1",
+			"namespace": "test"
+		},
+		"spec": {
+			"completions": 1,
+			"parallelism": 1,
+			"template": {
+				"metadata": {
+					"labels": {
+						"appwrapper.mcad.ibm.com": "aw-test-jobtimeout-with-comp-1"
+					}
+				},
+				"spec": {
+					"containers": [
+						{
+							"args": [
+								"sleep infinity"
+							],
+							"command": [
+								"/bin/bash",
+								"-c",
+								"--"
+							],
+							"image": "ubuntu:latest",
+							"imagePullPolicy": "IfNotPresent",
+							"name": "aw-test-jobtimeout-with-comp-1",
+							"resources": {
+								"limits": {
+									"cpu": "100m",
+									"memory": "256M"
+								},
+								"requests": {
+									"cpu": "100m",
+									"memory": "256M"
+								}
+							}
+						}
+					],
+					"restartPolicy": "Never"
+				}
+			}
+		}
+	}`)
+	var schedSpecMin int = 1
+	var dispatchDurationSeconds int = 10
+	aw := &arbv1.AppWrapper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "test",
+		},
+		Spec: arbv1.AppWrapperSpec{
+			SchedSpec: arbv1.SchedulingSpecTemplate{
+				MinAvailable: schedSpecMin,
+				DispatchDuration: arbv1.DispatchDurationSpec{
+					Limit: dispatchDurationSeconds,
+				},
+			},
+			AggrResources: arbv1.AppWrapperResourceList{
+				GenericItems: []arbv1.AppWrapperGenericResource{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "aw-test-jobtimeout-with-comp-1-job"),
+							Namespace: "test",
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb,
+						},
+						CompletionStatus: "Complete",
+					},
+				},
+			},
+		},
+	}
+
+	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	Expect(err).NotTo(HaveOccurred())
+
+	return appwrapper
+}
+
 func createJobEx(context *context, job *jobSpec) ([]*batchv1.Job, *arbv1.AppWrapper) {
 	var jobs []*batchv1.Job
 	var appwrapper *arbv1.AppWrapper
