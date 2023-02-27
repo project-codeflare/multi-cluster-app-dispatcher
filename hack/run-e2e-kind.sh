@@ -417,4 +417,4 @@ mcad-env-status
 cd ${ROOT_DIR}
 
 echo "==========================>>>>> Running E2E tests... <<<<<=========================="
-#go test ./test/e2e -v -timeout 55m
+go test ./test/e2e -v -timeout 55m
