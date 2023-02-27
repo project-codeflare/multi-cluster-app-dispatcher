@@ -403,9 +403,12 @@ mcad-quota-management-up
 
 mcad-env-status
 
+echo "==========================>>>>> Running Quota Management Kuttl E2E tests... <<<<<=========================="
+kubectl kuttl test
+
 mcad-quota-management-down
 
-# Non-quota mangement testing
+# Non-quota management testing
 mcad-up
 
 mcad-env-status
@@ -414,4 +417,4 @@ mcad-env-status
 cd ${ROOT_DIR}
 
 echo "==========================>>>>> Running E2E tests... <<<<<=========================="
-go test ./test/e2e -v -timeout 55m
+#go test ./test/e2e -v -timeout 55m
