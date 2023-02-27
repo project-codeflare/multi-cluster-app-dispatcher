@@ -27,3 +27,31 @@ spec:
         requests:
           cpu: 1075
           memory: 1045
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: context-root-children
+  namespace: kube-system
+  labels:
+    tree: quota_context
+spec:
+  parent: context-root
+  children:
+    - name: gold
+      quotas:
+        requests:
+          cpu: 1075
+          memory: 450
+    - name: silver
+      quotas:
+        hardLimit: false
+        requests:
+          cpu: 1075
+          memory: 400
+    - name: bronze
+      quotas:
+        hardLimit: true
+        requests:
+          cpu: 900
+          memory: 300

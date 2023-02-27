@@ -41,6 +41,7 @@ export IMAGE_REPOSITORY_MCAD="${1}"
 export IMAGE_TAG_MCAD="${2}"
 export MCAD_IMAGE_PULL_POLICY="${3-Always}"
 export IMAGE_MCAD="${IMAGE_REPOSITORY_MCAD}:${IMAGE_TAG_MCAD}"
+export KUTTL_VERSION=0.15.0
 
 sudo apt-get update && sudo apt-get install -y apt-transport-https
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
@@ -52,6 +53,9 @@ sudo apt-get install -y  kubectl=1.17.0-00
 # Download kind binary (0.6.1)
 sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.11.0/kind-linux-amd64
 sudo chmod +x /usr/local/bin/kind
+
+# Download kuttl plugin
+sudo curl -sSLf --output /tmp/kubectl-kuttl https://github.com/kudobuilder/kuttl/releases/download/v${KUTTL_VERSION}/kubectl-kuttl_${KUTTL_VERSION}_linux_x86_64 && mv /tmp/kubectl-kuttl /usr/local/bin && chmod a+x /usr/local/bin/kubectl-kuttl
 
 # check if kind installed
 function check-prerequisites {
@@ -71,7 +75,15 @@ function check-prerequisites {
   else
     echo -n "found kubectl, " && kubectl version --short --client
   fi
-  
+
+  kubectl kuttl version >/dev/null 2>&1
+  if [[ $? -ne 0 ]]; then
+    echo "kuttl plugin for kubectl not installed, exiting."
+    exit 1
+  else
+    echo -n "found kuttl plugin for kubectl, " && kubectl kuttl version
+  fi
+
   if [[ $IMAGE_REPOSITORY_MCAD == "" ]]
   then
     echo "No MCAD image was provided."
@@ -367,6 +379,8 @@ kube-test-env-up
 mcad-up
 
 mcad-env-status
+
+
 cd ${ROOT_DIR}
 
 echo "==========================>>>>> Running E2E tests... <<<<<=========================="
