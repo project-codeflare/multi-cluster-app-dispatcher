@@ -55,7 +55,7 @@ sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/rele
 sudo chmod +x /usr/local/bin/kind
 
 # Download kuttl plugin
-sudo curl -sSLf --output /tmp/kubectl-kuttl https://github.com/kudobuilder/kuttl/releases/download/v${KUTTL_VERSION}/kubectl-kuttl_${KUTTL_VERSION}_linux_x86_64 && mv /tmp/kubectl-kuttl /usr/local/bin && chmod a+x /usr/local/bin/kubectl-kuttl
+sudo curl -sSLf --output /tmp/kubectl-kuttl https://github.com/kudobuilder/kuttl/releases/download/v${KUTTL_VERSION}/kubectl-kuttl_${KUTTL_VERSION}_linux_x86_64 && sudo mv /tmp/kubectl-kuttl /usr/local/bin && sudo chmod a+x /usr/local/bin/kubectl-kuttl
 
 # check if kind installed
 function check-prerequisites {
