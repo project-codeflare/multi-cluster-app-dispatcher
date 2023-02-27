@@ -320,8 +320,30 @@ function kube-test-env-up {
 
 }
 
+function mcad-quota-management-up {
+    cd $ROOT_DIR/deployment
+
+    # start mcad controller
+    echo "Starting MCAD Controller for Quota Management Testing..."
+    echo "helm install mcad-controller namespace kube-system wait set loglevel=2 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=4000m set resources.limits.memory=4096Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY set configMap.quotaEnabled='true' set quotaManagement.rbac.apiGroup=ibm.com set quotaManagement.rbac.resource=quotasubtrees set configMap.name=mcad-controller-configmap set configMap.preemptionEnabled='true'"
+    helm install mcad-controller --namespace kube-system --wait --set loglevel=10 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY --set configMap.quotaEnabled='"true"' --set quotaManagement.rbac.apiGroup=ibm.com --set quotaManagement.rbac.resource=quotasubtrees --set configMap.name=mcad-controller-configmap --set configMap.preemptionEnabled='"true"'
+    sleep 10
+}
+
+function mcad-quota-management-down {
+
+    # Helm chart install name
+    helm_chart_name=$(helm list --short)
+
+    # start mcad controller
+    echo "Stopping MCAD Controller for Quota Management Testing..."
+    echo "helm delete ${helm_chart_name}"
+    helm delete ${helm_chart_name}
+    sleep 20
+}
+
 function mcad-up {
-    cd deployment
+    cd $ROOT_DIR/deployment
 
     # start mcad controller
     echo "Starting MCAD Controller..."
@@ -376,6 +398,14 @@ kind-up-cluster
 
 kube-test-env-up
 
+# Quota management testing
+mcad-quota-management-up
+
+mcad-env-status
+
+mcad-quota-management-down
+
+# Non-quota mangement testing
 mcad-up
 
 mcad-env-status
