@@ -41,8 +41,6 @@ spec:
                       type: string
                     namespace:
                       type: string
-                    share:
-                      type: integer
                     quotas:
                       type: object
                       properties:

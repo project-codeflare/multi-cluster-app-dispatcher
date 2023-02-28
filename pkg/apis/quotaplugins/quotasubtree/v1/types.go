@@ -56,7 +56,6 @@ type QuotaSubtreeSpec struct {
 type Child struct {
 	Name         string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	Namespace    string `json:"namespace,omitempty" protobuf:"bytes,2,opt,name=namespace"`
-	Share  	     int32  `json:"share,omitempty" protobuf:"bytes,3,opt,name=share"`
 	Quotas       Quota  `json:"quotas,omitempty" protobuf:"bytes,4,opt,name=quotas"`
 	Path         string `json:"path,omitempty" protobuf:"bytes,5,opt,name=path"`
 }
