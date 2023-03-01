@@ -271,7 +271,6 @@ func (sc *ClusterStateCache) updateState() error {
 		}
 		// Do not use nodes with taints that has effect NoSchedule in calculations
 		// InstaScale uses preferNoSchedule strategy
-		klog.Infof("Abhishek the taints are %v", value.Taints)
 		var skipNode bool = false
 		for _, taint := range value.Taints {
 			if taint.Effect == "NoSchedule" {
