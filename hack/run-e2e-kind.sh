@@ -42,7 +42,8 @@ export IMAGE_TAG_MCAD="${2}"
 export MCAD_IMAGE_PULL_POLICY="${3-Always}"
 export IMAGE_MCAD="${IMAGE_REPOSITORY_MCAD}:${IMAGE_TAG_MCAD}"
 export KUTTL_VERSION=0.15.0
-export KUTTL_TEST_OPT="--config ${ROOT_DIR}/kuttl-test.yaml"
+export KUTTL_TEST_OPT="--config ${ROOT_DIR}/kuttl-test.yaml --skip-delete"
+#export KUTTL_TEST_OPT="--config ${ROOT_DIR}/kuttl-test.yaml"
 
 sudo apt-get update && sudo apt-get install -y apt-transport-https
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
