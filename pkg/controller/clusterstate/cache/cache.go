@@ -269,7 +269,21 @@ func (sc *ClusterStateCache) updateState() error {
 				value.Name, value.Allocatable, value.Used, value.Idle)
 			continue
 		}
-
+		// Do not use nodes with taints that has effect NoSchedule in calculations
+		// InstaScale uses preferNoSchedule strategy
+		klog.Infof("Abhishek the taints are %v", value.Taints)
+		var skipNode bool = false
+		for _, taint := range value.Taints {
+			if taint.Effect == "NoSchedule" {
+				klog.V(6).Infof("[updateState] %s is tainted node Total: %v, Used: %v, and Idle: %v will not be included in cluster state calculation.",
+					value.Name, value.Allocatable, value.Used, value.Idle)
+				skipNode = true
+				break
+			}
+		}
+		if skipNode {
+			continue
+		}
 		total = total.Add(value.Allocatable)
 		used = used.Add(value.Used)
 		idle = idle.Add(value.Idle)
