@@ -20,7 +20,7 @@ before_script:
   - export TEST_LOG_LEVEL=4
 
 script:
-#  - make
+  - YELLOW='\033[1;93m'
   - make mcad-controller
   - make run-test
   # Process 'make images' when NOT a pull request
@@ -34,8 +34,8 @@ script:
   # use 'travis_wait n' which unfortunately does not stream output until the very end so monitoring the Travis log 
   # during runtime is not possible.
   - make run-e2e &
-  - PID=$! && echo -e "\033[1;92mmake run e2e pid=${PID}"
+  - PID=$! && echo -e "${YELLOW}make run e2e pid=${PID}"
   - while [ -e /proc/${PID} ]; do echo -n "."  && sleep 30; done
   - wait ${PID}
-  - CODE=$? && echo -e "\033[1;92mmake run e2e pid=${PID} return code=${CODE}"
+  - CODE=$? && echo -e "${YELLOW}make run e2e pid=${PID} return code=${CODE}"
   - return ${CODE}
