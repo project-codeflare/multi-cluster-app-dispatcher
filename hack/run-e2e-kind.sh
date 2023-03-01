@@ -403,6 +403,7 @@ function kuttl-tests {
   if [[ $? -ne 0 ]]; then
     echo "quota management kuttl e2e tests failure, exiting."
     exit 1
+  fi
   mcad-quota-management-down
   kubectl delete namespace test
 }
