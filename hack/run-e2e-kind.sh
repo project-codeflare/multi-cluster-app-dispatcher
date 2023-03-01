@@ -61,7 +61,7 @@ sudo curl -sSLf --output /tmp/kubectl-kuttl https://github.com/kudobuilder/kuttl
 # check if kind installed
 function check-prerequisites {
   echo "checking prerequisites"
-  which kind >/dev/null 2>&1
+  which kind2 >/dev/null 2>&1
   if [[ $? -ne 0 ]]; then
     echo "kind not installed, exiting."
     exit 1
