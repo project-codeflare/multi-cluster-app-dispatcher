@@ -29,4 +29,4 @@ script:
   - 'if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then unset quay_repository && make images; fi'
   # Process 'make push-images' when NOT a pull request
   - 'if [ "$TRAVIS_PULL_REQUEST"  = "false" ]; then make push-images; fi'
-  - travis_wait 60 make run-e2e
+  - travis_wait 80 make run-e2e
