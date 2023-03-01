@@ -1,12 +1,17 @@
-# Verify that quota management is enabled by checking the queuing is happening
+# Verify AppWrapper was dispatched and pod was created
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-  name: job2-1replica
+  name: job3-1replica
   namespace: test
+  labels:
+    quota_context: "gold"
+    quota_service: "service-root"
+status:
+  state: Running
 ---
 apiVersion: v1
 kind: Pod
 metadata:
-  name: job2-1replica-0
+  name: job3-1replica-0
   namespace: test

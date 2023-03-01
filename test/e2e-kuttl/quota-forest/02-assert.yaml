@@ -1,3 +1,4 @@
+# Verify subtree creations
 apiVersion: ibm.com/v1
 kind: QuotaSubtree
 metadata:
@@ -13,3 +14,11 @@ metadata:
   namespace: kube-system
   labels:
     tree: quota_service
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: context-root-children
+  namespace: kube-system
+  labels:
+    tree: quota_context

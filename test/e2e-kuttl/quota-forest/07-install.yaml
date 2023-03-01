@@ -1,7 +1,7 @@
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-  name: job6-1replica
+  name: job7-1replica
   namespace: test
   labels:
     quota_context: "bronze"
@@ -19,23 +19,23 @@ spec:
           apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
           kind: StatefulSet
           metadata:
-            name: job6-1replica
+            name: job7-1replica
             namespace: test
             labels:
-              app: job6-1replica
+              app: job7-1replica
           spec:
             selector:
               matchLabels:
-                app: job6-1replica
+                app: job7-1replica
             replicas: 1
             template:
               metadata:
                 labels:
-                  app: job6-1replica
+                  app: job7-1replica
                   size: "1"
               spec:
                 containers:
-                  - name: job6-1replica
+                  - name: job7-1replica
                     image: registry.access.redhat.com/ubi8/ubi:latest
                     command:
                       - /bin/sh
