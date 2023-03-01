@@ -36,7 +36,6 @@ package e2e
 import (
 	"fmt"
 	"os"
-
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -106,11 +105,11 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// Using quite mode due to creating of pods in earlier step.
 		err = waitAWReadyQuiet(context, aw2)
 		Expect(err).NotTo(HaveOccurred())
-
 	})
 
 	It("MCAD CPU Preemption Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Preemption Test - Started.\n")
+
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
 		appwrappersPtr := &appwrappers
@@ -138,6 +137,44 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// Since preemption takes some time, increasing timeout wait time to 2 minutes
 		err = waitAWPodsExists(context, aw3, 120000*time.Millisecond)
 		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("MCAD CPU Requeuing - Completion After Enough Requeuing Times Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Requeuing Test - Started.\n")
+
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		// Create a job with init containers that need 200 seconds to be ready before the container starts.
+		// The requeuing mechanism is set to start at 1 minute, which is not enough time for the PODs to be completed.
+		// The job should be requeued 3 times before it finishes since the wait time is doubled each time the job is requeued (i.e., initially it waits
+		// for 1 minutes before requeuing, then 2 minutes, and then 4 minutes). Since the init containers take 3 minutes
+		// and 20 seconds to finish, a 4 minute wait should be long enough to finish the job successfully
+		aw := createJobAWWithInitContainer(context, "aw-job-3-init-container", 60, "exponential", 0)
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWPodsCompleted(context, aw, 720 * time.Second) // This test waits for 10 minutes to make sure all PODs complete
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("MCAD CPU Requeuing - Deletion After Maximum Requeuing Times Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Requeuing Test - Started.\n")
+
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		// Create a job with init containers that need 200 seconds to be ready before the container starts.
+		// The requeuing mechanism is set to fire after 1 second (plus the 60 seconds time interval of the background thread)
+		// Within 5 minutes, the AppWrapper will be requeued up to 3 times at which point it will be deleted
+		aw := createJobAWWithInitContainer(context, "aw-job-3-init-container", 1, "none", 3)
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWPodsCompleted(context, aw, 300 * time.Second)
+		Expect(err).To(HaveOccurred())
 	})
 
 	It("Create AppWrapper - StatefulSet Only - 2 Pods", func() {
@@ -351,7 +388,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// This should fit on cluster with customPodResources matching deployment resource demands so AW pods are created
 		aw := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-deployment-2-550-vs-550-cpu", "550m", "550m", 2)
+			context, "aw-deployment-2-550-vs-550-cpu", "550m", "550m", 2, 60)
 
 		appwrappers = append(appwrappers, aw)
 
@@ -364,6 +401,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	It("MCAD Scheduling Fail Fast Preemption Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Started.\n")
+
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
 		appwrappersPtr := &appwrappers
@@ -378,7 +416,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// This should not fit on any node but should dispatch because there is enough aggregated resources.
 		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-ff-deployment-1-700-cpu", "700m", "700m", 1)
+			context, "aw-ff-deployment-1-700-cpu", "700m", "700m", 1, 60)
 
 		appwrappers = append(appwrappers, aw2)
 
@@ -391,7 +429,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fit on cluster after AW aw-deployment-1-700-cpu above is automatically preempted on
 		// scheduling failure
 		aw3 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-ff-deployment-2-340-cpu", "340m", "340m", 2)
+			context, "aw-ff-deployment-2-340-cpu", "340m", "340m", 2, 60)
 
 		appwrappers = append(appwrappers, aw3)
 
@@ -406,7 +444,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// Make sure pods from AW aw-deployment-1-700-cpu above do not exist proving preemption
 		err = waitAWAnyPodsExists(context, aw2)
 		Expect(err).To(HaveOccurred())
-
 	})
 
 	It("MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Not Queuing Test", func() {
@@ -425,7 +462,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// This should not fit on cluster but customPodResources is incorrect so AW pods are created
 		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-deployment-2-425-vs-426-cpu", "425m", "426m", 2)
+			context, "aw-deployment-2-425-vs-426-cpu", "425m", "426m", 2, 60)
 
 		appwrappers = append(appwrappers, aw2)
 
@@ -452,13 +489,38 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// This should fit on cluster but customPodResources is incorrect so AW pods are not created
 		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-deployment-2-426-vs-425-cpu", "426m", "425m", 2)
+			context, "aw-deployment-2-426-vs-425-cpu", "426m", "425m", 2, 60)
 
 		appwrappers = append(appwrappers, aw2)
 
 		err = waitAWAnyPodsExists(context, aw2)
 		Expect(err).To(HaveOccurred())
 
+	})
+
+	It("MCAD appwrapper timeout Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD appwrapper timeout Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		aw := createGenericAWTimeoutWithStatus(context, "aw-test-jobtimeout-with-comp-1")
+		err1 := waitAWPodsReady(context, aw)
+		Expect(err1).NotTo(HaveOccurred())
+		time.Sleep(60 * time.Second)
+		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "Error getting status")
+		}
+		pass := false
+		fmt.Fprintf(os.Stdout, "[e2e] status of AW %v.\n", aw1.Status.State)
+		if aw1.Status.State == arbv1.AppWrapperStateFailed {
+			pass = true
+		}
+		Expect(pass).To(BeTrue())
+		appwrappers = append(appwrappers, aw)
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD appwrapper timeout Test - Completed.\n")
 	})
 
 	It("MCAD Job Completion Test", func() {
@@ -497,7 +559,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createGenericJobAWWithScheduleSpec(context, "aw-test-job-with-scheduling-spec")
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred())
-		err2 := waitAWPodsCompleted(context, aw)
+		err2 := waitAWPodsCompleted(context, aw, 90 * time.Second)
 		Expect(err2).NotTo(HaveOccurred())
 
 		// Once pods are completed, we wait for them to see if they change their status to anything BUT "Completed"

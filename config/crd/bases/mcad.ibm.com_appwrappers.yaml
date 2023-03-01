@@ -257,6 +257,38 @@ spec:
                 properties:
                   minAvailable:
                     type: integer
+                  requeuing:
+                    description: Specification of the requeuing strategy based on
+                      waiting time
+                    properties:
+                      initialTimeInSeconds:
+                        type: integer
+                      timeInSeconds:
+                        type: integer
+                        default: 300
+                      maxTimeInSeconds:
+                        type: integer
+                        default: 0
+                      growthType:
+                        type: string
+                        default: "exponential"
+                      numRequeuings:
+                        type: integer
+                        default: 0
+                      maxNumRequeuings:
+                        type: integer
+                        default: 0
+                    type: object
+                  dispatchDuration:
+                    description: Wall clock duration time of appwrapper in seconds
+                    properties:
+                      expected:
+                        format: int32
+                        type: integer
+                      limit:
+                        format: int32
+                        type: integer
+                    type: object
                   nodeSelector:
                     additionalProperties:
                       type: string

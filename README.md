@@ -1,4 +1,4 @@
-Multi-Cluster Application Dispatcher
+Multi-Cluster App Dispatcher
 ==
 
 The `multi-cluster-app-dispatcher` is a Kubernetes controller providing mechanisms for applications to manage batch jobs in a single or mult-cluster environment.
