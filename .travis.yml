@@ -34,8 +34,8 @@ script:
   # use 'travis_wait n' which unfortunately does not stream output until the very end so monitoring the Travis log 
   # during runtime is not possible.
   - make run-e2e &
-  - PID=$!
+  - PID=$! && echo "make run e2e pid=${PID}"
   - while [ -e /proc/${PID} ]; do echo -n "."  && sleep 30; done
   - wait $PID
-  - CODE=$?
-  - return ${CODE}
+  - CODE=$? && echo "make run e2e pid=${PID} return code=${CODE}"
+  - exit ${CODE}
