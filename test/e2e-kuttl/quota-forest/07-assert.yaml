@@ -2,16 +2,10 @@
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-  name: job4-1replica
+  name: job6-1replica
   namespace: test
 status:
-  state: Running
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: job4-1replica-0
-  namespace: test
+  state: Pending
 ---
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper

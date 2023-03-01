@@ -1,10 +1,11 @@
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-  name: job5-1replica
+  name: job4-1replica
   namespace: test
   labels:
-    quota_context: "bronze"
+    #quota_context: "context-root"
+    quota_context: "gold"
     quota_service: "service-root"
 spec:
   service:
@@ -19,23 +20,23 @@ spec:
           apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
           kind: StatefulSet
           metadata:
-            name: job5-1replica
+            name: job4-1replica
             namespace: test
             labels:
-              app: job5-1replica
+              app: job4-1replica
           spec:
             selector:
               matchLabels:
-                app: job5-1replica
+                app: job4-1replica
             replicas: 1
             template:
               metadata:
                 labels:
-                  app: job5-1replica
+                  app: job4-1replica
                   size: "1"
               spec:
                 containers:
-                  - name: job5-1replica
+                  - name: job4-1replica
                     image: registry.access.redhat.com/ubi8/ubi:latest
                     command:
                       - /bin/sh
@@ -43,8 +44,8 @@ spec:
                       - while true; do sleep 10; done
                     resources:
                       requests:
-                        cpu: "0.4"
+                        cpu: "0.6"
                         memory: "95Mi"
                       limits:
-                        cpu: "0.4"
+                        cpu: "0.6"
                         memory: "95Mi"

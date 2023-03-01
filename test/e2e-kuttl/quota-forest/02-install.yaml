@@ -1,51 +1,57 @@
-apiVersion: mcad.ibm.com/v1beta1
-kind: AppWrapper
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
 metadata:
-  name: job2-1replica
-  namespace: test
+  name: context-root
+  namespace: kube-system
   labels:
-    #quota_context: "context-root"
-    quota_context: "gold"
-    quota_service: "service-root"
+    tree: quota_context
 spec:
-  service:
-    spec: {}
-  resources:
-    metadata: {}
-    Items: []
-    GenericItems:
-      - metadata: {}
-        replicas: 1
-        generictemplate:
-          apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
-          kind: StatefulSet
-          metadata:
-            name: job2-1replica
-            namespace: test
-            labels:
-              app: job2-1replica
-          spec:
-            selector:
-              matchLabels:
-                app: job2-1replica
-            replicas: 1
-            template:
-              metadata:
-                labels:
-                  app: job2-1replica
-                  size: "1"
-              spec:
-                containers:
-                  - name: job2-1replica
-                    image: registry.access.redhat.com/ubi8/ubi:latest
-                    command:
-                      - /bin/sh
-                      - -c
-                      - while true; do sleep 10; done
-                    resources:
-                      requests:
-                        cpu: "0.6"
-                        memory: "95Mi"
-                      limits:
-                        cpu: "0.6"
-                        memory: "95Mi"
+  children:
+    - name: context-root
+      quotas:
+        requests:
+          cpu: 1075
+          memory: 1045
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: service-root
+  namespace: kube-system
+  labels:
+    tree: quota_service
+spec:
+  children:
+    - name: service-root
+      quotas:
+        requests:
+          cpu: 1075
+          memory: 1045
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: context-root-children
+  namespace: kube-system
+  labels:
+    tree: quota_context
+spec:
+  parent: context-root
+  children:
+    - name: gold
+      quotas:
+        requests:
+          cpu: 1075
+          memory: 450
+    - name: silver
+      quotas:
+        hardLimit: false
+        requests:
+          cpu: 1075
+          memory: 400
+    - name: bronze
+      quotas:
+        hardLimit: true
+        requests:
+          cpu: 900
+          memory: 300

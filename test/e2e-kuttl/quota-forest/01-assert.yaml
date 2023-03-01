@@ -1,15 +1,5 @@
-apiVersion: ibm.com/v1
-kind: QuotaSubtree
+# Verify test namespace existance
+apiVersion: v1
+kind: Namespace
 metadata:
-  name: context-root
-  namespace: kube-system
-  labels:
-    tree: quota_context
----
-apiVersion: ibm.com/v1
-kind: QuotaSubtree
-metadata:
-  name: service-root
-  namespace: kube-system
-  labels:
-    tree: quota_service
+  name: test

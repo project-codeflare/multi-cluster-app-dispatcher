@@ -393,19 +393,9 @@ function mcad-env-status {
 }
 
 function kuttl-tests {
-  kubectl create namespace test
   mcad-quota-management-up
   mcad-env-status
   cd ${ROOT_DIR}
-  echo "==============>>>>> Running Quota Management Kuttl E2E tests... <<<<<=============="
-  echo "kubectl kuttl test ${KUTTL_TEST_OPT}"
-  kubectl kuttl test ${KUTTL_TEST_OPT}
-  if [[ $? -ne 0 ]]; then
-    echo "quota management kuttl e2e tests failure, exiting."
-    exit 1
-  fi
-  mcad-quota-management-down
-  kubectl delete namespace test
 }
 
 trap cleanup EXIT
@@ -414,18 +404,31 @@ kind-up-cluster
 
 kube-test-env-up
 
+###
 # Quota management testing
+###
 kuttl-tests
+echo "==============>>>>> Running Quota Management Kuttl E2E tests... <<<<<=============="
+echo "kubectl kuttl test ${KUTTL_TEST_OPT}"
+kubectl kuttl test ${KUTTL_TEST_OPT}
+if [[ $? -ne 0 ]]; then
+  echo "quota management kuttl e2e tests failure, exiting."
+  exit 1
+else
+  # Takes about 50 seconds for namespace created in kuttl testing to completely delete.
+  sleep 50
+fi
+mcad-quota-management-down
 
+
+###
 # Non-quota management testing
+###
 mcad-up
 
 mcad-env-status
-
 
 cd ${ROOT_DIR}
 
 echo "==========================>>>>> Running E2E tests... <<<<<=========================="
 go test ./test/e2e -v -timeout 55m
-
-}
