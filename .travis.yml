@@ -20,7 +20,7 @@ before_script:
   - export TEST_LOG_LEVEL=4
 
 script:
-  - YELLOW='\033[1;93m'
+  - YELLOW='\033[43m'
   - make mcad-controller
   - make run-test
   # Process 'make images' when NOT a pull request
