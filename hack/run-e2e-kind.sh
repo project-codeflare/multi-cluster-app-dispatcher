@@ -405,8 +405,8 @@ function kuttl-tests {
     echo "quota management kuttl e2e tests failure, exiting."
     exit 1
   else
-    # Takes about 50 seconds for namespace created in kuttl testing to completely delete.
-    sleep 50
+    # Takes a bit of time for namespace created in kuttl testing to completely delete.
+    sleep 40
   fi
   mcad-quota-management-down
 }
@@ -421,18 +421,6 @@ kube-test-env-up
 # Quota management testing
 ###
 kuttl-tests
-#echo "==============>>>>> Running Quota Management Kuttl E2E tests... <<<<<=============="
-#echo "kubectl kuttl test ${KUTTL_TEST_OPT}"
-#kubectl kuttl test ${KUTTL_TEST_OPT}
-#if [[ $? -ne 0 ]]; then
-#  echo "quota management kuttl e2e tests failure, exiting."
-#  exit 1
-#else
-#  # Takes about 50 seconds for namespace created in kuttl testing to completely delete.
-#  sleep 50
-#fi
-#mcad-quota-management-down
-
 
 ###
 # Non-quota management testing
