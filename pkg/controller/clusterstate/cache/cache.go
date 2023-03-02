@@ -270,7 +270,6 @@ func (sc *ClusterStateCache) updateState() error {
 			continue
 		}
 		// Do not use nodes with taints that has effect NoSchedule in calculations
-		// InstaScale uses preferNoSchedule strategy
 		var skipNode bool = false
 		for _, taint := range value.Taints {
 			if taint.Effect == "NoSchedule" {
