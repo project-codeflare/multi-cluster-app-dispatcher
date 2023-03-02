@@ -51,7 +51,7 @@ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
 echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
 sudo apt-get update
 # Using older version due to older version of kubernetes cluster"
-sudo apt-get install -y  --allow-unauthenticated kubectl=1.17.0-00
+sudo apt-get install -y --allow-unauthenticated kubectl=1.17.0-00
 
 # Download kind binary (0.6.1)
 sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.11.0/kind-linux-amd64
@@ -398,6 +398,17 @@ function kuttl-tests {
   mcad-quota-management-up
   mcad-env-status
   cd ${ROOT_DIR}
+  echo "==============>>>>> Running Quota Management Kuttl E2E tests... <<<<<=============="
+  echo "kubectl kuttl test ${KUTTL_TEST_OPT}"
+  kubectl kuttl test ${KUTTL_TEST_OPT}
+  if [[ $? -ne 0 ]]; then
+    echo "quota management kuttl e2e tests failure, exiting."
+    exit 1
+  else
+    # Takes about 50 seconds for namespace created in kuttl testing to completely delete.
+    sleep 50
+  fi
+  mcad-quota-management-down
 }
 
 trap cleanup EXIT
@@ -410,17 +421,17 @@ kube-test-env-up
 # Quota management testing
 ###
 kuttl-tests
-echo "==============>>>>> Running Quota Management Kuttl E2E tests... <<<<<=============="
-echo "kubectl kuttl test ${KUTTL_TEST_OPT}"
-kubectl kuttl test ${KUTTL_TEST_OPT}
-if [[ $? -ne 0 ]]; then
-  echo "quota management kuttl e2e tests failure, exiting."
-  exit 1
-else
-  # Takes about 50 seconds for namespace created in kuttl testing to completely delete.
-  sleep 50
-fi
-mcad-quota-management-down
+#echo "==============>>>>> Running Quota Management Kuttl E2E tests... <<<<<=============="
+#echo "kubectl kuttl test ${KUTTL_TEST_OPT}"
+#kubectl kuttl test ${KUTTL_TEST_OPT}
+#if [[ $? -ne 0 ]]; then
+#  echo "quota management kuttl e2e tests failure, exiting."
+#  exit 1
+#else
+#  # Takes about 50 seconds for namespace created in kuttl testing to completely delete.
+#  sleep 50
+#fi
+#mcad-quota-management-down
 
 
 ###
