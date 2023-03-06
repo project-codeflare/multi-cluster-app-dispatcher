@@ -272,21 +272,13 @@ func (sc *ClusterStateCache) updateState() error {
 		// Do not use nodes with taints that has effect NoSchedule and label mcad.ibm.com=ignore
 		// in calculations
 		var skipNode bool = false
-		var foundIgnoreLabel bool = false
 		for labelk, labelv := range value.Labels {
-			if labelk == "mcad.ibm.com" && labelv == "ignore" {
-				foundIgnoreLabel = true
+			if labelk == "mcad.ibm.com" && labelv == "ignoreCapacity" {
+				skipNode = true
 				break
 			}
 		}
-		if foundIgnoreLabel {
-			for _, taint := range value.Taints {
-				if taint.Key == "mcad.ibm.com" && taint.Value == "ignore" && taint.Effect == "NoSchedule" {
-					skipNode = true
-					break
-				}
-			}
-		}
+
 		if skipNode {
 			klog.V(6).Infof("[updateState] %s is tainted and labelled node to be ignored. Total: %v, Used: %v, and Idle: %v will not be included in cluster state calculation.",
 				value.Name, value.Allocatable, value.Used, value.Idle)
