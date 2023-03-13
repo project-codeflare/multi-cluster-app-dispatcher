@@ -1,50 +1,15 @@
-apiVersion: mcad.ibm.com/v1beta1
-kind: AppWrapper
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: job3-1replica
+  name: job-delay-step
   namespace: test
-  labels:
-    quota_context: "gold"
-    quota_service: "service-root"
 spec:
-  service:
-    spec: {}
-  resources:
-    metadata: {}
-    Items: []
-    GenericItems:
-      - metadata: {}
-        replicas: 1
-        generictemplate:
-          apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
-          kind: StatefulSet
-          metadata:
-            name: job3-1replica
-            namespace: test
-            labels:
-              app: job3-1replica
-          spec:
-            selector:
-              matchLabels:
-                app: job3-1replica
-            replicas: 1
-            template:
-              metadata:
-                labels:
-                  app: job3-1replica
-                  size: "1"
-              spec:
-                containers:
-                  - name: job3-1replica
-                    image: registry.access.redhat.com/ubi8/ubi:latest
-                    command:
-                      - /bin/sh
-                      - -c
-                      - while true; do sleep 10; done
-                    resources:
-                      requests:
-                        cpu: "0.6"
-                        memory: "95Mi"
-                      limits:
-                        cpu: "0.6"
-                        memory: "95Mi"
+  template:
+    spec:
+      containers:
+        - name: job-delay-step
+          image: ubuntu:latest
+          command: [ "/bin/bash", "-c", "--" ]
+          args: [ "sleep 10;" ]
+      restartPolicy: Never
+  backoffLimit: 4

@@ -1,4 +1,32 @@
-# Verify that quota management preempted lower priority job
+# Verify that quota management hard limit
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: job-2-bronze-1replica
+  namespace: test
+  labels:
+    quota_context: "bronze"
+    quota_service: "service-root"
+status:
+  state: Pending
+---
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: job-1-bronze-1replica
+  namespace: test
+  labels:
+    quota_context: "bronze"
+    quota_service: "service-root"
+status:
+  state: Running
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: job-1-bronze-1replica-0
+  namespace: test
+---
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:

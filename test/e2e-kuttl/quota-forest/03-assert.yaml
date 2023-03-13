@@ -1,17 +1,8 @@
-# Verify AppWrapper was dispatched and pod was created
-apiVersion: mcad.ibm.com/v1beta1
-kind: AppWrapper
+# Verify delay step
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: job3-1replica
+  name: job-delay-step
   namespace: test
-  labels:
-    quota_context: "gold"
-    quota_service: "service-root"
 status:
-  state: Running
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: job3-1replica-0
-  namespace: test
+  succeeded: 1

@@ -1,19 +1,8 @@
-# Verify that quota management hard limit
+# Verify that quota management is enabled using different quota ids
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-  name: job7-1replica
-  namespace: test
-  labels:
-    quota_context: "bronze"
-    quota_service: "service-root"
-status:
-  state: Pending
----
-apiVersion: mcad.ibm.com/v1beta1
-kind: AppWrapper
-metadata:
-  name: job6-1replica
+  name: job-1-bronze-1replica
   namespace: test
   labels:
     quota_context: "bronze"
@@ -24,13 +13,13 @@ status:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: job6-1replica-0
+  name: job-1-bronze-1replica-0
   namespace: test
 ---
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-  name: job5-1replica
+  name: job-gold-high-pri-1replica
   namespace: test
   labels:
     quota_context: "gold"
@@ -41,13 +30,13 @@ status:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: job5-1replica-0
+  name: job-gold-high-pri-1replica-0
   namespace: test
 ---
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-  name: job4-10replica
+  name: job-bad-quota-id-10replica
   namespace: test
   labels:
     quota_context: "context-root2"
@@ -58,7 +47,7 @@ status:
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-  name: job3-1replica
+  name: job-gold-lo-pri-1replica
   namespace: test
   labels:
     quota_context: "gold"
