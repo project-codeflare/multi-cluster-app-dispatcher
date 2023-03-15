@@ -253,29 +253,48 @@ spec:
                     type: object
                 type: object
               schedulingSpec:
-                description: SchedSpec specifies the parameters for scheduling.
+                description: 'schedulingSpec' specifies the parameters used for scheduling generic items
+                  wrapped inside AppWrappers. It defines the policy for requeuing jobs based on the number
+                  of running pods.
                 properties:
                   minAvailable:
+                    description: Expected number of pods in running and/or completed state. Requeuing is triggered
+                      when the number of running/completed pods is not equal to this value. When not specified,
+                      requeuing is disabled and no check is performed.
                     type: integer
                   requeuing:
-                    description: Specification of the requeuing strategy based on
-                      waiting time
+                    description: Specification of the requeuing strategy based on waiting time. Values in this field
+                      control how often the pod check should happen and if requeuing has reached its maximum number of
+                      times.
                     properties:
                       initialTimeInSeconds:
+                        description: Value to keep track of the initial wait time. Users cannot set this as it is
+                          taken from 'timeInSeconds'.
                         type: integer
                       timeInSeconds:
+                        description: Initial waiting time before requeuing conditions are checked. This value is
+                          specified by the user, but it may grow as requeuing events happen.
                         type: integer
                         default: 300
                       maxTimeInSeconds:
+                        description: Maximum waiting time for requeuing checks
                         type: integer
                         default: 0
                       growthType:
+                        description: Growth strategy to increase the waiting time between requeuing checks. The values
+                          available are 'exponential', 'linear', or 'none'. For example, 'exponential' growth would
+                          double the 'timeInSeconds' value every time a requeuing event is triggered. If the string value
+                          is misspelled or not one of the possible options, the growth behavior is defaulted to 'none'.
                         type: string
                         default: "exponential"
                       numRequeuings:
+                        description: Field to keep track of how many times a requeuing event has been triggered
                         type: integer
                         default: 0
                       maxNumRequeuings:
+                        description: Maximum number of requeuing events allowed. Once this value is reached (e.g.,
+                          'numRequeuings = maxNumRequeuings', no more requeuing checks are performed and the generic
+                          items are stopped and removed from the cluster (AppWrapper remains deployed).
                         type: integer
                         default: 0
                     type: object
