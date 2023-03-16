@@ -253,7 +253,7 @@ spec:
                     type: object
                 type: object
               schedulingSpec:
-                description: 'schedulingSpec' specifies the parameters used for scheduling generic items
+                description: Field 'schedulingSpec' specifies the parameters used for scheduling generic items
                   wrapped inside AppWrappers. It defines the policy for requeuing jobs based on the number
                   of running pods.
                 properties:
