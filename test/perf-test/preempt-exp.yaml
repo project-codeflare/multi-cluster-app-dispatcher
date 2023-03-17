@@ -1,0 +1,57 @@
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: defaultaw-schd-spec-with-timeout-1
+  namespace: default
+spec:
+  schedulingSpec:
+    minAvailable: 1
+    requeuing:
+        timeInSeconds: 120
+        growthType: "exponential" 
+  priority: 9
+  resources:
+    Items: []
+    GenericItems:
+    - replicas: 1
+      completionstatus: Complete
+      custompodresources:
+      - replicas: 1
+        requests:
+          cpu: 500m
+          memory: 512M
+          nvidia.com/gpu: 0
+        limits:
+          cpu: 500m
+          memory: 512M
+          nvidia.com/gpu: 0
+      generictemplate:
+        apiVersion: batch/v1
+        kind: Job
+        metadata:
+          namespace: default
+          name: defaultaw-schd-spec-with-timeout-1
+          # labels:
+          #   appwrapper.mcad.ibm.com: defaultaw-schd-spec-with-timeout-1
+        spec:
+          parallelism: 1
+          completions: 1
+          template:
+            metadata:
+              namespace: default
+              labels:
+                appwrapper.mcad.ibm.com: "defaultaw-schd-spec-with-timeout-1"
+            spec:
+              containers:
+              - name: defaultaw-schd-spec-with-timeout-1
+                image: ubuntu:latest
+                command: [ "/bin/bash", "-c", "--" ]
+                args: [ "sleep 10" ]
+                resources:
+                  requests:
+                    memory: "512Mi"
+                    cpu: "500m"
+                  limits:
+                    memory: "512Mi"
+                    cpu: "500m"
+              restartPolicy: Never
