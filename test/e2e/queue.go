@@ -350,6 +350,21 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
+	It("Create AppWrapper  - Bad Generic Item Only", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper  - Bad Generic Item Only - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		aw := createBadGenericItemAW(context, "aw-bad-generic-item-1")
+		appwrappers = append(appwrappers, aw)
+
+		err := waitAWPodsReady(context, aw)
+		Expect(err).To(HaveOccurred())
+
+	})
+
 	It("Create AppWrapper - Namespace Only - 0 Pods", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - Started.\n")
 		context := initTestContext()
@@ -546,6 +561,47 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(pass).To(BeTrue())
 		appwrappers = append(appwrappers, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Job Completion Test - Completed.\n")
+
+	})
+
+	It("MCAD Multi-Item Job Completion Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Multi-Item Job Completion Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		aw := createGenericJobAWWithMultipleStatus(context, "aw-test-job-with-comp-ms-21")
+		err1 := waitAWPodsReady(context, aw)
+		Expect(err1).NotTo(HaveOccurred())
+		time.Sleep(1 * time.Minute)
+		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "Error getting status")
+		}
+		pass := false
+		fmt.Fprintf(os.Stdout, "[e2e] status of AW %v.\n", aw1.Status.State)
+		if aw1.Status.State == arbv1.AppWrapperStateCompleted {
+			pass = true
+		}
+		Expect(pass).To(BeTrue())
+		appwrappers = append(appwrappers, aw)
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Job Completion Test - Completed.\n")
+
+	})
+
+	It("MCAD GenericItem Without Status Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD GenericItem Without Status Test - Started.\n")
+		context := initTestContext()
+		var appwrappers []*arbv1.AppWrapper
+		appwrappersPtr := &appwrappers
+		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+
+		aw := createAWGenericItemWithoutStatus(context, "aw-test-job-with-comp-44")
+		err1 := waitAWPodsReady(context, aw)
+		fmt.Fprintf(os.Stdout, "The error is: %v", err1)
+		Expect(err1).To(HaveOccurred())
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD GenericItem Without Status Test - Completed.\n")
 
 	})
 
