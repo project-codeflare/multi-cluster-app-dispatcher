@@ -1,0 +1,15 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: job-delay-step
+  namespace: test
+spec:
+  template:
+    spec:
+      containers:
+        - name: job-delay-step
+          image: ubuntu:latest
+          command: [ "/bin/bash", "-c", "--" ]
+          args: [ "sleep 10;" ]
+      restartPolicy: Never
+  backoffLimit: 4

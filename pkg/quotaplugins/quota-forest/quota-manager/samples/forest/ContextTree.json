@@ -1,0 +1,69 @@
+{
+  "kind": "QuotaTree",
+  "metadata": {
+    "name": "ContextTree"
+  },
+  "spec": {
+    "resourceNames": [
+      "cpu"
+    ],
+    "nodes": {
+      "Root": {
+        "parent": "nil",
+        "quota": {
+          "cpu": "10"
+        }
+      },
+      "Org-A": {
+        "parent": "Root",
+        "quota": {
+          "cpu": "4"
+        }
+      },
+      "Org-B": {
+        "parent": "Root",
+        "hard": "true",
+        "quota": {
+          "cpu": "6"
+        }
+      },
+      "Org-C": {
+        "parent": "Root",
+        "quota": {
+          "cpu": "4"
+        }
+      },
+      "Context-1": {
+        "parent": "Org-A",
+        "quota": {
+          "cpu": "1"
+        }
+      },
+      "Context-2": {
+        "parent": "Org-A",
+        "quota": {
+          "cpu": "1"
+        }
+      },
+      "Context-3": {
+        "parent": "Org-B",
+        "quota": {
+          "cpu": "2"
+        }
+      },
+      "Context-4": {
+        "parent": "Org-B",
+        "hard": "true",
+        "quota": {
+          "cpu": "2"
+        }
+      },
+      "Context-5": {
+        "parent": "Org-C",
+        "quota": {
+          "cpu": "4"
+        }
+      }
+    }
+  }
+}

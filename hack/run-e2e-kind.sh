@@ -41,17 +41,24 @@ export IMAGE_REPOSITORY_MCAD="${1}"
 export IMAGE_TAG_MCAD="${2}"
 export MCAD_IMAGE_PULL_POLICY="${3-Always}"
 export IMAGE_MCAD="${IMAGE_REPOSITORY_MCAD}:${IMAGE_TAG_MCAD}"
+export KUTTL_VERSION=0.15.0
+export KUTTL_TEST_OPT="--config ${ROOT_DIR}/kuttl-test.yaml"
+# FOR DEBUGGING
+#export KUTTL_TEST_OPT="--config ${ROOT_DIR}/kuttl-test.yaml --skip-delete"
 
 sudo apt-get update && sudo apt-get install -y apt-transport-https
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
 sudo apt-get update
 # Using older version due to older version of kubernetes cluster"
-sudo apt-get install -y  --allow-unauthenticated kubectl=1.17.0-00
+sudo apt-get install -y --allow-unauthenticated kubectl=1.17.0-00
 
 # Download kind binary (0.6.1)
 sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.11.0/kind-linux-amd64
 sudo chmod +x /usr/local/bin/kind
+
+# Download kuttl plugin
+sudo curl -sSLf --output /tmp/kubectl-kuttl https://github.com/kudobuilder/kuttl/releases/download/v${KUTTL_VERSION}/kubectl-kuttl_${KUTTL_VERSION}_linux_x86_64 && sudo mv /tmp/kubectl-kuttl /usr/local/bin && sudo chmod a+x /usr/local/bin/kubectl-kuttl
 
 # check if kind installed
 function check-prerequisites {
@@ -71,7 +78,15 @@ function check-prerequisites {
   else
     echo -n "found kubectl, " && kubectl version --short --client
   fi
-  
+
+  kubectl kuttl version >/dev/null 2>&1
+  if [[ $? -ne 0 ]]; then
+    echo "kuttl plugin for kubectl not installed, exiting."
+    exit 1
+  else
+    echo -n "found kuttl plugin for kubectl, " && kubectl kuttl version
+  fi
+
   if [[ $IMAGE_REPOSITORY_MCAD == "" ]]
   then
     echo "No MCAD image was provided."
@@ -289,9 +304,39 @@ function kube-test-env-up {
 
     echo "Installing Podgroup CRD"
 
+    helm version
+
+    # Turn off master taints
+    kubectl taint nodes --all node-role.kubernetes.io/master-
+
+}
+
+function mcad-quota-management-up {
+    cd $ROOT_DIR/deployment
+
+    # start mcad controller
+    echo "Starting MCAD Controller for Quota Management Testing..."
+    echo "helm upgrade --install mcad-controller . namespace kube-system wait set loglevel=10 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=4000m set resources.limits.memory=4096Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY set configMap.quotaEnabled='true' set quotaManagement.rbac.apiGroup=ibm.com set quotaManagement.rbac.resource=quotasubtrees set configMap.name=mcad-controller-configmap set configMap.preemptionEnabled='true'"
+    helm upgrade --install mcad-controller .  --namespace kube-system --wait --set loglevel=10 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY --set configMap.quotaEnabled='"true"' --set quotaManagement.rbac.apiGroup=ibm.com --set quotaManagement.rbac.resource=quotasubtrees --set configMap.name=mcad-controller-configmap --set configMap.preemptionEnabled='"true"'
+    sleep 10
+}
+
+function mcad-quota-management-down {
+
+    # Helm chart install name
+    helm_chart_name=$(helm list --short)
+
+    # start mcad controller
+    echo "Stopping MCAD Controller for Quota Management Testing..."
+    echo "helm delete ${helm_chart_name}"
+    helm delete ${helm_chart_name}
+    sleep 20
+}
+
+function mcad-up {
     kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/scheduler-plugins/277b6bdec18f8a9e9ccd1bfeaf4b66495bfc6f92/config/crd/bases/scheduling.sigs.k8s.io_podgroups.yaml
 
-    cd deployment/mcad-controller
+    cd $ROOT_DIR/deployment/mcad-controller
 
     # start mcad controller
     echo "Starting MCAD Controller..."
@@ -299,6 +344,9 @@ function kube-test-env-up {
     helm upgrade --install mcad-controller .  --namespace kube-system --wait --set loglevel=2 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi --set configMap.name=mcad-controller-configmap --set configMap.podCreationTimeout='"120000"' --set configMap.quotaEnabled='"false"' --set coscheduler.rbac.apiGroup=scheduling.sigs.k8s.io --set coscheduler.rbac.resource=podgroups --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY
 
     sleep 10
+}
+
+function mcad-env-status {
     echo "Listing MCAD Controller Helm Chart and Pod YAML..."
     helm list
     mcad_pod=$(kubectl get pods -n kube-system | grep mcad-controller | awk '{print $1}')
@@ -306,7 +354,6 @@ function kube-test-env-up {
     then
         kubectl get pod ${mcad_pod} -n kube-system -o yaml
     fi
-
 
     sleep 10
     echo "Listing MCAD Controller Helm Chart and Pod YAML..."
@@ -316,10 +363,6 @@ function kube-test-env-up {
     then
         kubectl get pod ${mcad_pod} -n kube-system -o yaml
     fi
-
-    # Turn off master taints
-    kubectl taint nodes --all node-role.kubernetes.io/master-
-
 
     # This is meant to orchestrate initial cluster configuration such that accounting tests can be consistent
     echo "---"
@@ -341,12 +384,40 @@ function kube-test-env-up {
     kubectl describe nodes
 }
 
+function kuttl-tests {
+  mcad-quota-management-up
+  mcad-env-status
+  cd ${ROOT_DIR}
+  echo "==============>>>>> Running Quota Management Kuttl E2E tests... <<<<<=============="
+  echo "kubectl kuttl test ${KUTTL_TEST_OPT}"
+  kubectl kuttl test ${KUTTL_TEST_OPT}
+  if [[ $? -ne 0 ]]; then
+    echo "quota management kuttl e2e tests failure, exiting."
+    exit 1
+  else
+    # Takes a bit of time for namespace created in kuttl testing to completely delete.
+    sleep 40
+  fi
+  mcad-quota-management-down
+}
 
 trap cleanup EXIT
 
 kind-up-cluster
 
 kube-test-env-up
+
+###
+# Quota management testing
+###
+kuttl-tests
+
+###
+# Non-quota management testing
+###
+mcad-up
+
+mcad-env-status
 
 cd ${ROOT_DIR}
 

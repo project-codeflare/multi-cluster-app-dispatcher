@@ -1,0 +1,278 @@
+Using tree input file name: ExampleTree.json
+
+kind=QuotaTree
+numResources=1
+
+node=A; parent=nil; hard=false; cpu=10; 
+node=B; parent=A; hard=false; cpu=2; 
+node=C; parent=A; hard=false; cpu=6; 
+node=D; parent=A; hard=false; cpu=2; 
+node=E; parent=B; hard=false; cpu=1; 
+node=F; parent=B; hard=false; cpu=1; 
+node=G; parent=C; hard=false; cpu=3; 
+node=H; parent=C; hard=false; cpu=3; 
+node=I; parent=D; hard=false; cpu=1; 
+node=J; parent=D; hard=false; cpu=1; 
+node=K; parent=G; hard=false; cpu=1; 
+node=L; parent=G; hard=false; cpu=2; 
+node=M; parent=H; hard=false; cpu=1; 
+node=N; parent=H; hard=false; cpu=2; 
+
+Tree: A -> ( B -> ( E F ) C -> ( G -> ( K L ) H -> ( M N ) ) D -> ( I J ) )
+
+QuotaTree: 
+|A: isHard=false; quota=[ 10 ]; allocated=[ 0 ]; consumers={ }
+--|B: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|E: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|F: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+--|C: isHard=false; quota=[ 6 ]; allocated=[ 0 ]; consumers={ }
+----|G: isHard=false; quota=[ 3 ]; allocated=[ 0 ]; consumers={ }
+------|K: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|L: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|H: isHard=false; quota=[ 3 ]; allocated=[ 0 ]; consumers={ }
+------|M: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|N: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+--|D: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|I: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|J: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+
+Allocating consumer a:
+*** Consumer a allocated on node N 
+Consumer: id=a; groupId=N; priority=0; unPreemptable=false; request=[ 1 ]; aNode=N; 
+QuotaTree: 
+|A: isHard=false; quota=[ 10 ]; allocated=[ 1 ]; consumers={ }
+--|B: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|E: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|F: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+--|C: isHard=false; quota=[ 6 ]; allocated=[ 1 ]; consumers={ }
+----|G: isHard=false; quota=[ 3 ]; allocated=[ 0 ]; consumers={ }
+------|K: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|L: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|H: isHard=false; quota=[ 3 ]; allocated=[ 1 ]; consumers={ }
+------|M: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|N: isHard=false; quota=[ 2 ]; allocated=[ 1 ]; consumers={ a }
+--|D: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|I: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|J: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+Status = Success
+Preempted Consumers: []
+
+Allocating consumer b:
+*** Consumer b allocated on node N 
+Consumer: id=b; groupId=N; priority=0; unPreemptable=false; request=[ 1 ]; aNode=N; 
+QuotaTree: 
+|A: isHard=false; quota=[ 10 ]; allocated=[ 2 ]; consumers={ }
+--|B: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|E: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|F: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+--|C: isHard=false; quota=[ 6 ]; allocated=[ 2 ]; consumers={ }
+----|G: isHard=false; quota=[ 3 ]; allocated=[ 0 ]; consumers={ }
+------|K: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|L: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|H: isHard=false; quota=[ 3 ]; allocated=[ 2 ]; consumers={ }
+------|M: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|N: isHard=false; quota=[ 2 ]; allocated=[ 2 ]; consumers={ a b }
+--|D: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|I: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|J: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+Status = Success
+Preempted Consumers: []
+
+Allocating consumer c:
+*** Consumer c allocated on node H 
+Consumer: id=c; groupId=N; priority=0; unPreemptable=false; request=[ 1 ]; aNode=H; 
+QuotaTree: 
+|A: isHard=false; quota=[ 10 ]; allocated=[ 3 ]; consumers={ }
+--|B: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|E: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|F: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+--|C: isHard=false; quota=[ 6 ]; allocated=[ 3 ]; consumers={ }
+----|G: isHard=false; quota=[ 3 ]; allocated=[ 0 ]; consumers={ }
+------|K: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|L: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|H: isHard=false; quota=[ 3 ]; allocated=[ 3 ]; consumers={ c }
+------|M: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|N: isHard=false; quota=[ 2 ]; allocated=[ 2 ]; consumers={ a b }
+--|D: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|I: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|J: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+Status = Success
+Preempted Consumers: []
+
+Deallocating consumer a:
+*** Consumer c slid down to node N 
+Consumer: id=a; groupId=N; priority=0; unPreemptable=false; request=[ 1 ]; aNode=null; 
+QuotaTree: 
+|A: isHard=false; quota=[ 10 ]; allocated=[ 2 ]; consumers={ }
+--|B: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|E: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|F: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+--|C: isHard=false; quota=[ 6 ]; allocated=[ 2 ]; consumers={ }
+----|G: isHard=false; quota=[ 3 ]; allocated=[ 0 ]; consumers={ }
+------|K: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|L: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|H: isHard=false; quota=[ 3 ]; allocated=[ 2 ]; consumers={ }
+------|M: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|N: isHard=false; quota=[ 2 ]; allocated=[ 2 ]; consumers={ b c }
+--|D: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|I: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|J: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+Status = Success
+Preempted Consumers: []
+
+Allocating consumer d:
+*** Consumer b slid up to node H 
+*** Consumer c slid up to node H 
+*** Consumer b slid up to node C 
+*** Consumer d allocated on node N 
+Consumer: id=d; groupId=N; priority=1; unPreemptable=false; request=[ 2 ]; aNode=N; 
+QuotaTree: 
+|A: isHard=false; quota=[ 10 ]; allocated=[ 4 ]; consumers={ }
+--|B: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|E: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|F: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+--|C: isHard=false; quota=[ 6 ]; allocated=[ 4 ]; consumers={ b }
+----|G: isHard=false; quota=[ 3 ]; allocated=[ 0 ]; consumers={ }
+------|K: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|L: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|H: isHard=false; quota=[ 3 ]; allocated=[ 3 ]; consumers={ c }
+------|M: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|N: isHard=false; quota=[ 2 ]; allocated=[ 2 ]; consumers={ d }
+--|D: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|I: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|J: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+Status = Success
+Preempted Consumers: []
+
+Allocating consumer e:
+*** Consumer b slid up to node A 
+*** Consumer e allocated on node G 
+Consumer: id=e; groupId=L; priority=0; unPreemptable=false; request=[ 3 ]; aNode=G; 
+QuotaTree: 
+|A: isHard=false; quota=[ 10 ]; allocated=[ 7 ]; consumers={ b }
+--|B: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|E: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|F: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+--|C: isHard=false; quota=[ 6 ]; allocated=[ 6 ]; consumers={ }
+----|G: isHard=false; quota=[ 3 ]; allocated=[ 3 ]; consumers={ e }
+------|K: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|L: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|H: isHard=false; quota=[ 3 ]; allocated=[ 3 ]; consumers={ c }
+------|M: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|N: isHard=false; quota=[ 2 ]; allocated=[ 2 ]; consumers={ d }
+--|D: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|I: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|J: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+Status = Success
+Preempted Consumers: []
+
+Allocating consumer f:
+*** Consumer f allocated on node A 
+Consumer: id=f; groupId=E; priority=0; unPreemptable=false; request=[ 3 ]; aNode=A; 
+QuotaTree: 
+|A: isHard=false; quota=[ 10 ]; allocated=[ 10 ]; consumers={ b f }
+--|B: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|E: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|F: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+--|C: isHard=false; quota=[ 6 ]; allocated=[ 6 ]; consumers={ }
+----|G: isHard=false; quota=[ 3 ]; allocated=[ 3 ]; consumers={ e }
+------|K: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|L: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|H: isHard=false; quota=[ 3 ]; allocated=[ 3 ]; consumers={ c }
+------|M: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|N: isHard=false; quota=[ 2 ]; allocated=[ 2 ]; consumers={ d }
+--|D: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|I: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|J: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+Status = Success
+Preempted Consumers: []
+
+Allocating consumer g:
+*** Consumer b is preempted! 
+*** Consumer g allocated on node J 
+Consumer: id=g; groupId=J; priority=0; unPreemptable=false; request=[ 1 ]; aNode=J; 
+QuotaTree: 
+|A: isHard=false; quota=[ 10 ]; allocated=[ 10 ]; consumers={ f }
+--|B: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|E: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|F: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+--|C: isHard=false; quota=[ 6 ]; allocated=[ 6 ]; consumers={ }
+----|G: isHard=false; quota=[ 3 ]; allocated=[ 3 ]; consumers={ e }
+------|K: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|L: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|H: isHard=false; quota=[ 3 ]; allocated=[ 3 ]; consumers={ c }
+------|M: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|N: isHard=false; quota=[ 2 ]; allocated=[ 2 ]; consumers={ d }
+--|D: isHard=false; quota=[ 2 ]; allocated=[ 1 ]; consumers={ }
+----|I: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|J: isHard=false; quota=[ 1 ]; allocated=[ 1 ]; consumers={ g }
+Status = Success
+Preempted Consumers: [b]
+
+Allocating consumer h:
+*** Consumer e slid up to node C 
+*** Consumer e slid up to node A 
+*** Consumer f is preempted! 
+*** Consumer h allocated on node K 
+Consumer: id=h; groupId=K; priority=0; unPreemptable=false; request=[ 1 ]; aNode=K; 
+QuotaTree: 
+|A: isHard=false; quota=[ 10 ]; allocated=[ 8 ]; consumers={ e }
+--|B: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|E: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|F: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+--|C: isHard=false; quota=[ 6 ]; allocated=[ 4 ]; consumers={ }
+----|G: isHard=false; quota=[ 3 ]; allocated=[ 1 ]; consumers={ }
+------|K: isHard=false; quota=[ 1 ]; allocated=[ 1 ]; consumers={ h }
+------|L: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|H: isHard=false; quota=[ 3 ]; allocated=[ 3 ]; consumers={ c }
+------|M: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|N: isHard=false; quota=[ 2 ]; allocated=[ 2 ]; consumers={ d }
+--|D: isHard=false; quota=[ 2 ]; allocated=[ 1 ]; consumers={ }
+----|I: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|J: isHard=false; quota=[ 1 ]; allocated=[ 1 ]; consumers={ g }
+Status = Success
+Preempted Consumers: [f]
+
+Allocating consumer i:
+*** Consumer e is preempted! 
+*** Consumer i allocated on node A 
+Consumer: id=i; groupId=I; priority=1; unPreemptable=false; request=[ 3 ]; aNode=A; 
+QuotaTree: 
+|A: isHard=false; quota=[ 10 ]; allocated=[ 8 ]; consumers={ i }
+--|B: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|E: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|F: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+--|C: isHard=false; quota=[ 6 ]; allocated=[ 4 ]; consumers={ }
+----|G: isHard=false; quota=[ 3 ]; allocated=[ 1 ]; consumers={ }
+------|K: isHard=false; quota=[ 1 ]; allocated=[ 1 ]; consumers={ h }
+------|L: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|H: isHard=false; quota=[ 3 ]; allocated=[ 3 ]; consumers={ c }
+------|M: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|N: isHard=false; quota=[ 2 ]; allocated=[ 2 ]; consumers={ d }
+--|D: isHard=false; quota=[ 2 ]; allocated=[ 1 ]; consumers={ }
+----|I: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|J: isHard=false; quota=[ 1 ]; allocated=[ 1 ]; consumers={ g }
+Status = Success
+Preempted Consumers: [e]
+
+Allocating consumer j:
+*** Consumer j allocated on node B 
+Consumer: id=j; groupId=F; priority=0; unPreemptable=false; request=[ 2 ]; aNode=B; 
+QuotaTree: 
+|A: isHard=false; quota=[ 10 ]; allocated=[ 10 ]; consumers={ i }
+--|B: isHard=false; quota=[ 2 ]; allocated=[ 2 ]; consumers={ j }
+----|E: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|F: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+--|C: isHard=false; quota=[ 6 ]; allocated=[ 4 ]; consumers={ }
+----|G: isHard=false; quota=[ 3 ]; allocated=[ 1 ]; consumers={ }
+------|K: isHard=false; quota=[ 1 ]; allocated=[ 1 ]; consumers={ h }
+------|L: isHard=false; quota=[ 2 ]; allocated=[ 0 ]; consumers={ }
+----|H: isHard=false; quota=[ 3 ]; allocated=[ 3 ]; consumers={ c }
+------|M: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+------|N: isHard=false; quota=[ 2 ]; allocated=[ 2 ]; consumers={ d }
+--|D: isHard=false; quota=[ 2 ]; allocated=[ 1 ]; consumers={ }
+----|I: isHard=false; quota=[ 1 ]; allocated=[ 0 ]; consumers={ }
+----|J: isHard=false; quota=[ 1 ]; allocated=[ 1 ]; consumers={ g }
+Status = Success
+Preempted Consumers: []
+

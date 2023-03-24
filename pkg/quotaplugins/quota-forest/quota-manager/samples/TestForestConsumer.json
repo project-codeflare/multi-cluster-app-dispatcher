@@ -1,0 +1,32 @@
+{
+  "kind": "Consumer",
+  "metadata": {
+    "name": "consumer-data"
+  },
+  "spec": {
+    "id": "C-1",
+    "trees": [
+      {
+        "treeName": "ContextTree",
+        "groupID": "Context-1",
+        "request": {
+          "cpu": 2
+        },
+        "priority": 0,
+        "type": 0,
+        "unPreemptable": false
+      },
+      {
+        "treeName": "ServiceTree",
+        "groupID": "Srvc-X",
+        "request": {
+          "cpu": 8,
+          "count": 1
+        },
+        "priority": 0,
+        "type": 0,
+        "unPreemptable": false
+      }
+    ]
+  }
+}

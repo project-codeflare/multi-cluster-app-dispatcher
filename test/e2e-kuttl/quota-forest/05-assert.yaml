@@ -1,0 +1,11 @@
+# Verify that quota management is enabled by checking the queuing is happening (e.g. no available quota for quota ids provided in AW)
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: job-bad-quota-id-10replica
+  namespace: test
+  labels:
+    quota_context: "context-root2"
+    quota_service: "service-root2"
+status:
+  state: Pending
