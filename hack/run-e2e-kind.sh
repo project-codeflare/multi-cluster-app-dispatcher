@@ -312,7 +312,7 @@ function kube-test-env-up {
 }
 
 function mcad-quota-management-up {
-    cd $ROOT_DIR/deployment
+    cd $ROOT_DIR/deployment/mcad-controller
 
     # start mcad controller
     echo "Starting MCAD Controller for Quota Management Testing..."
