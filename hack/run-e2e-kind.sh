@@ -293,28 +293,16 @@ function kube-test-env-up {
       cat $HOME/.kube/config
     fi
 
-    # Install Helm Client
+    # Installing helm3
 
-    echo "---"
-    echo "Installing Helm Client..."
-    curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get > install-helm.sh
-    chmod u+x install-helm.sh
-    ./install-helm.sh --version v2.17.0
+    curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    chmod 700 get_helm.sh
+    ./get_helm.sh
+    sleep 10
 
-    # Start Helm Server
-    echo "Installing Helm Server..."
-    kubectl -n kube-system create serviceaccount tiller
-    kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
+    helm version 
 
-    echo "Initialize Helm Server..."
-    helm init --service-account tiller
-    echo "Wait for Helm Server to complete startup..."
-    sleep 25
-
-    echo "Getting Helm Server info..."
-    tiller_pod=$(kubectl get pods --namespace kube-system | grep tiller | awk '{print $1}')
-
-    kubectl describe pod ${tiller_pod} -n kube-system
+    echo "Installing Podgroup CRD"
 
     helm version
 
@@ -347,11 +335,14 @@ function mcad-quota-management-down {
 
 function mcad-up {
     cd $ROOT_DIR/deployment
+    kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/scheduler-plugins/277b6bdec18f8a9e9ccd1bfeaf4b66495bfc6f92/config/crd/bases/scheduling.sigs.k8s.io_podgroups.yaml
+
+    cd $ROOT_DIR/deployment/mcad-controller
 
     # start mcad controller
     echo "Starting MCAD Controller..."
     echo "helm install mcad-controller namespace kube-system wait set loglevel=2 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=4000m set resources.limits.memory=4096Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY"
-    helm install mcad-controller --namespace kube-system --wait --set loglevel=2 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY
+    helm upgrade --install mcad-controller .  --namespace kube-system --wait --set loglevel=2 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi --set configMap.name=mcad-controller-configmap --set configMap.podCreationTimeout='"120000"' --set configMap.quotaEnabled='"false"' --set coscheduler.rbac.apiGroup=scheduling.sigs.k8s.io --set coscheduler.rbac.resource=podgroups --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY
 
     sleep 10
 }
