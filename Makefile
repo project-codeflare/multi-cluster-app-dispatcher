@@ -4,6 +4,7 @@ VERSION_FILE=./CONTROLLER_VERSION
 RELEASE_VER=v$(shell $(CAT_CMD) $(VERSION_FILE))
 CURRENT_DIR=$(shell pwd)
 GIT_BRANCH:=$(shell git symbolic-ref --short HEAD 2>&1 | grep -v fatal)
+LOCAL_BUILD_ARGS ?= -race
 # Reset branch name if this a Travis CI environment
 ifneq ($(strip $(TRAVIS_BRANCH)),)
 	GIT_BRANCH:=${TRAVIS_BRANCH}
@@ -23,9 +24,10 @@ TAG:=${TAG}${RELEASE_VER}
 
 .PHONY: print-global-variables
 
+# Build the controler executalbe for use in docker image build
 mcad-controller: init generate-code
 	$(info Compiling controller)
-	CGO_ENABLED=0 GOARCH=amd64 go build -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
+	CGO_ENABLED=0 GOOS="linux" go build -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
 
 print-global-variables:
 	$(info "---")
@@ -55,7 +57,7 @@ generate-code:
 	${BIN_DIR}/deepcopy-gen -i ./pkg/apis/controller/v1beta1/ -O zz_generated.deepcopy 
 	${BIN_DIR}/deepcopy-gen -i ./pkg/apis/quotaplugins/quotasubtree/v1 -O zz_generated.deepcopy
 
-images: verify-tag-name
+images: verify-tag-name mcad-controller
 	$(info List executable directory)
 	$(info repo id: ${git_repository_id})
 	$(info branch: ${GIT_BRANCH})
@@ -63,7 +65,7 @@ images: verify-tag-name
 	$(info Build the docker image)
 	docker build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
 
-images-podman: verify-tag-name
+images-podman: verify-tag-name mcad-controller
 	$(info List executable directory)
 	$(info repo id: ${git_repository_id})
 	$(info branch: ${GIT_BRANCH})
@@ -106,6 +108,12 @@ endif
 mcad-controller-private: init generate-code
 	$(info Compiling controller)
 	CGO_ENABLED=0 GOARCH=amd64 GOPRIVATE=github.ibm.com/* go build -tags private -modfile ./private.mod -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
+
+# Build the controller executable for use on the local host and using local build args
+# the default for local build args is `-race` to turn race detection
+mcad-controller-local: init generate-code
+	$(info Compiling controller)
+	go build ${LOCAL_BUILD_ARGS} -o ${BIN_DIR}/mcad-controller-local ./cmd/kar-controllers/
 
 coverage:
 #	KUBE_COVER=y hack/make-rules/test.sh $(WHAT) $(TESTS)

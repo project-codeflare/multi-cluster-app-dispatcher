@@ -322,52 +322,40 @@ EOF
   kubectl delete namespace test
 }
 
-function kube-test-env-up {
-  # Hack to setup for 'go test' call which expects this path.
-  if [ ! -f $HOME/.kube/config ]
-  then
-    echo "'$HOME/.kube/config' not found"
-    exit 1
-  fi
-
-  echo "---"
-  echo "kubectl version"
-  kubectl version
-
-  echo "---"
-  echo "kubectl config current-context"
-  kubectl config current-context
-
-  echo "---"
-  echo "kubectl get nodes"
-  kubectl get nodes -o wide
-
-  echo "Installing Podgroup CRD"
-  kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/scheduler-plugins/277b6bdec18f8a9e9ccd1bfeaf4b66495bfc6f92/config/crd/bases/scheduling.sigs.k8s.io_podgroups.yaml
-
-  helm version
-
-  # Turn off master taints
-  kubectl taint nodes --all node-role.kubernetes.io/master-
-}
-
 function mcad-quota-management-up {
     # start mcad controller
     echo "Starting MCAD Controller for Quota Management Testing..."
-    echo "helm upgrade --install mcad-controller . namespace kube-system wait set loglevel=10 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=4000m set resources.limits.memory=4096Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY set configMap.quotaEnabled='true' set quotaManagement.rbac.apiGroup=ibm.com set quotaManagement.rbac.resource=quotasubtrees set configMap.name=mcad-controller-configmap set configMap.preemptionEnabled='true'"
+    echo "helm upgrade --install mcad-controller ${ROOT_DIR}/deployment/mcad-controller namespace kube-system wait set loglevel=10 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=4000m set resources.limits.memory=4096Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY set configMap.quotaEnabled='true' set quotaManagement.rbac.apiGroup=ibm.com set quotaManagement.rbac.resource=quotasubtrees set configMap.name=mcad-controller-configmap set configMap.preemptionEnabled='true'"
     helm upgrade --install mcad-controller ${ROOT_DIR}/deployment/mcad-controller  --namespace kube-system --wait --set loglevel=10 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY --set configMap.quotaEnabled='"true"' --set quotaManagement.rbac.apiGroup=ibm.com --set quotaManagement.rbac.resource=quotasubtrees --set configMap.name=mcad-controller-configmap --set configMap.preemptionEnabled='"true"'
+    if [ $? -ne 0 ]
+    then
+      echo "Failed to deploy MCAD controller"
+      exit 1
+    fi
     sleep 10
+    echo "Listing MCAD Controller Helm Chart and Pod YAML..."
+    mcad_pod=$(kubectl get pods -n kube-system | grep mcad-controller | awk '{print $1}')
+    if [[ "$mcad_pod" != "" ]]
+    then
+        kubectl get pod ${mcad_pod} -n kube-system -o yaml
+    fi
 }
 
 function mcad-quota-management-down {
 
     # Helm chart install name
-    helm_chart_name=$(helm list --short)
+    helm_chart_name=$(helm list -n kube-system --short | grep mcad-controller)
 
     # start mcad controller
     echo "Stopping MCAD Controller for Quota Management Testing..."
     echo "helm delete ${helm_chart_name}"
-    helm delete ${helm_chart_name}
+    helm delete -n kube-system ${helm_chart_name}
+    if [ $? -ne 0 ]
+    then
+      echo "Failed to undeploy controller"
+      exit 1
+    fi
+
     sleep 20
 }
 
@@ -376,37 +364,54 @@ function mcad-up {
     echo "Starting MCAD Controller..."
     echo "helm install mcad-controller namespace kube-system wait set loglevel=2 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=4000m set resources.limits.memory=4096Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY"
     helm upgrade --install mcad-controller ${ROOT_DIR}/deployment/mcad-controller  --namespace kube-system --wait --set loglevel=2 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi --set configMap.name=mcad-controller-configmap --set configMap.podCreationTimeout='"120000"' --set configMap.quotaEnabled='"false"' --set coscheduler.rbac.apiGroup=scheduling.sigs.k8s.io --set coscheduler.rbac.resource=podgroups --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY
+    if [ $? -ne 0 ]
+    then
+      echo "Failed to deploy MCAD controller"
+      exit 1
+    fi
 
     sleep 10
-}
-
-function mcad-env-status {
     echo "Listing MCAD Controller Helm Chart and Pod YAML..."
-    helm list
     mcad_pod=$(kubectl get pods -n kube-system | grep mcad-controller | awk '{print $1}')
     if [[ "$mcad_pod" != "" ]]
     then
         kubectl get pod ${mcad_pod} -n kube-system -o yaml
     fi
+}
 
-    # This is meant to orchestrate initial cluster configuration such that accounting tests can be consistent
-    echo "---"
-    echo "Orchestrate cluster..."
-    echo "kubectl cordon test-worker"
-    kubectl cordon test-worker
-    a=$(kubectl -n kube-system get pods | grep coredns | cut -d' ' -f1)
-    for b in $a
-    do
-      echo "kubectl -n kube-system delete pod $b"
-      kubectl -n kube-system delete pod $b
-    done
-    echo "kubectl uncordon test-worker"
-    kubectl uncordon test-worker
+function setup-mcad-env {
+  echo "---"
+  echo "kubectl config current-context"
+  kubectl config current-context
+  
+  echo "Installing Podgroup CRD"
+  kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/scheduler-plugins/277b6bdec18f8a9e9ccd1bfeaf4b66495bfc6f92/config/crd/bases/scheduling.sigs.k8s.io_podgroups.yaml
 
-    # Show available resources of cluster nodes
-    echo "---"
-    echo "kubectl describe nodes"
-    kubectl describe nodes
+  # Turn off master taints
+  kubectl taint nodes --all node-role.kubernetes.io/master-
+ 
+  # This is meant to orchestrate initial cluster configuration such that accounting tests can be consistent
+  echo "---"
+  echo "Orchestrate cluster..."
+  echo "kubectl cordon test-worker"
+  kubectl cordon test-worker
+  a=$(kubectl -n kube-system get pods | grep coredns | cut -d' ' -f1)
+  for b in $a
+  do
+    echo "kubectl -n kube-system delete pod $b"
+    kubectl -n kube-system delete pod $b
+  done
+  echo "kubectl uncordon test-worker"
+  kubectl uncordon test-worker
+
+  # sleep to allow the pods to restart
+  echo "Sleeping waiting for the cluster pods to become ready"
+  sleep 90s
+
+  # Show available resources of cluster nodes
+  echo "---"
+  echo "kubectl describe nodes"
+  kubectl describe nodes
 }
 
 function kuttl-tests {
@@ -431,12 +436,10 @@ if [ "$(lsb_release -c -s 2>&1 | grep bullseye)" == "bullseye" ]; then
 fi
 check-prerequisites 
 kind-up-cluster
-kube-test-env-up
+setup-mcad-env
 mcad-quota-management-up
-mcad-env-status
 kuttl-tests
 mcad-quota-management-down
-mcad_up
-mcad-env-status
+mcad-up
 echo "==========================>>>>> Running E2E tests... <<<<<=========================="
 go test ./test/e2e -v -timeout 75m

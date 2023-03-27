@@ -733,8 +733,8 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		context := initTestContext()
 		var aws []*arbv1.AppWrapper
-		//appwrappersPtr := &aws
-		//defer cleanupTestObjectsPtr(context, appwrappersPtr)
+		// appwrappersPtr := &aws
+		// defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		const (
 			awCount           = 100
