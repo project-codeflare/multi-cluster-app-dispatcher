@@ -740,7 +740,7 @@ func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bo
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite))
 }
 
-func waitAWPodsCompletedEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool, timeout time.Duration ) error {
+func waitAWPodsCompletedEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool, timeout time.Duration) error {
 	return wait.Poll(100*time.Millisecond, timeout, awPodPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodSucceeded}, taskNum, quite))
 }
@@ -831,7 +831,7 @@ func createReplicaSet(context *context, name string, rep int32, img string, req 
 	return deployment
 }
 
-func createJobAWWithInitContainer(context *context, name string, requeuingTimeInSeconds int, requeuingGrowthType string, requeuingMaxNumRequeuings int ) *arbv1.AppWrapper {
+func createJobAWWithInitContainer(context *context, name string, requeuingTimeInSeconds int, requeuingGrowthType string, requeuingMaxNumRequeuings int) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "batch/v1",
 		"kind": "Job",
 	"metadata": {
@@ -894,8 +894,8 @@ func createJobAWWithInitContainer(context *context, name string, requeuingTimeIn
 			SchedSpec: arbv1.SchedulingSpecTemplate{
 				MinAvailable: minAvailable,
 				Requeuing: arbv1.RequeuingTemplate{
-					TimeInSeconds: requeuingTimeInSeconds,
-					GrowthType: requeuingGrowthType,
+					TimeInSeconds:    requeuingTimeInSeconds,
+					GrowthType:       requeuingGrowthType,
 					MaxNumRequeuings: requeuingMaxNumRequeuings,
 				},
 			},
@@ -953,7 +953,7 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 				"containers": [
 					{
 						"name": "aw-deployment-3",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"ports": [
 							{
 								"containerPort": 80
@@ -1029,7 +1029,7 @@ func createDeploymentAWwith900CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-900cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "900m"
@@ -1110,7 +1110,7 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-550cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "550m"
@@ -1191,7 +1191,7 @@ func createDeploymentAWwith125CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-125cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "125m"
@@ -1272,7 +1272,7 @@ func createDeploymentAWwith126CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-126cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "126m"
@@ -1353,7 +1353,7 @@ func createDeploymentAWwith350CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-350cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "350m"
@@ -1434,7 +1434,7 @@ func createDeploymentAWwith351CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-351cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "351m"
@@ -1515,7 +1515,7 @@ func createDeploymentAWwith426CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-426cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "426m"
@@ -1596,7 +1596,7 @@ func createDeploymentAWwith425CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-425cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "425m"
@@ -1677,7 +1677,7 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 				"containers": [
 					{
 						"name": "aw-generic-deployment-3",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"ports": [
 							{
 								"containerPort": 80
@@ -2264,7 +2264,7 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 				"containers": [
 					{
 						"name": "aw-deployment-2-status",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"ports": [
 							{
 								"containerPort": 80
@@ -2305,7 +2305,7 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 			"containers": [
 				{
 					"name": "aw-deployment-3-status",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"ports": [
 						{
 							"containerPort": 80
@@ -2392,7 +2392,7 @@ func createGenericDeploymentAWWithService(context *context, name string) *arbv1.
 				"containers": [
 					{
 						"name": "aw-deployment-3-status",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"ports": [
 							{
 								"containerPort": 80
@@ -2515,7 +2515,7 @@ func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand s
 				"containers": [
 					{
 						"name": "%s",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "%s"
@@ -2597,7 +2597,7 @@ func createGenericDeploymentCustomPodResourcesWithCPUAW(context *context, name s
 				"containers": [
 					{
 						"name": "%s",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "%s"
@@ -2764,7 +2764,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 				"containers": [
 					{
 						"name": "aw-statefulset-2",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"imagePullPolicy": "Never",
 						"ports": [
 							{
@@ -2841,7 +2841,7 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 				"containers": [
 					{
 						"name": "aw-generic-statefulset-2",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"imagePullPolicy": "Never",
 						"ports": [
 							{
@@ -2886,9 +2886,10 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 	return appwrapper
 }
 
-//NOTE: Recommend this test not to be the last test in the test suite it may pass
-//      may pass the local test but may cause controller to fail which is not
-//      part of this test's validation.
+// NOTE: Recommend this test not to be the last test in the test suite it may pass
+//
+//	may pass the local test but may cause controller to fail which is not
+//	part of this test's validation.
 func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "v1",
 		"kind": "Pod",
@@ -2904,7 +2905,7 @@ func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "aw-bad-podtemplate-2",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"ports": [
 						{
 							"containerPort": 80
@@ -2971,7 +2972,7 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "aw-podtemplate-2",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"ports": [
 						{
 							"containerPort": 80
@@ -3038,7 +3039,7 @@ func createPodCheckFailedStatusAW(context *context, name string) *arbv1.AppWrapp
 			"containers": [
 				{
 					"name": "aw-checkfailedstatus-1",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"ports": [
 						{
 							"containerPort": 80
@@ -3109,7 +3110,7 @@ func createGenericPodAWCustomDemand(context *context, name string, cpuDemand str
 			"containers": [
 					{
 						"name": "%s",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"limits": {
 								"cpu": "%s"
@@ -3183,7 +3184,7 @@ func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "aw-generic-pod-1",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"resources": {
 						"limits": {
 							"memory": "150Mi"
@@ -3256,7 +3257,7 @@ func createGenericPodTooBigAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "aw-generic-big-pod-1",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"resources": {
 						"limits": {
 							"cpu": "100",
@@ -3329,7 +3330,7 @@ func createBadGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "aw-bad-generic-pod-1",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"ports": [
 						{
 							"containerPort": 80
@@ -3429,7 +3430,7 @@ func createBadGenericPodTemplateAW(context *context, name string) (*arbv1.AppWra
 			"containers": [
 				{
 					"name": "aw-generic-podtemplate-2",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"ports": [
 						{
 							"containerPort": 80

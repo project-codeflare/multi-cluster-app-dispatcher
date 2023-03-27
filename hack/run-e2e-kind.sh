@@ -27,13 +27,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export ROOT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/..
+export ROOT_DIR="$(dirname "$(dirname "$(readlink -fm "$0")")")"
 export LOG_LEVEL=3
-export CLEANUP_CLUSTER=${CLEANUP_CLUSTER:-1}
+export CLEANUP_CLUSTER=${CLEANUP_CLUSTER:-"true"}
 export CLUSTER_CONTEXT="--name test"
 # Using older image due to older version of kubernetes cluster"
-export IMAGE_NGINX="nginx:1.15.12"
-export IMAGE_ECHOSERVER="k8s.gcr.io/echoserver:1.4"
+export IMAGE_ECHOSERVER="kicbase/echo-server:1.0"
 export KIND_OPT=${KIND_OPT:=" --config ${ROOT_DIR}/hack/e2e-kind-config.yaml"}
 export KA_BIN=_output/bin
 export WAIT_TIME="20s"
@@ -41,6 +40,7 @@ export IMAGE_REPOSITORY_MCAD="${1}"
 export IMAGE_TAG_MCAD="${2}"
 export MCAD_IMAGE_PULL_POLICY="${3-Always}"
 export IMAGE_MCAD="${IMAGE_REPOSITORY_MCAD}:${IMAGE_TAG_MCAD}"
+CLUSTER_STARTED="false"
 
 function update_test_host {
   sudo apt-get update && sudo apt-get install -y apt-transport-https curl 
@@ -54,7 +54,7 @@ function update_test_host {
   sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.11.0/kind-linux-amd64
   sudo chmod +x /usr/local/bin/kind
 
-   # Installing helm3
+  # Installing helm3
   curl -fsSL -o ${ROOT_DIR}/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
   chmod 700 ${ROOT_DIR}/get_helm.sh
   ${ROOT_DIR}/get_helm.sh
@@ -65,7 +65,7 @@ function update_test_host {
 function check-prerequisites {
   echo "checking prerequisites"
   which kind >/dev/null 2>&1
-  if [[ $? -ne 0 ]]; then
+  if [ $? -ne 0 ]; then
     echo "kind not installed, exiting."
     exit 1
   else
@@ -73,11 +73,11 @@ function check-prerequisites {
   fi
 
   which kubectl >/dev/null 2>&1
-  if [[ $? -ne 0 ]]; then
+  if [ $? -ne 0 ]; then
     echo "kubectl not installed, exiting."
     exit 1
   else
-    echo -n "found kubectl, " && kubectl version --short --client
+    echo -n "found kubectl, " && kubectl version 
   fi
   
   if [[ $IMAGE_REPOSITORY_MCAD == "" ]]
@@ -93,7 +93,7 @@ function check-prerequisites {
   fi
   
   which helm >/dev/null 2>&1
-  if [[ $? -ne 0 ]]
+  if [ $? -ne 0 ]
   then
     echo "helm not installed, exiting."
     exit 1
@@ -106,43 +106,44 @@ function check-prerequisites {
 function kind-up-cluster {
   echo "Running kind: [kind create cluster ${CLUSTER_CONTEXT} ${KIND_OPT}]"
   kind create cluster ${CLUSTER_CONTEXT} ${KIND_OPT} --wait ${WAIT_TIME}
+  if [ $? -ne 0 ]
+  then
+    echo "Failed to start kind cluster"
+    exit 1
+  fi
+  CLUSTER_STARTED="true"
 
-  docker images
   docker pull ${IMAGE_ECHOSERVER}
-  docker pull ${IMAGE_NGINX}
   if [[ "$MCAD_IMAGE_PULL_POLICY" = "Always" ]]
   then
     docker pull ${IMAGE_MCAD}
   fi
   docker images
-  
-  kind load docker-image ${IMAGE_NGINX} ${CLUSTER_CONTEXT}
-  if [[ $? -ne 0 ]]
-  then
-    echo "Failed to load image ${IMAGE_NGINX} in cluster"
-    exit 1
-  fi 
-  
+    
   kind load docker-image ${IMAGE_ECHOSERVER} ${CLUSTER_CONTEXT}
-  if [[ $? -ne 0 ]]
+  if [ $? -ne 0 ]
   then
     echo "Failed to load image ${IMAGE_ECHOSERVER} in cluster"
     exit 1
   fi 
   
   kind load docker-image ${IMAGE_MCAD} ${CLUSTER_CONTEXT}
-  if [[ $? -ne 0 ]]
+  if [ $? -ne 0 ]
   then
     echo "Failed to load image ${IMAGE_MCAD} in cluster"
     exit 1
-  fi 
+  fi
 }
 
 # clean up
 function cleanup {
     echo "==========================>>>>> Cleaning up... <<<<<=========================="
     echo " "
-
+    if [[ ${CLUSTER_STARTED} == "false" ]]
+    then
+      echo "Cluster was not started, nothing more to do."
+      return
+    fi  
 
     echo "Custom Resource Definitions..."
     echo "kubectl get crds"
@@ -185,8 +186,13 @@ function cleanup {
       echo "kubectl logs ${mcad_pod} -n kube-system"
       kubectl logs ${mcad_pod} -n kube-system
     fi
-    kind delete cluster ${CLUSTER_CONTEXT}
     rm -rf ${ROOT_DIR}/get_helm.sh
+    if [[ $CLEANUP_CLUSTER == "true" ]]
+    then
+      kind delete cluster ${CLUSTER_CONTEXT}     
+    else 
+      echo "Cluster requested to stay up, not deleting cluster"     
+    fi 
 }
 
 debug_function() {
@@ -231,7 +237,7 @@ spec:
             spec:
               containers:
                - name: hellodiana-2-test-0
-                 image: k8s.gcr.io/echoserver:1.4
+                 image: ${IMAGE_ECHOSERVER}
                  imagePullPolicy: Always
                  ports:
                  - containerPort: 80
@@ -287,8 +293,7 @@ EOF
 }
 
 function kube-test-env-up {
-    cd ${ROOT_DIR}
-
+ 
     echo "---"
     export KUBECONFIG="$(kind get kubeconfig-path ${CLUSTER_CONTEXT})"
 
@@ -385,5 +390,3 @@ kube-test-env-up
 
 echo "==========================>>>>> Running E2E tests... <<<<<=========================="
 go test ./test/e2e -v -timeout 55m
-debug_function
-sleep 3600s
