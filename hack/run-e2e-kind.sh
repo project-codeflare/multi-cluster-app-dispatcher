@@ -33,6 +33,7 @@ export CLEANUP_CLUSTER=${CLEANUP_CLUSTER:-"true"}
 export CLUSTER_CONTEXT="--name test"
 # Using older image due to older version of kubernetes cluster"
 export IMAGE_ECHOSERVER="kicbase/echo-server:1.0"
+export IMAGE_UBUNTULATEST="ubuntu:latest"
 export KIND_OPT=${KIND_OPT:=" --config ${ROOT_DIR}/hack/e2e-kind-config.yaml"}
 export KA_BIN=_output/bin
 export WAIT_TIME="20s"
@@ -113,26 +114,23 @@ function kind-up-cluster {
   fi
   CLUSTER_STARTED="true"
 
-  docker pull ${IMAGE_ECHOSERVER}
+  docker pull ${IMAGE_ECHOSERVER} ${IMAGE_UBUNTU_LATEST}
   if [[ "$MCAD_IMAGE_PULL_POLICY" = "Always" ]]
   then
     docker pull ${IMAGE_MCAD}
   fi
   docker images
-    
-  kind load docker-image ${IMAGE_ECHOSERVER} ${CLUSTER_CONTEXT}
-  if [ $? -ne 0 ]
-  then
-    echo "Failed to load image ${IMAGE_ECHOSERVER} in cluster"
-    exit 1
-  fi 
-  
-  kind load docker-image ${IMAGE_MCAD} ${CLUSTER_CONTEXT}
-  if [ $? -ne 0 ]
-  then
-    echo "Failed to load image ${IMAGE_MCAD} in cluster"
-    exit 1
-  fi
+
+  for image in ${IMAGE_ECHOSERVER} ${IMAGE_UBUNTU_LATEST} ${IMAGE_MCAD}
+  do
+
+    kind load docker-image ${image} ${CLUSTER_CONTEXT}
+    if [ $? -ne 0 ]
+    then
+      echo "Failed to load image ${IMAGE_ECHOSERVER} in cluster"
+      exit 1
+    fi
+  done 
 }
 
 # clean up
@@ -389,4 +387,4 @@ kind-up-cluster
 kube-test-env-up
 
 echo "==========================>>>>> Running E2E tests... <<<<<=========================="
-go test ./test/e2e -v -timeout 55m
+go test ./test/e2e -v -timeout 75m
