@@ -123,7 +123,6 @@ function kind-up-cluster {
 
   for image in ${IMAGE_ECHOSERVER} ${IMAGE_UBUNTU_LATEST} ${IMAGE_MCAD}
   do
-
     kind load docker-image ${image} ${CLUSTER_CONTEXT}
     if [ $? -ne 0 ]
     then
@@ -291,7 +290,6 @@ EOF
 }
 
 function kube-test-env-up {
- 
     echo "---"
     export KUBECONFIG="$(kind get kubeconfig-path ${CLUSTER_CONTEXT})"
 

@@ -2886,8 +2886,9 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 	return appwrapper
 }
 
-// NOTE: Recommend this test not to be the last test in the test suite it may pass
+// NOTE:
 //
+//	Recommend this test not to be the last test in the test suite it may pass
 //	may pass the local test but may cause controller to fail which is not
 //	part of this test's validation.
 func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
