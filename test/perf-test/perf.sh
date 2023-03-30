@@ -7,7 +7,9 @@ function help() {
     echo
     echo "Description: Runs Appwrapper performance test script(s) in subdirectories under $SCRIPT_DIR."
     echo
-    echo "Preconditions: The Script assumes you've logged into your cluster already. If not, it will tell you to login."
+    echo "Preconditions: "
+    echo "   - The script assumes you've logged into your cluster already. If not, it will tell you to login."
+    echo "   - The script checks that you have the mcad-controller installed, otherwise it'll tell you to install it first."
     echo
     echo "Options:"
     echo "  -h       Print this help message"
@@ -27,9 +29,27 @@ function check_kubectl_login_status() {
       else
         echo
         echo "Nice, looks like you're logged in"
-        echo
     fi
 }
+
+function check_mcad_installed_status() {
+    set +e
+    kubectl get pod -A |grep mcad-controller &> /dev/null
+    res2="$?"
+    kubectl get crd |grep appwrapper &> /dev/null
+    res3="$?"
+    set -e
+    MCAD="$res2"
+    CRD="$res3"
+      if [[ $MCAD == 1 ]] || [[ $CRD == 1 ]]
+      then
+        echo "You need Install MCAD Controller first before running this script"
+        exit 1
+      else
+        echo "Nice, MCAD Controller is installed"
+    fi
+}
+
 
 while getopts hf: option; do
     case $option in
@@ -47,6 +67,12 @@ shift $((OPTIND-1))
 echo "Checking whether we have a valid oc login or not..."
 check_kubectl_login_status
 
+# Track whether you have the MCAD controller installed
+echo "Checking MCAD Controller installation status"
+echo
+check_mcad_installed_status
+
+echo
 read -p "How many appwrapper jobs do you want?" jobs
 
 # Start the timer now
