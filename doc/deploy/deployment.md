@@ -97,7 +97,7 @@ or
 ```
 ### 2. Navigate to the Helm Deployment Directory.
 ```
-cd multi-cluster-app-wrapper/deployment
+cd multi-cluster-app-dispatcher/deployment
 ```
 
 ### 3. Run the installation using Helm.
