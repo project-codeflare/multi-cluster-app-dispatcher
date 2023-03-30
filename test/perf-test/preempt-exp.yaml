@@ -18,12 +18,12 @@ spec:
       custompodresources:
       - replicas: 1
         requests:
-          cpu: 500m
-          memory: 512M
+          cpu: 10m
+          memory: 10M
           nvidia.com/gpu: 0
         limits:
           cpu: 500m
-          memory: 512M
+          memory: 128M
           nvidia.com/gpu: 0
       generictemplate:
         apiVersion: batch/v1
@@ -44,14 +44,14 @@ spec:
             spec:
               containers:
               - name: defaultaw-schd-spec-with-timeout-1
-                image: ubuntu:latest
+                image: ubi8-minimal:latest
                 command: [ "/bin/bash", "-c", "--" ]
                 args: [ "sleep 10" ]
                 resources:
                   requests:
-                    memory: "512Mi"
-                    cpu: "500m"
+                    memory: "10Mi"
+                    cpu: "10m"
                   limits:
-                    memory: "512Mi"
+                    memory: "128Mi"
                     cpu: "500m"
               restartPolicy: Never
