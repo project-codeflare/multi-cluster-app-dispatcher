@@ -1,0 +1,35 @@
+@startuml
+skinparam handwritten true
+
+participant Main as Main
+participant ServerOptions as SrvOpt
+participant App as app
+participant Controller as controller
+
+activate Main
+Main -> SrvOpt : NewServerOption()
+activate SrvOpt
+SrvOpt -> SrvOpt: AddFlags
+activate SrvOpt
+deactivate SrvOpt
+SrvOpt -> SrvOpt: CheckOptionOrDie
+activate SrvOpt
+deactivate SrvOpt
+SrvOpt --> Main : return s
+deactivate SrvOpt
+
+Main-> app : Run(s) 
+activate app
+app -> controller : NewJobController(config, opt)
+activate controller
+controller --> app: jobctrl
+deactivate
+app -> controller : Run(neverStop)
+activate controller
+controller --> app: err
+deactivate controller
+app -> app : listenHealthProbe 
+app --> Main : return err
+deactivate app
+deactivate Main
+@enduml

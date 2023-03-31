@@ -1,0 +1,116 @@
+@startuml
+skinparam handwritten true
+'autonumber
+
+participant Controller as controller
+participant AppWrapperInformer as queueJobInformer  << (I,#ADD1B2) Informer >> 
+participant ResourceTypePod as resourceTypePod << (R,#902E06) Interface >> 
+participant ResourceTypeService as resourceTypeService << (R,#902E06) Interface >> 
+participant ResourceTypeDeployment as resourceTypeDeployment  << (R,#902E06) Interface >> 
+participant ResourceTypeStatefulSet as resourceTypeStatefulSet << (R,#902E06) Interface >> 
+participant ResourceTypePersistentVolume as resourceTypePersistentVolume << (R,#902E06) Interface >>
+participant ResourceTypePersistentVolumeClaim as resourceTypePersistentVolumeClaim << (R,#902E06) Interface >>
+participant ResourceTypeNamespace as resourceTypeNamespace << (R,#902E06) Interface >> 
+participant ResourceTypeConfigMap as resourceTypeConfigMap << (R,#902E06) Interface >>
+participant ResourceTypeSecret as resourceTypeSecret << (R,#902E06) Interface >>
+participant ResourceTypeNetworkPolicy as resourceTypeNetworkPolicy << (R,#902E06) Interface >>
+participant Cache as cache <<(P, #5E9006) Package>>
+participant clusterstatecache.Cache as clusterstatecache 
+participant ControllerScheduleNext as controllerScheduleNext << (T, #CDF489) Go Routine >>
+
+
+
+activate controller
+controller -> controller: createAppWrapperKind
+activate controller
+deactivate controller
+
+controller -[#blue]>> queueJobInformer : Run(stopCh)
+activate queueJobInformer
+queueJobInformer--[#blue]>>controller
+deactivate queueJobInformer
+
+controller-[#blue]>>resourceTypePod : Run(stopCh)
+activate resourceTypePod
+resourceTypePod --[#blue]>>controller
+deactivate resourceTypePod
+
+controller-[#blue]>>resourceTypeService : Run(stopCh)
+activate resourceTypeService
+resourceTypeService --[#blue]>>controller
+deactivate resourceTypeService
+
+controller-[#blue]>>resourceTypeDeployment : Run(stopCh)
+activate resourceTypeDeployment
+resourceTypeDeployment --[#blue]>>controller
+deactivate resourceTypeDeployment
+
+controller-[#blue]>>resourceTypeStatefulSet : Run(stopCh)
+activate resourceTypeStatefulSet
+resourceTypeStatefulSet --[#blue]>>controller
+deactivate resourceTypeStatefulSet
+
+controller-[#blue]>>resourceTypePersistentVolume : Run(stopCh)
+activate resourceTypePersistentVolume
+resourceTypePersistentVolume --[#blue]>>controller
+deactivate resourceTypePersistentVolume
+
+controller-[#blue]>>resourceTypePersistentVolumeClaim : Run(stopCh)
+activate resourceTypePersistentVolumeClaim
+resourceTypePersistentVolumeClaim --[#blue]>>controller
+deactivate resourceTypePersistentVolumeClaim
+
+controller-[#blue]>>resourceTypeNamespace : Run(stopCh)
+activate resourceTypeNamespace
+resourceTypeNamespace --[#blue]>>controller
+deactivate resourceTypeNamespace
+
+controller-[#blue]>>resourceTypeConfigMap : Run(stopCh)
+activate resourceTypeConfigMap
+resourceTypeConfigMap --[#blue]>>controller
+deactivate resourceTypeConfigMap
+
+controller-[#blue]>>resourceTypeSecret : Run(stopCh)
+activate resourceTypeSecret
+resourceTypeSecret --[#blue]>>controller
+deactivate resourceTypeSecret
+
+controller-[#blue]>>resourceTypeNetworkPolicy : Run(stopCh)
+activate resourceTypeNetworkPolicy
+resourceTypeNetworkPolicy --[#blue]>>controller
+deactivate resourceTypeNetworkPolicy
+
+controller->cache : WaitForCacheSync(stopCh, cc.queueJobSynced)
+activate cache
+cache -->> controller
+deactivate cache
+
+controller-[#blue]>>clusterstatecache : Run(stopCh)
+activate clusterstatecache
+clusterstatecache --[#blue]>> controller
+deactivate clusterstatecache
+
+controller -[#blue]>> controllerScheduleNext : wait.Until(cc.ScheduleNext, 0, stopCh)
+activate controllerScheduleNext
+controllerScheduleNext --[#blue]>> controller
+
+controller -[#blue]>> controllerPreemptQueueJobs: wait.Until(cc.PreemptQueueJobs, 60*time.Second, stopCh)
+activate controllerPreemptQueueJobs
+controllerPreemptQueueJobs --[#blue]>>controller
+
+controller -[#blue]>> controllerUpdateQueueJobs: wait.Until(cc.UpdateQueueJobs, 5*time.Second, stopCh)
+activate controllerUpdateQueueJobs
+
+	if cc.isDispatcher {
+		go wait.Until(cc.UpdateAgent, 2*time.Second, stopCh) // In the Agent?
+		for _, jobClusterAgent := range cc.agentMap {
+			go jobClusterAgent.Run(stopCh)
+		}
+		go wait.Until(cc.agentEventQueueWorker, time.Second, stopCh) // Update Agent Worker
+	}
+
+	// go wait.Until(cc.worker, time.Second, stopCh)
+	go wait.Until(cc.worker, 0, stopCh)
+
+deactivate controller
+@enduml
