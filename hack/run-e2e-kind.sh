@@ -27,7 +27,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export ROOT_DIR="$(dirname "$(dirname "$(readlink -fm "$0")")")"
+export ROOT_DIR="$(dirname "$(dirname "$(readlink -fn "$0")")")"
 export LOG_LEVEL=3
 export CLEANUP_CLUSTER=${CLEANUP_CLUSTER:-"true"}
 export CLUSTER_CONTEXT="--name test"

@@ -13,7 +13,8 @@ To build `Multi-Cluster-App-Deployer`, a running Docker environment must be avai
 Clone this repo in your local environment:
 
 __Option 1__: Clone this github project to your local machine via HTTPS
-```
+
+```bash
 $ git clone https://github.com/project-codeflare/multi-cluster-app-dispatcher.git
 Cloning into 'multi-cluster-app-dispatcher'...
 Checking connectivity... done.
@@ -22,90 +23,103 @@ $
 ```
 
 __Option 2__: Clone this github project to your local machine via SSH
-```
+
+```bash
 $ git clone git@github.com:project-codeflare/multi-cluster-app-dispatcher.git
 Cloning into 'multi-cluster-app-dispatcher'...
 Checking connectivity... done.
 Checking out files: 100% (####/####), done.
 $
-
 ```
+
+### Additional software needed
+
+To build the controller and to run the end to end tests locally you will need to have the following software installed:
+
+* `Go` (version 1.16) -- the controller will compile and run with later versions, but currently supported version is 1.16
+* `kind` (version 0.11) -- later versions will work fine
+* `kubectl`
+* `helm` - version 3.0 or later
+* `make`
+
+On MacOS you will need to have `readlink` executable installed (`brew install coreutils`)
+
 ## 2. Building the Multi-Cluster-App-Deployer Controller
 
 ### Build the Executable
 
-Run the build script `build.sh`:
-```
-$ cd multi-cluster-app-dispatcher/deployment/
+From the root directory of the repository:
 
-$ ./build.sh
+```bash
+#build for linux OS and for use inside docker image
+multi-cluster-app-dispatcher $ make mcad-controller
 ...
-+ cd ..
-+ make generate-code
-Compiling deepcopy-gen
-Generating deepcopy
+Compiling deepcopy-gen...
+Generating deepcopy...
 go build -o _output/bin/deepcopy-gen ./cmd/deepcopy-gen/
-_output/bin/deepcopy-gen -i ./pkg/apis/controller/v1beta1/ -O zz_generated.deepcopy
-+ make kar-controller
+_output/bin/deepcopy-gen -i ./pkg/apis/controller/v1beta1/ -O zz_generated.deepcopy 
+Compiling controller
+CGO_ENABLED=0 GOOS="linux" go build -o _output/bin/mcad-controller ./cmd/kar-controllers/
+
+#build for local testing purposes, by default enable the race conditions detector
+multi-cluster-app-dispatcher $ make mcad-controller-local
+...
 mkdir -p _output/bin
-CGO_ENABLED=0 GOARCH=amd64 go build -o _output/bin/kar-controllers ./cmd/kar-controllers/
-$
+Compiling deepcopy-gen...
+Generating deepcopy...
+go build -o _output/bin/deepcopy-gen ./cmd/deepcopy-gen/
+_output/bin/deepcopy-gen -i ./pkg/apis/controller/v1beta1/ -O zz_generated.deepcopy 
+Compiling controller
+go build -race -o _output/bin/mcad-controller-local ./cmd/kar-controllers/
 ```
 
-Ensure the executables: `deepcopy-gen`, `mcad-controllers`  are created in the target output directory:
-```
-$ ls ../_output/bin/
-deepcopy-gen	mcad-controller
-$
+Ensure the executables: `deepcopy-gen`, `mcad-controllers`, and optionally `mca-controller-local` are created in the target output directory:
+
+```bash
+multi-cluster-app-dispatcher $ ls _output/bin 
+deepcopy-gen            mcad-controller         mcad-controller-local
 ```
 
 ### Build the Multi-Cluster-App-Dispatcher Image
 
-Run the image build script `image.sh`:
+From the root directory of the repository:
 
-```
-$ ./image.sh
-...
-+ make images
-Changed to executable directory
-Build the docker image
-cd ./_output/bin
-docker build --no-cache --tag mcad-controller:v1.14 ...
-Sending build context to Docker daemon  122.7MB
-Step 1/7 : From ubuntu:18.04
- ---> ea4c82dcd15a
-Step 2/7 : ADD mcad-controller /usr/local/bin
- ---> 674cefbce55a
-...
- ---> 911c7c82b5ee
-Step 7/7 : WORKDIR /usr/local/bin
- ---> Running in f2db4649e7a6
-Removing intermediate container f2db4649e7a6
- ---> 1dbf126976cf
-Successfully built 1dbf126976cf
-Successfully tagged mcad-controller:v1.14
-$
+```bash
+# With docker daemon running
+multi-cluster-app-dispatcher % make images
+
+#Using podman
+make images-podman
 ```
 
-Note the *image name* and *image tag* from the image build script (`./image.sh`) above.  For example the *image name* and *image tag* built after running the example above is `mcad-controller:v1.14`.  List the Docker images to ensure the image exists.
-
-```
-$ docker images mcad-controller
-REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
-mcad-controller     v.1.14            1dbf126976cf        11 minutes ago      272MB
-$
-```
 ### Push the Multi-Cluster-App-Dispatcher Image to an Image Repository
-The following example assumes an available `<repository>/mcad-controller` on [Docker Hub](https://hub.docker.com)
-```
-$ docker login
-$ docker push <respository>/mcad-controller:v1.14
+
+The following example assumes an available `<repository>/mcad-controller` on [Docker Hub](https://hub.docker.com) and using image version `v1.14`
+
+```bash
+docker login
+docker push <respository>/mcad-controller:v1.14
 ```
 
 The same can be done with [Quay](quay.io)
-```
-$ docker login quay.io
-$ docker push <quay_respository>/mcad-controller:v1.14
+
+```bash
+docker login quay.io
+docker push <quay_respository>/mcad-controller:v1.14
 ```
 
 Refer to [deployment](../deploy/deployment.md) on how to deploy the `multi-cluster-app-dispatcher` as a controller in Kubernetes.
+
+## 3. Running e2e tests locally
+
+When running e2e tests, is recommended you restrict the `docker` daemon [cpu and memory resources](https://docs.docker.com/config/containers/resource_constraints/). The recomended settings are:
+
+* CPU: 4
+* Memory: 4 GB
+
+From the root directory of the repository:
+
+```bash
+# With docker daemon running
+multi-cluster-app-dispatcher % make run-e2e:
+```
