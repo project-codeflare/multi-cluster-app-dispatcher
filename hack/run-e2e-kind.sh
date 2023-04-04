@@ -33,7 +33,7 @@ export CLEANUP_CLUSTER=${CLEANUP_CLUSTER:-"true"}
 export CLUSTER_CONTEXT="--name test"
 # Using older image due to older version of kubernetes cluster"
 export IMAGE_ECHOSERVER="kicbase/echo-server:1.0"
-export IMAGE_UBUNTULATEST="ubuntu:latest"
+export IMAGE_UBUNTU_LATEST="ubuntu:latest"
 export KIND_OPT=${KIND_OPT:=" --config ${ROOT_DIR}/hack/e2e-kind-config.yaml"}
 export KA_BIN=_output/bin
 export WAIT_TIME="20s"
@@ -115,11 +115,27 @@ function kind-up-cluster {
   CLUSTER_STARTED="true"
 
   docker pull ${IMAGE_ECHOSERVER} 
+  if [ $? -ne 0 ]
+  then
+    echo "Failed to pull ${IMAGE_ECHOSERVER}"
+    exit 1
+  fi
+
   docker pull ${IMAGE_UBUNTU_LATEST}
+  if [ $? -ne 0 ]
+  then
+    echo "Failed to pull ${IMAGE_UBUNTU_LATEST}"
+    exit 1
+  fi
 
   if [[ "$MCAD_IMAGE_PULL_POLICY" = "Always" ]]
   then
     docker pull ${IMAGE_MCAD}
+    if [ $? -ne 0 ]
+    then
+      echo "Failed to pull ${IMAGE_MCAD}"
+      exit 1
+    fi
   fi
   docker images
 
@@ -292,11 +308,12 @@ EOF
 }
 
 function kube-test-env-up {
-    echo "---"
-    export KUBECONFIG="$(kind get kubeconfig-path ${CLUSTER_CONTEXT})"
-
-    echo "---"
-    echo "KUBECONFIG file: ${KUBECONFIG}"
+   # Hack to setup for 'go test' call which expects this path.
+    if [ ! -f $HOME/.kube/config ]
+    then
+      echo "'$HOME/.kube/config' not found"
+      exit 1
+    fi
 
     echo "---"
     echo "kubectl version"
@@ -310,15 +327,6 @@ function kube-test-env-up {
     echo "kubectl get nodes"
     kubectl get nodes -o wide
 
-    # Hack to setup for 'go test' call which expects this path.
-    if [ ! -z $HOME/.kube/config ]
-    then
-      cp $KUBECONFIG $HOME/.kube/config
-
-      echo "---"
-      cat $HOME/.kube/config
-    fi
-  
     echo "Installing Podgroup CRD"
 
     kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/scheduler-plugins/277b6bdec18f8a9e9ccd1bfeaf4b66495bfc6f92/config/crd/bases/scheduling.sigs.k8s.io_podgroups.yaml
