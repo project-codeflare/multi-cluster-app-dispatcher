@@ -114,7 +114,9 @@ function kind-up-cluster {
   fi
   CLUSTER_STARTED="true"
 
-  docker pull ${IMAGE_ECHOSERVER} ${IMAGE_UBUNTU_LATEST}
+  docker pull ${IMAGE_ECHOSERVER} 
+  docker pull ${IMAGE_UBUNTU_LATEST}
+
   if [[ "$MCAD_IMAGE_PULL_POLICY" = "Always" ]]
   then
     docker pull ${IMAGE_MCAD}
@@ -126,7 +128,7 @@ function kind-up-cluster {
     kind load docker-image ${image} ${CLUSTER_CONTEXT}
     if [ $? -ne 0 ]
     then
-      echo "Failed to load image ${IMAGE_ECHOSERVER} in cluster"
+      echo "Failed to load image ${image} in cluster"
       exit 1
     fi
   done 
@@ -325,16 +327,6 @@ function kube-test-env-up {
     echo "Starting MCAD Controller..."
     echo "helm install mcad-controller namespace kube-system wait set loglevel=2 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=4000m set resources.limits.memory=4096Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY"
     helm upgrade --install mcad-controller ${ROOT_DIR}/deployment/mcad-controller  --namespace kube-system --wait --set loglevel=2 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi --set configMap.name=mcad-controller-configmap --set configMap.podCreationTimeout='"120000"' --set configMap.quotaEnabled='"false"' --set coscheduler.rbac.apiGroup=scheduling.sigs.k8s.io --set coscheduler.rbac.resource=podgroups --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY
-
-    sleep 10
-    echo "Listing MCAD Controller Helm Chart and Pod YAML..."
-    helm list
-    mcad_pod=$(kubectl get pods -n kube-system | grep mcad-controller | awk '{print $1}')
-    if [[ "$mcad_pod" != "" ]]
-    then
-        kubectl get pod ${mcad_pod} -n kube-system -o yaml
-    fi
-
 
     sleep 10
     echo "Listing MCAD Controller Helm Chart and Pod YAML..."
