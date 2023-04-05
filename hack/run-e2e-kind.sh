@@ -418,7 +418,8 @@ function kuttl-tests {
   echo "==============>>>>> Running Quota Management Kuttl E2E tests... <<<<<=============="
   echo "kubectl kuttl test ${KUTTL_TEST_OPT}"
   kubectl kuttl test ${KUTTL_TEST_OPT}
-  if [[ $? -ne 0 ]]; then
+  if [ $? -ne 0 ]
+  then
     echo "quota management kuttl e2e tests failure, exiting."
     exit 1
   else
