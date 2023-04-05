@@ -90,12 +90,3 @@ require (
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.14 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.0.2 // indirect
 )
-
-replace (
-	golang.org/x/tools => golang.org/x/tools v0.1.4 // indirect
-	k8s.io/api => k8s.io/api v0.20.0
-	k8s.io/apimachinery => k8s.io/apimachinery v0.20.0
-	k8s.io/client-go => k8s.io/client-go v0.20.0
-	k8s.io/code-generator => k8s.io/code-generator v0.20.0
-	k8s.io/metrics => k8s.io/metrics v0.20.0
-)

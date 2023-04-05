@@ -1,5 +1,7 @@
 language: go
 
+dist: focal
+
 sudo: required
 
 env:
