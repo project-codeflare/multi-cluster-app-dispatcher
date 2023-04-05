@@ -52,11 +52,10 @@ function update_test_host {
   curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
   echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
   sudo apt-get update
-  # Using older version due to older version of kubernetes cluster"
-  sudo apt-get install -y --allow-unauthenticated kubectl=1.17.0-00
+  sudo apt-get install -y --allow-unauthenticated kubectl
 
-  # Download kind binary (0.6.1)
-  sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.11.0/kind-linux-amd64
+  # Download kind binary (0.17.0)
+  sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.17.0/kind-linux-amd64
   sudo chmod +x /usr/local/bin/kind
 
   # Installing helm3
@@ -431,8 +430,8 @@ function kuttl-tests {
 trap cleanup EXIT
 
 #Only run this function if we are running on the test build machinbe,
-#currently  ubuntu 16.04 xenial
-if [ "$(lsb_release -c -s 2>&1 | grep bullseye)" == "bullseye" ]; then 
+#currently  ubuntu 22.04 focal
+if [ "$(lsb_release -c -s 2>&1 | grep focal)" == "focal" ]; then 
    update_test_host
 fi
 check-prerequisites 
