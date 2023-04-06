@@ -1,6 +1,6 @@
 module github.com/project-codeflare/multi-cluster-app-dispatcher
 
-go 1.19
+go 1.18
 
 require (
 	github.com/emicklei/go-restful v2.14.3+incompatible
