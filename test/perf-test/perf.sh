@@ -29,7 +29,7 @@ function check_kubectl_login_status() {
       else
         echo
         echo "Nice, looks like you're logged in"
-    fi
+      fi
 }
 
 function check_mcad_installed_status() {
@@ -64,7 +64,7 @@ done
 shift $((OPTIND-1))
 
 # Track whether we have a valid kubectl login
-echo "Checking whether we have a valid oc login or not..."
+echo "Checking whether we have a valid cluster login or not..."
 check_kubectl_login_status
 
 # Track whether you have the MCAD controller installed
@@ -100,7 +100,7 @@ do
       *) 
         sed -i "s/defaultaw-schd-spec-with-timeout-$num/defaultaw-schd-spec-with-timeout-$next_num/g" ${SCRIPT_DIR}/preempt-exp.yaml ;;
     esac
-    oc apply -f ${SCRIPT_DIR}/preempt-exp.yaml
+    kubectl apply -f ${SCRIPT_DIR}/preempt-exp.yaml
 done
 
     # Let's reset the original preempt-exp.yaml file back to original value 
@@ -114,13 +114,13 @@ done
     esac
 
 # Check for all jobs to report complete
-jobstatus=`oc get jobs --no-headers --field-selector status.successful=1 |wc -l`
+jobstatus=`kubectl get jobs --no-headers --field-selector status.successful=1 |wc -l`
 
 while [ $jobstatus -lt $jobs ]
 do
    echo "Number of completed jobs is: " $jobstatus " and the goal is: " $jobs
    sleep 10
-   jobstatus=`oc get jobs --no-headers --field-selector status.successful=1 |wc -l`
+   jobstatus=`kubectl get jobs --no-headers --field-selector status.successful=1 |wc -l`
 done
 
 echo " "
