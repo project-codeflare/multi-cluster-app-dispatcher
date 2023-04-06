@@ -114,13 +114,13 @@ done
     esac
 
 # Check for all jobs to report complete
-jobstatus=`kubectl get jobs --no-headers --field-selector status.successful=1 |wc -l`
+jobstatus=`kubectl get jobs -n default --no-headers --field-selector status.successful=1 |wc -l`
 
 while [ $jobstatus -lt $jobs ]
 do
    echo "Number of completed jobs is: " $jobstatus " and the goal is: " $jobs
    sleep 10
-   jobstatus=`kubectl get jobs --no-headers --field-selector status.successful=1 |wc -l`
+   jobstatus=`kubectl get jobs -n default --no-headers --field-selector status.successful=1 |wc -l`
 done
 
 echo " "
