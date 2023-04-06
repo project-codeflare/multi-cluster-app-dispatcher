@@ -13,8 +13,8 @@ go:
 
 go_import_path: github.com/project-codeflare/multi-cluster-app-dispatcher
 
-install:
-  - go get -u golang.org/x/lint/golint
+install: []
+
 
 before_script:
   - export TEST_LOG_LEVEL=4
