@@ -20,7 +20,7 @@ before_script:
   - export TEST_LOG_LEVEL=4
 
 script:
-#  - make
+  - BLUE='\033[34m'
   - make mcad-controller
   - make run-test
   # Process 'make images' when NOT a pull request
@@ -29,4 +29,11 @@ script:
   - 'if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then unset quay_repository && make images; fi'
   # Process 'make push-images' when NOT a pull request
   - 'if [ "$TRAVIS_PULL_REQUEST"  = "false" ]; then make push-images; fi'
-  - travis_wait 80 make run-e2e
+  # Run the e2e and handle Travis condition where Travis fails on no output for 10 minutes.   No output for 10 minutes
+  # is fine for our test cases that waits for 10 minutes before requeuing a job.  The other workaround was to
+  # use 'travis_wait n' which unfortunately does not stream output until the very end so monitoring the Travis log 
+  # during runtime is not possible.
+  - make run-e2e &
+  - PID=$! && echo -e "${BLUE}make run e2e pid=${PID}"
+  - while [ -e /proc/${PID} ]; do echo -n "."  && sleep 30; done
+  - wait ${PID}
