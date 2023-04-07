@@ -27,7 +27,7 @@ TAG:=${TAG}${RELEASE_VER}
 # Build the controler executalbe for use in docker image build
 mcad-controller: init generate-code
 	$(info Compiling controller)
-	CGO_ENABLED=0 GOOS="linux" go build -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
+	CGO_ENABLED=0 go build -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
 
 print-global-variables:
 	$(info "---")
@@ -57,21 +57,20 @@ generate-code:
 	${BIN_DIR}/deepcopy-gen -i ./pkg/apis/controller/v1beta1/ -O zz_generated.deepcopy 
 	${BIN_DIR}/deepcopy-gen -i ./pkg/apis/quotaplugins/quotasubtree/v1 -O zz_generated.deepcopy
 
-images: verify-tag-name mcad-controller
+images: verify-tag-name 
 	$(info List executable directory)
 	$(info repo id: ${git_repository_id})
 	$(info branch: ${GIT_BRANCH})
-	ls -l ${CURRENT_DIR}/_output/bin
 	$(info Build the docker image)
-	docker build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
+	docker build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
 
-images-podman: verify-tag-name mcad-controller
+images-podman: verify-tag-name
 	$(info List executable directory)
 	$(info repo id: ${git_repository_id})
 	$(info branch: ${GIT_BRANCH})
 	ls -l ${CURRENT_DIR}/_output/bin
 	$(info Build the docker image)
-	podman build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/deployment/Dockerfile.both  ${CURRENT_DIR}/_output/bin
+	podman build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
 
 push-images: verify-tag-name
 ifeq ($(strip $(quay_repository)),)
@@ -96,7 +95,7 @@ run-test:
 	$(info Running unit tests...)
 	hack/make-rules/test.sh $(WHAT) $(TESTS)
 
-run-e2e: mcad-controller verify-tag-name
+run-e2e: verify-tag-name
 ifeq ($(strip $(quay_repository)),)
 	echo "Running e2e with MCAD local image: mcad-controller ${TAG} IfNotPresent."
 	hack/run-e2e-kind.sh mcad-controller ${TAG} IfNotPresent
@@ -110,7 +109,8 @@ mcad-controller-private: init generate-code
 	CGO_ENABLED=0 GOARCH=amd64 GOPRIVATE=github.ibm.com/* go build -tags private -modfile ./private.mod -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
 
 # Build the controller executable for use on the local host and using local build args
-# the default for local build args is `-race` to turn race detection
+# the default for local build args is `-race` to turn race detection, this is not to be used 
+# inside the docker containers.
 mcad-controller-local: init generate-code
 	$(info Compiling controller)
 	go build ${LOCAL_BUILD_ARGS} -o ${BIN_DIR}/mcad-controller-local ./cmd/kar-controllers/
