@@ -103,9 +103,6 @@ else
 	hack/run-e2e-kind.sh ${quay_repository}/mcad-controller ${TAG}
 endif
 
-mcad-controller-private: init generate-code
-	$(info Compiling controller)
-	CGO_ENABLED=0 GOARCH=amd64 GOPRIVATE=github.ibm.com/* go build -tags private -modfile ./private.mod -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
 
 # Build the controller executable for use on the local host and using local build args
 # the default for local build args is `-race` to turn race detection, this is not to be used 
@@ -119,4 +116,3 @@ coverage:
 
 clean:
 	rm -rf _output/
-	rm -f mcad-controllers
