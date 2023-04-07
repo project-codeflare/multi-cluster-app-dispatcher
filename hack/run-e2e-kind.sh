@@ -431,7 +431,7 @@ trap cleanup EXIT
 
 #Only run this function if we are running on the test build machinbe,
 #currently  ubuntu 22.04 focal
-if [ "$(lsb_release -c -s 2>&1 | grep focal)" == "focal" ]; then 
+if [ "$(lsb_release -c -s 2>&1 | grep xenial)" == "xenial" ]; then 
    update_test_host
 fi
 check-prerequisites 
