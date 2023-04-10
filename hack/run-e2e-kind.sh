@@ -256,7 +256,7 @@ function cleanup {
       echo "kubectl logs ${mcad_pod} -n kube-system"
       kubectl logs ${mcad_pod} -n kube-system
     fi
-  
+    rm -f kubeconfig
   
     if [[ $CLEANUP_CLUSTER == "true" ]]
     then
@@ -458,6 +458,9 @@ function setup-mcad-env {
   
   echo "Installing Podgroup CRD"
   kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/scheduler-plugins/277b6bdec18f8a9e9ccd1bfeaf4b66495bfc6f92/config/crd/bases/scheduling.sigs.k8s.io_podgroups.yaml
+ 
+ # Turn off master taints
+  kubectl taint nodes --all node-role.kubernetes.io/master-
  
   # This is meant to orchestrate initial cluster configuration such that accounting tests can be consistent
   echo "---"
