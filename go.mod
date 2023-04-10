@@ -3,7 +3,7 @@ module github.com/project-codeflare/multi-cluster-app-dispatcher
 go 1.18
 
 require (
-	github.com/emicklei/go-restful v2.14.3+incompatible
+	github.com/emicklei/go-restful v2.16.0+incompatible
 	github.com/golang/protobuf v1.4.3
 	github.com/kubernetes-sigs/custom-metrics-apiserver v0.0.0-20210311094424-0ca2b1909cdc
 	github.com/onsi/ginkgo v1.11.0
