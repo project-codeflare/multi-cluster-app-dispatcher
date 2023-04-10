@@ -47,7 +47,7 @@ export KUTTL_TEST_OPT="--config ${ROOT_DIR}/kuttl-test.yaml"
 #export KUTTL_TEST_OPT="--config ${ROOT_DIR}/kuttl-test.yaml --skip-delete"
 
 function update_test_host {
-  if [[ "$(uname -o)" != "GNU/Linux " ]]
+  if [[ "$(uname -o)" != "GNU/Linux" ]]
   then
     echo -n "Running on: " && uname -o
     # this function applies only to linux hosts
