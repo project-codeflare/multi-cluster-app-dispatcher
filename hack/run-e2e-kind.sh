@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 # Copyright 2014 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,6 +49,7 @@ export KUTTL_TEST_OPT="--config ${ROOT_DIR}/kuttl-test.yaml"
 function update_test_host {
   if [[ "$(uname -o)" != "GNU/Linux " ]]
   then
+    echo -n "Running on: " && uname -o
     # this function applies only to linux hosts
     return
   fi
@@ -72,6 +73,7 @@ function update_test_host {
     echo "Could not determine architecture"
     exit 1
   fi
+  echo "Echo the architecture is: $arch"
   
   which kind >/dev/null 2>&1
   if [ $? -ne 0 ] 
@@ -79,6 +81,7 @@ function update_test_host {
     # Download kind binary (0.18.0)
     sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.18.0/kind-linux-${arch}
     sudo chmod +x /usr/local/bin/kind
+    echo "Kind was sucessfully installed."
   fi
 
   which helm >/dev/null 2>&1
@@ -89,6 +92,7 @@ function update_test_host {
     chmod 700 ${ROOT_DIR}/get_helm.sh
     ${ROOT_DIR}/get_helm.sh
     rm -rf ${ROOT_DIR}/get_helm.sh
+    echo "Helm was sucessfully installed."
   fi
   
   kubectl kuttl version >/dev/null 2>&1
@@ -98,6 +102,7 @@ function update_test_host {
     sudo curl -sSLf --output /tmp/kubectl-kuttl https://github.com/kudobuilder/kuttl/releases/download/v${KUTTL_VERSION}/kubectl-kuttl_${KUTTL_VERSION}_linux_${arch} && \
     sudo mv /tmp/kubectl-kuttl /usr/local/bin && \
     sudo chmod a+x /usr/local/bin/kubectl-kuttl
+    echo "Helm was sucessfully installed."
   fi
 
 }
