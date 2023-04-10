@@ -47,12 +47,15 @@ export KUTTL_TEST_OPT="--config ${ROOT_DIR}/kuttl-test.yaml"
 #export KUTTL_TEST_OPT="--config ${ROOT_DIR}/kuttl-test.yaml --skip-delete"
 
 function update_test_host {
-  if [[ "$(uname -o)" != "GNU/Linux" ]]
+  
+  local arch="$(go env GOARCH)"
+  if [ -z $arch ]
   then
-    echo -n "Running on: " && uname -o
-    # this function applies only to linux hosts
-    return
+    echo "Unable to determine downloads architecture"
+    exit 1
   fi
+  echo "CPU architecture for downloads is: ${arch}"
+
   #Only run this function if we are running on the travis build machinbe,
   if [ "$(lsb_release -c -s 2>&1 | grep xenial)" == "xenial" ]; then 
     sudo apt-get update && sudo apt-get install -y apt-transport-https curl 
@@ -67,17 +70,9 @@ function update_test_host {
       sudo apt-get install -y --allow-unauthenticated kubectl
   fi    
   
-  local arch="$(dpkg --print-architecture)"
-  if [ -z ${arch} ]
-  then
-    echo "Could not determine architecture"
-    exit 1
-  fi
-  echo "Echo the architecture is: $arch"
-  
   which kind >/dev/null 2>&1
   if [ $? -ne 0 ] 
-  then 
+  then
     # Download kind binary (0.18.0)
     sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.18.0/kind-linux-${arch}
     sudo chmod +x /usr/local/bin/kind
@@ -101,10 +96,9 @@ function update_test_host {
     # Download kuttl plugin
     sudo curl -sSLf --output /tmp/kubectl-kuttl https://github.com/kudobuilder/kuttl/releases/download/v${KUTTL_VERSION}/kubectl-kuttl_${KUTTL_VERSION}_linux_${arch} && \
     sudo mv /tmp/kubectl-kuttl /usr/local/bin && \
-    sudo chmod a+x /usr/local/bin/kubectl-kuttl
-    echo "Helm was sucessfully installed."
+    sudo chmod a+x /usr/local/bin/kubectl-kuttl && \
+    echo "Kuttl was sucessfully installed."
   fi
-
 }
 
 # check if pre-requizites are installed.
