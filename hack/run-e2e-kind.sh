@@ -93,8 +93,12 @@ function update_test_host {
   kubectl kuttl version >/dev/null 2>&1
   if [ $? -ne 0 ]
   then
+    if [[ "$arch" == "amd64" ]]
+    then 
+      local kuttl_arch="x86_64"
+    fi
     # Download kuttl plugin
-    sudo curl -sSLf --output /tmp/kubectl-kuttl https://github.com/kudobuilder/kuttl/releases/download/v${KUTTL_VERSION}/kubectl-kuttl_${KUTTL_VERSION}_linux_${arch} && \
+    sudo curl -sSLf --output /tmp/kubectl-kuttl https://github.com/kudobuilder/kuttl/releases/download/v${KUTTL_VERSION}/kubectl-kuttl_${KUTTL_VERSION}_linux_${kuttl_arch} && \
     sudo mv /tmp/kubectl-kuttl /usr/local/bin && \
     sudo chmod a+x /usr/local/bin/kubectl-kuttl && \
     echo "Kuttl was sucessfully installed."
