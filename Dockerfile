@@ -31,4 +31,4 @@ RUN groupadd --system --gid=9999 mcad && \
 
 RUN chown -R mcad:mcad /usr/local/bin
 
-#USER mcad
+USER mcad
