@@ -1,0 +1,16 @@
+"---"
+"MAKE GLOBAL VARIABLES:"
+"  "BIN_DIR="_output/bin"
+"  "GIT_BRANCH="quota-management-go-update"
+"  "RELEASE_VER="v1.29.55"
+"  "TAG="quota-management-go-update-v1.29.55"
+"---"
+# Check for invalid tag name
+t=quota-management-go-update-v1.29.55 && [ ${#t} -le 128 ] || { echo "Target name $t has 128 or more chars"; false; }
+echo "Running e2e with MCAD local image: mcad-controller quota-management-go-update-v1.29.55 IfNotPresent."
+Running e2e with MCAD local image: mcad-controller quota-management-go-update-v1.29.55 IfNotPresent.
+hack/run-e2e-kind.sh mcad-controller quota-management-go-update-v1.29.55 IfNotPresent
+Could not determine architecture
+==========================>>>>> Cleaning up... <<<<<==========================
+ 
+Cluster was not started, nothing more to do.
