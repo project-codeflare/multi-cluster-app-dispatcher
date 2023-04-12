@@ -92,45 +92,45 @@ From the root directory of the repository:
 # With docker daemon running
 multi-cluster-app-dispatcher % make images
 ....
-# output from a local branch, MacOS build, local file names replaced with XXXXXXXXXX
+# output from main branch, MacOS build, local file names replaced with XXXXXXXXXX
 "---"
 "MAKE GLOBAL VARIABLES:"
 "  "BIN_DIR="_output/bin"
-"  "GIT_BRANCH="issue_315_small_changes"
+"  "GIT_BRANCH="main"
 "  "RELEASE_VER="v1.29.55"
-"  "TAG="issue_315_small_changes-v1.29.55"
+"  "TAG="main-v1.29.55"
 "---"
 # Check for invalid tag name
-t=issue_315_small_changes-v1.29.55 && [ ${#t} -le 128 ] || { echo "Target name $t has 128 or more chars"; false; }
+t=main-v1.29.55 && [ ${#t} -le 128 ] || { echo "Target name $t has 128 or more chars"; false; }
 List executable directory
 repo id: 
-branch: issue_315_small_changes
+branch: main
 Build the docker image
-docker build --quiet --no-cache --tag mcad-controller:issue_315_small_changes-v1.29.55 -f XXXXXXXXXX/multi-cluster-app-dispatcher/Dockerfile  XXXXXXXXXX/multi-cluster-app-dispatcher
+docker build --quiet --no-cache --tag mcad-controller:main-v1.29.55 -f XXXXXXXXXX/multi-cluster-app-dispatcher/Dockerfile  XXXXXXXXXX/multi-cluster-app-dispatcher
 sha256:6871c150701280abc29baa14aa639791cefb9ba4b61177ab4faf5a43bdfcc4e4
 
 #Using podman
 make images-podman
 ....
-# output from a local branch, MacOS build, local file names replaced with XXXXXXXXXX
+# output from a main branch, MacOS build, local file names replaced with XXXXXXXXXX
 "---"
 "MAKE GLOBAL VARIABLES:"
 "  "BIN_DIR="_output/bin"
-"  "GIT_BRANCH="issue_315_small_changes"
+"  "GIT_BRANCH="main"
 "  "RELEASE_VER="v1.29.55"
-"  "TAG="issue_315_small_changes-v1.29.55"
+"  "TAG="main-v1.29.55"
 "---"
 # Check for invalid tag name
-t=issue_315_small_changes-v1.29.55 && [ ${#t} -le 128 ] || { echo "Target name $t has 128 or more chars"; false; }
+t=main-v1.29.55 && [ ${#t} -le 128 ] || { echo "Target name $t has 128 or more chars"; false; }
 List executable directory
 repo id: 
-branch: issue_315_small_changes
+branch: main
 Build the docker image
-ls -l /Users/laurentiu.bradin/work/repos/multi-cluster-app-dispatcher/_output/bin
+ls -l XXXXXXXXXX/multi-cluster-app-dispatcher/_output/bin
 total 130144
 -rwxr-xr-x  1 laurentiu.bradin  staff   8238498 Apr  6 15:19 deepcopy-gen
 -rwxr-xr-x  1 laurentiu.bradin  staff  58391090 Apr  6 15:19 mcad-controller
-podman build --quiet --no-cache --tag mcad-controller:issue_315_small_changes-v1.29.55 -f /Users/laurentiu.bradin/work/repos/multi-cluster-app-dispatcher/Dockerfile  /Users/laurentiu.bradin/work/repos/multi-cluster-app-dispatcher
+podman build --quiet --no-cache --tag mcad-controller:issue_315_small_changes-v1.29.55 -f XXXXXXXXXX/multi-cluster-app-dispatcher/Dockerfile  XXXXXXXXXX/multi-cluster-app-dispatcher
 f784707e8982399ef7ef66e3d8a09b669e6deb17990d174400338813fb13c505
 ```
 

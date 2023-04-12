@@ -382,15 +382,14 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	cc.refManager = queuejobresources.NewLabelRefManager()
 
 	// Setup Quota
-	if serverOption.QuotaEnabled {
-		// TODO Disable this when merg
-		// dispatchedAWDemands, dispatchedAWs := cc.getDispatchedAppWrappers()
-		// cc.quotaManager, _ = quotaforestmanager.NewQuotaManager(dispatchedAWDemands, dispatchedAWs, cc.queueJobLister,
-		//	config, serverOption)
-		klog.Warning("Quta manager enabled, but this version does not yet support it!!!")
-	} else {
-		cc.quotaManager = nil
-	}
+	// TODO: Enable this block, with the merge of quota-management branch
+	// if serverOption.QuotaEnabled {
+	//	dispatchedAWDemands, dispatchedAWs := cc.getDispatchedAppWrappers()
+	//	cc.quotaManager, _ = quotamanager.NewQuotaManager(dispatchedAWDemands, dispatchedAWs, cc.queueJobLister,
+	//		config, serverOption)
+	//} else {
+	//	cc.quotaManager = nil
+	//}
 
 	// Set dispatcher mode or agent mode
 	cc.isDispatcher = serverOption.Dispatcher
