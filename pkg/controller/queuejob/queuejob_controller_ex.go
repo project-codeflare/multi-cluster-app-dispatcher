@@ -41,7 +41,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager"
 	dto "github.com/prometheus/client_model/go"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
@@ -106,7 +105,7 @@ const (
 // controllerKind contains the schema.GroupVersionKind for this controller type.
 var controllerKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
 
-//XController the AppWrapper Controller type
+// XController the AppWrapper Controller type
 type XController struct {
 	config       *rest.Config
 	serverOption *options.ServerOption
@@ -181,7 +180,7 @@ func NewJobAndClusterAgent(qjKey string, qaKey string) *JobAndClusterAgent {
 	}
 }
 
-//RegisterAllQueueJobResourceTypes - gegisters all resources
+// RegisterAllQueueJobResourceTypes - gegisters all resources
 func RegisterAllQueueJobResourceTypes(regs *queuejobresources.RegisteredResources) {
 	respod.Register(regs)
 	resservice.Register(regs)
@@ -212,7 +211,7 @@ func GetQueueJobKey(obj interface{}) (string, error) {
 	return fmt.Sprintf("%s/%s", qj.Namespace, qj.Name), nil
 }
 
-//NewJobController create new AppWrapper Controller
+// NewJobController create new AppWrapper Controller
 func NewJobController(config *rest.Config, serverOption *options.ServerOption) *XController {
 	cc := &XController{
 		config:          config,
@@ -383,13 +382,14 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	cc.refManager = queuejobresources.NewLabelRefManager()
 
 	// Setup Quota
-	if serverOption.QuotaEnabled {
-		dispatchedAWDemands, dispatchedAWs := cc.getDispatchedAppWrappers()
-		cc.quotaManager, _ = quotamanager.NewQuotaManager(dispatchedAWDemands, dispatchedAWs, cc.queueJobLister,
-			config, serverOption)
-	} else {
-		cc.quotaManager = nil
-	}
+	// TODO: Enable this block, with the merge of quota-management branch
+	// if serverOption.QuotaEnabled {
+	//	dispatchedAWDemands, dispatchedAWs := cc.getDispatchedAppWrappers()
+	//	cc.quotaManager, _ = quotamanager.NewQuotaManager(dispatchedAWDemands, dispatchedAWs, cc.queueJobLister,
+	//		config, serverOption)
+	//} else {
+	//	cc.quotaManager = nil
+	//}
 
 	// Set dispatcher mode or agent mode
 	cc.isDispatcher = serverOption.Dispatcher
@@ -599,7 +599,7 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 				// Check for the minimum age and then skip preempt if current time is not beyond minimum age
 				// The minimum age is controlled by the requeuing.TimeInSeconds stanza
 				// For preemption, the time is compared to the last condition or the dispatched condition in the AppWrapper, whichever happened later
-				lastCondition := value.Status.Conditions[numConditions - 1]
+				lastCondition := value.Status.Conditions[numConditions-1]
 				var condition arbv1.AppWrapperCondition
 
 				if dispatchedConditionExists && dispatchedCondition.LastTransitionMicroTime.After(lastCondition.LastTransitionMicroTime.Time) {
@@ -674,7 +674,7 @@ func (qjm *XController) GetAggregatedResourcesPerGenericItem(cqj *arbv1.AppWrapp
 	return retVal
 }
 
-//Gets all objects owned by AW from API server, check user supplied status and set whole AW status
+// Gets all objects owned by AW from API server, check user supplied status and set whole AW status
 func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arbv1.AppWrapperState {
 
 	// Get all pods and related resources
@@ -2214,7 +2214,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 	return err
 }
 
-//Cleanup function
+// Cleanup function
 func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 	klog.V(3).Infof("[Cleanup] begin AppWrapper %s Version=%s Status=%+v\n", appwrapper.Name, appwrapper.ResourceVersion, appwrapper.Status)
 

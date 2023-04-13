@@ -91,69 +91,47 @@ From the root directory of the repository:
 ```bash
 # With docker daemon running
 multi-cluster-app-dispatcher % make images
-
 ....
-
-# output from a local branch, MacOS build, local file names replaced with XXXXXXXXXX
+# output from main branch, MacOS build, local file names replaced with XXXXXXXXXX
 "---"
 "MAKE GLOBAL VARIABLES:"
 "  "BIN_DIR="_output/bin"
-"  "GIT_BRANCH="local_e2e_test"
+"  "GIT_BRANCH="main"
 "  "RELEASE_VER="v1.29.55"
-"  "TAG="local_e2e_test-v1.29.55"
+"  "TAG="main-v1.29.55"
 "---"
 # Check for invalid tag name
-t=local_e2e_test-v1.29.55 && [ ${#t} -le 128 ] || { echo "Target name $t has 128 or more chars"; false; }
-mkdir -p _output/bin
-Compiling deepcopy-gen...
-Generating deepcopy...
-go build -o _output/bin/deepcopy-gen ./cmd/deepcopy-gen/
-_output/bin/deepcopy-gen -i ./pkg/apis/controller/v1beta1/ -O zz_generated.deepcopy 
-Compiling controller
-CGO_ENABLED=0 GOOS="linux" go build -o _output/bin/mcad-controller ./cmd/kar-controllers/
+t=main-v1.29.55 && [ ${#t} -le 128 ] || { echo "Target name $t has 128 or more chars"; false; }
 List executable directory
 repo id: 
-branch: local_e2e_test
+branch: main
 Build the docker image
-ls -l XXXXXXXXXXXX/multi-cluster-app-dispatcher/_output/bin
-total 268768
--rwxr-xr-x  1 XXXXX  staff   8238498 Apr  4 12:46 deepcopy-gen
--rwxr-xr-x  1 XXXXX  staff  57584808 Apr  4 12:47 mcad-controller
-docker build --quiet --no-cache --tag mcad-controller:local_e2e_test-v1.29.55 -f XXXXXXXX/multi-cluster-app-dispatcher/deployment/Dockerfile.both  XXXXXX/multi-cluster-app-dispatcher/_output/bin
-sha256:3b4f314b06674f6b52d6a5d77ad1d3d9cebf8fa94a9f80026b02813689c3289d
+docker build --quiet --no-cache --tag mcad-controller:main-v1.29.55 -f XXXXXXXXXX/multi-cluster-app-dispatcher/Dockerfile  XXXXXXXXXX/multi-cluster-app-dispatcher
+sha256:6871c150701280abc29baa14aa639791cefb9ba4b61177ab4faf5a43bdfcc4e4
 
 #Using podman
 make images-podman
-
 ....
-
-# output from a local branch, MacOS build, local file names replaced with XXXXXXXXXX
+# output from a main branch, MacOS build, local file names replaced with XXXXXXXXXX
 "---"
 "MAKE GLOBAL VARIABLES:"
 "  "BIN_DIR="_output/bin"
-"  "GIT_BRANCH="local_e2e_test"
+"  "GIT_BRANCH="main"
 "  "RELEASE_VER="v1.29.55"
-"  "TAG="local_e2e_test-v1.29.55"
+"  "TAG="main-v1.29.55"
 "---"
 # Check for invalid tag name
-t=local_e2e_test-v1.29.55 && [ ${#t} -le 128 ] || { echo "Target name $t has 128 or more chars"; false; }
-mkdir -p _output/bin
-Compiling deepcopy-gen...
-Generating deepcopy...
-go build -o _output/bin/deepcopy-gen ./cmd/deepcopy-gen/
-_output/bin/deepcopy-gen -i ./pkg/apis/controller/v1beta1/ -O zz_generated.deepcopy 
-Compiling controller
-CGO_ENABLED=0 GOOS="linux" go build -o _output/bin/mcad-controller ./cmd/kar-controllers/
+t=main-v1.29.55 && [ ${#t} -le 128 ] || { echo "Target name $t has 128 or more chars"; false; }
 List executable directory
 repo id: 
-branch: local_e2e_test
+branch: main
 Build the docker image
 ls -l XXXXXXXXXX/multi-cluster-app-dispatcher/_output/bin
-total 128568
--rwxr-xr-x  1 XXXXXXXX  staff   8238498 Apr  4 12:53 deepcopy-gen
--rwxr-xr-x  1 XXXXXXXX  staff  57584808 Apr  4 12:53 mcad-controller
-podman build --quiet --no-cache --tag mcad-controller:local_e2e_test-v1.29.55 -f XXXXXXXXXX/multi-cluster-app-dispatcher/deployment/Dockerfile.both  XXXXXXXXXX/multi-cluster-app-dispatcher/_output/bin
-7553c702e5238920f44cba7303d1ff111aca1722e7e3ed4d49afbafa165fc3e3
+total 130144
+-rwxr-xr-x  1 laurentiu.bradin  staff   8238498 Apr  6 15:19 deepcopy-gen
+-rwxr-xr-x  1 laurentiu.bradin  staff  58391090 Apr  6 15:19 mcad-controller
+podman build --quiet --no-cache --tag mcad-controller:issue_315_small_changes-v1.29.55 -f XXXXXXXXXX/multi-cluster-app-dispatcher/Dockerfile  XXXXXXXXXX/multi-cluster-app-dispatcher
+f784707e8982399ef7ef66e3d8a09b669e6deb17990d174400338813fb13c505
 ```
 
 ### Push the Multi-Cluster-App-Dispatcher Image to an Image Repository
@@ -176,7 +154,7 @@ Refer to [deployment](../deploy/deployment.md) on how to deploy the `multi-clust
 
 ## 3. Running e2e tests locally
 
-When running e2e tests, is recommended you restrict the `docker` daemon [cpu and memory resources](https://docs.docker.com/config/containers/resource_constraints/). The recomended settings are:
+When running e2e tests, is recommended you restrict the `docker` daemon [cpu and memory resources](https://docs.docker.com/config/containers/resource_constraints/). The recommended settings are:
 
 * CPU: 2
 * Memory: 8 GB
@@ -185,5 +163,5 @@ From the root directory of the repository:
 
 ```bash
 # With docker daemon running
-multi-cluster-app-dispatcher % make run-e2e:
+multi-cluster-app-dispatcher % make run-e2e
 ```
