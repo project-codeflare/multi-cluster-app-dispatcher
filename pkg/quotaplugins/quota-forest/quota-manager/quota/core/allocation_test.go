@@ -185,6 +185,73 @@ func TestAllocation_SetValue(t *testing.T) {
 	}
 }
 
+func TestAllocation_Add(t *testing.T) {
+	type fields struct {
+		x []int
+		y []int
+	}
+	type args struct {
+		other *Allocation
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   bool
+	}{
+		{
+			name: "test1",
+			fields: fields{
+				x: []int{1, 2},
+				y: []int{4, 6},
+			},
+			args: args{
+				other: &Allocation{
+					x: []int{3, 4},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "test2",
+			fields: fields{
+				x: []int{1, 2},
+				y: []int{1, 2},
+			},
+			args: args{
+				other: &Allocation{
+					x: []int{3, 4, 5},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "test3",
+			fields: fields{
+				x: []int{1, 2},
+				y: []int{4, 9},
+			},
+			args: args{
+				other: &Allocation{
+					x: []int{3, 4},
+				},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &Allocation{
+				x: tt.fields.x,
+			}
+			if got := a.Add(tt.args.other) && reflect.DeepEqual(a.x, tt.fields.y); got != tt.want {
+				t.Errorf("Allocation.Add() = %v, want %v; result = %v, want %v",
+					got, tt.want, a.x, tt.fields.y)
+			}
+		})
+	}
+}
+
 func TestAllocation_Fit(t *testing.T) {
 	type fields struct {
 		x []int
@@ -277,6 +344,122 @@ func TestAllocation_Fit(t *testing.T) {
 			}
 			if got := a.Fit(tt.args.allocated, tt.args.capacity); got != tt.want {
 				t.Errorf("Allocation.Fit() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAllocation_IsZero(t *testing.T) {
+	type fields struct {
+		x []int
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
+		{
+			name: "test1",
+			fields: fields{
+				x: []int{0, 0, 0},
+			},
+			want: true,
+		},
+		{
+			name: "test2",
+			fields: fields{
+				x: []int{0, 1},
+			},
+			want: false,
+		},
+		{
+			name: "test3",
+			fields: fields{
+				x: []int{1, 2, -4},
+			},
+			want: false,
+		},
+		{
+			name: "test4",
+			fields: fields{
+				x: []int{},
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &Allocation{
+				x: tt.fields.x,
+			}
+			if got := a.IsZero(); got != tt.want {
+				t.Errorf("Allocation.IsZero() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAllocation_Equal(t *testing.T) {
+	type fields struct {
+		x []int
+	}
+	type args struct {
+		other *Allocation
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   bool
+	}{
+		{
+			name: "test1",
+			fields: fields{
+				x: []int{1, 2, 3},
+			},
+			args: args{
+				other: &Allocation{x: []int{1, 2, 3}},
+			},
+			want: true,
+		},
+		{
+			name: "test2",
+			fields: fields{
+				x: []int{},
+			},
+			args: args{
+				other: &Allocation{x: []int{}},
+			},
+			want: true,
+		},
+		{
+			name: "test3",
+			fields: fields{
+				x: []int{1, 2, 3},
+			},
+			args: args{
+				other: &Allocation{x: []int{4, 5, 6}},
+			},
+			want: false,
+		},
+		{
+			name: "test4",
+			fields: fields{
+				x: []int{1, 2},
+			},
+			args: args{
+				other: &Allocation{x: []int{1, 2, 3}},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &Allocation{
+				x: tt.fields.x,
+			}
+			if got := a.Equal(tt.args.other); got != tt.want {
+				t.Errorf("Allocation.Equal() = %v, want %v", got, tt.want)
 			}
 		})
 	}
