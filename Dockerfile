@@ -1,6 +1,7 @@
 FROM  registry.access.redhat.com/ubi8/go-toolset:1.18.10-1 AS BUILDER
-USER root
-WORKDIR /workdir
+
+ARG GO_BUILD_ARGS
+ENV GO_BUILD_ARGS=${GO_BUILD_ARGS}
 
 COPY Makefile Makefile
 COPY go.mod go.mod
@@ -8,12 +9,13 @@ COPY go.sum go.sum
 COPY cmd cmd
 COPY pkg pkg
 COPY hack hack
+COPY CONTROLLER_VERSION CONTROLLER_VERSION
 
 RUN make mcad-controller
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 
-COPY --from=BUILDER /workdir/_output/bin/mcad-controller /usr/local/bin
+COPY --from=BUILDER /opt/app-root/src/_output/bin/mcad-controller /usr/local/bin
 
 RUN true \
     && microdnf update \
