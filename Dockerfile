@@ -1,7 +1,5 @@
 FROM  registry.access.redhat.com/ubi8/go-toolset:1.18.10-1 AS BUILDER
-
 ARG GO_BUILD_ARGS
-ENV GO_BUILD_ARGS=${GO_BUILD_ARGS}
 
 COPY Makefile Makefile
 COPY go.mod go.mod
@@ -11,7 +9,9 @@ COPY pkg pkg
 COPY hack hack
 COPY CONTROLLER_VERSION CONTROLLER_VERSION
 
-RUN make mcad-controller
+ENV GO_BUILD_ARGS=$GO_BUILD_ARGS
+RUN echo "Go build args: $GO_BUILD_ARGS" && \
+    make mcad-controller
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 

@@ -28,10 +28,11 @@ TAG:=${TAG}${RELEASE_VER}
 
 # Build the controler executalbe for use in docker image build
 mcad-controller: init generate-code
-	$(info Compiling controller)
 ifeq ($(strip $(GO_BUILD_ARGS)),)
+	$(info Compiling controller)
 	CGO_ENABLED=0 go build -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
 else
+	$(info Compling controller with build arguments: '${GO_BUILD_ARGS}')
 	go build $(GO_BUILD_ARGS) -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
 endif	
 
@@ -75,7 +76,7 @@ images: verify-tag-name generate-code
 ifeq ($(strip $(GO_BUILD_ARGS)),)
 	docker build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
 else 
-	docker build --quiet --no-cache --tag mcad-controller:${TAG} --build-arg $(GO_BUILD_ARGS) -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
+	docker build --no-cache --tag mcad-controller:${TAG} --build-arg GO_BUILD_ARGS=$(GO_BUILD_ARGS) -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
 endif		
 
 images-podman: verify-tag-name generate-code
@@ -86,7 +87,7 @@ images-podman: verify-tag-name generate-code
 ifeq ($(strip $(GO_BUILD_ARGS)),)
 	podman build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
 else
-	podman build --quiet --no-cache --tag mcad-controller:${TAG} --build-arg $(GO_BUILD_ARGS) -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
+	podman build --no-cache --tag mcad-controller:${TAG} --build-arg GO_BUILD_ARGS=$(GO_BUILD_ARGS) -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
 endif	
 
 push-images: verify-tag-name

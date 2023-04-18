@@ -362,6 +362,11 @@ function kube-test-env-up {
     done
     echo "kubectl uncordon test-worker"
     kubectl uncordon test-worker
+    echo "Waiting for pod in the kube-system namespace to become ready"
+    while [[ $(kubectl get pods -n kube-system -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}' | tr ' ' '\n' | sort -u) != "True" ]]
+    do
+       echo -n "." && sleep 1; 
+    done
 
     # Show available resources of cluster nodes
     echo "---"
@@ -385,4 +390,4 @@ kind-up-cluster
 kube-test-env-up
 
 echo "==========================>>>>> Running E2E tests... <<<<<=========================="
-go test ./test/e2e -v -timeout 75m
+go test ./test/e2e -v -timeout 75m -count=1
