@@ -18,7 +18,8 @@ COPY --from=BUILDER /workdir/_output/bin/mcad-controller /usr/local/bin
 RUN true \
     && microdnf update \
     && microdnf --nodocs install \
-        curl shadow-utils \
+#        curl shadow-utils \
+        curl \
     && microdnf clean all \
     && true
 
@@ -26,9 +27,9 @@ RUN cd /usr/local/bin && curl -LO https://storage.googleapis.com/kubernetes-rele
 
 WORKDIR /usr/local/bin
 
-RUN groupadd --system --gid=9999 mcad && \
-    useradd --system --create-home --uid=9999 --gid=mcad mcad
+#RUN groupadd --system --gid=9999 mcad && \
+    #useradd --system --create-home --uid=9999 --gid=mcad mcad
 
-RUN chown -R mcad:mcad /usr/local/bin
+RUN chown -R 1000:1000 /usr/local/bin
 
-USER mcad
+USER 1000
