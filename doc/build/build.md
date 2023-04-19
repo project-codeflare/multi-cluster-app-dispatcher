@@ -6,7 +6,7 @@ This document will show how to build the `Multi-Cluster-App-Deployer` (`MCAD`) K
 
 ### Docker Environment
 
-To build `Multi-Cluster-App-Deployer`, a running Docker environment must be available. Here is a document on [Getting Started with Docker](https://www.docker.com/get-started).
+To build `multi-cluster-app-dispatcher`, a running Docker environment must be available. Here is a document on [Getting Started with Docker](https://www.docker.com/get-started).
 
 ### Clone Multi-Cluster-App-Deployer Git Repo
 
@@ -36,8 +36,8 @@ $
 
 To build the controller and to run the end to end tests locally you will need to have the following software installed:
 
-* `Go` (version 1.16) -- the controller will compile and run with later versions, but currently supported version is 1.16
-* `kind` (version 0.11) -- later versions will work fine
+* `Go` (version 1.18.10)
+* `kind` (version 0.18)
 * `kubectl`
 * `helm` - version 3.0 or later
 * `make`
@@ -76,13 +76,14 @@ go build -race -o _output/bin/mcad-controller-local ./cmd/kar-controllers/
 ```
 
 Ensure the executables: `deepcopy-gen`, `mcad-controllers`  are created in the target output directory:
-```
+
+```text
 $ ls ../_output/bin/
-deepcopy-gen	mcad-controller
+deepcopy-gen mcad-controller
 $
 ```
 
-### Build the Multi-Cluster-App-Dispatcher Image
+### Build the Multi Cluster App Dispatcher Image
 
 If you want to run the end to end tests locally, you will need to have the docker daemon running on your workstation, and build the image using docker. Images can also be build using podman for deployment of the MCAD controller on remote clusters.
 
