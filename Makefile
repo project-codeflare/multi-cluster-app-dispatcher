@@ -21,6 +21,9 @@ endif
 # Check for current branch name
 ifneq ($(strip $(GIT_BRANCH)),)
 	TAG:=${TAG}${GIT_BRANCH}-
+
+# 	replace invalid characters that might exist in the branch name
+	TAG:=$(shell echo ${TAG} | sed 's/[^a-zA-Z0-9]/-/g')
 endif
 TAG:=${TAG}${RELEASE_VER}
 
