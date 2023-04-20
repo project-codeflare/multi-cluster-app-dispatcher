@@ -125,3 +125,5 @@ kubernetes.tar.gz
 /bazel-*
 *.pyc
 
+# .devcontainer files
+.devcontainer
