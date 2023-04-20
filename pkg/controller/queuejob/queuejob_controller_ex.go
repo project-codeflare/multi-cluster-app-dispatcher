@@ -165,7 +165,7 @@ type XController struct {
 	quotaManager quota.QuotaManagerInterface
 
 	// Active Scheduling AppWrapper
-	schedulingAW *arbv1.AppWrapper
+	schedulingAW *ActiveAppWrapper
 }
 
 type JobAndClusterAgent struct {
@@ -224,6 +224,7 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		updateQueue:     cache.NewFIFO(GetQueueJobKey),
 		qjqueue:         NewSchedulingQueue(),
 		cache:           clusterstatecache.New(config),
+		schedulingAW:    NewActiveAppWrapper(),
 	}
 	cc.metricsAdapter = adapter.New(serverOption, config, cc.cache)
 
@@ -416,8 +417,6 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	//create (empty) dispatchMap
 	cc.dispatchMap = map[string]string{}
 
-	// Initialize current scheuling active AppWrapper
-	cc.schedulingAW = nil
 	return cc
 }
 
@@ -1098,7 +1097,6 @@ func (qjm *XController) ScheduleNext() {
 	// if we have enough compute resources then we set the AllocatedReplicas to the total
 	// amount of resources asked by the job
 	qj, err := qjm.qjqueue.Pop()
-	qjm.schedulingAW = qj
 	if err != nil {
 		klog.V(3).Infof("[ScheduleNext] Cannot pop QueueJob from qjqueue! err=%#v", err)
 		return // Try to pop qjqueue again
@@ -1149,12 +1147,12 @@ func (qjm *XController) ScheduleNext() {
 
 		// Retrieve HeadOfLine after priority update
 		qj, err = qjm.qjqueue.Pop()
-		qjm.schedulingAW = qj
 		if err != nil {
 			klog.V(3).Infof("[ScheduleNext] Cannot pop QueueJob from qjqueue! err=%#v", err)
 		} else {
 			klog.V(3).Infof("[ScheduleNext] activeQ.Pop_afterPriorityUpdate %s *Delay=%.6f seconds RemainingLength=%d &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qjm.qjqueue.Length(), qj, qj.ResourceVersion, qj.Status)
 		}
+		qjm.schedulingAW.AtomicSet(qj)
 	}
 
 	if qj.Status.CanRun {
@@ -1338,16 +1336,13 @@ func (qjm *XController) ScheduleNext() {
 // Update AppWrappers in etcd
 // todo: This is a current workaround for duplicate message bug.
 func (cc *XController) updateEtcd(qj *arbv1.AppWrapper, at string) error {
-	//apiCacheAWJob, e := cc.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
-	//
-	//if (e != nil) {
-	//	klog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s, namespace: %s at %s err=%v",
-	//		apiCacheAWJob.Name, apiCacheAWJob.Namespace, at, e)
-	//	return e
-	//}
+	apiCacheAWJob, e := cc.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
+	if e != nil {
+		klog.Errorf("[updateEtcd] Failed to update status of AppWrapper %s, namespace: %s at %s err=%v",
+			apiCacheAWJob.Name, apiCacheAWJob.Namespace, at, e)
+		return e
+	}
 
-	//TODO: Remove next line
-	var apiCacheAWJob *arbv1.AppWrapper
 	//TODO: Remove next line
 	apiCacheAWJob = qj
 	apiCacheAWJob.Status.Sender = "before " + at // set Sender string to indicate code location
@@ -1620,7 +1615,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 		qj.Status.SystemPriority = float64(qj.Spec.Priority)
 		qj.Status.QueueJobState = arbv1.AppWrapperCondInit
 		qj.Status.Conditions = []arbv1.AppWrapperCondition{
-			arbv1.AppWrapperCondition{
+			{
 				Type:                    arbv1.AppWrapperCondInit,
 				Status:                  v1.ConditionTrue,
 				LastUpdateMicroTime:     metav1.NowMicro(),
@@ -1979,9 +1974,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 		if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued &&
 			!cc.qjqueue.IfExistUnschedulableQ(qj) && !cc.qjqueue.IfExistActiveQ(qj) {
 			// One more check to ensure AW is not the current active schedule object
-			if cc.schedulingAW == nil ||
-				(strings.Compare(cc.schedulingAW.Namespace, qj.Namespace) != 0 &&
-					strings.Compare(cc.schedulingAW.Name, qj.Name) != 0) {
+			if cc.schedulingAW.IsActiveAppWrapper(qj.Name, qj.Namespace) {
 				cc.qjqueue.AddIfNotPresent(qj)
 				klog.V(3).Infof("[manageQueueJob] Recovered AppWrapper %s%s - added to active queue, Status=%+v",
 					qj.Namespace, qj.Name, qj.Status)
@@ -2233,9 +2226,11 @@ func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 			for _, ar := range appwrapper.Spec.AggrResources.GenericItems {
 				genericResourceName, gvk, err00 := cc.genericresources.Cleanup(appwrapper, &ar)
 				if err00 != nil {
-					klog.Errorf("[Cleanup] Error deleting generic item %s, GVK=%s.%s.%s from job=%s Status=%+v err=%+v.",
-						genericResourceName, gvk.Group, gvk.Version, gvk.Kind, appwrapper.Name, appwrapper.Status, err00)
+					klog.Errorf("[Cleanup] Error deleting generic item %s, from app wrapper=%s Status=%+v err=%+v.",
+						genericResourceName, appwrapper.Name, appwrapper.Status, err00)
 				}
+				klog.Info("[Cleanup] Delete generic item %s, GVK=%s.%s.%s from app wrapper=%s Status=%+v",
+					genericResourceName, gvk.Group, gvk.Version, gvk.Kind, appwrapper.Name, appwrapper.Status)
 			}
 		}
 
