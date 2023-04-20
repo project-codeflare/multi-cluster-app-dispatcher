@@ -35,7 +35,7 @@ ifeq ($(strip $(GO_BUILD_ARGS)),)
 	$(info Compiling controller)
 	CGO_ENABLED=0 go build -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
 else
-	$(info Compling controller with build arguments: '${GO_BUILD_ARGS}')
+	$(info Compiling controller with build arguments: '${GO_BUILD_ARGS}')
 	go build $(GO_BUILD_ARGS) -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
 endif	
 
@@ -63,7 +63,7 @@ verify-tag-name: print-global-variables
 
 generate-code: pkg/apis/controller/v1beta1/zz_generated.deepcopy.go
 
-pkg/apis/controller/v1beta1/zz_generated.deepcopy.go:
+pkg/apis/controller/v1beta1/zz_generated.deepcopy.go: ${BIN_DIR}/deepcopy-gen
 	$(info Generating deepcopy...)
 	${BIN_DIR}/deepcopy-gen -i ./pkg/apis/controller/v1beta1/ -O zz_generated.deepcopy 
 

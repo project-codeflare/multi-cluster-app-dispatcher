@@ -1,12 +1,12 @@
 # Multi-Cluster-App-Dispatcher Controller Build Instructions
 
-This document will show how to build the `Multi-Cluster-App-Deployer` (`MCAD`) Kubernetes Controller that operates on an `AppWrapper` kubernetes custom resource definition. Instructions are for the [master](https://github.com/IBM/multi-cluster-app-dispatcher/tree/master) branch.
+This document will show how to build the `Multi-Cluster-App-Dispatcher` (`MCAD`) Kubernetes Controller that operates on an `AppWrapper` kubernetes custom resource definition. Instructions are for the [main](https://github.com/project-codeflare/multi-cluster-app-dispatcher/tree/main) branch.
 
 ## 1. Pre-condition
 
 ### Docker Environment
 
-To build `Multi-Cluster-App-Deployer`, a running Docker environment must be available. Here is a document on [Getting Started with Docker](https://www.docker.com/get-started).
+To build `Multi-Cluster-App-Dispatcher`, a running Docker environment must be available. Here is a document on [Getting Started with Docker](https://www.docker.com/get-started). Podman image builds are also supported.
 
 ### Clone Multi-Cluster-App-Deployer Git Repo
 
@@ -36,8 +36,8 @@ $
 
 To build the controller and to run the end to end tests locally you will need to have the following software installed:
 
-* `Go` (version 1.16) -- the controller will compile and run with later versions, but currently supported version is 1.16
-* `kind` (version 0.11) -- later versions will work fine
+* `Go` (version 1.18)
+* `kind` (version 0.18)
 * `kubectl`
 * `helm` - version 3.0 or later
 * `make`
@@ -56,30 +56,25 @@ To to build the executable, execute:
 #build for linux OS and for use inside docker image
 multi-cluster-app-dispatcher $ make mcad-controller
 ...
-Compiling deepcopy-gen...
-Generating deepcopy...
-go build -o _output/bin/deepcopy-gen ./cmd/deepcopy-gen/
-_output/bin/deepcopy-gen -i ./pkg/apis/controller/v1beta1/ -O zz_generated.deepcopy 
-Compiling controller
-CGO_ENABLED=0 GOOS="linux" go build -o _output/bin/mcad-controller ./cmd/kar-controllers/
-
-#build for local testing purposes, by default enable the race conditions detector
-multi-cluster-app-dispatcher $ make mcad-controller-local
-...
 mkdir -p _output/bin
-Compiling deepcopy-gen...
-Generating deepcopy...
-go build -o _output/bin/deepcopy-gen ./cmd/deepcopy-gen/
-_output/bin/deepcopy-gen -i ./pkg/apis/controller/v1beta1/ -O zz_generated.deepcopy 
 Compiling controller
-go build -race -o _output/bin/mcad-controller-local ./cmd/kar-controllers/
+CGO_ENABLED=0 go build -o _output/bin/mcad-controller ./cmd/kar-controllers/
 ```
 
-Ensure the executables: `deepcopy-gen` and `mcad-controllers` are created in the target output directory:
+Ensure the executable `mcad-controllers` are created in the target output directory:
 
 ```bash
 multi-cluster-app-dispatcher $ ls _output/bin 
-deepcopy-gen            mcad-controller
+mcad-controller
+```
+
+If you want pass additional args to the `go build`, define add them to the `GO_BUILD_ARGS` environment variable. This feature is useful if you want to compile the executable with the race condition detector turned on. To turn on the the race detector in your executable, execute:
+
+```bash
+make mcad-controller GO_BUILD_ARGS=-race
+mkdir -p _output/bin
+Compiling controller with build arguments: '-race'
+go build -race -o _output/bin/mcad-controller ./cmd/kar-controllers/
 ```
 
 ### Build the Multi-Cluster-App-Dispatcher Image
@@ -92,22 +87,22 @@ From the root directory of the repository:
 # With docker daemon running
 multi-cluster-app-dispatcher % make images
 ....
-# output from main branch, MacOS build, local file names replaced with XXXXXXXXXX
+make images
 "---"
 "MAKE GLOBAL VARIABLES:"
 "  "BIN_DIR="_output/bin"
 "  "GIT_BRANCH="main"
-"  "RELEASE_VER="v1.29.55"
-"  "TAG="main-v1.29.55"
+"  "RELEASE_VER="v1.29.57"
+"  "TAG="main-v1.29.57"
+"  "GO_BUILD_ARGS=""
 "---"
 # Check for invalid tag name
-t=main-v1.29.55 && [ ${#t} -le 128 ] || { echo "Target name $t has 128 or more chars"; false; }
+t=main-v1.29.57 && [ ${#t} -le 128 ] || { echo "Target name $t has 128 or more chars"; false; }
 List executable directory
 repo id: 
 branch: main
 Build the docker image
-docker build --quiet --no-cache --tag mcad-controller:main-v1.29.55 -f XXXXXXXXXX/multi-cluster-app-dispatcher/Dockerfile  XXXXXXXXXX/multi-cluster-app-dispatcher
-sha256:6871c150701280abc29baa14aa639791cefb9ba4b61177ab4faf5a43bdfcc4e4
+docker build --quiet --no-cache --tag mcad-controller:main-v1.29.57 -f XXXXXX/multi-cluster-app-dispatcher/Dockerfile  XXXXX/multi-cluster-app-dispatcher
 
 #Using podman
 make images-podman
@@ -117,22 +112,20 @@ make images-podman
 "MAKE GLOBAL VARIABLES:"
 "  "BIN_DIR="_output/bin"
 "  "GIT_BRANCH="main"
-"  "RELEASE_VER="v1.29.55"
-"  "TAG="main-v1.29.55"
+"  "RELEASE_VER="v1.29.57"
+"  "TAG="main-v1.29.57"
+"  "GO_BUILD_ARGS=""
 "---"
 # Check for invalid tag name
-t=main-v1.29.55 && [ ${#t} -le 128 ] || { echo "Target name $t has 128 or more chars"; false; }
+t=main-v1.29.57 && [ ${#t} -le 128 ] || { echo "Target name $t has 128 or more chars"; false; }
 List executable directory
 repo id: 
 branch: main
 Build the docker image
-ls -l XXXXXXXXXX/multi-cluster-app-dispatcher/_output/bin
-total 130144
--rwxr-xr-x  1 laurentiu.bradin  staff   8238498 Apr  6 15:19 deepcopy-gen
--rwxr-xr-x  1 laurentiu.bradin  staff  58391090 Apr  6 15:19 mcad-controller
-podman build --quiet --no-cache --tag mcad-controller:issue_315_small_changes-v1.29.55 -f XXXXXXXXXX/multi-cluster-app-dispatcher/Dockerfile  XXXXXXXXXX/multi-cluster-app-dispatcher
-f784707e8982399ef7ef66e3d8a09b669e6deb17990d174400338813fb13c505
+podman build --quiet --no-cache --tag mcad-controller:main-v1.29.57 -f XXXXX/multi-cluster-app-dispatcher/Dockerfile  XXXXX/multi-cluster-app-dispatcher
 ```
+
+The `GO_BUILD_ARGS` use is also supported by the images builds with either `docker` and `podman`. To turn on the race condition detector in image's executable execute: `make images GO_BUILD_ARGS=-race`
 
 ### Push the Multi-Cluster-App-Dispatcher Image to an Image Repository
 
@@ -140,14 +133,14 @@ The following example assumes an available `<repository>/mcad-controller` on [Do
 
 ```bash
 docker login
-docker push <respository>/mcad-controller:v1.14
+docker push <repository>/mcad-controller:v1.14
 ```
 
 The same can be done with [Quay](quay.io)
 
 ```bash
 docker login quay.io
-docker push <quay_respository>/mcad-controller:v1.14
+docker push <quay_repository>/mcad-controller:v1.14
 ```
 
 Refer to [deployment](../deploy/deployment.md) on how to deploy the `multi-cluster-app-dispatcher` as a controller in Kubernetes.
