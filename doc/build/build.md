@@ -8,7 +8,7 @@ This document will show how to build the `Multi-Cluster-App-Deployer` (`MCAD`) K
 
 To build `multi-cluster-app-dispatcher`, a running Docker environment must be available. Here is a document on [Getting Started with Docker](https://www.docker.com/get-started).
 
-### Clone Multi-Cluster-App-Deployer Git Repo
+### Clone Multi-Cluster-App-Dispatcher Git Repo
 
 Clone this repo in your local environment:
 
@@ -127,11 +127,11 @@ List executable directory
 repo id: 
 branch: issue_315_small_changes
 Build the docker image
-ls -l /Users/laurentiu.bradin/work/repos/multi-cluster-app-dispatcher/_output/bin
+ls -l XXXXX/multi-cluster-app-dispatcher/_output/bin
 total 130144
--rwxr-xr-x  1 laurentiu.bradin  staff   8238498 Apr  6 15:19 deepcopy-gen
--rwxr-xr-x  1 laurentiu.bradin  staff  58391090 Apr  6 15:19 mcad-controller
-podman build --quiet --no-cache --tag mcad-controller:issue_315_small_changes-v1.29.55 -f /Users/laurentiu.bradin/work/repos/multi-cluster-app-dispatcher/Dockerfile  /Users/laurentiu.bradin/work/repos/multi-cluster-app-dispatcher
+-rwxr-xr-x  1 XXXXXX  staff   8238498 Apr  6 15:19 deepcopy-gen
+-rwxr-xr-x  1 XXXXXX  staff  58391090 Apr  6 15:19 mcad-controller
+podman build --quiet --no-cache --tag mcad-controller:issue_315_small_changes-v1.29.55 -f XXXXX/multi-cluster-app-dispatcher/Dockerfile  XXXXXX/multi-cluster-app-dispatcher
 f784707e8982399ef7ef66e3d8a09b669e6deb17990d174400338813fb13c505
 ```
 

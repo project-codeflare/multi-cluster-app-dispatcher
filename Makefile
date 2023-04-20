@@ -24,7 +24,7 @@ TAG:=${TAG}${RELEASE_VER}
 
 .PHONY: print-global-variables
 
-# Build the controler executalbe for use in docker image build
+# Build the controler executable for use in docker image build
 mcad-controller: init generate-code
 	$(info Compiling controller)
 	CGO_ENABLED=0 go build -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
