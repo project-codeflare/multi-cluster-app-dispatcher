@@ -27,7 +27,7 @@
 # limitations under the License.
 
 export ROOT_DIR="$(dirname "$(dirname "$(readlink -fn "$0")")")"
-export LOG_LEVEL=3
+export LOG_LEVEL=2
 export CLEANUP_CLUSTER=${CLEANUP_CLUSTER:-"true"}
 export CLUSTER_CONTEXT="--name test"
 # Using older image due to older version of kubernetes cluster"
@@ -68,26 +68,31 @@ function update_test_host {
   if [ $? -ne 0 ]
   then 
       sudo apt-get install -y --allow-unauthenticated kubectl
+      [ $? -ne 0 ] && echo "Failed to install kubectl" && exit 1  
+      echo "kubectl was sucessfully installed."    
   fi    
   
   which kind >/dev/null 2>&1
   if [ $? -ne 0 ] 
   then
     # Download kind binary (0.18.0)
-    sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.18.0/kind-linux-${arch}
-    sudo chmod +x /usr/local/bin/kind
-    echo "Kind was sucessfully installed."
+    echo "Downloading and installing kind...."
+    sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.18.0/kind-linux-${arch} && \
+    sudo chmod +x /usr/local/bin/kind  
+    [ $? -ne 0 ] && echo "Failed to download kind" && exit 1  
+    echo "Kind was sucessfully installed."    
   fi
 
   which helm >/dev/null 2>&1
   if [ $? -ne 0 ]
   then 
     # Installing helm3
-    curl -fsSL -o ${ROOT_DIR}/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-    chmod 700 ${ROOT_DIR}/get_helm.sh
-    ${ROOT_DIR}/get_helm.sh
-    rm -rf ${ROOT_DIR}/get_helm.sh
+    echo "Downloading and installing helm..."
+    curl -fsSL -o ${ROOT_DIR}/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 && 
+      chmod 700 ${ROOT_DIR}/get_helm.sh && ${ROOT_DIR}/get_helm.sh
+    [ $? -ne 0 ] && echo "Failed to download and install helm" && exit 1
     echo "Helm was sucessfully installed."
+    rm -rf ${ROOT_DIR}/get_helm.sh
   fi
   
   kubectl kuttl version >/dev/null 2>&1
@@ -96,11 +101,15 @@ function update_test_host {
     if [[ "$arch" == "amd64" ]]
     then 
       local kuttl_arch="x86_64"
+    else
+      local kuttl_arch=$arch  
     fi
     # Download kuttl plugin
+    echo "Downloading and installing kuttl...."
     sudo curl -sSLf --output /tmp/kubectl-kuttl https://github.com/kudobuilder/kuttl/releases/download/v${KUTTL_VERSION}/kubectl-kuttl_${KUTTL_VERSION}_linux_${kuttl_arch} && \
     sudo mv /tmp/kubectl-kuttl /usr/local/bin && \
-    sudo chmod a+x /usr/local/bin/kubectl-kuttl && \
+    sudo chmod a+x /usr/local/bin/kubectl-kuttl
+    [ $? -ne 0 ] && echo "Failed to download and install helm" && exit 1
     echo "Kuttl was sucessfully installed."
   fi
 }
@@ -367,7 +376,7 @@ function mcad-quota-management-up {
     echo " "
     echo "helm upgrade --install mcad-controller ${ROOT_DIR}/deployment/mcad-controller namespace kube-system wait set loglevel=10 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=1000m set resources.limits.memory=1024Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY set configMap.quotaEnabled='true' set quotaManagement.rbac.apiGroup=ibm.com set quotaManagement.rbac.resource=quotasubtrees set configMap.name=mcad-controller-configmap set configMap.preemptionEnabled='true'"
     helm upgrade  --install mcad-controller ${ROOT_DIR}/deployment/mcad-controller  \
-                  --namespace kube-system --wait --set loglevel=10 --set resources.requests.cpu=1000m \
+                  --namespace kube-system --wait --set loglevel=${LOG_LEVEL} --set resources.requests.cpu=1000m \
                   --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi \
                   --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY \
                   --set configMap.quotaEnabled='"true"' --set quotaManagement.rbac.apiGroup=ibm.com --set quotaManagement.rbac.resource=quotasubtrees \
@@ -415,7 +424,7 @@ function mcad-up {
  
     echo "helm install mcad-controller namespace kube-system wait set loglevel=2 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=4000m set resources.limits.memory=4096Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY"
     helm upgrade  --install mcad-controller ${ROOT_DIR}/deployment/mcad-controller  --namespace kube-system --wait \
-                  --set loglevel=2 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi \
+                  --set loglevel=${LOG_LEVEL} --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi \
                   --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi \
                   --set configMap.name=mcad-controller-configmap --set configMap.podCreationTimeout='"120000"' \
                   --set configMap.quotaEnabled='"false"' --set coscheduler.rbac.apiGroup=scheduling.sigs.k8s.io \
@@ -457,7 +466,7 @@ function setup-mcad-env {
   echo "Installing Podgroup CRD"
   kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/scheduler-plugins/277b6bdec18f8a9e9ccd1bfeaf4b66495bfc6f92/config/crd/bases/scheduling.sigs.k8s.io_podgroups.yaml
  
- # Turn off master taints
+  # Turn off master taints
   kubectl taint nodes --all node-role.kubernetes.io/master-
  
   # This is meant to orchestrate initial cluster configuration such that accounting tests can be consistent
@@ -499,7 +508,7 @@ function kuttl-tests {
     # Takes a bit of time for namespace created in kuttl testing to completely delete.
     sleep 40
   fi
-  [ -f kubeconfig ] && echo "Kubeconfig found now"
+  rm -f kubeconfig
 }
 
 trap cleanup EXIT
@@ -513,4 +522,4 @@ kuttl-tests
 mcad-quota-management-down
 mcad-up
 echo "==========================>>>>> Running E2E tests... <<<<<=========================="
-go test ./test/e2e -v -timeout 75m
+go test ./test/e2e -v -timeout 75m -count=1
