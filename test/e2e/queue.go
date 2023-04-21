@@ -297,10 +297,10 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		time.Sleep(2 * time.Minute)
 		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		if err != nil {
-			fmt.Fprintf(os.Stdout, "Error getting status")
+			fmt.Fprint(GinkgoWriter, "Error getting status")
 		}
 		pass := false
-		fmt.Fprintf(os.Stdout, "[e2e] status of AW %v.\n", aw1.Status.State)
+		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
 		if len(aw1.Status.PendingPodConditions) == 0 {
 			pass = true
 		}
@@ -526,10 +526,10 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		time.Sleep(60 * time.Second)
 		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		if err != nil {
-			fmt.Fprintf(os.Stdout, "Error getting status")
+			fmt.Fprintf(GinkgoWriter, "Error getting status")
 		}
 		pass := false
-		fmt.Fprintf(os.Stdout, "[e2e] status of AW %v.\n", aw1.Status.State)
+		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
 		if aw1.Status.State == arbv1.AppWrapperStateFailed {
 			pass = true
 		}
@@ -551,10 +551,10 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		time.Sleep(1 * time.Minute)
 		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		if err != nil {
-			fmt.Fprintf(os.Stdout, "Error getting status")
+			fmt.Fprint(GinkgoWriter, "Error getting status")
 		}
 		pass := false
-		fmt.Fprintf(os.Stdout, "[e2e] status of AW %v.\n", aw1.Status.State)
+		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
 		if aw1.Status.State == arbv1.AppWrapperStateCompleted {
 			pass = true
 		}
@@ -577,10 +577,10 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		time.Sleep(1 * time.Minute)
 		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		if err != nil {
-			fmt.Fprintf(os.Stdout, "Error getting status")
+			fmt.Fprint(GinkgoWriter, "Error getting status")
 		}
 		pass := false
-		fmt.Fprintf(os.Stdout, "[e2e] status of AW %v.\n", aw1.Status.State)
+		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
 		if aw1.Status.State == arbv1.AppWrapperStateCompleted {
 			pass = true
 		}
@@ -641,10 +641,10 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		time.Sleep(1 * time.Minute)
 		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		if err != nil {
-			fmt.Fprintf(os.Stdout, "Error getting status")
+			fmt.Fprintf(GinkgoWriter, "Error getting status, %v", err)
 		}
 		pass := false
-		fmt.Fprintf(os.Stdout, "[e2e] status of AW %v.\n", aw1.Status.State)
+		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
 		if aw1.Status.State == arbv1.AppWrapperStateEnqueued {
 			pass = true
 		}
@@ -689,10 +689,10 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err1).NotTo(HaveOccurred())
 		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		if err != nil {
-			fmt.Fprintf(os.Stdout, "Error getting status")
+			fmt.Fprintf(GinkgoWriter, "Error getting status, %v", err)
 		}
 		pass := false
-		fmt.Fprintf(os.Stdout, "[e2e] status of AW %v.\n", aw1.Status.State)
+		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
 		if aw1.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
 			pass = true
 		}
@@ -715,10 +715,10 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err1).NotTo(HaveOccurred())
 		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		if err != nil {
-			fmt.Fprintf(os.Stdout, "Error getting status")
+			fmt.Fprintf(GinkgoWriter, "Error getting status, %v", err)
 		}
 		pass := false
-		fmt.Fprintf(os.Stdout, "[e2e] status of AW %v.\n", aw1.Status.State)
+		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
 		if aw1.Status.State == arbv1.AppWrapperStateActive {
 			pass = true
 		}
@@ -759,7 +759,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			name = fmt.Sprintf("%s%d", name, i+1)
 			cpuDemand := "5m"
 			if ((i+1)%modDivisor) == 0 || i == 0 {
-				fmt.Fprintf(os.Stdout, "[e2e] Creating AW %s with %s cpu and %d replica(s).\n", name, cpuDemand, replicas)
+				fmt.Fprintf(GinkgoWriter, "[e2e] Creating AW %s with %s cpu and %d replica(s).\n", name, cpuDemand, replicas)
 			}
 			aw := createGenericDeploymentWithCPUAW(context, name, cpuDemand, replicas)
 			aws = append(aws, aw)
@@ -768,9 +768,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// Give the deployments time to create pods
 		time.Sleep(2 * time.Minute)
 		for i := 0; i < len(aws); i++ {
-			if ((i+1)%modDivisor) == 0 || i == 0 {
-				fmt.Fprintf(os.Stdout, "[e2e] Checking for %d replicas running for AW %s.\n", replicas, aws[i].Name)
-			}
 			err := waitAWReadyQuiet(context, aws[i])
 			Expect(err).NotTo(HaveOccurred())
 		}

@@ -1,5 +1,6 @@
 FROM  registry.access.redhat.com/ubi8/go-toolset:1.18.10-1 AS BUILDER
 ARG GO_BUILD_ARGS
+USER root
 
 COPY Makefile Makefile
 COPY go.mod go.mod
