@@ -1116,6 +1116,7 @@ func (qjm *XController) ScheduleNext() {
 		klog.V(10).Infof("[ScheduleNext] %s found more recent copy from cache &apiQueueJob=%p apiQueueJob=%+v", apiCacheAWJob.Name, apiCacheAWJob, apiCacheAWJob)
 		apiCacheAWJob.DeepCopyInto(qj)
 	}
+	qjm.schedulingAW.AtomicSet(qj)
 
 	// Re-compute SystemPriority for DynamicPriority policy
 	if qjm.serverOption.DynamicPriority {
