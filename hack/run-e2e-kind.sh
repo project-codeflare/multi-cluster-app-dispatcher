@@ -28,7 +28,7 @@
 # limitations under the License.
 
 export ROOT_DIR="$(dirname "$(dirname "$(readlink -fn "$0")")")"
-export LOG_LEVEL=3
+export LOG_LEVEL=${TEST_LOG_LEVEL:-2}
 export CLEANUP_CLUSTER=${CLEANUP_CLUSTER:-"true"}
 export CLUSTER_CONTEXT="--name test"
 # Using older image due to older version of kubernetes cluster"
@@ -334,7 +334,7 @@ function kube-test-env-up {
     # start mcad controller
     echo "Starting MCAD Controller..."
     echo "helm install mcad-controller namespace kube-system wait set loglevel=2 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=4000m set resources.limits.memory=4096Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY"
-    helm upgrade --install mcad-controller ${ROOT_DIR}/deployment/mcad-controller  --namespace kube-system --wait --set loglevel=2 --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi --set configMap.name=mcad-controller-configmap --set configMap.podCreationTimeout='"120000"' --set configMap.quotaEnabled='"false"' --set coscheduler.rbac.apiGroup=scheduling.sigs.k8s.io --set coscheduler.rbac.resource=podgroups --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY
+    helm upgrade --install mcad-controller ${ROOT_DIR}/deployment/mcad-controller  --namespace kube-system --wait --set loglevel=${LOG_LEVEL} --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi --set configMap.name=mcad-controller-configmap --set configMap.podCreationTimeout='"120000"' --set configMap.quotaEnabled='"false"' --set coscheduler.rbac.apiGroup=scheduling.sigs.k8s.io --set coscheduler.rbac.resource=podgroups --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY
 
     sleep 10
     echo "Listing MCAD Controller Helm Chart and Pod YAML..."
@@ -362,6 +362,11 @@ function kube-test-env-up {
     done
     echo "kubectl uncordon test-worker"
     kubectl uncordon test-worker
+    echo "Waiting for pod in the kube-system namespace to become ready"
+    while [[ $(kubectl get pods -n kube-system -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}' | tr ' ' '\n' | sort -u) != "True" ]]
+    do
+       echo -n "." && sleep 1; 
+    done
 
     # Show available resources of cluster nodes
     echo "---"
@@ -385,4 +390,4 @@ kind-up-cluster
 kube-test-env-up
 
 echo "==========================>>>>> Running E2E tests... <<<<<=========================="
-go test ./test/e2e -v -timeout 75m
+go test ./test/e2e -v -timeout 75m -count=1

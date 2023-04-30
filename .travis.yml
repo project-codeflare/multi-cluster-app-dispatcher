@@ -17,7 +17,7 @@ install: []
 
 
 before_script:
-  - export TEST_LOG_LEVEL=4
+  - export TEST_LOG_LEVEL=2
 
 script:
   - BLUE='\033[34m'

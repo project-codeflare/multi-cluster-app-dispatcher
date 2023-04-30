@@ -1,6 +1,7 @@
-FROM  registry.access.redhat.com/ubi8/go-toolset:1.18.10-1 AS BUILDER
-USER root
+FROM registry.access.redhat.com/ubi8/go-toolset:1.18.10-1 AS BUILDER
+ARG GO_BUILD_ARGS
 WORKDIR /workdir
+USER root
 
 COPY Makefile Makefile
 COPY go.mod go.mod
@@ -10,8 +11,10 @@ COPY pkg pkg
 COPY hack hack
 COPY CONTROLLER_VERSION CONTROLLER_VERSION
 
-RUN cd /workdir && curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl
-RUN make mcad-controller
+RUN cd /workdir && curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/$(go env GOARCH)/kubectl && chmod +x kubectl
+ENV GO_BUILD_ARGS=$GO_BUILD_ARGS
+RUN echo "Go build args: $GO_BUILD_ARGS" && \
+    make mcad-controller
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 

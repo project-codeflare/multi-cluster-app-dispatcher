@@ -165,7 +165,7 @@ type XController struct {
 	quotaManager quota.QuotaManagerInterface
 
 	// Active Scheduling AppWrapper
-	schedulingAW *arbv1.AppWrapper
+	schedulingAW *ActiveAppWrapper
 }
 
 type JobAndClusterAgent struct {
@@ -224,6 +224,7 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		updateQueue:     cache.NewFIFO(GetQueueJobKey),
 		qjqueue:         NewSchedulingQueue(),
 		cache:           clusterstatecache.New(config),
+		schedulingAW:    NewActiveAppWrapper(),
 	}
 	cc.metricsAdapter = adapter.New(serverOption, config, cc.cache)
 
@@ -416,8 +417,6 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	//create (empty) dispatchMap
 	cc.dispatchMap = map[string]string{}
 
-	// Initialize current scheuling active AppWrapper
-	cc.schedulingAW = nil
 	return cc
 }
 
@@ -1098,7 +1097,6 @@ func (qjm *XController) ScheduleNext() {
 	// if we have enough compute resources then we set the AllocatedReplicas to the total
 	// amount of resources asked by the job
 	qj, err := qjm.qjqueue.Pop()
-	qjm.schedulingAW = qj
 	if err != nil {
 		klog.V(3).Infof("[ScheduleNext] Cannot pop QueueJob from qjqueue! err=%#v", err)
 		return // Try to pop qjqueue again
@@ -1118,6 +1116,7 @@ func (qjm *XController) ScheduleNext() {
 		klog.V(10).Infof("[ScheduleNext] %s found more recent copy from cache &apiQueueJob=%p apiQueueJob=%+v", apiCacheAWJob.Name, apiCacheAWJob, apiCacheAWJob)
 		apiCacheAWJob.DeepCopyInto(qj)
 	}
+	qjm.schedulingAW.AtomicSet(qj)
 
 	// Re-compute SystemPriority for DynamicPriority policy
 	if qjm.serverOption.DynamicPriority {
@@ -1149,12 +1148,12 @@ func (qjm *XController) ScheduleNext() {
 
 		// Retrieve HeadOfLine after priority update
 		qj, err = qjm.qjqueue.Pop()
-		qjm.schedulingAW = qj
 		if err != nil {
 			klog.V(3).Infof("[ScheduleNext] Cannot pop QueueJob from qjqueue! err=%#v", err)
 		} else {
 			klog.V(3).Infof("[ScheduleNext] activeQ.Pop_afterPriorityUpdate %s *Delay=%.6f seconds RemainingLength=%d &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qjm.qjqueue.Length(), qj, qj.ResourceVersion, qj.Status)
 		}
+		qjm.schedulingAW.AtomicSet(qj)
 	}
 
 	if qj.Status.CanRun {
@@ -1620,7 +1619,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 		qj.Status.SystemPriority = float64(qj.Spec.Priority)
 		qj.Status.QueueJobState = arbv1.AppWrapperCondInit
 		qj.Status.Conditions = []arbv1.AppWrapperCondition{
-			arbv1.AppWrapperCondition{
+			{
 				Type:                    arbv1.AppWrapperCondInit,
 				Status:                  v1.ConditionTrue,
 				LastUpdateMicroTime:     metav1.NowMicro(),
@@ -1979,9 +1978,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 		if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued &&
 			!cc.qjqueue.IfExistUnschedulableQ(qj) && !cc.qjqueue.IfExistActiveQ(qj) {
 			// One more check to ensure AW is not the current active schedule object
-			if cc.schedulingAW == nil ||
-				(strings.Compare(cc.schedulingAW.Namespace, qj.Namespace) != 0 &&
-					strings.Compare(cc.schedulingAW.Name, qj.Name) != 0) {
+			if cc.schedulingAW.IsActiveAppWrapper(qj.Name, qj.Namespace) {
 				cc.qjqueue.AddIfNotPresent(qj)
 				klog.V(3).Infof("[manageQueueJob] Recovered AppWrapper %s%s - added to active queue, Status=%+v",
 					qj.Namespace, qj.Name, qj.Status)
@@ -2233,9 +2230,11 @@ func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 			for _, ar := range appwrapper.Spec.AggrResources.GenericItems {
 				genericResourceName, gvk, err00 := cc.genericresources.Cleanup(appwrapper, &ar)
 				if err00 != nil {
-					klog.Errorf("[Cleanup] Error deleting generic item %s, GVK=%s.%s.%s from job=%s Status=%+v err=%+v.",
-						genericResourceName, gvk.Group, gvk.Version, gvk.Kind, appwrapper.Name, appwrapper.Status, err00)
+					klog.Errorf("[Cleanup] Error deleting generic item %s, from app wrapper=%s Status=%+v err=%+v.",
+						genericResourceName, appwrapper.Name, appwrapper.Status, err00)
 				}
+				klog.Info("[Cleanup] Delete generic item %s, GVK=%s.%s.%s from app wrapper=%s Status=%+v",
+					genericResourceName, gvk.Group, gvk.Version, gvk.Kind, appwrapper.Name, appwrapper.Status)
 			}
 		}
 

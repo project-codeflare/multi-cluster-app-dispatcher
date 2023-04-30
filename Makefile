@@ -4,7 +4,9 @@ VERSION_FILE=./CONTROLLER_VERSION
 RELEASE_VER=v$(shell $(CAT_CMD) $(VERSION_FILE))
 CURRENT_DIR=$(shell pwd)
 GIT_BRANCH:=$(shell git symbolic-ref --short HEAD 2>&1 | grep -v fatal)
-LOCAL_BUILD_ARGS ?= -race
+#define the GO_BUILD_ARGS if you need to pass additional arguments to the go build
+GO_BUILD_ARGS?=
+
 # Reset branch name if this a Travis CI environment
 ifneq ($(strip $(TRAVIS_BRANCH)),)
 	GIT_BRANCH:=${TRAVIS_BRANCH}
@@ -29,8 +31,13 @@ TAG:=${TAG}${RELEASE_VER}
 
 # Build the controler executalbe for use in docker image build
 mcad-controller: init generate-code
+ifeq ($(strip $(GO_BUILD_ARGS)),)
 	$(info Compiling controller)
 	CGO_ENABLED=0 go build -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
+else
+	$(info Compiling controller with build arguments: '${GO_BUILD_ARGS}')
+	go build $(GO_BUILD_ARGS) -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
+endif	
 
 print-global-variables:
 	$(info "---")
@@ -39,6 +46,7 @@ print-global-variables:
 	$(info "  "GIT_BRANCH="$(GIT_BRANCH)")
 	$(info "  "RELEASE_VER="$(RELEASE_VER)")
 	$(info "  "TAG="$(TAG)")
+	$(info "  "GO_BUILD_ARGS="$(GO_BUILD_ARGS)")
 	$(info "---")
 
 verify: generate-code
@@ -53,30 +61,41 @@ verify-tag-name: print-global-variables
 	# Check for invalid tag name
 	t=${TAG} && [ $${#t} -le 128 ] || { echo "Target name $$t has 128 or more chars"; false; }
 
-generate-code:
-	$(info Compiling deepcopy-gen...)
-	go build -o ${BIN_DIR}/deepcopy-gen ./cmd/deepcopy-gen/
+generate-code: pkg/apis/controller/v1beta1/zz_generated.deepcopy.go
+
+pkg/apis/controller/v1beta1/zz_generated.deepcopy.go: ${BIN_DIR}/deepcopy-gen
 	$(info Generating deepcopy...)
 	${BIN_DIR}/deepcopy-gen -i ./pkg/apis/controller/v1beta1/ -O zz_generated.deepcopy 
 
-images: verify-tag-name 
-	$(info List executable directory)
-	$(info repo id: ${git_repository_id})
-	$(info branch: ${GIT_BRANCH})
-	$(info Build the docker image)
-	docker build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
+${BIN_DIR}/deepcopy-gen:	
+	$(info Compiling deepcopy-gen...)
+	go build -o ${BIN_DIR}/deepcopy-gen ./cmd/deepcopy-gen/
 
-images-podman: verify-tag-name
+images: verify-tag-name generate-code
 	$(info List executable directory)
 	$(info repo id: ${git_repository_id})
 	$(info branch: ${GIT_BRANCH})
-	ls -l ${CURRENT_DIR}/_output/bin
 	$(info Build the docker image)
+ifeq ($(strip $(GO_BUILD_ARGS)),)
+	docker build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
+else 
+	docker build --no-cache --tag mcad-controller:${TAG} --build-arg GO_BUILD_ARGS=$(GO_BUILD_ARGS) -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
+endif		
+
+images-podman: verify-tag-name generate-code
+	$(info List executable directory)
+	$(info repo id: ${git_repository_id})
+	$(info branch: ${GIT_BRANCH})
+	$(info Build the docker image)
+ifeq ($(strip $(GO_BUILD_ARGS)),)
 	podman build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
+else
+	podman build --no-cache --tag mcad-controller:${TAG} --build-arg GO_BUILD_ARGS=$(GO_BUILD_ARGS) -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
+endif	
 
 push-images: verify-tag-name
 ifeq ($(strip $(quay_repository)),)
-	$(info No registry information provide.  To push images to a docker registry please set)
+	$(info No registry information provided.  To push images to a docker registry please set)
 	$(info environment variables: quay_repository, quay_token, and quay_id.  Environment)
 	$(info variables do not need to be set for github Travis CICD.)
 else
@@ -105,14 +124,6 @@ else
 	echo "Running e2e with MCAD registry image image: ${quay_repository}/mcad-controller ${TAG}."
 	hack/run-e2e-kind.sh ${quay_repository}/mcad-controller ${TAG}
 endif
-
-
-# Build the controller executable for use on the local host and using local build args
-# the default for local build args is `-race` to turn race detection, this is not to be used 
-# inside the docker containers.
-mcad-controller-local: init generate-code
-	$(info Compiling controller)
-	go build ${LOCAL_BUILD_ARGS} -o ${BIN_DIR}/mcad-controller-local ./cmd/kar-controllers/
 
 coverage:
 #	KUBE_COVER=y hack/make-rules/test.sh $(WHAT) $(TESTS)
