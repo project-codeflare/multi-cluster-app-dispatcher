@@ -9,15 +9,15 @@ services:
   - docker
 
 go:
-  - "1.16.3"
+  - "1.18.10"
 
 go_import_path: github.com/project-codeflare/multi-cluster-app-dispatcher
 
-install:
-  - go get -u golang.org/x/lint/golint
+install: []
+
 
 before_script:
-  - export TEST_LOG_LEVEL=4
+  - export TEST_LOG_LEVEL=2
 
 script:
   - BLUE='\033[34m'

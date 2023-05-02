@@ -169,7 +169,7 @@ func cleanupTestContextExtendedTime(cxt *context, seconds time.Duration) {
 	// Wait for namespace deleted.
 	// err = wait.Poll(100*time.Millisecond, seconds, namespaceNotExist(cxt))
 	// if err != nil {
-	// 	fmt.Fprintf(os.Stdout, "[cleanupTestContextExtendedTime] Failure check for namespace: %s.\n", cxt.namespace)
+	// 	fmt.Fprintf(GinkgoWriter, "[cleanupTestContextExtendedTime] Failure check for namespace: %s.\n", cxt.namespace)
 	// }
 	//Expect(err).NotTo(HaveOccurred())
 }
@@ -407,12 +407,12 @@ func anyPodsExist(ctx *context, awNamespace string, awName string) wait.Conditio
 
 			// First find a pod from the list that is part of the AW
 			if awn, found := podFromPodList.Labels["appwrapper.mcad.ibm.com"]; !found || awn != awName {
-				//DEBUG fmt.Fprintf(os.Stdout, "[anyPodsExist] Pod %s in phase: %s not part of AppWrapper: %s, labels: %#v\n",
+				//DEBUG fmt.Fprintf(GinkgoWriter, "[anyPodsExist] Pod %s in phase: %s not part of AppWrapper: %s, labels: %#v\n",
 				//DEBUG 	podFromPodList.Name, podFromPodList.Status.Phase, awName, podFromPodList.Labels)
 				continue
 			}
 			podExistsNum++
-			fmt.Fprintf(os.Stdout, "[anyPodsExist] Found Pod %s in phase: %s as part of AppWrapper: %s, labels: %#v\n",
+			fmt.Fprintf(GinkgoWriter, "[anyPodsExist] Found Pod %s in phase: %s as part of AppWrapper: %s, labels: %#v\n",
 				podFromPodList.Name, podFromPodList.Status.Phase, awName, podFromPodList.Labels)
 		}
 
@@ -426,7 +426,7 @@ func podPhase(ctx *context, awNamespace string, awName string, pods []*v1.Pod, p
 		Expect(err).NotTo(HaveOccurred())
 
 		if podList == nil || podList.Size() < 1 {
-			fmt.Fprintf(os.Stdout, "[podPhase] Listing podList found for Namespace: %s/%s resulting in no podList found that could match AppWrapper with pod count: %d\n",
+			fmt.Fprintf(GinkgoWriter, "[podPhase] Listing podList found for Namespace: %s/%s resulting in no podList found that could match AppWrapper with pod count: %d\n",
 				awNamespace, awName, len(pods))
 		}
 
@@ -436,7 +436,7 @@ func podPhase(ctx *context, awNamespace string, awName string, pods []*v1.Pod, p
 
 			// First find a pod from the list that is part of the AW
 			if awn, found := podFromPodList.Labels["appwrapper.mcad.ibm.com"]; !found || awn != awName {
-				fmt.Fprintf(os.Stdout, "[podPhase] Pod %s in phase: %s not part of AppWrapper: %s, labels: %#v\n",
+				fmt.Fprintf(GinkgoWriter, "[podPhase] Pod %s in phase: %s not part of AppWrapper: %s, labels: %#v\n",
 					podFromPodList.Name, podFromPodList.Status.Phase, awName, podFromPodList.Labels)
 				continue
 			}
@@ -458,8 +458,8 @@ func podPhase(ctx *context, awNamespace string, awName string, pods []*v1.Pod, p
 						}
 
 					}
-					if matchToPodsFromInput == false {
-						fmt.Fprintf(os.Stdout, "[podPhase] Pod %s in phase: %s does not match any input pods: %#v \n",
+					if !matchToPodsFromInput {
+						fmt.Fprintf(GinkgoWriter, "[podPhase] Pod %s in phase: %s does not match any input pods: %#v \n",
 							podFromPodList.Name, podFromPodList.Status.Phase, inputPodIDs)
 					}
 					break
@@ -478,7 +478,7 @@ func awStatePhase(ctx *context, aw *arbv1.AppWrapper, phase []arbv1.AppWrapperSt
 
 		phaseCount := 0
 		if !quite {
-			fmt.Fprintf(os.Stdout, "[awStatePhase] AW %s found with state: %s.\n", aw.Name, aw.Status.State)
+			fmt.Fprintf(GinkgoWriter, "[awStatePhase] AW %s found with state: %s.\n", aw.Name, aw.Status.State)
 		}
 
 		for _, p := range phase {
@@ -497,7 +497,7 @@ func cleanupTestObjectsPtr(context *context, appwrappersPtr *[]*arbv1.AppWrapper
 
 func cleanupTestObjectsPtrVerbose(context *context, appwrappersPtr *[]*arbv1.AppWrapper, verbose bool) {
 	if appwrappersPtr == nil {
-		fmt.Fprintf(os.Stdout, "[cleanupTestObjectsPtr] No  AppWrappers to cleanup.\n")
+		fmt.Fprintf(GinkgoWriter, "[cleanupTestObjectsPtr] No  AppWrappers to cleanup.\n")
 	} else {
 		cleanupTestObjects(context, *appwrappersPtr)
 	}
@@ -509,7 +509,7 @@ func cleanupTestObjects(context *context, appwrappers []*arbv1.AppWrapper) {
 
 func cleanupTestObjectsVerbose(context *context, appwrappers []*arbv1.AppWrapper, verbose bool) {
 	if appwrappers == nil {
-		fmt.Fprintf(os.Stdout, "[cleanupTestObjects] No AppWrappers to cleanup.\n")
+		fmt.Fprintf(GinkgoWriter, "[cleanupTestObjects] No AppWrappers to cleanup.\n")
 		return
 	}
 
@@ -519,13 +519,13 @@ func cleanupTestObjectsVerbose(context *context, appwrappers []*arbv1.AppWrapper
 		pods := getPodsOfAppWrapper(context, aw)
 		awNamespace := aw.Namespace
 		awName := aw.Name
-		fmt.Fprintf(os.Stdout, "[cleanupTestObjects] Deleting AW %s.\n", aw.Name)
+		fmt.Fprintf(GinkgoWriter, "[cleanupTestObjects] Deleting AW %s.\n", aw.Name)
 		err := deleteAppWrapper(context, aw.Name)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for the pods of the deleted the appwrapper to be destroyed
 		for _, pod := range pods {
-			fmt.Fprintf(os.Stdout, "[cleanupTestObjects] Awaiting pod %s/%s to be deleted for AW %s.\n",
+			fmt.Fprintf(GinkgoWriter, "[cleanupTestObjects] Awaiting pod %s/%s to be deleted for AW %s.\n",
 				pod.Namespace, pod.Name, aw.Name)
 		}
 		err = waitAWPodsDeleted(context, awNamespace, awName, pods)
@@ -536,7 +536,7 @@ func cleanupTestObjectsVerbose(context *context, appwrappers []*arbv1.AppWrapper
 			for _, pod := range pods {
 				podExist, _ := context.kubeclient.CoreV1().Pods(pod.Namespace).Get(gcontext.Background(), pod.Name, metav1.GetOptions{})
 				if podExist != nil {
-					fmt.Fprintf(os.Stdout, "[cleanupTestObjects] Found pod %s/%s %s, not completedly deleted for AW %s.\n", podExist.Namespace, podExist.Name, podExist.Status.Phase, aw.Name)
+					fmt.Fprintf(GinkgoWriter, "[cleanupTestObjects] Found pod %s/%s %s, not completedly deleted for AW %s.\n", podExist.Namespace, podExist.Name, podExist.Status.Phase, aw.Name)
 					podsStillExisting = append(podsStillExisting, podExist)
 				}
 			}
@@ -560,7 +560,7 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 		Expect(err).NotTo(HaveOccurred())
 
 		if podList == nil || podList.Size() < 1 {
-			fmt.Fprintf(os.Stdout, "[awPodPhase] Listing podList found for Namespace: %s resulting in no podList found that could match AppWrapper: %s \n",
+			fmt.Fprintf(GinkgoWriter, "[awPodPhase] Listing podList found for Namespace: %s resulting in no podList found that could match AppWrapper: %s \n",
 				aw.Namespace, aw.Name)
 		}
 
@@ -568,7 +568,7 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 		for _, pod := range podList.Items {
 			if awn, found := pod.Labels["appwrapper.mcad.ibm.com"]; !found || awn != aw.Name {
 				if !quite {
-					fmt.Fprintf(os.Stdout, "[awPodPhase] Pod %s not part of AppWrapper: %s, labels: %s\n", pod.Name, aw.Name, pod.Labels)
+					fmt.Fprintf(GinkgoWriter, "[awPodPhase] Pod %s not part of AppWrapper: %s, labels: %s\n", pod.Name, aw.Name, pod.Labels)
 				}
 				continue
 			}
@@ -576,7 +576,7 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 			for _, p := range phase {
 				if pod.Status.Phase == p {
 					//DEBUGif quite {
-					//DEBUG	fmt.Fprintf(os.Stdout, "[awPodPhase] Found pod %s of AppWrapper: %s, phase: %v\n", pod.Name, aw.Name, p)
+					//DEBUG	fmt.Fprintf(GinkgoWriter, "[awPodPhase] Found pod %s of AppWrapper: %s, phase: %v\n", pod.Name, aw.Name, p)
 					//DEBUG}
 					readyTaskNum++
 					break
@@ -584,7 +584,7 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 					pMsg := pod.Status.Message
 					if len(pMsg) > 0 {
 						pReason := pod.Status.Reason
-						fmt.Fprintf(os.Stdout, "[awPodPhase] pod: %s, phase: %s, reason: %s, message: %s\n", pod.Name, p, pReason, pMsg)
+						fmt.Fprintf(GinkgoWriter, "[awPodPhase] pod: %s, phase: %s, reason: %s, message: %s\n", pod.Name, p, pReason, pMsg)
 					}
 					containerStatuses := pod.Status.ContainerStatuses
 					for _, containerStatus := range containerStatuses {
@@ -594,7 +594,7 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 							if len(wMsg) > 0 {
 								wReason := waitingState.Reason
 								containerName := containerStatus.Name
-								fmt.Fprintf(os.Stdout, "[awPodPhase] condition for pod: %s, phase: %s, container name: %s, "+
+								fmt.Fprintf(GinkgoWriter, "[awPodPhase] condition for pod: %s, phase: %s, container name: %s, "+
 									"reason: %s, message: %s\n", pod.Name, p, containerName, wReason, wMsg)
 							}
 						}
@@ -604,7 +604,7 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 		}
 
 		//DEBUGif taskNum <= readyTaskNum && quite {
-		//DEBUG	fmt.Fprintf(os.Stdout, "[awPodPhase] Successfully found %v podList of AppWrapper: %s, state: %s\n", readyTaskNum, aw.Name, aw.Status.State)
+		//DEBUG	fmt.Fprintf(GinkgoWriter, "[awPodPhase] Successfully found %v podList of AppWrapper: %s, state: %s\n", readyTaskNum, aw.Name, aw.Status.State)
 		//DEBUG}
 
 		return taskNum <= readyTaskNum, nil
@@ -740,7 +740,7 @@ func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bo
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite))
 }
 
-func waitAWPodsCompletedEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool, timeout time.Duration ) error {
+func waitAWPodsCompletedEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool, timeout time.Duration) error {
 	return wait.Poll(100*time.Millisecond, timeout, awPodPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodSucceeded}, taskNum, quite))
 }
@@ -831,7 +831,7 @@ func createReplicaSet(context *context, name string, rep int32, img string, req 
 	return deployment
 }
 
-func createJobAWWithInitContainer(context *context, name string, requeuingTimeInSeconds int, requeuingGrowthType string, requeuingMaxNumRequeuings int ) *arbv1.AppWrapper {
+func createJobAWWithInitContainer(context *context, name string, requeuingTimeInSeconds int, requeuingGrowthType string, requeuingMaxNumRequeuings int) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "batch/v1",
 		"kind": "Job",
 	"metadata": {
@@ -894,8 +894,8 @@ func createJobAWWithInitContainer(context *context, name string, requeuingTimeIn
 			SchedSpec: arbv1.SchedulingSpecTemplate{
 				MinAvailable: minAvailable,
 				Requeuing: arbv1.RequeuingTemplate{
-					TimeInSeconds: requeuingTimeInSeconds,
-					GrowthType: requeuingGrowthType,
+					TimeInSeconds:    requeuingTimeInSeconds,
+					GrowthType:       requeuingGrowthType,
 					MaxNumRequeuings: requeuingMaxNumRequeuings,
 				},
 			},
@@ -953,7 +953,7 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 				"containers": [
 					{
 						"name": "aw-deployment-3",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"ports": [
 							{
 								"containerPort": 80
@@ -1029,7 +1029,7 @@ func createDeploymentAWwith900CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-900cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "900m"
@@ -1110,7 +1110,7 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-550cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "550m"
@@ -1191,7 +1191,7 @@ func createDeploymentAWwith125CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-125cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "125m"
@@ -1272,7 +1272,7 @@ func createDeploymentAWwith126CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-126cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "126m"
@@ -1353,7 +1353,7 @@ func createDeploymentAWwith350CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-350cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "350m"
@@ -1434,7 +1434,7 @@ func createDeploymentAWwith351CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-351cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "351m"
@@ -1515,7 +1515,7 @@ func createDeploymentAWwith426CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-426cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "426m"
@@ -1596,7 +1596,7 @@ func createDeploymentAWwith425CPU(context *context, name string) *arbv1.AppWrapp
 				"containers": [
 					{
 						"name": "aw-deployment-2-425cpu",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "425m"
@@ -1677,7 +1677,7 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 				"containers": [
 					{
 						"name": "aw-generic-deployment-3",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"ports": [
 							{
 								"containerPort": 80
@@ -2264,7 +2264,7 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 				"containers": [
 					{
 						"name": "aw-deployment-2-status",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"ports": [
 							{
 								"containerPort": 80
@@ -2305,7 +2305,7 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 			"containers": [
 				{
 					"name": "aw-deployment-3-status",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"ports": [
 						{
 							"containerPort": 80
@@ -2392,7 +2392,7 @@ func createGenericDeploymentAWWithService(context *context, name string) *arbv1.
 				"containers": [
 					{
 						"name": "aw-deployment-3-status",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"ports": [
 							{
 								"containerPort": 80
@@ -2515,7 +2515,7 @@ func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand s
 				"containers": [
 					{
 						"name": "%s",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "%s"
@@ -2597,7 +2597,7 @@ func createGenericDeploymentCustomPodResourcesWithCPUAW(context *context, name s
 				"containers": [
 					{
 						"name": "%s",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
 								"cpu": "%s"
@@ -2764,7 +2764,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 				"containers": [
 					{
 						"name": "aw-statefulset-2",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"imagePullPolicy": "Never",
 						"ports": [
 							{
@@ -2841,7 +2841,7 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 				"containers": [
 					{
 						"name": "aw-generic-statefulset-2",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"imagePullPolicy": "Never",
 						"ports": [
 							{
@@ -2886,9 +2886,11 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 	return appwrapper
 }
 
-//NOTE: Recommend this test not to be the last test in the test suite it may pass
-//      may pass the local test but may cause controller to fail which is not
-//      part of this test's validation.
+// NOTE:
+//
+//	Recommend this test not to be the last test in the test suite it may pass
+//	may pass the local test but may cause controller to fail which is not
+//	part of this test's validation.
 func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "v1",
 		"kind": "Pod",
@@ -2904,7 +2906,7 @@ func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "aw-bad-podtemplate-2",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"ports": [
 						{
 							"containerPort": 80
@@ -2971,7 +2973,7 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "aw-podtemplate-2",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"ports": [
 						{
 							"containerPort": 80
@@ -3038,7 +3040,7 @@ func createPodCheckFailedStatusAW(context *context, name string) *arbv1.AppWrapp
 			"containers": [
 				{
 					"name": "aw-checkfailedstatus-1",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"ports": [
 						{
 							"containerPort": 80
@@ -3109,7 +3111,7 @@ func createGenericPodAWCustomDemand(context *context, name string, cpuDemand str
 			"containers": [
 					{
 						"name": "%s",
-						"image": "k8s.gcr.io/echoserver:1.4",
+						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"limits": {
 								"cpu": "%s"
@@ -3183,7 +3185,7 @@ func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "aw-generic-pod-1",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"resources": {
 						"limits": {
 							"memory": "150Mi"
@@ -3256,7 +3258,7 @@ func createGenericPodTooBigAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "aw-generic-big-pod-1",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"resources": {
 						"limits": {
 							"cpu": "100",
@@ -3329,7 +3331,7 @@ func createBadGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 			"containers": [
 				{
 					"name": "aw-bad-generic-pod-1",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"ports": [
 						{
 							"containerPort": 80
@@ -3429,7 +3431,7 @@ func createBadGenericPodTemplateAW(context *context, name string) (*arbv1.AppWra
 			"containers": [
 				{
 					"name": "aw-generic-podtemplate-2",
-					"image": "k8s.gcr.io/echoserver:1.4",
+					"image": "kicbase/echo-server:1.0",
 					"ports": [
 						{
 							"containerPort": 80

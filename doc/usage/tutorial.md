@@ -23,7 +23,7 @@ kind: AppWrapper
 metadata:
   name: stateful-set-2-replicas
 spec:
-  schedSpec:
+  schedulingSpec:
     minAvailable: 2
   resources:
     Items:
@@ -49,7 +49,7 @@ spec:
             spec:
               containers:
                - name: stateful-set-2-replicas
-                 image: k8s.gcr.io/echoserver:1.4
+                 image: kicbase/echo-server:1.0
                  resources:
                    requests:
                      memory: "200Mi"
@@ -193,7 +193,7 @@ kind: AppWrapper
 metadata:
   name: deployment-2-replicas
 spec:
-  schedSpec:
+  schedulingSpec:
     minAvailable: 2
   resources:
     Items:
@@ -218,7 +218,7 @@ spec:
             spec:
               containers:
                - name: deployment-2-replicas
-                 image: k8s.gcr.io/echoserver:1.4
+                 image: kicbase/echo-server:1.0
                  resources:
                    limits:
                      memory: 150Mi

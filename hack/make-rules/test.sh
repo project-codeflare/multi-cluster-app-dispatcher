@@ -223,7 +223,7 @@ runTests() {
     # `go test` does not install the things it builds. `go test -i` installs
     # the build artifacts but doesn't run the tests.  The two together provide
     # a large speedup for tests that do not need to be rebuilt.
-    go test -i "${goflags[@]:+${goflags[@]}}" \
+    go test "${goflags[@]:+${goflags[@]}}" \
     ${KUBE_RACE} ${KUBE_TIMEOUT} "${@}" \
     "${testargs[@]:+${testargs[@]}}"
     go test "${goflags[@]:+${goflags[@]}}" \
