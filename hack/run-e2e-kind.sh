@@ -27,7 +27,7 @@
 # limitations under the License.
 
 export ROOT_DIR="$(dirname "$(dirname "$(readlink -fn "$0")")")"
-export LOG_LEVEL=2
+export LOG_LEVEL=${TEST_LOG_LEVEL:-2}
 export CLEANUP_CLUSTER=${CLEANUP_CLUSTER:-"true"}
 export CLUSTER_CONTEXT="--name test"
 # Using older image due to older version of kubernetes cluster"
@@ -153,7 +153,18 @@ function check-prerequisites {
     exit 1
   else
     echo "end to end test with ${IMAGE_MCAD}."
+    echo "end to end test with ${IMAGE_MCAD}."
   fi
+  
+  which helm >/dev/null 2>&1
+  if [ $? -ne 0 ]
+  then
+    echo "helm not installed, exiting."
+    exit 1
+  else
+    echo -n "found helm, " && helm version --short
+  fi  
+
   
   which helm >/dev/null 2>&1
   if [ $? -ne 0 ]
@@ -175,6 +186,26 @@ function kind-up-cluster {
     exit 1
   fi
   CLUSTER_STARTED="true"
+  if [ $? -ne 0 ]
+  then
+    echo "Failed to start kind cluster"
+    exit 1
+  fi
+  CLUSTER_STARTED="true"
+
+  docker pull ${IMAGE_ECHOSERVER} 
+  if [ $? -ne 0 ]
+  then
+    echo "Failed to pull ${IMAGE_ECHOSERVER}"
+    exit 1
+  fi
+
+  docker pull ${IMAGE_UBUNTU_LATEST}
+  if [ $? -ne 0 ]
+  then
+    echo "Failed to pull ${IMAGE_UBUNTU_LATEST}"
+    exit 1
+  fi
 
   docker pull ${IMAGE_ECHOSERVER} 
   if [ $? -ne 0 ]
@@ -198,8 +229,23 @@ function kind-up-cluster {
       echo "Failed to pull ${IMAGE_MCAD}"
       exit 1
     fi
+    if [ $? -ne 0 ]
+    then
+      echo "Failed to pull ${IMAGE_MCAD}"
+      exit 1
+    fi
   fi
   docker images
+
+  for image in ${IMAGE_ECHOSERVER} ${IMAGE_UBUNTU_LATEST} ${IMAGE_MCAD}
+  do
+    kind load docker-image ${image} ${CLUSTER_CONTEXT}
+    if [ $? -ne 0 ]
+    then
+      echo "Failed to load image ${image} in cluster"
+      exit 1
+    fi
+  done 
 
   for image in ${IMAGE_ECHOSERVER} ${IMAGE_UBUNTU_LATEST} ${IMAGE_MCAD}
   do
@@ -216,6 +262,11 @@ function kind-up-cluster {
 function cleanup {
     echo "==========================>>>>> Cleaning up... <<<<<=========================="
     echo " "
+    if [[ ${CLUSTER_STARTED} == "false" ]]
+    then
+      echo "Cluster was not started, nothing more to do."
+      return
+    fi  
     if [[ ${CLUSTER_STARTED} == "false" ]]
     then
       echo "Cluster was not started, nothing more to do."
@@ -513,6 +564,10 @@ function kuttl-tests {
 
 trap cleanup EXIT
 
+   update_test_host
+fi
+
+check-prerequisites 
 update_test_host
 check-prerequisites 
 kind-up-cluster

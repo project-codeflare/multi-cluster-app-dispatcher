@@ -25,7 +25,7 @@ spec:
             spec:
               containers:
                - name: 0001-aw-generic-deployment-3
-                 image: k8s.gcr.io/echoserver:1.4
+                 image: kicbase/echo-server:1.0
                  ports:
                  - containerPort: 80
                  resources:

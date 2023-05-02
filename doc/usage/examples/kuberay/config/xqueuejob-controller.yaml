@@ -5,13 +5,10 @@ metadata:
     meta.helm.sh/release-name: mcad
     meta.helm.sh/release-namespace: kube-system
     rbac.authorization.kubernetes.io/autoupdate: "true"
-  creationTimestamp: "2022-09-26T14:38:29Z"
   labels:
     app.kubernetes.io/managed-by: Helm
     kubernetes.io/bootstrapping: rbac-defaults
   name: system:controller:xqueuejob-controller
-  resourceVersion: "516188"
-  uid: cff865b6-db8f-4bf5-ae28-c281e5599b91
 rules:
 - apiGroups:
   - mcad.ibm.com
