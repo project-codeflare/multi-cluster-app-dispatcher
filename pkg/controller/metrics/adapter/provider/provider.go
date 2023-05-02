@@ -31,6 +31,7 @@ limitations under the License.
 package provider
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"sync"
@@ -51,8 +52,8 @@ import (
 	"k8s.io/metrics/pkg/apis/external_metrics"
 
 	clusterstatecache "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
-	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/provider"
-	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/provider/helpers"
+	"sigs.k8s.io/custom-metrics-apiserver/pkg/provider"
+	"sigs.k8s.io/custom-metrics-apiserver/pkg/provider/helpers"
 )
 
 // CustomMetricResource wraps provider.CustomMetricInfo in a struct which stores the Name and Namespace of the resource
@@ -316,7 +317,7 @@ func (p *clusterMetricsProvider) metricsFor(namespace string, selector labels.Se
 	}, nil
 }
 
-func (p *clusterMetricsProvider) GetMetricByName(name types.NamespacedName, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValue, error) {
+func (p *clusterMetricsProvider) GetMetricByName(ctx context.Context, name types.NamespacedName, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValue, error) {
 	p.valuesLock.RLock()
 	defer p.valuesLock.RUnlock()
 
@@ -327,7 +328,7 @@ func (p *clusterMetricsProvider) GetMetricByName(name types.NamespacedName, info
 	return p.metricFor(value, name, labels.Everything(), info, metricSelector)
 }
 
-func (p *clusterMetricsProvider) GetMetricBySelector(namespace string, selector labels.Selector, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValueList, error) {
+func (p *clusterMetricsProvider) GetMetricBySelector(ctx context.Context, namespace string, selector labels.Selector, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValueList, error) {
 	p.valuesLock.RLock()
 	defer p.valuesLock.RUnlock()
 
@@ -353,7 +354,7 @@ func (p *clusterMetricsProvider) ListAllMetrics() []provider.CustomMetricInfo {
 	return metrics
 }
 
-func (p *clusterMetricsProvider) GetExternalMetric(namespace string, metricSelector labels.Selector,
+func (p *clusterMetricsProvider) GetExternalMetric(ctx context.Context, namespace string, metricSelector labels.Selector,
 	info provider.ExternalMetricInfo) (*external_metrics.ExternalMetricValueList, error) {
 	klog.V(10).Infof("[GetExternalMetric] Entered GetExternalMetric()")
 	klog.V(9).Infof("[GetExternalMetric] metricsSelector: %s, metricsInfo: %s", metricSelector.String(), info.Metric)

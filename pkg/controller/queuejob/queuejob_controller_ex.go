@@ -156,7 +156,7 @@ type XController struct {
 	dispatchMap map[string]string
 
 	// Metrics API Server
-	metricsAdapter *adapter.MetricsAdpater
+	metricsAdapter *adapter.MetricsAdapter
 
 	// EventQueueforAgent
 	agentEventQueue *cache.FIFO
