@@ -563,11 +563,6 @@ function kuttl-tests {
 }
 
 trap cleanup EXIT
-
-   update_test_host
-fi
-
-check-prerequisites 
 update_test_host
 check-prerequisites 
 kind-up-cluster
