@@ -36,13 +36,13 @@ import (
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
+	"k8s.io/klog/v2"
 
 	"os"
 )
 
 func main() {
-	//flag.Parse()
-
+	klog.InitFlags(nil)
 	s := options.NewServerOption()
 	s.AddFlags(flag.CommandLine)
 
