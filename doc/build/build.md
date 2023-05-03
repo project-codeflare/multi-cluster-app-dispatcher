@@ -83,10 +83,6 @@ If you want to run the end to end tests locally, you will need to have the docke
 
 From the root directory of the repository:
 
-If you want to run the end to end tests locally, you will need to have the docker daemon running on your workstation, and build the image using docker. Images can also be build using podman for deployment of the MCAD controller on remote clusters.
-
-From the root directory of the repository:
-
 ```bash
 # With docker daemon running
 multi-cluster-app-dispatcher % make images

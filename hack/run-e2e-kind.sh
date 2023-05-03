@@ -153,7 +153,6 @@ function check-prerequisites {
     exit 1
   else
     echo "end to end test with ${IMAGE_MCAD}."
-    echo "end to end test with ${IMAGE_MCAD}."
   fi
   
   which helm >/dev/null 2>&1
@@ -246,27 +245,12 @@ function kind-up-cluster {
       exit 1
     fi
   done 
-
-  for image in ${IMAGE_ECHOSERVER} ${IMAGE_UBUNTU_LATEST} ${IMAGE_MCAD}
-  do
-    kind load docker-image ${image} ${CLUSTER_CONTEXT}
-    if [ $? -ne 0 ]
-    then
-      echo "Failed to load image ${image} in cluster"
-      exit 1
-    fi
-  done 
 }
 
 # clean up
 function cleanup {
     echo "==========================>>>>> Cleaning up... <<<<<=========================="
     echo " "
-    if [[ ${CLUSTER_STARTED} == "false" ]]
-    then
-      echo "Cluster was not started, nothing more to do."
-      return
-    fi  
     if [[ ${CLUSTER_STARTED} == "false" ]]
     then
       echo "Cluster was not started, nothing more to do."
