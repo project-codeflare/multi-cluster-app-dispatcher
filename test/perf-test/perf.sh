@@ -94,23 +94,23 @@ do
 # Had to do this OSTYPE because sed acts differently on Linux versus Mac
     case "$OSTYPE" in
       linux-gnu*)
-        sed -i "s/defaultaw-schd-spec-with-timeout-$num/defaultaw-schd-spec-with-timeout-$next_num/g" ${SCRIPT_DIR}/preempt-exp.yaml ;;
+        sed -i "s/defaultaw-batchv1-$num/defaultaw-batchv1-$next_num/g" ${SCRIPT_DIR}/aw-batchv1-job.yaml ;;
       darwin*) 
-        sed -i '' "s/defaultaw-schd-spec-with-timeout-$num/defaultaw-schd-spec-with-timeout-$next_num/g" ${SCRIPT_DIR}/preempt-exp.yaml ;;
+        sed -i '' "s/defaultaw-batchv1-$num/defaultaw-batchv1-$next_num/g" ${SCRIPT_DIR}/aw-batchv1-job.yaml ;;
       *) 
-        sed -i "s/defaultaw-schd-spec-with-timeout-$num/defaultaw-schd-spec-with-timeout-$next_num/g" ${SCRIPT_DIR}/preempt-exp.yaml ;;
+        sed -i "s/defaultaw-batchv1-$num/defaultaw-batchv1-$next_num/g" ${SCRIPT_DIR}/aw-batchv1-job.yaml ;;
     esac
-    kubectl apply -f ${SCRIPT_DIR}/preempt-exp.yaml
+    kubectl apply -f ${SCRIPT_DIR}/aw-batchv1-job.yaml
 done
 
-    # Let's reset the original preempt-exp.yaml file back to original value 
+    # Let's reset the original aw-batchv1-job.yaml file back to original value 
     case "$OSTYPE" in
       linux-gnu*)
-        sed -i "s/defaultaw-schd-spec-with-timeout-$next_num/defaultaw-schd-spec-with-timeout-1/g" ${SCRIPT_DIR}/preempt-exp.yaml ;;
+        sed -i "s/defaultaw-batchv1-$next_num/defaultaw-batchv1-1/g" ${SCRIPT_DIR}/aw-batchv1-job.yaml ;;
       darwin*) 
-        sed -i '' "s/defaultaw-schd-spec-with-timeout-$next_num/defaultaw-schd-spec-with-timeout-1/g" ${SCRIPT_DIR}/preempt-exp.yaml ;;
+        sed -i '' "s/defaultaw-batchv1-$next_num/defaultaw-batchv1/g" ${SCRIPT_DIR}/aw-batchv1-job.yaml ;;
       *) 
-        sed -i "s/defaultaw-schd-spec-with-timeout-$next_num/defaultaw-schd-spec-with-timeout-1/g" ${SCRIPT_DIR}/preempt-exp.yaml ;;
+        sed -i "s/defaultaw-batchv1-$next_num/defaultaw-batchv1/g" ${SCRIPT_DIR}/aw-batchv1-job.yaml ;;
     esac
 
 # Check for all jobs to report complete
