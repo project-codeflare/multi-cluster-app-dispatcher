@@ -8,7 +8,7 @@ This document will show how to build the `Multi-Cluster-App-Dispatcher` (`MCAD`)
 
 To build `Multi-Cluster-App-Dispatcher`, a running Docker environment must be available. Here is a document on [Getting Started with Docker](https://www.docker.com/get-started). Podman image builds are also supported.
 
-### Clone Multi-Cluster-App-Deployer Git Repo
+### Clone Multi-Cluster-App-Dispatcher Git Repo
 
 Clone this repo in your local environment:
 
@@ -77,7 +77,7 @@ Compiling controller with build arguments: '-race'
 go build -race -o _output/bin/mcad-controller ./cmd/kar-controllers/
 ```
 
-### Build the Multi-Cluster-App-Dispatcher Image
+### Build the Multi Cluster App Dispatcher Image
 
 If you want to run the end to end tests locally, you will need to have the docker daemon running on your workstation, and build the image using docker. Images can also be build using podman for deployment of the MCAD controller on remote clusters.
 

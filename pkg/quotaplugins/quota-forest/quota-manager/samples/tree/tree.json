@@ -1,0 +1,125 @@
+{
+    "kind": "QuotaTree",
+    "metadata": {
+      "name": "ExampleTree"
+    },
+    "spec": {
+      "resourceNames": [
+      	"cpu"
+      	],
+      "nodes": {
+
+        "A": {
+          "parent": "nil",
+          "hard": "false",
+          "quota": {
+            "cpu": "10"
+          }
+        },
+
+        "B": {
+          "parent": "A",
+          "hard": "false",
+          "quota": {
+            "cpu": "2"
+          }
+        },
+
+        "C": {
+          "parent": "A",
+          "hard": "false",
+          "quota": {
+            "cpu": "6"
+          }
+        },
+
+        "D": {
+          "parent": "A",
+          "hard": "false",
+          "quota": {
+            "cpu": "2"
+          }
+        },
+
+        "E": {
+          "parent": "B",
+          "hard": "false",
+          "quota": {
+            "cpu": "1"
+          }
+        },
+
+        "F": {
+          "parent": "B",
+          "hard": "false",
+          "quota": {
+            "cpu": "1"
+          }
+        },
+
+        "G": {
+          "parent": "C",
+          "hard": "false",
+          "quota": {
+            "cpu": "3"
+          }
+        },
+
+        "H": {
+          "parent": "C",
+          "hard": "false",
+          "quota": {
+            "cpu": "3"
+          }
+        },
+
+        "K": {
+          "parent": "G",
+          "hard": "false",
+          "quota": {
+            "cpu": "1"
+          }
+        },
+
+        "L": {
+          "parent": "G",
+          "hard": "false",
+          "quota": {
+            "cpu": "2"
+          }
+        },
+
+        "M": {
+          "parent": "H",
+          "hard": "false",
+          "quota": {
+            "cpu": "1"
+          }
+        },
+
+        "N": {
+          "parent": "H",
+          "hard": "false",
+          "quota": {
+            "cpu": "2"
+          }
+        },
+
+        "I": {
+          "parent": "D",
+          "hard": "false",
+          "quota": {
+            "cpu": "1"
+          }
+        },
+
+        "J": {
+          "parent": "D",
+          "hard": "false",
+          "quota": {
+            "cpu": "1"
+          }
+        }
+      }
+    }
+}

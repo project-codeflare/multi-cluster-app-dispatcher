@@ -32,6 +32,7 @@ package queuejob
 
 import (
 	"fmt"
+	qmutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
 	"math"
 	"math/rand"
 	"reflect"
@@ -41,12 +42,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotaforestmanager"
 	dto "github.com/prometheus/client_model/go"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota"
-	qmutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotamanager/util"
 	"k8s.io/apimachinery/pkg/api/equality"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -383,14 +384,13 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	cc.refManager = queuejobresources.NewLabelRefManager()
 
 	// Setup Quota
-	// TODO: Enable this block, with the merge of quota-management branch
-	// if serverOption.QuotaEnabled {
-	//	dispatchedAWDemands, dispatchedAWs := cc.getDispatchedAppWrappers()
-	//	cc.quotaManager, _ = quotamanager.NewQuotaManager(dispatchedAWDemands, dispatchedAWs, cc.queueJobLister,
-	//		config, serverOption)
-	//} else {
-	//	cc.quotaManager = nil
-	//}
+	if serverOption.QuotaEnabled {
+		dispatchedAWDemands, dispatchedAWs := cc.getDispatchedAppWrappers()
+		cc.quotaManager, _ = quotaforestmanager.NewQuotaManager(dispatchedAWDemands, dispatchedAWs, cc.queueJobLister,
+			config, serverOption)
+	} else {
+		cc.quotaManager = nil
+	}
 
 	// Set dispatcher mode or agent mode
 	cc.isDispatcher = serverOption.Dispatcher

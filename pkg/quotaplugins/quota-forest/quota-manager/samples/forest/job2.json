@@ -1,0 +1,28 @@
+{
+  "kind": "Consumer",
+  "metadata": {
+    "name": "consumer-data"
+  },
+  "spec": {
+    "id": "job-2",
+    "trees": [
+      {
+        "treeName": "ContextTree",
+        "groupID": "Context-2",
+        "request": {
+          "cpu": 3
+        },
+        "priority": 0
+      },
+      {
+        "treeName": "ServiceTree",
+        "groupID": "Srvc-Y",
+        "request": {
+          "cpu": 1,
+          "disk": 1
+        },
+        "priority": 0
+      }
+    ]
+  }
+}

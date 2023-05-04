@@ -29,7 +29,7 @@ TAG:=${TAG}${RELEASE_VER}
 
 .PHONY: print-global-variables
 
-# Build the controler executalbe for use in docker image build
+# Build the controler executable for use in docker image build
 mcad-controller: init generate-code
 ifeq ($(strip $(GO_BUILD_ARGS)),)
 	$(info Compiling controller)
@@ -66,6 +66,7 @@ generate-code: pkg/apis/controller/v1beta1/zz_generated.deepcopy.go
 pkg/apis/controller/v1beta1/zz_generated.deepcopy.go: ${BIN_DIR}/deepcopy-gen
 	$(info Generating deepcopy...)
 	${BIN_DIR}/deepcopy-gen -i ./pkg/apis/controller/v1beta1/ -O zz_generated.deepcopy 
+	${BIN_DIR}/deepcopy-gen -i ./pkg/apis/quotaplugins/quotasubtree/v1 -O zz_generated.deepcopy
 
 ${BIN_DIR}/deepcopy-gen:	
 	$(info Compiling deepcopy-gen...)

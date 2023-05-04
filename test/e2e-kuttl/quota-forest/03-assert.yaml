@@ -1,0 +1,8 @@
+# Verify delay step
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: job-delay-step
+  namespace: test
+status:
+  succeeded: 1

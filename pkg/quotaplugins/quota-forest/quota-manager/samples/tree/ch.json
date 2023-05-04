@@ -1,0 +1,20 @@
+{
+  "kind": "Consumer",
+  "metadata": {
+    "name": "consumer-data"
+  },
+  "spec": {
+    "id": "h",
+    "trees": [
+      {
+        "treeName": "ExampleTree",
+        "groupID": "K",
+        "request": {
+          "cpu": 1
+        },
+        "priority": 0,
+        "unPreemptable": false
+      }
+    ]
+  }
+}
