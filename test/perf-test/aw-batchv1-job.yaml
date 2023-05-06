@@ -1,7 +1,7 @@
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-  name: defaultaw-batchv1
+  name: defaultaw-batchv1-1
   namespace: default
 spec:
   priority: 9
@@ -25,9 +25,9 @@ spec:
         kind: Job
         metadata:
           namespace: default
-          name: defaultaw-batchv1
+          name: defaultaw-batchv1-1
           labels:
-            appwrapper.mcad.ibm.com: defaultaw-batchv1
+            appwrapper.mcad.ibm.com: defaultaw-batchv1-1
         spec:
           parallelism: 1
           completions: 1
@@ -35,10 +35,10 @@ spec:
             metadata:
               namespace: default
               labels:
-                appwrapper.mcad.ibm.com: "defaultaw-batchv1"
+                appwrapper.mcad.ibm.com: "defaultaw-batchv1-1"
             spec:
               containers:
-              - name: defaultaw-batchv1
+              - name: defaultaw-batchv1-1
                 image: ubi8-minimal:latest
                 command: [ "/bin/bash", "-c", "--" ]
                 args: [ "sleep 10" ]
