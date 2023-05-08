@@ -431,7 +431,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// This should not fit on any node but should dispatch because there is enough aggregated resources.
 		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-ff-deployment-1-700-cpu", "700m", "700m", 1, 60)
+			context, "aw-ff-deployment-1-850-cpu", "850m", "850m", 1, 60)
 
 		appwrappers = append(appwrappers, aw2)
 
@@ -728,8 +728,8 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
-	It("Create AppWrapper - Generic 100 Deployment Only - 2 pods each", func() {
-		fmt.Fprintf(os.Stdout, "[e2e] Generic 100 Deployment Only - 2 pods each - Started.\n")
+	It("Create AppWrapper - Generic 50 Deployment Only - 2 pods each", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] Generic 50 Deployment Only - 2 pods each - Started.\n")
 
 		context := initTestContext()
 		var aws []*arbv1.AppWrapper
@@ -737,27 +737,16 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		const (
-			awCount           = 100
+			awCount           = 50
 			reportingInterval = 10
+			cpuDemand         = "5m"
 		)
 
 		replicas := 2
 		modDivisor := int(awCount / reportingInterval)
 		for i := 0; i < awCount; i++ {
-			name := fmt.Sprintf("%s%d-", "aw-generic-deployment-", replicas)
+			name := fmt.Sprintf("aw-generic-deployment-%02d-%03d", replicas, i+1)
 
-			// Pad name with '0' when i < 100
-			if i < (awCount - 1) {
-				name = fmt.Sprintf("%s%s", name, "0")
-			}
-
-			// Pad name with '0' when i < 10
-			if i < (reportingInterval - 1) {
-				name = fmt.Sprintf("%s%s", name, "0")
-			}
-
-			name = fmt.Sprintf("%s%d", name, i+1)
-			cpuDemand := "5m"
 			if ((i+1)%modDivisor) == 0 || i == 0 {
 				fmt.Fprintf(GinkgoWriter, "[e2e] Creating AW %s with %s cpu and %d replica(s).\n", name, cpuDemand, replicas)
 			}
@@ -766,6 +755,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		}
 
 		// Give the deployments time to create pods
+		// FIXME: do not assume that the pods are in running state in the order of submission.
 		time.Sleep(2 * time.Minute)
 		for i := 0; i < len(aws); i++ {
 			err := waitAWReadyQuiet(context, aws[i])

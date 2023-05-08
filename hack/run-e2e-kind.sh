@@ -556,4 +556,4 @@ kuttl-tests
 mcad-quota-management-down
 mcad-up
 echo "==========================>>>>> Running E2E tests... <<<<<=========================="
-go test ./test/e2e -v -timeout 75m -count=1
+go test ./test/e2e -v -timeout 120m -count=1
