@@ -32,7 +32,6 @@ package queuejob
 
 import (
 	"fmt"
-	qmutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
 	"math"
 	"math/rand"
 	"reflect"
@@ -41,6 +40,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	qmutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotaforestmanager"
 	dto "github.com/prometheus/client_model/go"
@@ -386,8 +387,12 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	// Setup Quota
 	if serverOption.QuotaEnabled {
 		dispatchedAWDemands, dispatchedAWs := cc.getDispatchedAppWrappers()
-		cc.quotaManager, _ = quotaforestmanager.NewQuotaManager(dispatchedAWDemands, dispatchedAWs, cc.queueJobLister,
+		cc.quotaManager, err = quotaforestmanager.NewQuotaManager(dispatchedAWDemands, dispatchedAWs, cc.queueJobLister,
 			config, serverOption)
+		if err != nil {
+			klog.Error("Failed to instantiate quota manager: %#v", err)
+			return nil
+		}
 	} else {
 		cc.quotaManager = nil
 	}
