@@ -1,11 +1,11 @@
 // b private
 // ------------------------------------------------------ {COPYRIGHT-TOP} ---
 // Copyright 2019, 2021, 2022, 2023 The Multi-Cluster App Dispatcher Authors.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //    http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
@@ -18,11 +18,13 @@
 package quotasubtmgr
 
 import (
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/core"
-	"k8s.io/klog/v2"
+	"errors"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/core"
+	"k8s.io/klog/v2"
 
 	qstv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotaforestmanager/qm_lib_backend_with_quotasubt_mgr/quotasubtmgr/util"
@@ -38,7 +40,6 @@ import (
 	qstinformer "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/quotasubtree/informers/externalversions"
 	qstinformers "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/quotasubtree/informers/externalversions/quotasubtree/v1"
 )
-
 
 // New returns a new implementation.
 func NewQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Manager) (*QuotaSubtreeManager, error) {
@@ -95,7 +96,9 @@ func newQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Mana
 	// Wait for cache sync
 	klog.V(10).Infof("[newQuotaSubtreeManager] Waiting for QuotaSubtree informer cache sync. to complete.")
 	qstm.qstSynced = qstm.quotaSubtreeInformer.Informer().HasSynced
-	cache.WaitForCacheSync(neverStop, qstm.qstSynced)
+	if ! cache.WaitForCacheSync(neverStop, qstm.qstSynced) {
+		return nil, errors.New("failed to wait for the quota sub tree informer to synch")
+	}
 
 	// Initialize Quota Trees
 	qstm.initializeQuotaTreeBackend()
