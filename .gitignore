@@ -127,5 +127,6 @@ kubernetes.tar.gz
 
 # .devcontainer files
 .devcontainer
+#local debug files
 cmd/kar-controllers/__debug_bin
-apiserver*/*
+apiserver.local.config
