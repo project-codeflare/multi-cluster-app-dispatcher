@@ -19,11 +19,15 @@ package quota
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 
+	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/core"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/utils"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 )
 
@@ -434,7 +438,24 @@ func (m *Manager) AllocateForest(forestName string, consumerID string) (response
 		return nil, fmt.Errorf("consumer %s does not exist, create and add first", consumerID)
 	}
 	if forestController.IsConsumerAllocated(consumerID) {
-		return nil, fmt.Errorf("consumer %s already allocated on forest %s", consumerID, forestName)
+		//allocation can pass if consumers are not released
+		//make sure that appwrapper (consumer) does not exist in target namespace
+		re := regexp.MustCompile("_")
+		split := re.Split(consumerID, -1)
+		namespace := split[1]
+		awName := split[3]
+		config, err := rest.InClusterConfig()
+		if err != nil {
+			klog.Errorf("unable to retrieve in-cluster kubeconfig %v", err)
+		}
+		arbclients := clientset.NewForConfigOrDie(config)
+		_, err = arbclients.ArbV1().AppWrappers(namespace).Get(awName, v1.GetOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("consumer %s already allocated on forest %s", consumerID, forestName)
+		} else {
+			//release quota
+			m.DeAllocateForest(forestName, consumerID)
+		}
 	}
 	resourceNames := forestController.GetResourceNames()
 	forestConsumer, err := consumerInfo.CreateForestConsumer(forestName, resourceNames)
