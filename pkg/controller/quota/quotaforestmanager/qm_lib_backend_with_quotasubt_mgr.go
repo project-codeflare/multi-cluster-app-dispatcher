@@ -390,7 +390,7 @@ func (qm *QuotaManager) getQuotaTreeResourceTypesDemands(awResDemands *clusterst
 		// Memory Demands
 		if strings.Contains(strings.ToLower(treeResourceType), "memory") {
 			// Handle type conversions
-			demand, converErr := qm.convertFloat64Demand(awResDemands.Memory / 1000000)
+			demand, converErr := qm.convertFloat64Demand(awResDemands.Memory)
 			if converErr != nil {
 				if err == nil {
 					err = fmt.Errorf("resource type: %s %s",
