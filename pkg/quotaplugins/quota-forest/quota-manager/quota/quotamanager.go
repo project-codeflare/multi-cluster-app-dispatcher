@@ -430,6 +430,7 @@ func (m *Manager) AllocateForest(forestName string, consumerID string) (response
 	defer m.mutex.Unlock()
 
 	forestController := m.forests[forestName]
+	var awExistsInNamespace bool = false
 	if forestController == nil {
 		return nil, fmt.Errorf("invalid forest name %s", forestName)
 	}
@@ -437,26 +438,32 @@ func (m *Manager) AllocateForest(forestName string, consumerID string) (response
 	if consumerInfo == nil {
 		return nil, fmt.Errorf("consumer %s does not exist, create and add first", consumerID)
 	}
-	if forestController.IsConsumerAllocated(consumerID) {
-		//allocation can pass if consumers are not released
-		//make sure that appwrapper (consumer) does not exist in target namespace
-		re := regexp.MustCompile("_")
-		split := re.Split(consumerID, -1)
-		namespace := split[1]
-		awName := split[3]
-		config, err := rest.InClusterConfig()
-		if err != nil {
-			klog.Errorf("unable to retrieve in-cluster kubeconfig %v", err)
-		}
-		arbclients := clientset.NewForConfigOrDie(config)
-		_, err = arbclients.ArbV1().AppWrappers(namespace).Get(awName, v1.GetOptions{})
-		if err != nil {
+	//allocation can pass if consumers are not released
+	//make sure that appwrapper (consumer) does not exist in target namespace
+	re := regexp.MustCompile("_")
+	split := re.Split(consumerID, -1)
+	namespace := split[1]
+	awName := split[3]
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		klog.Errorf("unable to retrieve in-cluster kubeconfig %v", err)
+	}
+	arbclients := clientset.NewForConfigOrDie(config)
+	awQueried, err := arbclients.ArbV1().AppWrappers(namespace).Get(awName, v1.GetOptions{})
+	if awQueried.Name == awName {
+		awExistsInNamespace = true
+		klog.V(5).Infof("Found consumer %v in namespace", consumerID)
+	}
+	if awExistsInNamespace {
+		if forestController.IsConsumerAllocated(consumerID) {
 			return nil, fmt.Errorf("consumer %s already allocated on forest %s", consumerID, forestName)
-		} else {
-			//release quota
+		}
+	} else {
+		if forestController.IsConsumerAllocated(consumerID) {
 			m.DeAllocateForest(forestName, consumerID)
 		}
 	}
+
 	resourceNames := forestController.GetResourceNames()
 	forestConsumer, err := consumerInfo.CreateForestConsumer(forestName, resourceNames)
 	if err != nil {
