@@ -406,35 +406,7 @@ EOF
 }
 
 function mcad-quota-management-up {
-    # start mcad controller
-    echo "==========================>>>>> Starting MCAD Controller for Quota Management Testing <<<<<=========================="
-    echo " "
-    echo "helm upgrade --install mcad-controller ${ROOT_DIR}/deployment/mcad-controller namespace kube-system wait set loglevel=10 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=1000m set resources.limits.memory=1024Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY set configMap.quotaEnabled='true' set quotaManagement.rbac.apiGroup=ibm.com set quotaManagement.rbac.resource=quotasubtrees set configMap.name=mcad-controller-configmap set configMap.preemptionEnabled='true'"
-    helm upgrade  --install mcad-controller ${ROOT_DIR}/deployment/mcad-controller  \
-                  --namespace kube-system --wait --set loglevel=${LOG_LEVEL} --set resources.requests.cpu=1000m \
-                  --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi \
-                  --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY \
-                  --set configMap.quotaEnabled='"true"' --set quotaManagement.rbac.apiGroup=ibm.com --set quotaManagement.rbac.resource=quotasubtrees \
-                  --set configMap.name=mcad-controller-configmap --set configMap.preemptionEnabled='"true"'
-    if [ $? -ne 0 ]
-    then
-      echo "Failed to deploy MCAD controller"
-      exit 1
-    fi
-    echo "Listing MCAD Controller Helm Chart and Pod YAML..."
-    helm list -n kube-system
-    if [ $? -ne 0 ]
-    then
-      echo "Failed to find mcad-controller helm chart"
-      exit 1
-    fi
-    local mcad_pod=$(kubectl get pods -n kube-system | grep mcad-controller | awk '{print $1}')
-    if [[ "$mcad_pod" != "" ]]
-    then
-        kubectl get pod ${mcad_pod} -n kube-system -o yaml
-    fi
-
-    kubectl get configmap -n kube-system -o yaml mcad-controller-configmap
+  echo "Foobar"
 }
 
 function mcad-quota-management-down {

@@ -43,8 +43,8 @@ spec:
                       - while true; do sleep 10; done
                     resources:
                       requests:
-                        cpu: "0.6"
+                        cpu: 600m
                         memory: "95Mi"
                       limits:
-                        cpu: "0.6"
+                        cpu: 600m
                         memory: "95Mi"

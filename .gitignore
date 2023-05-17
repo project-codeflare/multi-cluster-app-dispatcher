@@ -130,3 +130,4 @@ kubernetes.tar.gz
 #local debug files
 cmd/kar-controllers/__debug_bin
 apiserver.local.config
+kubeconfig

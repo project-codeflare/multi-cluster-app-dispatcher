@@ -11,7 +11,7 @@ spec:
       quotas:
         requests:
           cpu: 1075
-          memory: 1045
+          memory: 1045Mi
 ---
 apiVersion: ibm.com/v1
 kind: QuotaSubtree
@@ -26,7 +26,7 @@ spec:
       quotas:
         requests:
           cpu: 1075
-          memory: 1045
+          memory: 1045Mi
 ---
 apiVersion: ibm.com/v1
 kind: QuotaSubtree
@@ -42,16 +42,16 @@ spec:
       quotas:
         requests:
           cpu: 1075
-          memory: 450
+          memory: 450Mi
     - name: silver
       quotas:
         hardLimit: false
         requests:
           cpu: 1075
-          memory: 400
+          memory: 400Mi
     - name: bronze
       quotas:
         hardLimit: true
         requests:
           cpu: 900
-          memory: 300
+          memory: 300Mi
