@@ -72,7 +72,7 @@ ${BIN_DIR}/deepcopy-gen:
 	$(info Compiling deepcopy-gen...)
 	go build -o ${BIN_DIR}/deepcopy-gen ./cmd/deepcopy-gen/
 
-images: verify-tag-name generate-code
+images: verify-tag-name generate-code update-deployment-crds
 	$(info List executable directory)
 	$(info repo id: ${git_repository_id})
 	$(info branch: ${GIT_BRANCH})
@@ -83,7 +83,7 @@ else
 	docker build --no-cache --tag mcad-controller:${TAG} --build-arg GO_BUILD_ARGS=$(GO_BUILD_ARGS) -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
 endif		
 
-images-podman: verify-tag-name generate-code
+images-podman: verify-tag-name generate-code update-deployment-crds
 	$(info List executable directory)
 	$(info repo id: ${git_repository_id})
 	$(info branch: ${GIT_BRANCH})
@@ -117,7 +117,7 @@ run-test:
 	$(info Running unit tests...)
 	hack/make-rules/test.sh $(WHAT) $(TESTS)
 
-run-e2e: verify-tag-name
+run-e2e: verify-tag-name update-deployment-crds
 ifeq ($(strip $(quay_repository)),)
 	echo "Running e2e with MCAD local image: mcad-controller ${TAG} IfNotPresent."
 	hack/run-e2e-kind.sh mcad-controller ${TAG} IfNotPresent
@@ -131,3 +131,22 @@ coverage:
 
 clean:
 	rm -rf _output/
+
+#CRD file maintenance rules
+DEPLOYMENT_CRD_DIR=deployment/mcad-controller/crds
+CRD_BASE_DIR=config/crd/bases
+MCAD_CRDS= ${DEPLOYMENT_CRD_DIR}/ibm.com_quotasubtree-v1.yaml  \
+		   ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_appwrappers.yaml \
+		   ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_queuejobs.yaml \
+		   ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_schedulingspecs.yaml
+
+update-deployment-crds: ${MCAD_CRDS}
+
+${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_schedulingspecs.yaml : ${CRD_BASE_DIR}/mcad.ibm.com_schedulingspecs.yaml
+${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_appwrappers.yaml : ${CRD_BASE_DIR}/mcad.ibm.com_appwrappers.yaml
+${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_queuejobs.yaml : ${CRD_BASE_DIR}/mcad.ibm.com_queuejobs.yaml
+${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_schedulingspecs.yaml : ${CRD_BASE_DIR}/mcad.ibm.com_schedulingspecs.yaml
+
+
+$(DEPLOYMENT_CRD_DIR)/%: ${CRD_BASE_DIR}/%
+	cp $< $@
