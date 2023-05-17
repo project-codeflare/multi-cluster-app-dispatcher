@@ -51,8 +51,8 @@ type QuotaSubtreeManager struct {
 
 	kubeclient *kubernetes.Clientset
 
-	beMutex                sync.Mutex
-	quotaManagerBackend    *qmlib.Manager
+	beMutex             sync.Mutex
+	quotaManagerBackend *qmlib.Manager
 
 	/* Information about Quota Subtrees */
 	quotaSubtreeInformer qstinformers.QuotaSubtreeInformer
@@ -75,9 +75,9 @@ func newQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Mana
 	}
 
 	qstInformerFactory := qstinformer.NewSharedInformerFactoryWithOptions(qstClient, 0,
-							qstinformer.WithTweakListOptions(func(opt *metav1.ListOptions) {
-		opt.LabelSelector = util.URMTreeLabel
-	}))
+		qstinformer.WithTweakListOptions(func(opt *metav1.ListOptions) {
+			opt.LabelSelector = util.URMTreeLabel
+		}))
 	qstm.quotaSubtreeInformer = qstInformerFactory.Quotasubtree().V1().QuotaSubtrees()
 
 
@@ -96,7 +96,7 @@ func newQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Mana
 	// Wait for cache sync
 	klog.V(10).Infof("[newQuotaSubtreeManager] Waiting for QuotaSubtree informer cache sync. to complete.")
 	qstm.qstSynced = qstm.quotaSubtreeInformer.Informer().HasSynced
-	if ! cache.WaitForCacheSync(neverStop, qstm.qstSynced) {
+	if !cache.WaitForCacheSync(neverStop, qstm.qstSynced) {
 		return nil, errors.New("failed to wait for the quota sub tree informer to synch")
 	}
 
@@ -156,11 +156,20 @@ func (qstm *QuotaSubtreeManager) createTreeNodesFromQST(qst *qstv1.QuotaSubtree)
 				continue
 			}
 			resourceTypes = appendIfNotPresent(resourceName, resourceTypes)
-			amount, success := v.AsInt64()
-			if !success {
-				klog.Errorf("[createTreeNodesFromQST] Failure converting QuotaSubtree request demand quota to int64, QuotaSubtree %s request quota: %v will be ignored.",
-					qst.Name, v)
-				continue
+			var amount int64
+			var success bool
+			switch resourceName {
+			case "cpu":
+				amount = v.MilliValue()
+			case "memory":
+				amount = v.Value()
+			default:
+				amount, success = v.AsInt64()
+				if !success {
+					klog.Errorf("[createTreeNodesFromQST] Failure converting QuotaSubtree request demand quota to int64, QuotaSubtree %s request quota: %v will be ignored.",
+						qst.Name, v)
+					continue
+				}
 			}
 
 			// Add new quota demand
@@ -246,11 +255,11 @@ func (qstm *QuotaSubtreeManager) LoadQuotaSubtreesIntoBackend() {
 	// Process all quotasubtrees to the tree caches
 	for _, qst := range qstm.qstMap {
 		klog.V(4).Infof("[LoadQuotaSubtreesIntoBackend] Processing QuotaSubtree  %s.",
-											qst.Name)
+			qst.Name)
 		qstTreeName := qst.Labels[util.URMTreeLabel]
 		if len(qstTreeName) <= 0 {
 			klog.Errorf("[LoadQuotaSubtreesIntoBackend] QuotaSubtree %s does not contain the proper 'tree' label will be ignored.",
-											qst.Name)
+				qst.Name)
 			continue
 		}
 
@@ -289,7 +298,7 @@ func (qstm *QuotaSubtreeManager) initializeQuotaTreeBackend() {
 		return
 	}
 
-	if qstm.quotaManagerBackend.GetMode() !=  qmlib.Maintenance {
+	if qstm.quotaManagerBackend.GetMode() != qmlib.Maintenance {
 		klog.Warningf("[initializeQuotaTreeBackend] Forcing Quota Manager into maintenance mode.")
 		qstm.quotaManagerBackend.SetMode(qmlib.Maintenance)
 	}
