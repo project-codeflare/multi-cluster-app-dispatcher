@@ -437,7 +437,7 @@ func (m *Manager) AllocateForest(forestName string, consumerID string) (response
 	if consumerInfo == nil {
 		return nil, fmt.Errorf("consumer %s does not exist, create and add first", consumerID)
 	}
-	//allocation can pass if consumers inside the forest is not released
+	//allocation can pass if consumers inside the forest are not released
 	//make sure that appwrapper (consumer) does not exist in target namespace
 	namespace, awName := util.ParseId(consumerID)
 	config, err := rest.InClusterConfig()
@@ -462,6 +462,7 @@ func (m *Manager) AllocateForest(forestName string, consumerID string) (response
 		}
 	} else {
 		if forestController.IsConsumerAllocated(consumerID) {
+			klog.V(4).Infof("[AllocateForest] Found consumer %v in quota tree but didn't find its matching AppWrapper. Deleting consumer from the tree", consumerID)
 			m.DeAllocateForest(forestName, consumerID)
 		}
 	}
