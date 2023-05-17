@@ -133,7 +133,7 @@ func NewQuotaManager(dispatchedAWDemands map[string]*clusterstateapi.Resource, d
 	// Create a resource plan manager
 	qm.quotaSubtreeManager, err = qstmanager.NewQuotaSubtreeManager(config, qm.quotaManagerBackend)
 	if err != nil {
-		klog.Errorf("[NewQuotaManager] failed to update the instantiate new quota subtree manager, err=%#v", err)
+		klog.Errorf("[NewQuotaManager] failed to instantiate new quota subtree manager, err=%#v", err)
 		return nil, err
 	}
 
@@ -209,11 +209,9 @@ func (qm *QuotaManager) updateForestFromCache() error {
 	var result *multierror.Error
 	for k, v := range treeCacheCreateResponse {
 		danglingNodeNames := v.DanglingNodeNames
-		if danglingNodeNames != nil {
-			for _, danglingNodeName := range danglingNodeNames {
-				klog.Errorf("[updateForestFromCache] Failure to link node %s to tree %s after Quota Manager Backend Cache refresh.", danglingNodeName, k)
-				result = multierror.Append(result, fmt.Errorf("failure to link node %s to tree %s after Quota Manager Backend Cache refresh", danglingNodeName, k))
-			}
+		for _, danglingNodeName := range danglingNodeNames {
+			klog.Errorf("[updateForestFromCache] Failure to link node %s to tree %s after Quota Manager Backend Cache refresh.", danglingNodeName, k)
+			result = multierror.Append(result, fmt.Errorf("failure to link node %s to tree %s after Quota Manager Backend Cache refresh", danglingNodeName, k))
 		}
 		klog.V(10).Infof("[updateForestFromCache] %s", qm.quotaManagerBackend.String())
 	}
@@ -224,19 +222,6 @@ func (qm *QuotaManager) updateForestFromCache() error {
 	}
 
 	return result.ErrorOrNil()
-}
-
-// Recursive call to add names of Tree
-// TODO (this method is not used, should be removed)
-func (qm *QuotaManager) addChildrenNodes(parentNode TreeNode, treeIDs []string) []string {
-	if len(parentNode.Children) > 0 {
-		for _, childNode := range parentNode.Children {
-			klog.V(10).Infof("[getQuotaTreeIDs] Quota tree response child node from quota mananger: %s", childNode.Name)
-			treeIDs = qm.addChildrenNodes(childNode, treeIDs)
-		}
-	}
-	treeIDs = append(treeIDs, parentNode.Name)
-	return treeIDs
 }
 
 func isValidQuota(quotaGroup QuotaGroup, qmTreeIDs []string) bool {
@@ -320,7 +305,7 @@ func (qm *QuotaManager) getQuotaDesignation(aw *arbv1.AppWrapper) ([]QuotaGroup,
 			fmt.Fprintf(&allocationMessage, ".")
 			err = fmt.Errorf(allocationMessage.String())
 		} else {
-			err = fmt.Errorf("Unknown error verifying quota designations.")
+			err = fmt.Errorf("unknown error verifying quota designations")
 		}
 		klog.V(6).Infof("[getQuotaDesignation] No valid quota management IDs found for AppWrapper Job: %s/%s, err=%#v",
 			aw.Namespace, aw.Name, err)
@@ -497,14 +482,6 @@ func (qm *QuotaManager) buildRequest(aw *arbv1.AppWrapper,
 
 	return consumerInfo, err
 }
-// TODO remove unused code.
-func (qm *QuotaManager) refreshQuotaDefiniions() error {
-	// Initialize Forest/Trees if new resource plan manager added to the cache
-	err := qm.updateForestFromCache()
-
-	return err
-}
-
 func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource,
 	proposedPreemptions []*arbv1.AppWrapper) (bool, []*arbv1.AppWrapper, string) {
 
