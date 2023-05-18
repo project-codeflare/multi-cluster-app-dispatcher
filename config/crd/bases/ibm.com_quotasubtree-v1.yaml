@@ -53,10 +53,10 @@ spec:
                           properties: 
                             cpu:
                               x-kubernetes-int-or-string: true
-                              pattern: '^[0-9]*(m)*$'
+                              pattern: '^[0-9]*(m)?$'
                             memory:
                               x-kubernetes-int-or-string: true
-                              pattern: '^[0-9]*(Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|K)*$'
+                              pattern: '^[0-9]*(Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|K)?$'
                             nvidia.com/gpu:
                               x-kubernetes-int-or-string: true
-                              pattern: '^[0-9]*$'
+                              pattern: '^[0-9]?$'
