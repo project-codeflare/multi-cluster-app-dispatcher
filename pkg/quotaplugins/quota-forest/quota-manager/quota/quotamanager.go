@@ -22,12 +22,8 @@ import (
 	"strings"
 	"sync"
 
-	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/core"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/utils"
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 )
 
@@ -437,34 +433,9 @@ func (m *Manager) AllocateForest(forestName string, consumerID string) (response
 	if consumerInfo == nil {
 		return nil, fmt.Errorf("consumer %s does not exist, create and add first", consumerID)
 	}
-	//allocation can pass if consumers inside the forest are not released
-	//make sure that appwrapper (consumer) does not exist in target namespace
-	namespace, awName := util.ParseId(consumerID)
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		klog.Errorf("unable to retrieve in-cluster kubeconfig %v", err)
-	}
-	arbclients := clientset.NewForConfigOrDie(config)
-	awQueried, err := arbclients.ArbV1().AppWrappers(namespace).Get(awName, v1.GetOptions{})
-	var awExistsInNamespace bool = false
-	if err != nil {
-		klog.Errorf("Unable to query consumer %v,", consumerID)
-		//force set to true
-		awExistsInNamespace = true
-	}
-	if awQueried.Name == awName {
-		awExistsInNamespace = true
-		klog.V(5).Infof("[AllocateForest] Found consumer %v in namespace", consumerID)
-	}
-	if awExistsInNamespace {
-		if forestController.IsConsumerAllocated(consumerID) {
-			return nil, fmt.Errorf("consumer %s already allocated on forest %s", consumerID, forestName)
-		}
-	} else {
-		if forestController.IsConsumerAllocated(consumerID) {
-			klog.V(4).Infof("[AllocateForest] Found consumer %v in quota tree but didn't find its matching AppWrapper. Deleting consumer from the tree", consumerID)
-			m.DeAllocateForest(forestName, consumerID)
-		}
+
+	if forestController.IsConsumerAllocated(consumerID) {
+		return nil, fmt.Errorf("consumer %s already allocated on forest %s", consumerID, forestName)
 	}
 
 	resourceNames := forestController.GetResourceNames()

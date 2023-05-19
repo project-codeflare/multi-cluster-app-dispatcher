@@ -1029,6 +1029,8 @@ func (qjm *XController) chooseAgent(qj *arbv1.AppWrapper) string {
 		//Now evaluate quota
 		if qjm.serverOption.QuotaEnabled {
 			if qjm.quotaManager != nil {
+				//quota trees faile to update with AW deletes, release quota before assigning
+				qjm.quotaManager.Release(qj)
 				if fits, preemptAWs, _ := qjm.quotaManager.Fits(qj, qjAggrResources, proposedPreemptions); fits {
 					klog.V(2).Infof("[chooseAgent] AppWrapper %s has enough quota.\n", qj.Name)
 					qjm.preemptAWJobs(preemptAWs)
@@ -1267,7 +1269,9 @@ func (qjm *XController) ScheduleNext() {
 					if qjm.quotaManager != nil {
 						var msg string
 						var preemptAWs []*arbv1.AppWrapper
-						quotaFits, preemptAWs, msg = qjm.quotaManager.Fits(qj, aggqj, proposedPreemptions)
+						//quota trees fail to update with AW deletes, release quota before assigning
+						qjm.quotaManager.Release(qj)
+						quotaFits, preemptAWs, msg := qjm.quotaManager.Fits(qj, aggqj, proposedPreemptions)
 						if quotaFits {
 							klog.Infof("[ScheduleNext] HOL quota evaluation successful %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 							// Set any jobs that are marked for preemption
