@@ -31,7 +31,6 @@ import (
 	qmlib "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota"
 	qmlibutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
 	qst "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/quotasubtree/clientset/versioned"
@@ -47,16 +46,11 @@ func NewQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Mana
 }
 
 type QuotaSubtreeManager struct {
-	mutex sync.Mutex
-
-	kubeclient *kubernetes.Clientset
-
-	beMutex             sync.Mutex
 	quotaManagerBackend *qmlib.Manager
 
 	/* Information about Quota Subtrees */
 	quotaSubtreeInformer qstinformers.QuotaSubtreeInformer
-	qstMutex             sync.Mutex
+	qstMutex             sync.RWMutex
 	qstMap               map[string]*qstv1.QuotaSubtree
 
 	qstChanged bool
@@ -79,7 +73,6 @@ func newQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Mana
 			opt.LabelSelector = util.URMTreeLabel
 		}))
 	qstm.quotaSubtreeInformer = qstInformerFactory.Quotasubtree().V1().QuotaSubtrees()
-
 
 	// Add event handle for resource plans
 	qstm.quotaSubtreeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -134,6 +127,9 @@ func (qstm *QuotaSubtreeManager) clearQuotasubtreeChanged() {
 }
 
 func (qstm *QuotaSubtreeManager) IsQuotasubtreeChanged() bool {
+	qstm.qstMutex.RLock()
+	defer qstm.qstMutex.RUnlock()
+
 	return qstm.qstChanged
 }
 
@@ -230,7 +226,6 @@ func (qstm *QuotaSubtreeManager) createTreeCache(forestName string, qst *qstv1.Q
 }
 
 func (qstm *QuotaSubtreeManager) LoadQuotaSubtreesIntoBackend() {
-
 	qstm.qstMutex.Lock()
 	defer qstm.qstMutex.Unlock()
 

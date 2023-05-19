@@ -1,11 +1,11 @@
 // b private
 // ------------------------------------------------------ {COPYRIGHT-TOP} ---
 // Copyright 2019, 2021, 2022, 2023 The Multi-Cluster App Dispatcher Authors.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //    http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
@@ -61,9 +61,9 @@ func (qstm *QuotaSubtreeManager) updateQST(oldObj, newObj interface{}) {
 	qstm.qstMutex.Unlock()
 
 	if notify {
-		qstm.mutex.Lock()
+		qstm.qstMutex.Lock()
 		qstm.setQuotasubtreeChanged()
-		qstm.mutex.Unlock()
+		qstm.qstMutex.Unlock()
 	}
 	klog.V(10).Infof("[updateQST] Update complete for: %s/%s", newQST.Name, newQST.Namespace)
 }

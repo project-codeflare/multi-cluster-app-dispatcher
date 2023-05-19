@@ -510,6 +510,7 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 		err := qm.updateForestFromCache()
 		if err != nil {
 			klog.Errorf("[Fits] Failure during refresh of quota tree(s), err=%#v.", err)
+			return false, nil, "failure during refresh of quota tree(s)"
 		}
 	}
 
@@ -522,7 +523,10 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 
 	var preemptIds []*arbv1.AppWrapper
 
-	qm.quotaManagerBackend.AddConsumer(consumerInfo)
+	_, err = qm.quotaManagerBackend.AddConsumer(consumerInfo)
+	if err != nil {
+		return doesFit, nil, err.Error()
+	}
 
 	consumerID := consumerInfo.GetID()
 	klog.V(4).Infof("[Fits] Sending quota allocation request: %#v ", consumerInfo)
