@@ -34,6 +34,7 @@ import (
 	gcontext "context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -3572,80 +3573,6 @@ func clusterSize(ctx *context, req v1.ResourceList) int32 {
 	return res
 }
 
-func clusterNodeNumber(ctx *context) int {
-	nodes, err := ctx.kubeclient.CoreV1().Nodes().List(gcontext.Background(), metav1.ListOptions{})
-	Expect(err).NotTo(HaveOccurred())
-
-	nn := 0
-	for _, node := range nodes.Items {
-		if len(node.Spec.Taints) != 0 {
-			continue
-		}
-		nn++
-	}
-
-	return nn
-}
-
-func computeNode(ctx *context, req v1.ResourceList) (string, int32) {
-	nodes, err := ctx.kubeclient.CoreV1().Nodes().List(gcontext.Background(), metav1.ListOptions{})
-	Expect(err).NotTo(HaveOccurred())
-
-	pods, err := ctx.kubeclient.CoreV1().Pods(metav1.NamespaceAll).List(gcontext.Background(), metav1.ListOptions{})
-	Expect(err).NotTo(HaveOccurred())
-
-	used := map[string]*csapi.Resource{}
-
-	for _, pod := range pods.Items {
-		nodeName := pod.Spec.NodeName
-		if len(nodeName) == 0 || pod.DeletionTimestamp != nil {
-			continue
-		}
-
-		if pod.Status.Phase == v1.PodSucceeded || pod.Status.Phase == v1.PodFailed {
-			continue
-		}
-
-		if _, found := used[nodeName]; !found {
-			used[nodeName] = csapi.EmptyResource()
-		}
-
-		for _, c := range pod.Spec.Containers {
-			req := csapi.NewResource(c.Resources.Requests)
-			used[nodeName].Add(req)
-		}
-	}
-
-	for _, node := range nodes.Items {
-		if len(node.Spec.Taints) != 0 {
-			continue
-		}
-
-		res := int32(0)
-
-		alloc := csapi.NewResource(node.Status.Allocatable)
-		slot := csapi.NewResource(req)
-
-		// Removed used resources.
-		if res, found := used[node.Name]; found {
-			_, err := alloc.Sub(res)
-			Expect(err).NotTo(HaveOccurred())
-		}
-
-		for slot.LessEqual(alloc) {
-			_, err := alloc.Sub(slot)
-			Expect(err).NotTo(HaveOccurred())
-			res++
-		}
-
-		if res > 0 {
-			return node.Name, res
-		}
-	}
-
-	return "", 0
-}
-
 func getPodsOfAppWrapper(ctx *context, aw *arbv1.AppWrapper) []*v1.Pod {
 	aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
@@ -3655,7 +3582,7 @@ func getPodsOfAppWrapper(ctx *context, aw *arbv1.AppWrapper) []*v1.Pod {
 
 	var awpods []*v1.Pod
 
-	for index, _ := range pods.Items {
+	for index := range pods.Items {
 		// Get a pointer to the pod in the list not a pointer to the podCopy
 		pod := &pods.Items[index]
 
@@ -3702,39 +3629,6 @@ func taintAllNodes(ctx *context, taints []v1.Taint) error {
 	return nil
 }
 
-func removeTaintsFromAllNodes(ctx *context, taints []v1.Taint) error {
-	nodes, err := ctx.kubeclient.CoreV1().Nodes().List(gcontext.Background(), metav1.ListOptions{})
-	Expect(err).NotTo(HaveOccurred())
-
-	for _, node := range nodes.Items {
-		newNode := node.DeepCopy()
-
-		var newTaints []v1.Taint
-		for _, nt := range newTaints {
-			found := false
-			for _, t := range taints {
-				if nt.Key == t.Key {
-					found = true
-					break
-				}
-			}
-
-			if !found {
-				newTaints = append(newTaints, nt)
-			}
-		}
-		newNode.Spec.Taints = newTaints
-
-		patchBytes, err := preparePatchBytesforNode(node.Name, &node, newNode)
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = ctx.kubeclient.CoreV1().Nodes().Patch(gcontext.Background(), node.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{})
-		Expect(err).NotTo(HaveOccurred())
-	}
-
-	return nil
-}
-
 func preparePatchBytesforNode(nodeName string, oldNode *v1.Node, newNode *v1.Node) ([]byte, error) {
 	oldData, err := json.Marshal(oldNode)
 	if err != nil {
@@ -3752,4 +3646,15 @@ func preparePatchBytesforNode(nodeName string, oldNode *v1.Node, newNode *v1.Nod
 	}
 
 	return patchBytes, nil
+}
+
+const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+
+func appendRandomString(value string) string {
+	seededRand := rand.New(rand.NewSource(time.Now().UnixNano()))
+	b := make([]byte, 6)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return fmt.Sprintf("%s-%s", value, string(b))
 }

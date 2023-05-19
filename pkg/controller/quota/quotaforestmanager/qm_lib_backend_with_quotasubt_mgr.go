@@ -485,13 +485,11 @@ func (qm *QuotaManager) buildRequest(aw *arbv1.AppWrapper,
 func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource,
 	proposedPreemptions []*arbv1.AppWrapper) (bool, []*arbv1.AppWrapper, string) {
 
-	doesFit := false
-
 	// If a Quota Manager Backend instance does not exists then assume quota failed
 	if qm.quotaManagerBackend == nil {
 		klog.V(4).Infof("[Fits] No quota manager backend exists, %#v fails quota by default.",
 			awResDemands)
-		return doesFit, nil, "No quota manager backend exists"
+		return false, nil, "No quota manager backend exists"
 	}
 
 	// If Quota Manager initialization is complete but quota manager backend is in maintenance mode assume quota
@@ -499,7 +497,7 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 	if qm.quotaManagerBackend.GetMode() == qmbackend.Maintenance && qm.initializationDone {
 		klog.Warningf("[Fits] Quota Manager backend in maintenance mode.  Unable to process request for AppWrapper: %s/%s",
 			aw.Namespace, aw.Name)
-		return doesFit, nil, "Quota Manager backend in maintenance mode"
+		return false, nil, "Quota Manager backend in maintenance mode"
 	}
 
 	// Refresh Quota Manager Backend Cache and Tree(s) if detected change in QuotaSubtrees
@@ -518,14 +516,14 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 	consumerInfo, err := qm.buildRequest(aw, awResDemands)
 	if err != nil {
 		klog.Errorf("[Fits] Creation of quota request failed: %s/%s, err=%#v.", aw.Namespace, aw.Name, err)
-		return doesFit, nil, err.Error()
+		return false, nil, err.Error()
 	}
 
 	var preemptIds []*arbv1.AppWrapper
 
 	_, err = qm.quotaManagerBackend.AddConsumer(consumerInfo)
 	if err != nil {
-		return doesFit, nil, err.Error()
+		return false, nil, err.Error()
 	}
 
 	consumerID := consumerInfo.GetID()
@@ -536,16 +534,16 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 		if allocResponse != nil && len(allocResponse.GetMessage()) > 0 {
 			klog.Errorf("[Fits] Error allocating consumer: %s/%s, msg=%s, err=%#v.",
 				aw.Namespace, aw.Name, allocResponse.GetMessage(), err)
-			return doesFit, nil, allocResponse.GetMessage()
+			return false, nil, allocResponse.GetMessage()
 		} else {
 			klog.Errorf("[Fits] Error allocating consumer: %s/%s, err=%#v.",
 				aw.Namespace, aw.Name, err)
-			return doesFit, nil, err.Error()
+			return false, nil, err.Error()
 
 		}
 	}
 
-	doesFit = allocResponse.IsAllocated()
+	doesFit := allocResponse.IsAllocated()
 	if len(allocResponse.GetMessage()) > 0 {
 		klog.Warningf("[Fits] Response from Quota Management backend: %s",
 			allocResponse.GetMessage())
