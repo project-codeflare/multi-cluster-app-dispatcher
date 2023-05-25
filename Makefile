@@ -115,7 +115,7 @@ endif
 
 run-test:
 	$(info Running unit tests...)
-	hack/make-rules/test.sh $(WHAT) $(TESTS)
+	go test -v -coverprofile cover.out -race -parallel 8  ./pkg/...
 
 run-e2e: verify-tag-name update-deployment-crds
 ifeq ($(strip $(quay_repository)),)

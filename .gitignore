@@ -131,3 +131,4 @@ kubernetes.tar.gz
 cmd/kar-controllers/__debug_bin
 apiserver.local.config
 kubeconfig
+cover.out
