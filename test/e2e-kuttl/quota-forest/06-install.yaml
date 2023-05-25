@@ -43,16 +43,8 @@ spec:
                       - while true; do sleep 10; done
                     resources:
                       requests:
-<<<<<<< HEAD
                         cpu: 600m
                         memory: 95Mi
                       limits:
                         cpu: 600m
                         memory: 95Mi
-=======
-                        cpu: "0.6m"
-                        memory: "95Mi"
-                      limits:
-                        cpu: "0.6m"
-                        memory: "95Mi"
->>>>>>> 7d1d38b9 (fix resorurce unit)

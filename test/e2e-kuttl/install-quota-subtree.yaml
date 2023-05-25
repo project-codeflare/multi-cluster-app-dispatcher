@@ -40,6 +40,7 @@ spec:
   children:
     - name: gold
       quotas:
+        hardLimit: false
         requests:
           cpu: 1075m
           memory: 450Mi
