@@ -13,17 +13,6 @@ spec:
     metadata: {}
     Items: []
     GenericItems:
-    - replicas: 1
-      custompodresources:
-      - replicas: 1
-        requests:
-          cpu: 600m
-          memory: 95Mi
-          nvidia.com/gpu: 0
-        limits:
-          cpu: 600m
-          memory: 95Mi
-          nvidia.com/gpu: 0
       - metadata: {}
         replicas: 1
         generictemplate:
