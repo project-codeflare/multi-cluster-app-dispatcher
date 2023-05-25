@@ -9,7 +9,7 @@ metadata:
 spec:
   service:
     spec: {}
-  priority: 1000
+  priority: 10000
   resources:
     metadata: {}
     GenericItems:
