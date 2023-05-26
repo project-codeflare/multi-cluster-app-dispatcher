@@ -85,7 +85,8 @@ func TestNewQuotaManagerConsumerAllocationRelease(t *testing.T) {
 	assert.NoError(t, err, "No error expected when adding a tree to forest")
 	err = qmManagerUnderTest.AddTreeToForest(forestName, testTreeName)
 	assert.NoError(t, err, "No error expected when adding a tree from forest")
-	qmManagerUnderTest.SetMode(quota.Normal)
+	modeSet := qmManagerUnderTest.SetMode(quota.Normal)
+	assert.True(t, modeSet, "Setting the mode should not fail.")
 
 	// Define the test table
 	var tests = []struct {
