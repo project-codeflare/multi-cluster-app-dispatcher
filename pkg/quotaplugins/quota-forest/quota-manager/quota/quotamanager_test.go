@@ -17,6 +17,7 @@ limitations under the License.
 package quota_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota"
@@ -210,11 +211,16 @@ func TestNewQuotaManagerConsumerAllocationRelease(t *testing.T) {
 			assert.True(t, added, "Consumer is expected to be added")
 
 			response, err := qmManagerUnderTest.AllocateForest(forestName, consumerInfo.GetID())
-			assert.NoError(t, err, "No Error expected when adding consumer to forest")
+			assert.NoError(t, err, "No Error expected when allocating consumer to forest")
 			assert.NotNil(t, response, "A non nill response is expected")
+			assert.Equal(t, 0, len(strings.TrimSpace(response.GetMessage())), "A empty response is expected")
 
-			deallocated := qmManagerUnderTest.DeAllocateForest(forestName, consumerInfo.GetID())
-			assert.True(t, deallocated, "Deallocation expected to succeed")
+			deAllocated := qmManagerUnderTest.DeAllocateForest(forestName, consumerInfo.GetID())
+			assert.True(t, deAllocated, "De-allocation expected to succeed")
+
+			removed, err := qmManagerUnderTest.RemoveConsumer(consumerInfo.GetID())
+			assert.NoError(t, err, "No Error expected when removing consumer")
+			assert.True(t, removed, "Removal of consumer should succeed")
 		})
 	}
 }
