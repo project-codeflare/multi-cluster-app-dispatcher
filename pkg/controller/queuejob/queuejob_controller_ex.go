@@ -1270,15 +1270,21 @@ func (qjm *XController) ScheduleNext() {
 				// All non-quota submission AWs will consume quota from default node.
 
 				//Find if AW has label named "quota_context"
-				allLabels := qj.Labels
+				allLabels := qj.DeepCopy().Labels
 				quotaSetForAw := false
 				for labelk, _ := range allLabels {
 					if labelk == "quota_context" {
 						quotaSetForAw = true
 					}
 				}
+				//When label "quota_context" not found add it
+				//this will only work for quota tree and not quota forest
 				if quotaSetForAw == false {
-					qj.Labels["quota_context"] = "default"
+					if len(allLabels) == 0 {
+						allLabels = make(map[string]string)
+					}
+					allLabels["quota_context"] = "default"
+					qj.SetLabels(allLabels)
 					if err := qjm.updateEtcd(qj, "ScheduleNext - setDefaultQuota"); err == nil {
 						klog.V(3).Infof("[ScheduleNext] Default quota added to AW %v", qj.Name)
 					}
