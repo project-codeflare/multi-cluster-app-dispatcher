@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The Multi-Cluster App Dispatcher Authors.
+Copyright 2022, 2203 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/core"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/utils"
@@ -39,6 +40,9 @@ type Manager struct {
 	consumerInfos map[string]*ConsumerInfo
 	// mode of the quota mnager; initially in maintenance mode
 	mode Mode
+
+	// mutex to
+	mutex sync.RWMutex
 }
 
 // agent : a pair of controller and its tree cache
@@ -94,11 +98,15 @@ func newAgentFromCache(treeCache *core.TreeCache) (*agent, error) {
 
 // GetMode : get the mode of the quota manager
 func (m *Manager) GetMode() Mode {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 	return m.mode
 }
 
 // SetMode : set the mode of the quota manager
 func (m *Manager) SetMode(mode Mode) bool {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	m.mode = mode
 	// in the future we may restrict some mode transitions
 	return true
@@ -120,6 +128,8 @@ func (m *Manager) GetModeString() string {
 
 // AddTreeByName : add an empty tree with a given name
 func (m *Manager) AddTreeByName(treeName string) (string, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	if _, exists := m.agents[treeName]; exists {
 		return treeName, fmt.Errorf("tree %v already exists; delete first", treeName)
 	}
@@ -133,6 +143,8 @@ func (m *Manager) AddTreeByName(treeName string) (string, error) {
 
 // AddTreeFromString : add a quota tree from the string JSON representation of the tree
 func (m *Manager) AddTreeFromString(treeSring string) (string, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	treeCache := core.NewTreeCache()
 	if err := treeCache.FromString(treeSring); err != nil {
 		return "", err
@@ -142,6 +154,8 @@ func (m *Manager) AddTreeFromString(treeSring string) (string, error) {
 
 // AddTreeFromStruct : add a quota tree from the JSON struct of the tree
 func (m *Manager) AddTreeFromStruct(jQuotaTree utils.JQuotaTree) (string, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	treeCache := core.NewTreeCache()
 	if err := treeCache.FromStruct(jQuotaTree); err != nil {
 		return "", err
@@ -165,6 +179,9 @@ func (m *Manager) addTree(treeCache *core.TreeCache) (string, error) {
 
 // DeleteTree : delete a quota tree
 func (m *Manager) DeleteTree(treeName string) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	agent := m.agents[treeName]
 	if agent == nil {
 		return fmt.Errorf("tree %v does not exist", treeName)
@@ -178,6 +195,8 @@ func (m *Manager) DeleteTree(treeName string) error {
 
 // GetTreeCache : get the tree cache corresponding to a tree; nil if does not exist
 func (m *Manager) GetTreeCache(treeName string) *core.TreeCache {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 	if agent, exists := m.agents[treeName]; exists {
 		return agent.cache
 	}
@@ -186,6 +205,8 @@ func (m *Manager) GetTreeCache(treeName string) *core.TreeCache {
 
 // GetTreeNames : get the names of all the trees
 func (m *Manager) GetTreeNames() []string {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	names := make([]string, len(m.agents))
 	i := 0
 	for name := range m.agents {
@@ -197,6 +218,8 @@ func (m *Manager) GetTreeNames() []string {
 
 // UpdateTree : update tree from cache
 func (m *Manager) UpdateTree(treeName string) (unallocatedConsumerIDs []string, response *core.TreeCacheCreateResponse, err error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	if agent, exists := m.agents[treeName]; exists {
 		unallocatedConsumerIDs, response = agent.controller.UpdateTree(agent.cache)
 		return unallocatedConsumerIDs, response, nil
@@ -206,6 +229,8 @@ func (m *Manager) UpdateTree(treeName string) (unallocatedConsumerIDs []string, 
 
 // AddConsumer : add a consumer info
 func (m *Manager) AddConsumer(consumerInfo *ConsumerInfo) (bool, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	consumerID := consumerInfo.GetID()
 	if _, exists := m.consumerInfos[consumerID]; exists {
 		return false, fmt.Errorf("consumer %s already exists", consumerID)
@@ -216,6 +241,8 @@ func (m *Manager) AddConsumer(consumerInfo *ConsumerInfo) (bool, error) {
 
 // RemoveConsumer : remove a consumer info, does not de-allocate any currently allocated consumers
 func (m *Manager) RemoveConsumer(consumerID string) (bool, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	if _, exists := m.consumerInfos[consumerID]; !exists {
 		return false, fmt.Errorf("consumer %s does not exist", consumerID)
 	}
@@ -225,6 +252,9 @@ func (m *Manager) RemoveConsumer(consumerID string) (bool, error) {
 
 // GetAllConsumerIDs : get IDs of all consumers added
 func (m *Manager) GetAllConsumerIDs() []string {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
 	allIDs := make([]string, len(m.consumerInfos))
 	i := 0
 	for id := range m.consumerInfos {
@@ -236,6 +266,9 @@ func (m *Manager) GetAllConsumerIDs() []string {
 
 // Allocate : allocate a consumer on a tree
 func (m *Manager) Allocate(treeName string, consumerID string) (response *core.AllocationResponse, err error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	agent := m.agents[treeName]
 	if agent == nil {
 		return nil, fmt.Errorf("invalid tree name %s", treeName)
@@ -267,6 +300,8 @@ func (m *Manager) Allocate(treeName string, consumerID string) (response *core.A
 
 // IsAllocated : check if a consumer is allocated on a tree
 func (m *Manager) IsAllocated(treeName string, consumerID string) bool {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 	if agent, exists := m.agents[treeName]; exists {
 		return agent.controller.IsConsumerAllocated(consumerID)
 	}
@@ -275,6 +310,9 @@ func (m *Manager) IsAllocated(treeName string, consumerID string) bool {
 
 // DeAllocate : de-allocate a consumer from a tree
 func (m *Manager) DeAllocate(treeName string, consumerID string) bool {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	if agent, exists := m.agents[treeName]; exists {
 		return agent.controller.DeAllocate(consumerID)
 	}
@@ -283,6 +321,9 @@ func (m *Manager) DeAllocate(treeName string, consumerID string) bool {
 
 // AddForest : add a new forest
 func (m *Manager) AddForest(forestName string) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	if _, exists := m.forests[forestName]; exists {
 		return fmt.Errorf("duplicate forest name %v", forestName)
 	}
@@ -292,6 +333,9 @@ func (m *Manager) AddForest(forestName string) error {
 
 // DeleteForest : delete a forest
 func (m *Manager) DeleteForest(forestName string) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	if forestController, exists := m.forests[forestName]; exists {
 		treeNames := forestController.GetTreeNames()
 		for i := 0; i < len(treeNames); i++ {
@@ -305,6 +349,9 @@ func (m *Manager) DeleteForest(forestName string) error {
 
 // AddTreeToForest : add an already defined tree to a forest
 func (m *Manager) AddTreeToForest(forestName string, treeName string) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	if forestController, exists := m.forests[forestName]; exists {
 		if agent, exists := m.agents[treeName]; exists {
 			forestController.AddController(agent.controller)
@@ -318,6 +365,9 @@ func (m *Manager) AddTreeToForest(forestName string, treeName string) error {
 
 // DeleteTreeFromForest : delete a tree from a forest
 func (m *Manager) DeleteTreeFromForest(forestName string, treeName string) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	if len(forestName) == 0 || m.treeToForest[treeName] != forestName {
 		return fmt.Errorf("forest %v does not include tree %v", forestName, treeName)
 	}
@@ -328,6 +378,9 @@ func (m *Manager) DeleteTreeFromForest(forestName string, treeName string) error
 
 // GetForestNames : get the names of all forests
 func (m *Manager) GetForestNames() []string {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
 	names := make([]string, len(m.forests))
 	i := 0
 	for name := range m.forests {
@@ -339,6 +392,9 @@ func (m *Manager) GetForestNames() []string {
 
 // GetForestTreeNames : get the tree names for all forests
 func (m *Manager) GetForestTreeNames() map[string][]string {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
 	forestTreeNames := make(map[string][]string)
 	for forestName, controller := range m.forests {
 		forestTreeNames[forestName] = controller.GetTreeNames()
@@ -349,6 +405,8 @@ func (m *Manager) GetForestTreeNames() map[string][]string {
 // UpdateForest : update forest from cache
 func (m *Manager) UpdateForest(forestName string) (unallocatedConsumerIDs []string,
 	response map[string]*core.TreeCacheCreateResponse, err error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	if forestController, exists := m.forests[forestName]; exists {
 		treeNames := forestController.GetTreeNames()
@@ -364,6 +422,9 @@ func (m *Manager) UpdateForest(forestName string) (unallocatedConsumerIDs []stri
 
 // AllocateForest : allocate a consumer on a forest
 func (m *Manager) AllocateForest(forestName string, consumerID string) (response *core.AllocationResponse, err error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	forestController := m.forests[forestName]
 	if forestController == nil {
 		return nil, fmt.Errorf("invalid forest name %s", forestName)
@@ -398,6 +459,9 @@ func (m *Manager) AllocateForest(forestName string, consumerID string) (response
 
 // IsAllocatedForest : check if a consumer is allocated on a forest
 func (m *Manager) IsAllocatedForest(forestName string, consumerID string) bool {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
 	if forestController, exists := m.forests[forestName]; exists {
 		return forestController.IsConsumerAllocated(consumerID)
 	}
@@ -406,6 +470,9 @@ func (m *Manager) IsAllocatedForest(forestName string, consumerID string) bool {
 
 // DeAllocateForest : de-allocate a consumer from a forest
 func (m *Manager) DeAllocateForest(forestName string, consumerID string) bool {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	if forestController, exists := m.forests[forestName]; exists {
 		return forestController.DeAllocate(consumerID)
 	}
@@ -418,6 +485,9 @@ func (m *Manager) UpdateAll() (treeUnallocatedConsumerIDs map[string][]string,
 	forestUnallocatedConsumerIDs map[string][]string,
 	forestResponse map[string]map[string]*core.TreeCacheCreateResponse,
 	err error) {
+
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	treeUnallocatedConsumerIDs = make(map[string][]string)
 	treeResponse = make(map[string]*core.TreeCacheCreateResponse)
@@ -454,6 +524,10 @@ func (m *Manager) UpdateAll() (treeUnallocatedConsumerIDs map[string][]string,
 
 // String : printout
 func (m *Manager) String() string {
+
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
 	var b bytes.Buffer
 	b.WriteString("QuotaManger: \n")
 	b.WriteString("Mode: " + m.GetModeString() + "\n")

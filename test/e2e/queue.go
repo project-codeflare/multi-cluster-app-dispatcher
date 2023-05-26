@@ -92,14 +92,14 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		// This should fill up the worker node and most of the master node
-		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 		// This should fill up the master node
-		aw2 := createDeploymentAWwith350CPU(context, "aw-deployment-2-350cpu")
+		aw2 := createDeploymentAWwith350CPU(context, appendRandomString("aw-deployment-2-350cpu"))
 		appwrappers = append(appwrappers, aw2)
 
 		// Using quite mode due to creating of pods in earlier step.
@@ -116,14 +116,14 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		// This should fill up the worker node and most of the master node
-		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 		// This should not fit on cluster
-		aw2 := createDeploymentAWwith426CPU(context, "aw-deployment-2-426cpu")
+		aw2 := createDeploymentAWwith426CPU(context, appendRandomString("aw-deployment-2-426cpu"))
 		appwrappers = append(appwrappers, aw2)
 
 		err = waitAWAnyPodsExists(context, aw2)
@@ -423,7 +423,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		// This should fill up the worker node and most of the master node
-		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
@@ -431,7 +431,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// This should not fit on any node but should dispatch because there is enough aggregated resources.
 		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-ff-deployment-1-850-cpu", "850m", "850m", 1, 60)
+			context, appendRandomString("aw-ff-deployment-1-850-cpu"), "850m", "850m", 1, 60)
 
 		appwrappers = append(appwrappers, aw2)
 
@@ -444,7 +444,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fit on cluster after AW aw-deployment-1-700-cpu above is automatically preempted on
 		// scheduling failure
 		aw3 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-ff-deployment-2-340-cpu", "340m", "340m", 2, 60)
+			context, appendRandomString("aw-ff-deployment-2-340-cpu"), "340m", "340m", 2, 60)
 
 		appwrappers = append(appwrappers, aw3)
 
@@ -469,7 +469,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		// This should fill up the worker node and most of the master node
-		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
@@ -477,7 +477,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// This should not fit on cluster but customPodResources is incorrect so AW pods are created
 		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-deployment-2-425-vs-426-cpu", "425m", "426m", 2, 60)
+			context, appendRandomString("aw-deployment-2-425-vs-426-cpu"), "425m", "426m", 2, 60)
 
 		appwrappers = append(appwrappers, aw2)
 
@@ -496,7 +496,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		// This should fill up the worker node and most of the master node
-		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
@@ -504,7 +504,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// This should fit on cluster but customPodResources is incorrect so AW pods are not created
 		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, "aw-deployment-2-426-vs-425-cpu", "426m", "425m", 2, 60)
+			context, appendRandomString("aw-deployment-2-426-vs-425-cpu"), "426m", "425m", 2, 60)
 
 		appwrappers = append(appwrappers, aw2)
 
@@ -662,14 +662,14 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		// This should fill up the worker node and most of the master node
-		aw := createDeploymentAWwith550CPU(context, "aw-deployment-2-550cpu")
+		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 		// This should not fit on cluster
-		aw2 := createDeploymentAWwith426CPU(context, "aw-deployment-2-426cpu")
+		aw2 := createDeploymentAWwith426CPU(context, appendRandomString("aw-deployment-2-426cpu"))
 		appwrappers = append(appwrappers, aw2)
 
 		err = waitAWAnyPodsExists(context, aw2)
@@ -683,7 +683,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappersPtr := &appwrappers
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
-		aw := createGenericDeploymentAWWithMultipleItems(context, "aw-deployment-2-status")
+		aw := createGenericDeploymentAWWithMultipleItems(context, appendRandomString("aw-deployment-2-status"))
 		time.Sleep(1 * time.Minute)
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred())
@@ -709,7 +709,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappersPtr := &appwrappers
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
-		aw := createGenericServiceAWWithNoStatus(context, "aw-deployment-2-status")
+		aw := createGenericServiceAWWithNoStatus(context, appendRandomString("aw-deployment-2-status"))
 		time.Sleep(1 * time.Minute)
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred())

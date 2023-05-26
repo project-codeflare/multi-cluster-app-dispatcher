@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	listersv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
@@ -100,7 +101,7 @@ var _ = quota.QuotaManagerInterface(&QuotaManager{})
 func getDispatchedAppWrapper(dispatchedAWs map[string]*arbv1.AppWrapper, awId string) *arbv1.AppWrapper {
 	// Find Appwrapper that is run (runnable)
 	aw := dispatchedAWs[awId]
-	if aw != nil && aw.Status.CanRun == true {
+	if aw != nil && aw.Status.CanRun {
 		return aw
 	}
 	return nil
@@ -109,7 +110,9 @@ func getDispatchedAppWrapper(dispatchedAWs map[string]*arbv1.AppWrapper, awId st
 func NewQuotaManager(dispatchedAWDemands map[string]*clusterstateapi.Resource, dispatchedAWs map[string]*arbv1.AppWrapper,
 	awJobLister listersv1.AppWrapperLister, config *rest.Config, serverOptions *options.ServerOption) (*QuotaManager, error) {
 
-	if serverOptions.QuotaEnabled == false {
+	var err error
+
+	if !serverOptions.QuotaEnabled {
 		klog.
 			Infof("[NewQuotaManager] Quota management is not enabled.")
 		return nil, nil
@@ -128,25 +131,24 @@ func NewQuotaManager(dispatchedAWDemands map[string]*clusterstateapi.Resource, d
 	klog.V(10).Infof("[NewQuotaManager] Before initialization QuotaSubtree informer - %s", qm.quotaManagerBackend.String())
 
 	// Create a resource plan manager
-	qm.quotaSubtreeManager, _ = qstmanager.NewQuotaSubtreeManager(config, qm.quotaManagerBackend)
+	qm.quotaSubtreeManager, err = qstmanager.NewQuotaSubtreeManager(config, qm.quotaManagerBackend)
+	if err != nil {
+		klog.Errorf("[NewQuotaManager] failed to instantiate new quota subtree manager, err=%#v", err)
+		return nil, err
+	}
 
 	// Initialize Forest/Trees if new resource plan manager added to the cache
-	err := qm.updateForestFromCache()
+	err = qm.updateForestFromCache()
 	if err != nil {
-		klog.Errorf("[dispatchedAWDemands] Failure during Quota Manager Backend Cache refresh, err=%#v", err)
+		klog.Errorf("[NewQuotaManager] Failure during Quota Manager Backend Cache refresh, err=%#v", err)
+		return nil, err
 	}
 
 	// Add AppWrappers that have been evaluated as runnable to QuotaManager
-	err2 := qm.loadDispatchedAWs(dispatchedAWDemands, dispatchedAWs)
-	if err2 != nil {
-		klog.Errorf("[dispatchedAWDemands] Failure during Quota Manager Backend Cache refresh, err=%#v",
-			err2)
-		// Combine errors for function return
-		if err != nil {
-			err = fmt.Errorf("%w; Next error %s", err, err2.Error())
-		} else {
-			err = err2
-		}
+	err = qm.loadDispatchedAWs(dispatchedAWDemands, dispatchedAWs)
+	if err != nil {
+		klog.Errorf("[dispatchedAWDemands] Failure during Quota Manager Backend Cache refresh, err=%#v", err)
+		return nil, err
 	}
 	// Set mode of quota manager
 	qm.quotaManagerBackend.SetMode(qmbackend.Normal)
@@ -158,7 +160,7 @@ func NewQuotaManager(dispatchedAWDemands map[string]*clusterstateapi.Resource, d
 	}
 
 	qm.initializationDone = true
-	return qm, err
+	return qm, nil
 }
 
 func (qm *QuotaManager) loadDispatchedAWs(dispatchedAWDemands map[string]*clusterstateapi.Resource,
@@ -171,76 +173,55 @@ func (qm *QuotaManager) loadDispatchedAWs(dispatchedAWDemands map[string]*cluste
 	}
 
 	// Process list of AppWrappers that are already dispatched
-	var err error
-	err = nil
+	var result *multierror.Error
 
 	for k, v := range dispatchedAWDemands {
 		aw := getDispatchedAppWrapper(dispatchedAWs, k)
 		if aw != nil {
-
-			doesFit, preemptionIds, err2 := qm.Fits(aw, v, nil)
-			if doesFit == false {
+			doesFit, preemptionIds, errorMessage := qm.Fits(aw, v, nil)
+			if !doesFit {
 				klog.Errorf("[loadDispatchedAWs] Loading of AppWrapper %s/%s failed.",
 					aw.Namespace, aw.Name)
-				err = fmt.Errorf("Loading of AppWrapper %s/%s failed, %#v \n",
-					aw.Namespace, aw.Name, err2)
+				result = multierror.Append(result, fmt.Errorf("loading of AppWrapper %s/%s failed, %s",
+					aw.Namespace, aw.Name, errorMessage))
 			}
 
-			if preemptionIds != nil && len(preemptionIds) > 0 {
-				klog.Errorf("[loadDispatchedAWs] Loading of AppWrapper %s/%s caused invalid preemptions: %v.  Quota Manager is in inconsistent state.",
-					aw.Namespace, aw.Name, preemptionIds)
-				if err == nil {
-					err = fmt.Errorf("Loading of AppWrapper %s/%s caused invalid preemptions: %v.  Quota Manager is in inconsistent state. \n",
-						aw.Namespace, aw.Name, preemptionIds)
-				} else {
-					err = fmt.Errorf("%w; Next error %s Loading of AppWrapper %s/%s caused invalid preemptions: %v.  Quota Manager is in inconsistent state. \n",
-						err, aw.Namespace, aw.Name, preemptionIds)
-				}
+			if len(preemptionIds) > 0 {
+				klog.Errorf("[loadDispatchedAWs] Loading of AppWrapper %s/%s caused invalid preemptions: %v.  Quota Manager is in inconsistent state, reason:",
+					aw.Namespace, aw.Name, preemptionIds, errorMessage)
+				result = multierror.Append(result, fmt.Errorf("loading of AppWrapper %s/%s caused invalid preemptions: %v.  Quota Manager is in inconsistent state",
+					aw.Namespace, aw.Name, preemptionIds))
 			}
 			klog.V(4).Infof("[loadDispatchedAWs] Dispatched AppWrappers %s/%s found to preload.", aw.Namespace, aw.Name)
 		} else {
-			klog.Warningf("[loadDispatchedAWs] Unable to obtain AppWrapper from key: %s.  Loading of AppWrapper will be skipped.",
-				k)
+			klog.Warningf("[loadDispatchedAWs] Unable to obtain AppWrapper from key: %s.  Loading of AppWrapper will be skipped.", k)
 		}
 	}
 
-	return err
+	return result.ErrorOrNil()
 }
 
 func (qm *QuotaManager) updateForestFromCache() error {
 	unallocatedConsumers, treeCacheCreateResponse, err := qm.quotaManagerBackend.UpdateForest(QuotaManagerForestName)
-
-	if treeCacheCreateResponse != nil {
-		for k, v := range treeCacheCreateResponse {
-			danglingNodeNames := v.DanglingNodeNames
-			if danglingNodeNames != nil {
-				for _, danglingNodeName := range danglingNodeNames {
-					klog.Errorf("[updateForestFromCache] Failure to link node %s to tree %s after Quota Manager Backend Cache refresh.", danglingNodeName, k)
-				}
-			}
-			klog.V(10).Infof("[updateForestFromCache] %s", qm.quotaManagerBackend.String())
+	if err != nil {
+		return err
+	}
+	var result *multierror.Error
+	for k, v := range treeCacheCreateResponse {
+		danglingNodeNames := v.DanglingNodeNames
+		for _, danglingNodeName := range danglingNodeNames {
+			klog.Errorf("[updateForestFromCache] Failure to link node %s to tree %s after Quota Manager Backend Cache refresh.", danglingNodeName, k)
+			result = multierror.Append(result, fmt.Errorf("failure to link node %s to tree %s after Quota Manager Backend Cache refresh", danglingNodeName, k))
 		}
+		klog.V(10).Infof("[updateForestFromCache] %s", qm.quotaManagerBackend.String())
 	}
 
-	if unallocatedConsumers != nil && len(unallocatedConsumers) > 0 {
-		for _, unallocatedConsumer := range unallocatedConsumers {
-			klog.Errorf("[updateForestFromCache] Failure to allocate %s after Quota Manager Backend Cache refresh.", unallocatedConsumer)
-		}
+	for _, unallocatedConsumer := range unallocatedConsumers {
+		klog.Errorf("[updateForestFromCache] Failure to allocate %s after Quota Manager Backend Cache refresh.", unallocatedConsumer)
+		result = multierror.Append(result, fmt.Errorf("failure to allocate %s after Quota Manager Backend Cache refresh", unallocatedConsumer))
 	}
 
-	return err
-}
-
-// Recrusive call to add names of Tree
-func (qm *QuotaManager) addChildrenNodes(parentNode TreeNode, treeIDs []string) []string {
-	if len(parentNode.Children) > 0 {
-		for _, childNode := range parentNode.Children {
-			klog.V(10).Infof("[getQuotaTreeIDs] Quota tree response child node from quota mananger: %s", childNode.Name)
-			treeIDs = qm.addChildrenNodes(childNode, treeIDs)
-		}
-	}
-	treeIDs = append(treeIDs, parentNode.Name)
-	return treeIDs
+	return result.ErrorOrNil()
 }
 
 func isValidQuota(quotaGroup QuotaGroup, qmTreeIDs []string) bool {
@@ -324,7 +305,7 @@ func (qm *QuotaManager) getQuotaDesignation(aw *arbv1.AppWrapper) ([]QuotaGroup,
 			fmt.Fprintf(&allocationMessage, ".")
 			err = fmt.Errorf(allocationMessage.String())
 		} else {
-			err = fmt.Errorf("Unknown error verifying quota designations.")
+			err = fmt.Errorf("unknown error verifying quota designations")
 		}
 		klog.V(6).Infof("[getQuotaDesignation] No valid quota management IDs found for AppWrapper Job: %s/%s, err=%#v",
 			aw.Namespace, aw.Name, err)
@@ -446,7 +427,7 @@ func (qm *QuotaManager) buildRequest(aw *arbv1.AppWrapper,
 	awResDemands *clusterstateapi.Resource) (*qmbackend.ConsumerInfo, error) {
 	awId := util.CreateId(aw.Namespace, aw.Name)
 	if len(awId) <= 0 {
-		err := fmt.Errorf("[buildRequest] Request failed due to invalid AppWrapper due to empty namespace: %s or name:%s.", aw.Namespace, aw.Name)
+		err := fmt.Errorf("[buildRequest] Request failed due to invalid AppWrapper due to empty namespace: %s or name:%s", aw.Namespace, aw.Name)
 		return nil, err
 	}
 
@@ -501,42 +482,33 @@ func (qm *QuotaManager) buildRequest(aw *arbv1.AppWrapper,
 
 	return consumerInfo, err
 }
-
-func (qm *QuotaManager) refreshQuotaDefiniions() error {
-	// Initialize Forest/Trees if new resource plan manager added to the cache
-	err := qm.updateForestFromCache()
-
-	return err
-}
-
 func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource,
 	proposedPreemptions []*arbv1.AppWrapper) (bool, []*arbv1.AppWrapper, string) {
-
-	doesFit := false
 
 	// If a Quota Manager Backend instance does not exists then assume quota failed
 	if qm.quotaManagerBackend == nil {
 		klog.V(4).Infof("[Fits] No quota manager backend exists, %#v fails quota by default.",
 			awResDemands)
-		return doesFit, nil, "No quota manager backend exists"
+		return false, nil, "No quota manager backend exists"
 	}
 
 	// If Quota Manager initialization is complete but quota manager backend is in maintenance mode assume quota
-	// Processing quota requests is allow during initialization and backend is in maitenace mode for recovery purposes
+	// Processing quota requests is allow during initialization and backend is in maintenance mode for recovery purposes
 	if qm.quotaManagerBackend.GetMode() == qmbackend.Maintenance && qm.initializationDone {
 		klog.Warningf("[Fits] Quota Manager backend in maintenance mode.  Unable to process request for AppWrapper: %s/%s",
 			aw.Namespace, aw.Name)
-		return doesFit, nil, "Quota Manager backend in maintenance mode"
+		return false, nil, "Quota Manager backend in maintenance mode"
 	}
 
 	// Refresh Quota Manager Backend Cache and Tree(s) if detected change in QuotaSubtrees
 	if qm.quotaSubtreeManager.IsQuotasubtreeChanged() {
 		// Load QuotaSubtree Cache into Quoto Management Backend Cache
 		qm.quotaSubtreeManager.LoadQuotaSubtreesIntoBackend()
-		// Realize new Quoto Management tree(s) from Backend Cache
+		// Realize new Quota Management tree(s) from Backend Cache
 		err := qm.updateForestFromCache()
 		if err != nil {
 			klog.Errorf("[Fits] Failure during refresh of quota tree(s), err=%#v.", err)
+			return false, nil, "failure during refresh of quota tree(s)"
 		}
 	}
 
@@ -544,38 +516,34 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 	consumerInfo, err := qm.buildRequest(aw, awResDemands)
 	if err != nil {
 		klog.Errorf("[Fits] Creation of quota request failed: %s/%s, err=%#v.", aw.Namespace, aw.Name, err)
-		return doesFit, nil, err.Error()
+		return false, nil, err.Error()
 	}
 
 	var preemptIds []*arbv1.AppWrapper
 
-	qm.quotaManagerBackend.AddConsumer(consumerInfo)
+	_, err = qm.quotaManagerBackend.AddConsumer(consumerInfo)
+	if err != nil {
+		return false, nil, err.Error()
+	}
 
 	consumerID := consumerInfo.GetID()
 	klog.V(4).Infof("[Fits] Sending quota allocation request: %#v ", consumerInfo)
 	allocResponse, err := qm.quotaManagerBackend.AllocateForest(QuotaManagerForestName, consumerID)
-
 	if err != nil {
-		if allocResponse != nil && len(allocResponse.GetMessage()) > 0 {
-			klog.Errorf("[Fits] Error allocating consumer: %s/%s, msg=%s, err=%#v.",
-				aw.Namespace, aw.Name, allocResponse.GetMessage(), err)
-			return doesFit, nil, allocResponse.GetMessage()
-		} else {
-			klog.Errorf("[Fits] Error allocating consumer: %s/%s, err=%#v.",
-				aw.Namespace, aw.Name, err)
-			return doesFit, nil, err.Error()
-
-		}
+		klog.Errorf("[Fits] Error allocating consumer: %s/%s, err=%#v.", aw.Namespace, aw.Name, err)
+		return false, nil, err.Error()
 	}
-
-	doesFit = allocResponse.IsAllocated()
-	if len(allocResponse.GetMessage()) > 0 {
-		klog.Warningf("[Fits] Response from Quota Management backend: %s",
-			allocResponse.GetMessage())
+	if allocResponse != nil && len(strings.TrimSpace(allocResponse.GetMessage())) > 0 {
+		klog.Errorf("[Fits] Error allocating consumer: %s/%s, msg=%s, err=%#v.",
+			aw.Namespace, aw.Name, allocResponse.GetMessage(), err)
+		return false, nil, allocResponse.GetMessage()
 	}
+	klog.V(4).Infof("[Fits] allocation response received. Quota Allocated: %t, Message: '%s', Preempted app wrappers count: %d", allocResponse.IsAllocated(),
+		strings.TrimSpace(allocResponse.GetMessage()), len(allocResponse.GetPreemptedIds()))
+	doesFit := allocResponse.IsAllocated()
 	preemptIds = qm.getAppWrappers(allocResponse.GetPreemptedIds())
 
-	return doesFit, preemptIds, allocResponse.GetMessage()
+	return doesFit, preemptIds, ""
 }
 
 func (qm *QuotaManager) getAppWrappers(preemptIds []string) []*arbv1.AppWrapper {
@@ -607,29 +575,25 @@ func (qm *QuotaManager) getAppWrappers(preemptIds []string) []*arbv1.AppWrapper 
 }
 func (qm *QuotaManager) Release(aw *arbv1.AppWrapper) bool {
 
-	released := false
-
 	// Handle uninitialized quota manager
 	if qm.quotaManagerBackend == nil {
 		klog.Errorf("[Release] No quota manager backend exists, Quota release %s/%s fails quota by default.",
 			aw.Name, aw.Namespace)
-		return released
+		return false
 	}
 
 	awId := util.CreateId(aw.Namespace, aw.Name)
 	if len(awId) <= 0 {
 		klog.Errorf("[Release] Request failed due to invalid AppWrapper due to empty namespace: %s or name:%s.", aw.Namespace, aw.Name)
-		return released
+		return false
 	}
 
-	released = qm.quotaManagerBackend.DeAllocateForest(QuotaManagerForestName, awId)
+	released := qm.quotaManagerBackend.DeAllocateForest(QuotaManagerForestName, awId)
 
 	if !released {
-		klog.Errorf("[Release] Quota release for %s/%s failed.",
-			aw.Namespace, aw.Name)
+		klog.Errorf("[Release] Quota release for %s/%s failed.", aw.Namespace, aw.Name)
 	} else {
-		klog.V(8).Infof("[Release] Quota release for %s/%s successful.",
-			aw.Namespace, aw.Name)
+		klog.V(4).Infof("[Release] Quota release for %s/%s successful.", aw.Namespace, aw.Name)
 	}
 
 	// Remove Consumer Request
@@ -640,7 +604,7 @@ func (qm *QuotaManager) Release(aw *arbv1.AppWrapper) bool {
 	}
 
 	if success {
-		klog.V(8).Infof("[Release] Quota request definition for %s/%s successful.",
+		klog.V(4).Infof("[Release] Quota request definition for %s/%s successful.",
 			aw.Namespace, aw.Name)
 
 	} else {
