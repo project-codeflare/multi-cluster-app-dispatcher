@@ -322,6 +322,8 @@ function mcad-quota-management-down {
       echo "Failed to undeploy controller"
       exit 1
     fi
+    echo "Waiting for the test namespace to be cleaned up.."
+    sleep 60
 }
 
 function mcad-up {
