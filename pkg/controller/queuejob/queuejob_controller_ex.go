@@ -1261,6 +1261,33 @@ func (qjm *XController) ScheduleNext() {
 
 			if aggqj.LessEqual(resources) && qjm.nodeChecks(qjm.cache.GetUnallocatedHistograms(), qj) {
 				//Now evaluate quota
+				//Quota tree design:
+				// Quota tree should have two nodes : default node and experimental node
+				// default node should have the same quota as root node with hardlimit set to True
+				// experimental node is the node which will borrow resources with hardlimit set to False but
+				// quota set to much lower value than default node.
+
+				// All non-quota submission AWs will consume quota from default node.
+
+				//Find if AW has label named "quota_context"
+				allLabels := qj.Labels
+				quotaSetForAw := false
+				for labelk, _ := range allLabels {
+					if labelk == "quota_context" {
+						quotaSetForAw = true
+					}
+				}
+				if quotaSetForAw == false {
+					qj.Labels["quota_context"] = "default"
+					if err := qjm.updateEtcd(qj, "ScheduleNext - setDefaultQuota"); err == nil {
+						klog.V(3).Infof("[ScheduleNext] Default quota added to AW %v", qj.Name)
+					}
+
+					if err != nil {
+						klog.V(3).Infof("[ScheduleNext] Failed to added default quota to AW %v, skipping dispatch of AW", qj.Name)
+						return
+					}
+				}
 				fits := true
 				klog.V(4).Infof("[ScheduleNext] HOL available resourse successful check for %s at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				if qjm.serverOption.QuotaEnabled {
