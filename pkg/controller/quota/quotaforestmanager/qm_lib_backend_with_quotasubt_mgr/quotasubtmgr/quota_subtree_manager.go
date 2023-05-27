@@ -1,11 +1,11 @@
 // b private
 // ------------------------------------------------------ {COPYRIGHT-TOP} ---
 // Copyright 2019, 2021, 2022, 2023 The Multi-Cluster App Dispatcher Authors.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //    http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
@@ -18,18 +18,19 @@
 package quotasubtmgr
 
 import (
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/core"
-	"k8s.io/klog/v2"
+	"errors"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/core"
+	"k8s.io/klog/v2"
 
 	qstv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotaforestmanager/qm_lib_backend_with_quotasubt_mgr/quotasubtmgr/util"
 	qmlib "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota"
 	qmlibutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
 	qst "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/quotasubtree/clientset/versioned"
@@ -39,23 +40,17 @@ import (
 	qstinformers "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/quotasubtree/informers/externalversions/quotasubtree/v1"
 )
 
-
 // New returns a new implementation.
 func NewQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Manager) (*QuotaSubtreeManager, error) {
 	return newQuotaSubtreeManager(config, quotaManagerBackend)
 }
 
 type QuotaSubtreeManager struct {
-	mutex sync.Mutex
-
-	kubeclient *kubernetes.Clientset
-
-	beMutex                sync.Mutex
-	quotaManagerBackend    *qmlib.Manager
+	quotaManagerBackend *qmlib.Manager
 
 	/* Information about Quota Subtrees */
 	quotaSubtreeInformer qstinformers.QuotaSubtreeInformer
-	qstMutex             sync.Mutex
+	qstMutex             sync.RWMutex
 	qstMap               map[string]*qstv1.QuotaSubtree
 
 	qstChanged bool
@@ -74,11 +69,10 @@ func newQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Mana
 	}
 
 	qstInformerFactory := qstinformer.NewSharedInformerFactoryWithOptions(qstClient, 0,
-							qstinformer.WithTweakListOptions(func(opt *metav1.ListOptions) {
-		opt.LabelSelector = util.URMTreeLabel
-	}))
+		qstinformer.WithTweakListOptions(func(opt *metav1.ListOptions) {
+			opt.LabelSelector = util.URMTreeLabel
+		}))
 	qstm.quotaSubtreeInformer = qstInformerFactory.Quotasubtree().V1().QuotaSubtrees()
-
 
 	// Add event handle for resource plans
 	qstm.quotaSubtreeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -95,7 +89,9 @@ func newQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Mana
 	// Wait for cache sync
 	klog.V(10).Infof("[newQuotaSubtreeManager] Waiting for QuotaSubtree informer cache sync. to complete.")
 	qstm.qstSynced = qstm.quotaSubtreeInformer.Informer().HasSynced
-	cache.WaitForCacheSync(neverStop, qstm.qstSynced)
+	if !cache.WaitForCacheSync(neverStop, qstm.qstSynced) {
+		return nil, errors.New("failed to wait for the quota sub tree informer to synch")
+	}
 
 	// Initialize Quota Trees
 	qstm.initializeQuotaTreeBackend()
@@ -131,6 +127,9 @@ func (qstm *QuotaSubtreeManager) clearQuotasubtreeChanged() {
 }
 
 func (qstm *QuotaSubtreeManager) IsQuotasubtreeChanged() bool {
+	qstm.qstMutex.RLock()
+	defer qstm.qstMutex.RUnlock()
+
 	return qstm.qstChanged
 }
 
@@ -153,11 +152,20 @@ func (qstm *QuotaSubtreeManager) createTreeNodesFromQST(qst *qstv1.QuotaSubtree)
 				continue
 			}
 			resourceTypes = appendIfNotPresent(resourceName, resourceTypes)
-			amount, success := v.AsInt64()
-			if !success {
-				klog.Errorf("[createTreeNodesFromQST] Failure converting QuotaSubtree request demand quota to int64, QuotaSubtree %s request quota: %v will be ignored.",
-					qst.Name, v)
-				continue
+			var amount int64
+			var success bool
+			switch resourceName {
+			case "cpu":
+				amount = v.MilliValue()
+			case "memory":
+				amount = v.Value()
+			default:
+				amount, success = v.AsInt64()
+				if !success {
+					klog.Errorf("[createTreeNodesFromQST] Failure converting QuotaSubtree request demand quota to int64, QuotaSubtree %s request quota: %v will be ignored.",
+						qst.Name, v)
+					continue
+				}
 			}
 
 			// Add new quota demand
@@ -218,7 +226,6 @@ func (qstm *QuotaSubtreeManager) createTreeCache(forestName string, qst *qstv1.Q
 }
 
 func (qstm *QuotaSubtreeManager) LoadQuotaSubtreesIntoBackend() {
-
 	qstm.qstMutex.Lock()
 	defer qstm.qstMutex.Unlock()
 
@@ -243,11 +250,11 @@ func (qstm *QuotaSubtreeManager) LoadQuotaSubtreesIntoBackend() {
 	// Process all quotasubtrees to the tree caches
 	for _, qst := range qstm.qstMap {
 		klog.V(4).Infof("[LoadQuotaSubtreesIntoBackend] Processing QuotaSubtree  %s.",
-											qst.Name)
+			qst.Name)
 		qstTreeName := qst.Labels[util.URMTreeLabel]
 		if len(qstTreeName) <= 0 {
 			klog.Errorf("[LoadQuotaSubtreesIntoBackend] QuotaSubtree %s does not contain the proper 'tree' label will be ignored.",
-											qst.Name)
+				qst.Name)
 			continue
 		}
 
@@ -286,7 +293,7 @@ func (qstm *QuotaSubtreeManager) initializeQuotaTreeBackend() {
 		return
 	}
 
-	if qstm.quotaManagerBackend.GetMode() !=  qmlib.Maintenance {
+	if qstm.quotaManagerBackend.GetMode() != qmlib.Maintenance {
 		klog.Warningf("[initializeQuotaTreeBackend] Forcing Quota Manager into maintenance mode.")
 		qstm.quotaManagerBackend.SetMode(qmlib.Maintenance)
 	}

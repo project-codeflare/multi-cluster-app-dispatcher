@@ -308,135 +308,6 @@ function cleanup {
     fi 
 }
 
-debug_function() {
-  echo "---"
-  echo "kubectl create namespace test"
-  kubectl create namespace test
-
-cat <<EOF > aw-ss.0.yaml
-apiVersion: mcad.ibm.com/v1beta1
-kind: AppWrapper
-metadata:
-  name: hellodiana-2-test-0
-  namespace: test
-spec:
-  schedulingSpec:
-    minAvailable: 2
-  resources:
-    Items:
-    - replicas: 1
-      metadata:
-        name: hellodiana-2-test-0
-        namespace: test
-      type: StatefulSet
-      template:
-        apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
-        kind: StatefulSet
-        metadata:
-          name: hellodiana-2-test-0
-          namespace: test
-          labels:
-            app: hellodiana-2-test-0
-        spec:
-          selector:
-            matchLabels:
-              app: hellodiana-2-test-0
-          replicas: 2
-          template:
-            metadata:
-              labels:
-                app: hellodiana-2-test-0
-                size: "2"
-            spec:
-              containers:
-               - name: hellodiana-2-test-0
-                 image: ${IMAGE_ECHOSERVER}
-                 imagePullPolicy: Always
-                 ports:
-                 - containerPort: 80
-EOF
-
-  echo "---" 
-  echo "kubectl get statefulsets"
-  kubectl get statefulsets -n test
-  
-  echo "---" 
-  echo "kubectl create -f  aw-ss.0.yaml"
-  kubectl create -f  aw-ss.0.yaml
-
-  echo "---"
-  echo "kubectl get appwrappers -o yaml"
-  kubectl get appwrappers -o yaml -n test
-
-  sleep 5
-
-  echo "---" 
-  echo "kubectl get statefulsets"
-  kubectl get statefulsets -n test
-
-  sleep 5
-
-  echo "---" 
-  echo "kubectl describe statefulsets"
-  kubectl describe statefulsets -n test
-
-  sleep 5
-
-  echo "---" 
-  echo "kubectl get pods"
-  kubectl get pods -n test
-
-  sleep 5
-
-  echo "---"
-  echo "kubectl get pods -o yaml"
-  kubectl get pods -n test -o yaml
-
-  echo "---" 
-  echo "kubectl describe pods"
-  kubectl describe pods -n test
-
-  echo "---"
-  echo "kubectl delete -f  aw-ss.0.yaml"
-  kubectl delete -f  aw-ss.0.yaml
-
-  echo "---"
-  echo "kubectl delete namespace test"
-  kubectl delete namespace test
-}
-
-function mcad-quota-management-up {
-    # start mcad controller
-    echo "==========================>>>>> Starting MCAD Controller for Quota Management Testing <<<<<=========================="
-    echo " "
-    echo "helm upgrade --install mcad-controller ${ROOT_DIR}/deployment/mcad-controller namespace kube-system wait set loglevel=10 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=1000m set resources.limits.memory=1024Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY set configMap.quotaEnabled='true' set quotaManagement.rbac.apiGroup=ibm.com set quotaManagement.rbac.resource=quotasubtrees set configMap.name=mcad-controller-configmap set configMap.preemptionEnabled='true'"
-    helm upgrade  --install mcad-controller ${ROOT_DIR}/deployment/mcad-controller  \
-                  --namespace kube-system --wait --set loglevel=${LOG_LEVEL} --set resources.requests.cpu=1000m \
-                  --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi \
-                  --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY \
-                  --set configMap.quotaEnabled='"true"' --set quotaManagement.rbac.apiGroup=ibm.com --set quotaManagement.rbac.resource=quotasubtrees \
-                  --set configMap.name=mcad-controller-configmap --set configMap.preemptionEnabled='"true"'
-    if [ $? -ne 0 ]
-    then
-      echo "Failed to deploy MCAD controller"
-      exit 1
-    fi
-    echo "Listing MCAD Controller Helm Chart and Pod YAML..."
-    helm list -n kube-system
-    if [ $? -ne 0 ]
-    then
-      echo "Failed to find mcad-controller helm chart"
-      exit 1
-    fi
-    local mcad_pod=$(kubectl get pods -n kube-system | grep mcad-controller | awk '{print $1}')
-    if [[ "$mcad_pod" != "" ]]
-    then
-        kubectl get pod ${mcad_pod} -n kube-system -o yaml
-    fi
-
-    kubectl get configmap -n kube-system -o yaml mcad-controller-configmap
-}
-
 function mcad-quota-management-down {
 
     # Helm chart install name
@@ -451,12 +322,11 @@ function mcad-quota-management-down {
       echo "Failed to undeploy controller"
       exit 1
     fi
+    echo "Waiting for the test namespace to be cleaned up.."
+    sleep 60
 }
 
 function mcad-up {
-    # start mcad controller
-    echo "==========================>>>>> Starting MCAD Controller with No Quota Management Testing <<<<<=========================="
- 
     echo "helm install mcad-controller namespace kube-system wait set loglevel=2 set resources.requests.cpu=1000m set resources.requests.memory=1024Mi set resources.limits.cpu=4000m set resources.limits.memory=4096Mi set image.repository=$IMAGE_REPOSITORY_MCAD set image.tag=$IMAGE_TAG_MCAD set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY"
     helm upgrade  --install mcad-controller ${ROOT_DIR}/deployment/mcad-controller  --namespace kube-system --wait \
                   --set loglevel=${LOG_LEVEL} --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi \
@@ -470,34 +340,9 @@ function mcad-up {
       echo "Failed to deploy MCAD controller"
       exit 1
     fi
-
-    echo "Listing MCAD Controller Helm Chart and Pod YAML..."
-    helm list -n kube-system
-    if [ $? -ne 0 ]
-    then
-      echo "Failed to find mcad-controller helm chart"
-      exit 1
-    fi
-
-    mcad_pod=$(kubectl get pods -n kube-system | grep mcad-controller | awk '{print $1}')
-    if [[ "$mcad_pod" != "" ]]
-    then
-        kubectl get pod ${mcad_pod} -n kube-system -o yaml
-    fi
-
-    kubectl get configmap -n kube-system -o yaml mcad-controller-configmap
 }
 
 function setup-mcad-env {
-  echo "==========================>>>>> Setting up MCAD Environment <<<<<=============================="
-  echo "kubectl config current-context"
-  kubectl config current-context
-  if [ $? -ne 0 ]
-  then
-    echo "Failed to get the current kubectl context"
-    exit 1
-  fi
-  
   echo "Installing Podgroup CRD"
   kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/scheduler-plugins/277b6bdec18f8a9e9ccd1bfeaf4b66495bfc6f92/config/crd/bases/scheduling.sigs.k8s.io_podgroups.yaml
  
@@ -505,7 +350,6 @@ function setup-mcad-env {
   kubectl taint nodes --all node-role.kubernetes.io/master-
  
   # This is meant to orchestrate initial cluster configuration such that accounting tests can be consistent
-  echo "---"
   echo "Orchestrate cluster..."
   echo "kubectl cordon test-worker"
   kubectl cordon test-worker
@@ -525,14 +369,9 @@ function setup-mcad-env {
     echo -n "." && sleep 1; 
   done
 
-  # Show available resources of cluster nodes
-  echo "---"
-  echo "kubectl describe nodes"
-  kubectl describe nodes
 }
 
 function kuttl-tests {
-  echo "==============>>>>> Running Quota Management Kuttl E2E tests... <<<<<=============="
   echo "kubectl kuttl test ${KUTTL_TEST_OPT}"
   kubectl kuttl test ${KUTTL_TEST_OPT}
   if [ $? -ne 0 ]
@@ -551,9 +390,8 @@ update_test_host
 check-prerequisites 
 kind-up-cluster
 setup-mcad-env
-mcad-quota-management-up
+# MCAD with quotamanagement options is started by kuttl-tests
 kuttl-tests
 mcad-quota-management-down
 mcad-up
-echo "==========================>>>>> Running E2E tests... <<<<<=========================="
 go test ./test/e2e -v -timeout 120m -count=1
