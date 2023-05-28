@@ -53,16 +53,5 @@ spec:
       quotas:
         hardLimit: true
         requests:
-<<<<<<< HEAD:test/e2e-kuttl/install-quota-subtree.yaml
           cpu: 900m
           memory: 300Mi
-=======
-          cpu: 900
-          memory: 300
-    - name: default
-      quotas:
-        hardLimit: true
-        requests:
-          cpu: 1075
-          memory: 1045
->>>>>>> 9c356c9f (add default quota):test/e2e-kuttl/quota-forest/01-install.yaml
