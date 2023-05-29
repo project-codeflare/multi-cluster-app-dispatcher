@@ -1,0 +1,21 @@
+# Verify AppWrappers finished successfully
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+---
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+    name: my-job-1
+    namespace: test
+status:
+    state: Completed
+---
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+    name: my-job-2
+    namespace: test
+status:
+    state: Completed
