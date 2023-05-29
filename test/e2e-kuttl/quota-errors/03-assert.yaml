@@ -1,0 +1,27 @@
+# Verify AppWrapper was dispatched and pod was created
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: deployment-silver-lo-pri-1replica
+  namespace: quota-errors
+  labels:
+    quota_context: "silver"
+    quota_service: "service-root"
+status:
+  state: Running
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-silver-lo-pri-1replica
+  namespace: quota-errors
+  labels:
+      app: deployment-silver-lo-pri-1replica
+      appwrapper.mcad.ibm.com: deployment-silver-lo-pri-1replica
+      resourceName: deployment-silver-lo-pri-1replica  
+status:
+    availableReplicas: 1
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1

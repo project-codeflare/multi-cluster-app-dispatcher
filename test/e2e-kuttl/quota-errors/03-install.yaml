@@ -1,0 +1,42 @@
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: deployment-silver-lo-pri-1replica
+  namespace: quota-errors
+  labels:
+    quota_context: "silver"
+    quota_service: "service-root"
+spec:
+  resources:
+    GenericItems:
+    - replicas: 1
+      generictemplate:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: deployment-silver-lo-pri-1replica
+          namespace: quota-errors
+          labels:
+            app: deployment-silver-lo-pri-1replica
+        spec:
+          selector:
+            matchLabels:
+              app: deployment-silver-lo-pri-1replica
+          replicas: 1
+          template:
+            metadata:
+              labels:
+                app: deployment-silver-lo-pri-1replica
+            spec:
+              containers:
+               - name:  deployment-silver-lo-pri-1replica
+                 image: kicbase/echo-server:1.0
+                 ports:
+                 - containerPort: 80
+                 resources:
+                   requests:
+                     cpu: 100m
+                     memory: 32Mi
+                   limits:
+                     cpu: 100m
+                     memory: 32Mi
