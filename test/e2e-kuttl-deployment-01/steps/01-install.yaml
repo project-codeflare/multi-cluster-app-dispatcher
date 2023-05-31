@@ -1,0 +1,79 @@
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: deployment-echoserver-01
+  namespace: start-up
+spec:
+  resources:
+    GenericItems:
+    - replicas: 1
+      generictemplate:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: deployment-echoserver-01
+          namespace: start-up
+          labels:
+            app: deployment-echoserver-01
+        spec:
+          selector:
+            matchLabels:
+              app: deployment-echoserver-01
+          replicas: 1
+          template:
+            metadata:
+              labels:
+                app: deployment-echoserver-01
+            spec:
+              containers:
+               - name:  deployment-echoserver-01
+                 image: kicbase/echo-server:1.0
+                 ports:
+                 - containerPort: 80
+                 resources:
+                   requests:
+                     cpu: 100m
+                     memory: 32Mi
+                   limits:
+                     cpu: 100m
+                     memory: 32Mi
+---
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: deployment-echoserver-02
+  namespace: start-up
+spec:
+  resources:
+    GenericItems:
+    - replicas: 1
+      generictemplate:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: deployment-echoserver-02
+          namespace: start-up
+          labels:
+            app: deployment-echoserver-02
+        spec:
+          selector:
+            matchLabels:
+              app: deployment-echoserver-02
+          replicas: 1
+          template:
+            metadata:
+              labels:
+                app: deployment-echoserver-02
+            spec:
+              containers:
+               - name:  deployment-echoserver-01
+                 image: kicbase/echo-server:1.0
+                 ports:
+                 - containerPort: 80
+                 resources:
+                   requests:
+                     cpu: 100m
+                     memory: 32Mi
+                   limits:
+                     cpu: 100m
+                     memory: 32Mi                     

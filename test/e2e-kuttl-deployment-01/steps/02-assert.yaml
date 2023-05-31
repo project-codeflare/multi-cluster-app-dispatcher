@@ -1,0 +1,43 @@
+# Verify CRDs existence
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: appwrappers.mcad.ibm.com
+status:
+  acceptedNames:
+    kind: AppWrapper
+    listKind: AppWrapperList
+    plural: appwrappers
+    singular: appwrapper
+  storedVersions:
+    - v1beta1
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: quotasubtrees.ibm.com
+status:
+  acceptedNames:
+    kind: QuotaSubtree
+    singular: quotasubtree
+    plural: quotasubtrees
+  storedVersions:
+    - v1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+    meta.helm.sh/release-name: mcad-controller
+    meta.helm.sh/release-namespace: kube-system
+  labels:
+    app: custom-metrics-apiserver
+    app.kubernetes.io/managed-by: Helm
+    chart: mcad-controller-0.1.0
+status:
+    availableReplicas: 1
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1        
