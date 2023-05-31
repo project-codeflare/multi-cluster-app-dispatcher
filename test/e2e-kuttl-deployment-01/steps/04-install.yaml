@@ -1,11 +1,8 @@
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-    name: my-job-1
+    name: no-quota-job-1
     namespace: start-up
-    labels:
-        quota_context: bronze
-        quota_service: service-root
 spec:
     schedulingSpec:
         minAvailable: 1
@@ -27,19 +24,19 @@ spec:
                   apiVersion: batch/v1
                   kind: Job
                   metadata:
-                      name: my-job-1
+                      name: no-quota-job-1
                       namespace: start-up
                       labels:
-                          appwrapper.mcad.ibm.com: my-job-1
+                          appwrapper.mcad.ibm.com: no-quota-job-1
                   spec:
                       parallelism: 1
                       completions: 1
                       template:
                           metadata:
-                              name: my-job-1
+                              name: no-quota-job-1
                               namespace: start-up
                               labels:
-                                  appwrapper.mcad.ibm.com: my-job-1
+                                  appwrapper.mcad.ibm.com: no-quota-job-1
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never
@@ -65,11 +62,8 @@ spec:
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-    name: my-job-2
+    name: no-quota-job-2
     namespace: start-up
-    labels:
-        quota_context: bronze
-        quota_service: service-root
 spec:
     schedulingSpec:
         minAvailable: 1
@@ -91,7 +85,7 @@ spec:
                   apiVersion: batch/v1
                   kind: Job
                   metadata:
-                      name: my-job-2
+                      name: no-quota-job-2
                       namespace: start-up
                       labels:
                           appwrapper.mcad.ibm.com: my-job-2
@@ -100,10 +94,10 @@ spec:
                       completions: 1
                       template:
                           metadata:
-                              name: my-job-2
+                              name: no-quota-job-2
                               namespace: start-up
                               labels:
-                                  appwrapper.mcad.ibm.com: my-job-2
+                                  appwrapper.mcad.ibm.com: no-quota-job-2
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never
