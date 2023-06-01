@@ -1,0 +1,10 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+apply: 
+  - 03-install.yaml
+assert: 
+  - 03-assert.yaml
+error: [] 
+unitTest: false
+delete: []
+commands: [] 

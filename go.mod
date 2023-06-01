@@ -3,6 +3,7 @@ module github.com/project-codeflare/multi-cluster-app-dispatcher
 go 1.18
 
 require (
+	github.com/eapache/go-resiliency v1.3.0
 	github.com/emicklei/go-restful v2.16.0+incompatible
 	github.com/golang/protobuf v1.4.3
 	github.com/hashicorp/go-multierror v1.1.1
