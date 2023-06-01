@@ -32,7 +32,8 @@ package api
 
 import (
 	"fmt"
-	"k8s.io/api/core/v1"
+
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 
@@ -252,18 +253,20 @@ func (ps *JobInfo) Clone() *JobInfo {
 		UID:       ps.UID,
 		Name:      ps.Name,
 		Namespace: ps.Namespace,
+		Priority:  ps.Priority,
 
 		MinAvailable: ps.MinAvailable,
-		NodeSelector: map[string]string{},
-		Allocated:    ps.Allocated.Clone(),
-		TotalRequest: ps.TotalRequest.Clone(),
+		Allocated:    EmptyResource(),
+		TotalRequest: EmptyResource(),
 
 		TaskStatusIndex: map[TaskStatus]tasksMap{},
 		Tasks:           tasksMap{},
 	}
-
-	for k, v := range ps.NodeSelector {
-		info.NodeSelector[k] = v
+	if ps.NodeSelector != nil {
+		info.NodeSelector = map[string]string{}
+		for k, v := range ps.NodeSelector {
+			info.NodeSelector[k] = v
+		}
 	}
 
 	for _, task := range ps.Tasks {

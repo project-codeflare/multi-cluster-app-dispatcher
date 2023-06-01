@@ -34,7 +34,7 @@ import (
 	"reflect"
 	"testing"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -203,6 +203,65 @@ func TestDeleteTaskInfo(t *testing.T) {
 		if !jobInfoEqual(ps, test.expected) {
 			t.Errorf("podset info %d: \n expected: %v, \n got: %v \n",
 				i, test.expected, ps)
+		}
+	}
+}
+
+func TestCloneJob(t *testing.T) {
+	case01UID := JobID("job_1")
+	case01Ns := "c1"
+	case01_owner := buildOwnerReference("uid")
+
+	case01Pod1 := buildPod("c1", "p1", "", v1.PodPending, buildResourceList("1000m", "1G"), []metav1.OwnerReference{case01_owner}, make(map[string]string))
+	case01Pod2 := buildPod("c1", "p2", "n1", v1.PodRunning, buildResourceList("2000m", "2G"), []metav1.OwnerReference{case01_owner}, make(map[string]string))
+	case01Pod3 := buildPod("c1", "p3", "n1", v1.PodPending, buildResourceList("1000m", "1G"), []metav1.OwnerReference{case01_owner}, make(map[string]string))
+	case01Pod4 := buildPod("c1", "p4", "n1", v1.PodPending, buildResourceList("1000m", "1G"), []metav1.OwnerReference{case01_owner}, make(map[string]string))
+	case01Task1 := NewTaskInfo(case01Pod1)
+	case01Task2 := NewTaskInfo(case01Pod2)
+	case01Task3 := NewTaskInfo(case01Pod3)
+	case01Task4 := NewTaskInfo(case01Pod4)
+
+	tests := []struct {
+		name     string
+		expected *JobInfo
+	}{
+		{
+			name: "add 1 pending owner pod, 1 running owner pod",
+			expected: &JobInfo{
+				UID:          case01UID,
+				Name:         "job_1",
+				Namespace:    case01Ns,
+				MinAvailable: 1,
+
+				Allocated:    buildResource("4000m", "4G"),
+				TotalRequest: buildResource("5000m", "5G"),
+				Tasks: tasksMap{
+					case01Task1.UID: case01Task1,
+					case01Task2.UID: case01Task2,
+					case01Task3.UID: case01Task3,
+					case01Task4.UID: case01Task4,
+				},
+				TaskStatusIndex: map[TaskStatus]tasksMap{
+					Running: {
+						case01Task2.UID: case01Task2,
+					},
+					Pending: {
+						case01Task1.UID: case01Task1,
+					},
+					Bound: {
+						case01Task3.UID: case01Task3,
+						case01Task4.UID: case01Task4,
+					},
+				},
+			},
+		},
+	}
+
+	for i, test := range tests {
+		clone := test.expected.Clone()
+		//assert.Equal(t, test.expected, clone)
+		if !jobInfoEqual(clone, test.expected) {
+			t.Errorf("clone info %d: \n expected: %v, \n got: %v \n", i, test.expected, clone)
 		}
 	}
 }
