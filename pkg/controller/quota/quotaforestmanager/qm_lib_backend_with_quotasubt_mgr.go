@@ -624,3 +624,6 @@ func (qm *QuotaManager) removeConsumer(consumerID string) {
 		klog.Warningf("Failed to remove consumer %s", consumerID)
 	}
 }
+func (qm *QuotaManager) GetTreeNames() []string {
+	return qm.quotaManagerBackend.GetTreeNames()
+}

@@ -1260,35 +1260,30 @@ func (qjm *XController) ScheduleNext() {
 			klog.Infof("[ScheduleNext] XQJ %s with resources %v to be scheduled on aggregated idle resources %v", qj.Name, aggqj, resources)
 
 			if aggqj.LessEqual(resources) && qjm.nodeChecks(qjm.cache.GetUnallocatedHistograms(), qj) {
-				//Now evaluate quota
-				//Quota tree design:
-				// Quota tree should have two nodes : default node and experimental node
-				// default node should have the same quota as root node with hardlimit set to True
-				// experimental node is the node which will borrow resources with hardlimit set to False but
-				// quota set to much lower value than default node.
-
-				// All non-quota submission AWs will consume quota from default node.
-
-				//Find if AW has label named "quota_context"
+				// Now evaluate quota
+				// Quota tree design:
+				// - All AppWrappers without quota submission will consume quota from the 'default' node.
+				// - All quota trees in the system should have a 'default' node so AppWrappers without
+				//   quota specification can be dispatched
+				// - If the AppWrapper doesn't have a quota label, then one is added for every tree with the 'default' value
+				// - Depending on how the 'default' node is configured, AppWrappers that don't specify quota could be
+				//   preemptable by default (e.g., 'default' node with 'cpu: 0m' and 'memory: 0Mi' quota and 'hardLimit: false'
+				//   such node borrows quota from other nodes already in the system)
+				allTrees := qjm.quotaManager.GetTreeNames()
 				allLabels := qj.DeepCopy().Labels
-				quotaSetForAw := false
-				for labelk, _ := range allLabels {
-					if labelk == "quota_context" {
-						quotaSetForAw = true
+				newLabels := make(map[string]string)
+				updateLabels := false
+				for _, treeName := range allTrees {
+					if _, quotaSetForAW := allLabels[treeName]; !quotaSetForAW {
+						newLabels[treeName] = "default"
+						updateLabels = true
 					}
 				}
-				//When label "quota_context" not found add it
-				//this will only work for quota tree and not quota forest
-				if quotaSetForAw == false {
-					if len(allLabels) == 0 {
-						allLabels = make(map[string]string)
-					}
-					allLabels["quota_context"] = "default"
-					qj.SetLabels(allLabels)
+				if updateLabels {
+					qj.SetLabels(newLabels)
 					if err := qjm.updateEtcd(qj, "ScheduleNext - setDefaultQuota"); err == nil {
 						klog.V(3).Infof("[ScheduleNext] Default quota added to AW %v", qj.Name)
 					}
-
 					if err != nil {
 						klog.V(3).Infof("[ScheduleNext] Failed to added default quota to AW %v, skipping dispatch of AW", qj.Name)
 						return

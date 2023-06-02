@@ -1,0 +1,13 @@
+# Verify AppWrapper without quota finished successfully
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 60
+---
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+    name: job-without-quota
+    namespace: test
+status:
+    state: Completed

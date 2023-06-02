@@ -1,3 +1,4 @@
+---
 apiVersion: ibm.com/v1
 kind: QuotaSubtree
 metadata:
@@ -55,3 +56,31 @@ spec:
         requests:
           cpu: 900m
           memory: 300Mi
+    - name: default
+      quotas:
+        hardLimit: false
+        requests:
+          cpu: 0m
+          memory: 0Mi
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: service-root-children
+  namespace: kube-system
+  labels:
+    tree: quota_service
+spec:
+  parent: service-root
+  children:
+    - name: gold
+      quotas:
+        requests:
+          cpu: 1075m
+          memory: 1045Mi
+    - name: default
+      quotas:
+        hardLimit: false
+        requests:
+          cpu: 0m
+          memory: 0Mi
