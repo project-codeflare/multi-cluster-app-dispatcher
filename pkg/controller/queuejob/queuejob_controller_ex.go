@@ -1261,38 +1261,38 @@ func (qjm *XController) ScheduleNext() {
 
 			if aggqj.LessEqual(resources) && qjm.nodeChecks(qjm.cache.GetUnallocatedHistograms(), qj) {
 				// Now evaluate quota
-				// Quota tree design:
-				// - All AppWrappers without quota submission will consume quota from the 'default' node.
-				// - All quota trees in the system should have a 'default' node so AppWrappers without
-				//   quota specification can be dispatched
-				// - If the AppWrapper doesn't have a quota label, then one is added for every tree with the 'default' value
-				// - Depending on how the 'default' node is configured, AppWrappers that don't specify quota could be
-				//   preemptable by default (e.g., 'default' node with 'cpu: 0m' and 'memory: 0Mi' quota and 'hardLimit: false'
-				//   such node borrows quota from other nodes already in the system)
-				allTrees := qjm.quotaManager.GetTreeNames()
-				allLabels := qj.DeepCopy().Labels
-				newLabels := make(map[string]string)
-				updateLabels := false
-				for _, treeName := range allTrees {
-					if _, quotaSetForAW := allLabels[treeName]; !quotaSetForAW {
-						newLabels[treeName] = "default"
-						updateLabels = true
-					}
-				}
-				if updateLabels {
-					qj.SetLabels(newLabels)
-					if err := qjm.updateEtcd(qj, "ScheduleNext - setDefaultQuota"); err == nil {
-						klog.V(3).Infof("[ScheduleNext] Default quota added to AW %v", qj.Name)
-					}
-					if err != nil {
-						klog.V(3).Infof("[ScheduleNext] Failed to added default quota to AW %v, skipping dispatch of AW", qj.Name)
-						return
-					}
-				}
 				fits := true
 				klog.V(4).Infof("[ScheduleNext] HOL available resourse successful check for %s at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				if qjm.serverOption.QuotaEnabled {
 					if qjm.quotaManager != nil {
+						// Quota tree design:
+						// - All AppWrappers without quota submission will consume quota from the 'default' node.
+						// - All quota trees in the system should have a 'default' node so AppWrappers without
+						//   quota specification can be dispatched
+						// - If the AppWrapper doesn't have a quota label, then one is added for every tree with the 'default' value
+						// - Depending on how the 'default' node is configured, AppWrappers that don't specify quota could be
+						//   preemptable by default (e.g., 'default' node with 'cpu: 0m' and 'memory: 0Mi' quota and 'hardLimit: false'
+						//   such node borrows quota from other nodes already in the system)
+						allTrees := qjm.quotaManager.GetTreeNames()
+						allLabels := qj.DeepCopy().Labels
+						newLabels := make(map[string]string)
+						updateLabels := false
+						for _, treeName := range allTrees {
+							if _, quotaSetForAW := allLabels[treeName]; !quotaSetForAW {
+								newLabels[treeName] = "default"
+								updateLabels = true
+							}
+						}
+						if updateLabels {
+							qj.SetLabels(newLabels)
+							if err := qjm.updateEtcd(qj, "ScheduleNext - setDefaultQuota"); err == nil {
+								klog.V(3).Infof("[ScheduleNext] Default quota added to AW %v", qj.Name)
+							}
+							if err != nil {
+								klog.V(3).Infof("[ScheduleNext] Failed to added default quota to AW %v, skipping dispatch of AW", qj.Name)
+								return
+							}
+						}
 						var msg string
 						var preemptAWs []*arbv1.AppWrapper
 						quotaFits, preemptAWs, msg = qjm.quotaManager.Fits(qj, aggqj, proposedPreemptions)
