@@ -1,0 +1,9 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+apply: [] 
+assert: [] 
+error: [] 
+unitTest: false
+delete: []
+commands:  
+  - command: kubectl delete namespace test 

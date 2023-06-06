@@ -33,6 +33,7 @@ export CLUSTER_CONTEXT="--name test"
 # Using older image due to older version of kubernetes cluster"
 export IMAGE_ECHOSERVER="kicbase/echo-server:1.0"
 export IMAGE_UBUNTU_LATEST="ubuntu:latest"
+export IMAGE_UBI_LATEST="registry.access.redhat.com/ubi8/ubi:latest"
 export KIND_OPT=${KIND_OPT:=" --config ${ROOT_DIR}/hack/e2e-kind-config.yaml"}
 export KA_BIN=_output/bin
 export WAIT_TIME="20s"
@@ -219,6 +220,13 @@ function kind-up-cluster {
     exit 1
   fi
 
+  docker pull ${IMAGE_UBI_LATEST}
+  if [ $? -ne 0 ]
+  then
+    echo "Failed to pull ${IMAGE_UBI_LATEST}"
+    exit 1
+  fi
+
   if [[ "$MCAD_IMAGE_PULL_POLICY" = "Always" ]]
   then
     docker pull ${IMAGE_MCAD}
@@ -235,7 +243,7 @@ function kind-up-cluster {
   fi
   docker images
 
-  for image in ${IMAGE_ECHOSERVER} ${IMAGE_UBUNTU_LATEST} ${IMAGE_MCAD}
+  for image in ${IMAGE_ECHOSERVER} ${IMAGE_UBUNTU_LATEST} ${IMAGE_MCAD} ${IMAGE_UBI_LATEST}
   do
     kind load docker-image ${image} ${CLUSTER_CONTEXT}
     if [ $? -ne 0 ]
