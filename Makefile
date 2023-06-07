@@ -20,7 +20,7 @@ endif
 
 # Check for current branch name
 ifneq ($(strip $(GIT_BRANCH)),)
-	TAG:=${TAG}${GIT_BRANCH}-
+	TAG:=${TAG}${GIT_BRANCH}
 
 # 	replace invalid characters that might exist in the branch name
 	TAG:=$(shell echo ${TAG} | sed 's/[^a-zA-Z0-9]/-/g')
@@ -28,7 +28,9 @@ endif
 
 # Check if the string does not contain "release"
 ifeq (,$(findstring release,$(GIT_BRANCH)))
-  TAG:=${TAG}${RELEASE_VER}
+	TAG:=${TAG}-${RELEASE_VER}
+else
+	TAG:=$(shell echo ${TAG} | sed 's/\(release-v[0-9]\)-\([0-9]*\)-\([0-9]*\)/\1.\2.\3/g')
 endif
 
 .PHONY: print-global-variables
