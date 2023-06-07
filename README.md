@@ -14,6 +14,19 @@ Follow the [build instructions here](./doc/build/build.md) to build the Multi-Cl
 
 Refer to [deployment instructions here](./doc/deploy/deployment.md) on how to deploy the `multi-cluster-app-dispatcher` as a controller in Kubernetes.
 
+
+## Release Process
+
+1. Update version in [CONTROLEER_VERSION file](https://github.com/project-codeflare/multi-cluster-app-dispatcher/blob/main/CONTROLLER_VERSION) to the new release version.
+
+2. Once CONTROLLER_VERSION file change merged , create the release branch against the main as `release-<version>`.
+
+3. The release branch then trigger the [image build/push pipeline](https://app.travis-ci.com/github/project-codeflare/multi-cluster-app-dispatcher/branches) and push the image to [mcad-controller quay repository](https://quay.io/repository/project-codeflare/mcad-controller?tab=tags) with specified release version tag.
+
+4. Create a new release on [Releases page](https://github.com/project-codeflare/multi-cluster-app-dispatcher/releases) by creating a tag with same value as in CONTROLLER_VERSION file formatted (with v prefix) , provide proper release title and description.
+
+5. The latest release changes should also reflect in the [mcad go package module](https://pkg.go.dev/github.com/project-codeflare/multi-cluster-app-dispatcher).
+
 ## Tutorial
 
 Refer to the [tutorial](./doc/usage/tutorial.md) on how to use `multi-cluster-app-dispatcher` to run batch job in Kubernetes
