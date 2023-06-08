@@ -1273,7 +1273,7 @@ func (qjm *XController) ScheduleNext() {
 						// - Depending on how the 'default' node is configured, AppWrappers that don't specify quota could be
 						//   preemptable by default (e.g., 'default' node with 'cpu: 0m' and 'memory: 0Mi' quota and 'hardLimit: false'
 						//   such node borrows quota from other nodes already in the system)
-						allTrees := qjm.quotaManager.GetTreeNames()
+						allTrees := qjm.quotaManager.GetValidQuotaLabels()
 						allLabels := qj.DeepCopy().Labels
 						newLabels := make(map[string]string)
 						updateLabels := false

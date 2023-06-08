@@ -23,5 +23,5 @@ import (
 type QuotaManagerInterface interface {
 	Fits(aw *arbv1.AppWrapper, resources *clusterstateapi.Resource, proposedPremptions []*arbv1.AppWrapper) (bool, []*arbv1.AppWrapper, string)
 	Release(aw *arbv1.AppWrapper) bool
-	GetTreeNames() []string
+	GetValidQuotaLabels() []string
 }

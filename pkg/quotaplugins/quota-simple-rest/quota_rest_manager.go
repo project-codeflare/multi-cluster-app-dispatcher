@@ -412,6 +412,6 @@ func (qm *QuotaManager) Release(aw *arbv1.AppWrapper) bool {
 
 	return released
 }
-func (qm *QuotaManager) GetTreeNames() []string {
+func (qm *QuotaManager) GetValidQuotaLabels() []string {
 	return qm.getQuotaTreeIDs()
 }
