@@ -1,42 +1,49 @@
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-    name: no-quota-job-1
+    name: hold-completion-job-03
     namespace: start-up
 spec:
+ #   priority: 5
+ #   priorityslope: 0.0
     schedulingSpec:
         minAvailable: 1
+        requeuing:
+            timeInSeconds: 60
+            growthType: "none"
+            maxNumRequeuings: 3
     resources:
+        Items: []
         GenericItems:
             - replicas: 1
               completionstatus: Complete
               custompodresources:
                   - replicas: 1
                     requests:
-                        cpu: 900m
+                        cpu: 500m
                         nvidia.com/gpu: 0
-                        memory: 300Mi
+                        memory: 1Gi
                     limits:
-                        cpu: 900m
+                        cpu: 500m
                         nvidia.com/gpu: 0
-                        memory: 300Mi
+                        memory: 1Gi
               generictemplate:
                   apiVersion: batch/v1
                   kind: Job
                   metadata:
-                      name: no-quota-job-1
+                      name: hold-completion-job-03-01
                       namespace: start-up
                       labels:
-                          appwrapper.mcad.ibm.com: no-quota-job-1
+                          appwrapper.mcad.ibm.com: hold-completion-job-03
                   spec:
                       parallelism: 1
                       completions: 1
                       template:
                           metadata:
-                              name: no-quota-job-1
+                              name: hold-completion-job-03-01
                               namespace: start-up
                               labels:
-                                  appwrapper.mcad.ibm.com: no-quota-job-1
+                                  appwrapper.mcad.ibm.com: hold-completion-job-03
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never
@@ -48,56 +55,45 @@ spec:
                                         - sh
                                         - -c
                                         - |
-                                          sleep 30
+                                          sleep 5
                                     resources:
                                         requests:
-                                            cpu: 900m
+                                            cpu: 500m
                                             nvidia.com/gpu: 0
-                                            memory: 300Mi
+                                            memory: 1Gi
                                         limits:
-                                            cpu: 900m
+                                            cpu: 500m
                                             nvidia.com/gpu: 0
-                                            memory: 300Mi
----
-apiVersion: mcad.ibm.com/v1beta1
-kind: AppWrapper
-metadata:
-    name: no-quota-job-2
-    namespace: start-up
-spec:
-    schedulingSpec:
-        minAvailable: 1
-    resources:
-        GenericItems:
+                                            memory: 1Gi
             - replicas: 1
-              completionstatus: Complete
+#              completionstatus: Complete
               custompodresources:
                   - replicas: 1
                     requests:
-                        cpu: 900m
+                        cpu: 1000m
                         nvidia.com/gpu: 0
-                        memory: 300Mi
+                        memory: 1Gi
                     limits:
-                        cpu: 900m
+                        cpu: 1000m
                         nvidia.com/gpu: 0
-                        memory: 300Mi
+                        memory: 1Gi
               generictemplate:
                   apiVersion: batch/v1
                   kind: Job
                   metadata:
-                      name: no-quota-job-2
+                      name: hold-completion-job-03-02
                       namespace: start-up
                       labels:
-                          appwrapper.mcad.ibm.com: my-job-2
+                          appwrapper.mcad.ibm.com: hold-completion-job-03
                   spec:
                       parallelism: 1
                       completions: 1
                       template:
                           metadata:
-                              name: no-quota-job-2
+                              name: hold-completion-job-03-02
                               namespace: start-up
                               labels:
-                                  appwrapper.mcad.ibm.com: no-quota-job-2
+                                  appwrapper.mcad.ibm.com: hold-completion-job-03
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never
@@ -109,13 +105,13 @@ spec:
                                         - sh
                                         - -c
                                         - |
-                                          sleep 30
+                                          sleep infinity
                                     resources:
                                         requests:
-                                            cpu: 900m
+                                            cpu: 5000m
                                             nvidia.com/gpu: 0
-                                            memory: 300Mi
+                                            memory: 1Gi
                                         limits:
-                                            cpu: 900m
+                                            cpu: 5000m
                                             nvidia.com/gpu: 0
-                                            memory: 300Mi
+                                            memory: 1Gi

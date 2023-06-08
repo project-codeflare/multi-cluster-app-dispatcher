@@ -1,0 +1,41 @@
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+    name: hold-completion-job-03
+    namespace: start-up
+status:
+    state: RunningHoldCompletion
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hold-completion-job-03-01
+  namespace: start-up
+  labels:
+    appwrapper.mcad.ibm.com: hold-completion-job-03
+    resourceName: hold-completion-job-03-01
+status:
+  conditions:
+  - status: "True"
+    type: Complete
+  succeeded: 1
+---
+apiVersion: v1                                                                                                                                                                            
+kind: Pod                                                                                                                                                                                 
+metadata:                                                                                                                                                                              
+  namespace: start-up
+  labels:                                                                                                                                                                                
+     appwrapper.mcad.ibm.com: hold-completion-job-03                                                                                                                                      
+     job-name: hold-completion-job-03-01                                                                                                                                                   
+     resourceName: hold-completion-job-03-01  
+---
+apiVersion: v1                                                                                                                                                                            
+kind: Pod                                                                                                                                                                                 
+metadata:                                                                                                                                                                              
+  namespace: start-up
+  labels:                                                                                                                                                                                
+     appwrapper.mcad.ibm.com: hold-completion-job-03                                                                                                                                      
+     job-name: hold-completion-job-03-02                                                                                                                                                  
+     resourceName: hold-completion-job-03-02 
+
+

@@ -2,7 +2,7 @@
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-  name: deployment-echoserver-01
+  name: no-quota-deployment-01
   namespace: start-up
 status:
   state: Running
@@ -10,40 +10,15 @@ status:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: deployment-echoserver-01
+  name: no-quota-deployment-01
   namespace: start-up
   labels:
-      app:  deployment-echoserver-01
-      appwrapper.mcad.ibm.com: deployment-echoserver-01
-      resourceName: deployment-echoserver-01 
+      app:  no-quota-deployment-01
+      appwrapper.mcad.ibm.com: no-quota-deployment-01
+      resourceName: no-quota-deployment-01
 status:
     availableReplicas: 1
     observedGeneration: 1
     readyReplicas: 1
     replicas: 1
     updatedReplicas: 1
----
-# Verify AppWrapper was dispatched and pod was created
-apiVersion: mcad.ibm.com/v1beta1
-kind: AppWrapper
-metadata:
-  name: deployment-echoserver-02
-  namespace: start-up
-status:
-  state: Running
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: deployment-echoserver-02
-  namespace: start-up
-  labels:
-      app:  deployment-echoserver-02
-      appwrapper.mcad.ibm.com: deployment-echoserver-02
-      resourceName: deployment-echoserver-02
-status:
-    availableReplicas: 1
-    observedGeneration: 1
-    readyReplicas: 1
-    replicas: 1
-    updatedReplicas: 1    

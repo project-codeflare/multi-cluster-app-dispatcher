@@ -1,42 +1,49 @@
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-    name: no-quota-job-02
-    namespace: start-up
+  name: no-quota-job-05
+  namespace: start-up
 spec:
+ #   priority: 5
+ #   priorityslope: 0.0
     schedulingSpec:
         minAvailable: 1
+        requeuing:
+            timeInSeconds: 10
+            growthType: "none"
+            maxNumRequeuings: 1
     resources:
+        Items: []
         GenericItems:
             - replicas: 1
               completionstatus: Complete
               custompodresources:
                   - replicas: 1
                     requests:
-                        cpu: 500m
+                        cpu: 1700m
                         nvidia.com/gpu: 0
-                        memory: 300Mi
+                        memory: 1Gi
                     limits:
-                        cpu: 500m
+                        cpu: 1700m
                         nvidia.com/gpu: 0
-                        memory: 300Mi
+                        memory: 1Gi
               generictemplate:
                   apiVersion: batch/v1
                   kind: Job
                   metadata:
-                      name: no-quota-job-02
+                      name: no-quota-job-05
                       namespace: start-up
                       labels:
-                          appwrapper.mcad.ibm.com: no-quota-job-02
+                          appwrapper.mcad.ibm.com: no-quota-job-05
                   spec:
                       parallelism: 1
                       completions: 1
                       template:
                           metadata:
-                              name: no-quota-job-1
+                              name: no-quota-job-05
                               namespace: start-up
                               labels:
-                                  appwrapper.mcad.ibm.com: no-quota-job-02
+                                  appwrapper.mcad.ibm.com: no-quota-job-05
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never
@@ -48,13 +55,13 @@ spec:
                                         - sh
                                         - -c
                                         - |
-                                          sleep 30
+                                          sleep 5
                                     resources:
                                         requests:
-                                            cpu: 500m
+                                            cpu: 1700m
                                             nvidia.com/gpu: 0
-                                            memory: 300Mi
+                                            memory: 1Gi
                                         limits:
-                                            cpu: 500m
+                                            cpu: 1700m
                                             nvidia.com/gpu: 0
-                                            memory: 300Mi
+                                            memory: 1Gi

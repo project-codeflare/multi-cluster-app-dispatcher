@@ -1,8 +1,8 @@
----
+#Verify AppWrappers finished successfully
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-    name: no-quota-job-02
+    name: no-quota-job-05
     namespace: start-up
 status:
-    state: Completed
+    state: Pending
