@@ -1,0 +1,39 @@
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: no-quota-deployment-02
+  namespace: start-up-02
+spec:
+  resources:
+    GenericItems:
+    - replicas: 1
+      generictemplate:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: no-quota-deployment-02
+          namespace: start-up-02
+          labels:
+            app: no-quota-deployment-02
+        spec:
+          selector:
+            matchLabels:
+              app: no-quota-deployment-02
+          replicas: 1
+          template:
+            metadata:
+              labels:
+                app: deployment-echoserver-01
+            spec:
+              containers:
+               - name:  no-quota-deployment-01
+                 image: kicbase/echo-server:1.0
+                 ports:
+                 - containerPort: 80
+                 resources:
+                   requests:
+                     cpu: 300m
+                     memory: 32Mi
+                   limits:
+                     cpu: 300m
+                     memory: 32Mi

@@ -1,0 +1,12 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+apply: [] 
+assert: [] 
+error: [] 
+unitTest: false
+delete: []
+commands:  
+  - command: kubectl delete appwrappers -n start-up-02 --all --wait
+  - command: kubectl delete deployments,pods,jobs -n start-up-02 --all --wait
+  - command: kubectl delete namespace start-up-02 --wait
+  - command: kubectl delete quotasubtrees -n kube-system --all --wait
