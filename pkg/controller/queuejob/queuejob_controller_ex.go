@@ -1273,22 +1273,29 @@ func (qjm *XController) ScheduleNext() {
 						// - Depending on how the 'default' node is configured, AppWrappers that don't specify quota could be
 						//   preemptable by default (e.g., 'default' node with 'cpu: 0m' and 'memory: 0Mi' quota and 'hardLimit: false'
 						//   such node borrows quota from other nodes already in the system)
+						apiCacheAWJob, err := qjm.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
+						if err != nil {
+							klog.Errorf("[ScheduleNext] Failed to get AppWrapper from API Cache %v/%v: %v",
+								qj.Namespace, qj.Name, err)
+							continue
+						}
 						allTrees := qjm.quotaManager.GetValidQuotaLabels()
-						allLabels := qj.DeepCopy().Labels
 						newLabels := make(map[string]string)
+						for key, value := range apiCacheAWJob.Labels {
+							newLabels[key] = value
+						}
 						updateLabels := false
 						for _, treeName := range allTrees {
-							if _, quotaSetForAW := allLabels[treeName]; !quotaSetForAW {
+							if _, quotaSetForAW := newLabels[treeName]; !quotaSetForAW {
 								newLabels[treeName] = "default"
 								updateLabels = true
 							}
 						}
 						if updateLabels {
-							qj.SetLabels(newLabels)
-							if err := qjm.updateEtcd(qj, "ScheduleNext - setDefaultQuota"); err == nil {
+							apiCacheAWJob.SetLabels(newLabels)
+							if err := qjm.updateEtcd(apiCacheAWJob, "ScheduleNext - setDefaultQuota"); err == nil {
 								klog.V(3).Infof("[ScheduleNext] Default quota added to AW %v", qj.Name)
-							}
-							if err != nil {
+							} else {
 								klog.V(3).Infof("[ScheduleNext] Failed to added default quota to AW %v, skipping dispatch of AW", qj.Name)
 								return
 							}

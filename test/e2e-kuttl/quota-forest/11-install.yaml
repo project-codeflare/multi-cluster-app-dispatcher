@@ -2,8 +2,10 @@
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-    name: job-without-labels
+    name: job-with-labels-no-quota
     namespace: test
+    labels:
+        my-label-key: my-label-value
 spec:
     schedulingSpec:
         minAvailable: 1
@@ -25,19 +27,19 @@ spec:
                   apiVersion: batch/v1
                   kind: Job
                   metadata:
-                      name: job-without-labels
+                      name: job-with-labels-no-quota
                       namespace: test
                       labels:
-                          appwrapper.mcad.ibm.com: job-without-labels
+                          appwrapper.mcad.ibm.com: job-with-labels-no-quota
                   spec:
                       parallelism: 1
                       completions: 1
                       template:
                           metadata:
-                              name: job-without-labels
+                              name: job-with-labels-no-quota
                               namespace: test
                               labels:
-                                  appwrapper.mcad.ibm.com: job-without-labels
+                                  appwrapper.mcad.ibm.com: job-with-labels-no-quota
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never

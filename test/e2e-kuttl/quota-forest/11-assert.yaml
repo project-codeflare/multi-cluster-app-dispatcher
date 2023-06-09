@@ -7,9 +7,10 @@ timeout: 60
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-    name: job-without-labels
+    name: job-with-labels-no-quota
     namespace: test
     labels:
+        my-label-key: my-label-value
         quota_context: default
         quota_service: default
 status:
