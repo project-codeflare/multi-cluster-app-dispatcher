@@ -7,8 +7,8 @@ The Steps below show two ways to simulated a large number of KWOK kubernetes nod
 - The second way is running KWOK inside an existing Kubernetes cluster
 
 # First Way: Using KWOK to simulate a large number of nodes and MCAD Appwrappers on a Mac laptop
-## Step 0. Pre-Reqs
-### 0.1 Make sure you have podman (I don't have Docker to test with), installed on your mac with a podman machine of at least 4 cpu and 8GB memory: 
+## Step 0. Pre-Req steps:
+### 0.1 Make sure you have podman (I don't have Docker to test with) installed on your mac with a podman machine of at least 4 cpu and 8GB memory: 
 ```
 brew update
 brew upgrade
@@ -54,7 +54,7 @@ chmod +x install.sh
 ```
 kubectl get pods -A
 ```
-## Step 1. Deploy NCAD on your cluster
+## Step 1. Deploy MCAD on your cluster
 ### 1.1 Make sure you have room: # You'll at least 2 free cpu and at least 2GB memory free
 ```
 kubectl describe node |grep cpu
@@ -67,39 +67,83 @@ cd multi-cluster-app-dispatcher/deployment
 ```
 ### 1.3 Install via helm using the following command - change the image.tag as necessary if you want something specific...
 ```
-helm install mcad-controller --namespace kube-system --generate-name --set image.repository=quay.io/project-codeflare/mcad-controller --set image.tag=main-v1.29.58
+helm install mcad-controller --namespace kube-system --generate-name --set image.repository=quay.io/project-codeflare/mcad-controller --set image.tag=stable
 ```
 ### 1.4 Check that mcad is running:
 ```
 kubectl get pods -n kube-system |grep mcad
 ```
 
-## Step 2. Creating simulated KWOK node(s)
-### 2.1 cd to where the MCAD performance scripts are located
+## Step 2. Install KWOK
+### 2.1 Install jq if you don't already have it on your laptop
+```
+brew install jq
+```
+
+### 2.2 Install the latest version of Kustomize
+```
+brew install kustomize
+```
+
+### Step 2.3. Install KWOK in your KIND Cluster: 
+### 2.3.1 Variable Prep:
+```
+export KWOK_WORK_DIR=$(mktemp -d)
+export KWOK_REPO=kubernetes-sigs/kwok
+export KWOK_LATEST_RELEASE=$(curl "https://api.github.com/repos/${KWOK_REPO}/releases/latest" | jq -r '.tag_name')
+```
+### 2.3.2 Render kustomization yaml
+```
+cat <<EOF > "${KWOK_WORK_DIR}/kustomization.yaml"
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+  - name: registry.k8s.io/kwok/kwok
+    newTag: "${KWOK_LATEST_RELEASE}"
+resources:
+  - "https://github.com/${KWOK_REPO}/kustomize/kwok?ref=${KWOK_LATEST_RELEASE}"
+EOF
+```
+### 2.3.3 Render it with the prepared variables.
+```
+kubectl kustomize "${KWOK_WORK_DIR}" > "${KWOK_WORK_DIR}/kwok.yaml"
+```
+### Step 2.4 Install the KWOK Controller in kube-system namespace:
+### 2.4.1 Apply your rendered yaml file from step 1.3 above:
+```
+kubectl apply -f "${KWOK_WORK_DIR}/kwok.yaml"
+```
+### 2.4.2 Check to make sure the kwok controller started:
+```
+kubectl get pods -n kube-system |grep kwok-controller
+```
+
+## Step 3. Creating simulated KWOK node(s)
+### 3.1 cd to where the MCAD performance scripts are located
 ```
 cd ../test/perf-test
 ```
 
-### 2.2 Run the script ./nodes.sh
+### 3.2 Run the script ./nodes.sh
 ``` 
 ./nodes.sh
 ```
-### 2.3 Check that the requested number of nodes started:
+### 3.3 Check that the requested number of nodes started:
 ```
 kubectl get nodes --selector type=kwok
 ```
 
-## Step 3. Create some AppWrapper jobs which create simulated pods on the simulated KWOK nodes
-### 3.1 Run the script kwokmcadperf.sh
+## Step 4. Create some AppWrapper jobs which create simulated pods on the simulated KWOK nodes
+### 4.1 Run the script kwokmcadperf.sh
 ```
 ./kwokmcadperf.sh
 ```
-## Step 4. Cleaning up
-### 4.1 Clean up all the simulated AppWrapper jobs with the cleanup-mcad-kwok.sh script:
+## Step 5. Cleaning up
+### 5.1 Clean up all the simulated AppWrapper jobs with the cleanup-mcad-kwok.sh script:
 ```
 ./cleanup-mcad-kwok.sh
 ```
-### 4.2 Clean up all the simulated nodes with the following command:
+### 5.2 Clean up all the simulated nodes with the following command:
 ```
 kubectl get nodes --selector type=kwok -o name | xargs kubectl delete
 ```
