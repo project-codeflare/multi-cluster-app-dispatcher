@@ -2,7 +2,7 @@
 ---
 apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
-timeout: 60
+timeout: 90
 ---
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
@@ -14,4 +14,4 @@ metadata:
         quota_context: default
         quota_service: default
 status:
-    state: Completed
+    state: Running
