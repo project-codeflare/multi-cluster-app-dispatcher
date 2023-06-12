@@ -2,7 +2,7 @@
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-    name: gold-quota-job-04
+    name: plutonium-quota-job-05
     namespace: start-up-03
 status:
     state: Completed
