@@ -44,7 +44,7 @@ export IMAGE_MCAD="${IMAGE_REPOSITORY_MCAD}:${IMAGE_TAG_MCAD}"
 CLUSTER_STARTED="false"
 export KUTTL_VERSION=0.15.0
 export KUTTL_OPTIONS=${TEST_KUTTL_OPTIONS}
-export KUTTL_TEST_SUITES=("${ROOT_DIR}/test/kuttl-test-deployment-01.yaml" "${ROOT_DIR}/test/kuttl-test.yaml") 
+export KUTTL_TEST_SUITES=("${ROOT_DIR}/test/kuttl-test-deployment-01.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-02.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-03.yaml" "${ROOT_DIR}/test/kuttl-test.yaml") 
 
 function update_test_host {
   
@@ -387,9 +387,9 @@ function kuttl-tests {
       undeploy_mcad_helm
       exit 1
     fi
-    rm -f kubeconfig
     undeploy_mcad_helm
   done
+  rm -f kubeconfig
 }
 
 trap cleanup EXIT

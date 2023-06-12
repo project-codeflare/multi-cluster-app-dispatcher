@@ -1,0 +1,47 @@
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: actinides-root
+  namespace: kube-system
+  labels:
+    tree: quota_actinides
+spec:
+  children:
+    - name: actinides-root
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: actinides-children
+  namespace: kube-system
+  labels:
+    tree: quota_actinides
+spec:
+  parent: actinides-root
+  children:
+    - name: plutonium
+    - name: lawrencium
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: context-root
+  namespace: kube-system
+  labels:
+    tree: quota_context
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: service-root
+  namespace: kube-system
+  labels:
+    tree: quota_service
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: context-root-children
+  namespace: kube-system
+  labels:
+    tree: quota_context  
