@@ -22,3 +22,11 @@ metadata:
   namespace: kube-system
   labels:
     tree: quota_context
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: service-root-children
+  namespace: kube-system
+  labels:
+    tree: quota_service
