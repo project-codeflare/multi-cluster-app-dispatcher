@@ -22,10 +22,12 @@ spec:
 status:
   allocatable:
     cpu: 32
+    nvidia.com/gpu: 32
     memory: 256Gi
     pods: 110
   capacity:
     cpu: 32
+    nvidia.com/gpu: 32
     memory: 256Gi
     pods: 110
   nodeInfo:

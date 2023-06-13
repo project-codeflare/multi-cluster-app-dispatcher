@@ -529,7 +529,7 @@ func (m *Manager) String() string {
 	defer m.mutex.RUnlock()
 
 	var b bytes.Buffer
-	b.WriteString("QuotaManger: \n")
+	b.WriteString("QuotaManager: \n")
 	b.WriteString("Mode: " + m.GetModeString() + "\n")
 	b.WriteString("\n")
 
