@@ -5,7 +5,7 @@ metadata:
     namespace: start-up-03
     labels:
         quota_context: bronze
-        quota_service: service-root
+        quota_service: gold
 spec:
     schedulingSpec:
         minAvailable: 1

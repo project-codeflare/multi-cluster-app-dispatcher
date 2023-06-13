@@ -4,6 +4,8 @@ metadata:
     name: plutonium-quota-job-05
     namespace: start-up-03
     labels:
+        quota_context: gold
+        quota_service: gold
         quota_actinides: "plutonium"
 spec:
     schedulingSpec:
