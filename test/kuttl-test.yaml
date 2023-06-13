@@ -1,7 +1,7 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestSuite
 testDirs:
-  - ./e2e-kuttl/
+  - test/e2e-kuttl/
 timeout: 420
 crdDir: config/crd/bases
 artifactsDir: _output/logs

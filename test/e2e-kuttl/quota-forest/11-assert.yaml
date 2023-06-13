@@ -1,9 +1,4 @@
 # Verify AppWrapper without quota finished successfully
----
-apiVersion: kuttl.dev/v1beta1
-kind: TestAssert
-timeout: 90
----
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:

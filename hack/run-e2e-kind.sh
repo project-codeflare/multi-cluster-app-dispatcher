@@ -44,7 +44,7 @@ export IMAGE_MCAD="${IMAGE_REPOSITORY_MCAD}:${IMAGE_TAG_MCAD}"
 CLUSTER_STARTED="false"
 export KUTTL_VERSION=0.15.0
 export KUTTL_OPTIONS=${TEST_KUTTL_OPTIONS}
-export KUTTL_TEST_SUITES=("${ROOT_DIR}/test/kuttl-test-deployment-01.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-02.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-03.yaml" "${ROOT_DIR}/test/kuttl-test.yaml") 
+export KUTTL_TEST_SUITES=("${ROOT_DIR}/test/kuttl-test.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-03.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-02.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-01.yaml") 
 
 function update_test_host {
   
@@ -206,20 +206,6 @@ function kind-up-cluster {
     exit 1
   fi
 
-  docker pull ${IMAGE_ECHOSERVER} 
-  if [ $? -ne 0 ]
-  then
-    echo "Failed to pull ${IMAGE_ECHOSERVER}"
-    exit 1
-  fi
-
-  docker pull ${IMAGE_UBUNTU_LATEST}
-  if [ $? -ne 0 ]
-  then
-    echo "Failed to pull ${IMAGE_UBUNTU_LATEST}"
-    exit 1
-  fi
-
   docker pull ${IMAGE_UBI_LATEST}
   if [ $? -ne 0 ]
   then
@@ -322,14 +308,12 @@ function undeploy_mcad_helm {
     # start mcad controller
     echo "Stopping MCAD Controller for Quota Management Testing..."
     echo "helm delete ${helm_chart_name}"
-    helm delete -n kube-system ${helm_chart_name}
+    helm delete -n kube-system ${helm_chart_name} --wait
     if [ $? -ne 0 ]
     then
       echo "Failed to undeploy controller"
       exit 1
     fi
-    echo "Waiting for the namespace to be cleaned up.."
-    sleep 60
 }
 
 function mcad-up {
@@ -384,9 +368,16 @@ function kuttl-tests {
     if [ $? -ne 0 ]
     then
       echo "kuttl e2e test '${kuttl_test}' failure, exiting."
-      undeploy_mcad_helm
       exit 1
     fi
+    #clean up after sucessfull execution of a test by removing all quota subtrees
+    #and undeploying mcad helm chart.
+    kubectl delete quotasubtrees -n kube-system --all --wait
+    if [ $? -ne 0 ]
+    then
+      echo "Failed to delete quotasubtrees for test: '${kuttl_test}'"
+      exit 1
+    fi  
     undeploy_mcad_helm
   done
   rm -f kubeconfig
