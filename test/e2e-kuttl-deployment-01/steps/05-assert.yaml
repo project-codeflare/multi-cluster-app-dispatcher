@@ -1,8 +1,27 @@
-#Verify AppWrappers finished successfully
-apiVersion: mcad.ibm.com/v1beta1
-kind: AppWrapper
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
 metadata:
-    name: no-quota-job-05
-    namespace: start-up
-status:
-    state: Pending
+  name: context-root
+  namespace: kube-system
+  labels:
+    tree: quota_context
+spec:
+  children:
+    - name: context-root
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: context-root-children
+  namespace: kube-system
+  labels:
+    tree: quota_context
+spec:
+  parent: context-root
+  children:
+    - name: gold
+    - name: silver
+    - name: bronze
+    - name: default
+    

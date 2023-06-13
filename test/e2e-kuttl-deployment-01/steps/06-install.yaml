@@ -1,10 +1,67 @@
-apiVersion: kuttl.dev/v1beta1
-kind: TestStep
-apply: [] 
-assert: [] 
-error: [] 
-unitTest: false
-delete: []
-commands:  
- - command: kubectl delete appwrappers -n start-up no-quota-deployment-01 hold-completion-job-03  --wait
- 
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: no-quota-job-05
+  namespace: start-up
+spec:
+ #   priority: 5
+ #   priorityslope: 0.0
+    schedulingSpec:
+        minAvailable: 1
+        requeuing:
+            timeInSeconds: 10
+            growthType: "none"
+            maxNumRequeuings: 1
+    resources:
+        Items: []
+        GenericItems:
+            - replicas: 1
+              completionstatus: Complete
+              custompodresources:
+                  - replicas: 1
+                    requests:
+                        cpu: 1700m
+                        nvidia.com/gpu: 0
+                        memory: 1Gi
+                    limits:
+                        cpu: 1700m
+                        nvidia.com/gpu: 0
+                        memory: 1Gi
+              generictemplate:
+                  apiVersion: batch/v1
+                  kind: Job
+                  metadata:
+                      name: no-quota-job-05
+                      namespace: start-up
+                      labels:
+                          appwrapper.mcad.ibm.com: no-quota-job-05
+                  spec:
+                      parallelism: 1
+                      completions: 1
+                      template:
+                          metadata:
+                              name: no-quota-job-05
+                              namespace: start-up
+                              labels:
+                                  appwrapper.mcad.ibm.com: no-quota-job-05
+                          spec:
+                              terminationGracePeriodSeconds: 1
+                              restartPolicy: Never
+                              containers:
+                                  - name: ubuntu
+                                    image: ubuntu:latest
+                                    imagePullPolicy: IfNotPresent
+                                    command:
+                                        - sh
+                                        - -c
+                                        - |
+                                          sleep 5
+                                    resources:
+                                        requests:
+                                            cpu: 1700m
+                                            nvidia.com/gpu: 0
+                                            memory: 1Gi
+                                        limits:
+                                            cpu: 1700m
+                                            nvidia.com/gpu: 0
+                                            memory: 1Gi

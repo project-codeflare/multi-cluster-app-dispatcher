@@ -1,63 +1,10 @@
-apiVersion: mcad.ibm.com/v1beta1
-kind: AppWrapper
-metadata:
-    name: bronze-quota-job-07
-    namespace: start-up
-    labels:
-        quota_context: bronze
-        quota_service: service-root
-spec:
-    schedulingSpec:
-        minAvailable: 1
-    resources:
-        GenericItems:
-            - replicas: 1
-              completionstatus: Complete
-              custompodresources:
-                  - replicas: 1
-                    requests:
-                        cpu: 300m
-                        nvidia.com/gpu: 0
-                        memory: 300Mi
-                    limits:
-                        cpu: 300m
-                        nvidia.com/gpu: 0
-                        memory: 300Mi
-              generictemplate:
-                  apiVersion: batch/v1
-                  kind: Job
-                  metadata:
-                      name: bronze-quota-job-07
-                      namespace: start-up
-                      labels:
-                          appwrapper.mcad.ibm.com: bronze-quota-job-07
-                  spec:
-                      parallelism: 1
-                      completions: 1
-                      template:
-                          metadata:
-                              name: bronze-quota-job-07
-                              namespace: start-up
-                              labels:
-                                  appwrapper.mcad.ibm.com: bronze-quota-job-07
-                          spec:
-                              terminationGracePeriodSeconds: 1
-                              restartPolicy: Never
-                              containers:
-                                  - name: ubuntu
-                                    image: ubuntu:latest
-                                    imagePullPolicy: IfNotPresent
-                                    command:
-                                        - sh
-                                        - -c
-                                        - |
-                                          sleep 30
-                                    resources:
-                                        requests:
-                                            cpu: 300m
-                                            nvidia.com/gpu: 0
-                                            memory: 300Mi
-                                        limits:
-                                            cpu: 300m
-                                            nvidia.com/gpu: 0
-                                            memory: 300Mi
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+apply: [] 
+assert: [] 
+error: [] 
+unitTest: false
+delete: []
+commands:  
+ - command: kubectl delete appwrappers -n start-up no-quota-deployment-01 hold-completion-job-03  --wait
+ 
