@@ -2,7 +2,7 @@
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-    name: bronze-quota-job-07
+    name: bronze-quota-job-08
     namespace: start-up
 status:
     state: Completed

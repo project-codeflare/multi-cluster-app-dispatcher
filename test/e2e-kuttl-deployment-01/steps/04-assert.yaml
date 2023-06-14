@@ -34,8 +34,8 @@ metadata:
     app: custom-metrics-apiserver
     app.kubernetes.io/managed-by: Helm
     chart: mcad-controller-0.1.0
-name: mcad-controller
-namespace: kube-system
+  name: mcad-controller
+  namespace: kube-system
 status:
     availableReplicas: 1
     observedGeneration: 1

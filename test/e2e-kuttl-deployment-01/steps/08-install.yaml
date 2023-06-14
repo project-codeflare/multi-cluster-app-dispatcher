@@ -1,7 +1,7 @@
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-    name: bronze-quota-job-07
+    name: bronze-quota-job-08
     namespace: start-up
     labels:
         quota_context: bronze
@@ -26,19 +26,19 @@ spec:
                   apiVersion: batch/v1
                   kind: Job
                   metadata:
-                      name: bronze-quota-job-07
+                      name: bronze-quota-job-08
                       namespace: start-up
                       labels:
-                          appwrapper.mcad.ibm.com: bronze-quota-job-07
+                          appwrapper.mcad.ibm.com: bronze-quota-job-08
                   spec:
                       parallelism: 1
                       completions: 1
                       template:
                           metadata:
-                              name: bronze-quota-job-07
+                              name: bronze-quota-job-08
                               namespace: start-up
                               labels:
-                                  appwrapper.mcad.ibm.com: bronze-quota-job-07
+                                  appwrapper.mcad.ibm.com: bronze-quota-job-08
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never

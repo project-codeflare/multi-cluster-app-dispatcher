@@ -1,7 +1,7 @@
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-  name: no-quota-job-05
+  name: no-quota-job-06
   namespace: start-up
 spec:
  #   priority: 5
@@ -20,30 +20,30 @@ spec:
               custompodresources:
                   - replicas: 1
                     requests:
-                        cpu: 1700m
+                        cpu: 1000m
                         nvidia.com/gpu: 0
-                        memory: 1Gi
+                        memory: 300Mi
                     limits:
-                        cpu: 1700m
+                        cpu: 1000m
                         nvidia.com/gpu: 0
-                        memory: 1Gi
+                        memory: 300Mi
               generictemplate:
                   apiVersion: batch/v1
                   kind: Job
                   metadata:
-                      name: no-quota-job-05
+                      name: no-quota-job-06
                       namespace: start-up
                       labels:
-                          appwrapper.mcad.ibm.com: no-quota-job-05
+                          appwrapper.mcad.ibm.com: no-quota-job-06
                   spec:
                       parallelism: 1
                       completions: 1
                       template:
                           metadata:
-                              name: no-quota-job-05
+                              name: no-quota-job-06
                               namespace: start-up
                               labels:
-                                  appwrapper.mcad.ibm.com: no-quota-job-05
+                                  appwrapper.mcad.ibm.com: no-quota-job-06
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never
@@ -58,10 +58,10 @@ spec:
                                           sleep 5
                                     resources:
                                         requests:
-                                            cpu: 1700m
+                                            cpu: 1000m
                                             nvidia.com/gpu: 0
-                                            memory: 1Gi
+                                            memory: 300Mi
                                         limits:
-                                            cpu: 1700m
+                                            cpu: 1000m
                                             nvidia.com/gpu: 0
-                                            memory: 1Gi
+                                            memory: 300Mi

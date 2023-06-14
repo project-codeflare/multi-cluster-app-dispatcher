@@ -11,8 +11,8 @@ spec:
     - name: context-root
       quotas:
         requests:
-          cpu: 1075m
-          memory: 1045Mi
+          cpu: 1950m
+          memory: 1500Mi
 ---
 apiVersion: ibm.com/v1
 kind: QuotaSubtree
