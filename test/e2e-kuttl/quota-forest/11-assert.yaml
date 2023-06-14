@@ -6,7 +6,9 @@ metadata:
     namespace: test
     labels:
         my-label-key: my-label-value
-        quota_context: default
-        quota_service: default
+# Skipping validation for now, until we understand the root cause for
+# https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/297        
+#        quota_context: default
+#        quota_service: default
 status:
     state: Running

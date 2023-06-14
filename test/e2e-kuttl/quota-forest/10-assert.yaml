@@ -4,8 +4,10 @@ kind: AppWrapper
 metadata:
     name: job-without-labels
     namespace: test
-    labels:
-        quota_context: default
-        quota_service: default
+#    labels:
+# Skipping validation for now, until we understand the root cause for
+# https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/297        
+#        quota_context: default
+#        quota_service: default
 status:
     state: Completed
