@@ -17,7 +17,7 @@ Refer to [deployment instructions here](./doc/deploy/deployment.md) on how to de
 
 ## Release Process
 
-1. Update version in [CONTROLEER_VERSION file](https://github.com/project-codeflare/multi-cluster-app-dispatcher/blob/main/CONTROLLER_VERSION) to the new release version.
+1. Update version in [CONTROLLER_VERSION file](https://github.com/project-codeflare/multi-cluster-app-dispatcher/blob/main/CONTROLLER_VERSION) to the new release version.
 
 2. Once CONTROLLER_VERSION file change merged , create the release branch against the main as `release-<version>`.
 
