@@ -4,8 +4,6 @@ metadata:
   name: no-quota-job-06
   namespace: start-up
 spec:
- #   priority: 5
- #   priorityslope: 0.0
     schedulingSpec:
         minAvailable: 1
         requeuing:

@@ -5,21 +5,21 @@ metadata:
   name: no-quota-deployment-02
   namespace: start-up-03
 status:
-#  state: Running
-  state: Pending
-#---
-#apiVersion: apps/v1
-#kind: Deployment
-#metadata:
-#  name: no-quota-deployment-02
-#  namespace: start-up-03
-#  labels:
-#      app:  no-quota-deployment-01
-#      appwrapper.mcad.ibm.com: no-quota-deployment-02
-#      resourceName: no-quota-deployment-02
-#status:
-#    availableReplicas: 1
-#    observedGeneration: 1
-#    readyReplicas: 1
-#    replicas: 1
-#    updatedReplicas: 1
+  state: Running
+#  state: Pending
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: no-quota-deployment-02
+  namespace: start-up-03
+  labels:
+      app:  no-quota-deployment-01
+      appwrapper.mcad.ibm.com: no-quota-deployment-02
+      resourceName: no-quota-deployment-02
+status:
+    availableReplicas: 1
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1

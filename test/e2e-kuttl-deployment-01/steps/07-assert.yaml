@@ -14,4 +14,5 @@ metadata:
   labels:                                                                                                                                                                                
      appwrapper.mcad.ibm.com: no-quota-job-06                                                                                                                                    
      job-name: no-quota-job-06                                                                                                                                                   
-     resourceName: no-quota-job-06  
+     resourceName: no-quota-job-06
+

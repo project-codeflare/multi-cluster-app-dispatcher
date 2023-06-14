@@ -6,6 +6,6 @@ error: []
 unitTest: false
 delete: []
 commands: 
-# the rollout restart doesn't seem to kill running pods, reliably on the kind cluster
+# the rollout restart doesn't seem to reliably kill running pods on the kind cluster
 #  - command: kubectl rollout restart deployment/mcad-controller -n kube-system
   - script: "kubectl -n kube-system get pods | grep mcad-controller | cut -d' ' -f1 | xargs kubectl -n kube-system delete pod $1"  

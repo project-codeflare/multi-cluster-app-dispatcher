@@ -62,3 +62,4 @@ spec:
                                             cpu: 300m
                                             nvidia.com/gpu: 0
                                             memory: 30Mi
+                                            

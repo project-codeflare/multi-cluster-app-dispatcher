@@ -10,3 +10,4 @@ commands:
   - command: kubectl delete deployments,pods,jobs -n start-up-02 --all --wait
   - command: kubectl delete namespace start-up-02 --wait
   - command: kubectl delete quotasubtrees -n kube-system --all --wait
+

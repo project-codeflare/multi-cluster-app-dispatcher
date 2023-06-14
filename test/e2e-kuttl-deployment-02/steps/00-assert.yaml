@@ -41,4 +41,4 @@ metadata:
   name: context-root-children
   namespace: kube-system
   labels:
-    tree: quota_context  
+    tree: quota_context
