@@ -16,13 +16,13 @@ spec:
               custompodresources:
                   - replicas: 1
                     requests:
-                        cpu: 300m
+                        cpu: 100m
                         nvidia.com/gpu: 0
-                        memory: 300Mi
+                        memory: 30Mi
                     limits:
-                        cpu: 300m
+                        cpu: 100m
                         nvidia.com/gpu: 0
-                        memory: 300Mi
+                        memory: 30Mi
               generictemplate:
                   apiVersion: batch/v1
                   kind: Job
@@ -54,10 +54,10 @@ spec:
                                           sleep infinity    
                                     resources:
                                         requests:
-                                            cpu: 300m
+                                            cpu: 100m
                                             nvidia.com/gpu: 0
-                                            memory: 300Mi
+                                            memory: 30Mi
                                         limits:
-                                            cpu: 300m
+                                            cpu: 100m
                                             nvidia.com/gpu: 0
-                                            memory: 300Mi
+                                            memory: 30Mi
