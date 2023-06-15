@@ -35,7 +35,7 @@ import (
 	"reflect"
 	"testing"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -76,7 +76,7 @@ func cacheEqual(l, r *ClusterStateCache) bool {
 		jobsEqual(l.Jobs, r.Jobs)
 }
 
-func buildNode(name string, alloc v1.ResourceList) *v1.Node {
+func buildNode(name string, alloc v1.ResourceList, nodecondtype string) *v1.Node {
 	return &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			UID:  types.UID(name),
@@ -85,6 +85,9 @@ func buildNode(name string, alloc v1.ResourceList) *v1.Node {
 		Status: v1.NodeStatus{
 			Capacity:    alloc,
 			Allocatable: alloc,
+			Conditions: []v1.NodeCondition{
+				{Type: v1.NodeConditionType(nodecondtype)},
+			},
 		},
 	}
 }
@@ -155,7 +158,7 @@ func TestAddPod(t *testing.T) {
 	j1.AddTaskInfo(pi1)
 	j1.AddTaskInfo(pi2)
 
-	node1 := buildNode("n1", buildResourceList("2000m", "10G"))
+	node1 := buildNode("n1", buildResourceList("2000m", "10G"), string(v1.NodeReady))
 	ni1 := api.NewNodeInfo(node1)
 	ni1.AddTask(pi2)
 
@@ -199,3 +202,31 @@ func TestAddPod(t *testing.T) {
 	}
 }
 
+func TestNodeStatus(t *testing.T) {
+
+	var memory float64 = 0.0
+	var millicpu float64 = 0.0
+	var gpu int64 = 0.0
+
+	node1 := buildNode("n1", buildResourceList("2000m", "10G"), string(v1.NodeDiskPressure))
+
+	cache := &ClusterStateCache{
+		Nodes: make(map[string]*api.NodeInfo),
+	}
+
+	cache.addNode(node1)
+
+	cache.updateState()
+
+	if cache.availableResources != nil {
+		memory = cache.availableResources.Memory
+		millicpu = cache.availableResources.MilliCPU
+		gpu = cache.availableResources.GPU
+	}
+
+	if cache.availableResources != nil {
+		t.Errorf("expected all values to be 0, \n got memory: %v, millicpus: %v, gpu:%v  \n",
+			memory, millicpu, gpu)
+	}
+
+}
