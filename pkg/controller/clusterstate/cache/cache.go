@@ -33,10 +33,11 @@ package cache
 import (
 	"context"
 	"fmt"
-	"github.com/golang/protobuf/proto"
-	dto "github.com/prometheus/client_model/go"
 	"sync"
 	"time"
+
+	"github.com/golang/protobuf/proto"
+	dto "github.com/prometheus/client_model/go"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -210,7 +211,6 @@ func (sc *ClusterStateCache) GetUnallocatedResources() *api.Resource {
 	return r.Add(sc.availableResources)
 }
 
-
 func (sc *ClusterStateCache) GetUnallocatedHistograms() map[string]*dto.Metric {
 	sc.Mutex.Lock()
 	defer sc.Mutex.Unlock()
@@ -238,7 +238,7 @@ func (sc *ClusterStateCache) GetResourceCapacities() *api.Resource {
 
 // Save the cluster state.
 func (sc *ClusterStateCache) saveState(available *api.Resource, capacity *api.Resource,
-								availableHistogram *api.ResourceHistogram) error {
+	availableHistogram *api.ResourceHistogram) error {
 	klog.V(12).Infof("Saving Cluster State")
 
 	sc.Mutex.Lock()
@@ -261,75 +261,87 @@ func (sc *ClusterStateCache) updateState() error {
 	idleMin := api.EmptyResource()
 	idleMax := api.EmptyResource()
 
-	firstNode :=  true
+	firstNode := true
+
+	var err error = nil
 	for _, value := range cluster.Nodes {
-		// Do not use any Unschedulable nodes in calculations
-		if value.Unschedulable == true {
-			klog.V(6).Infof("[updateState] %s is marked as unschedulable node Total: %v, Used: %v, and Idle: %v will not be included in cluster state calculation.",
-				value.Name, value.Allocatable, value.Used, value.Idle)
-			continue
+
+		for _, cond := range value.Node.Status.Conditions {
+			if cond.Type == v1.NodeReady {
+				if cond.Status == "True" {
+					// Do not use any Unschedulable nodes in calculations
+					if value.Unschedulable == true {
+						klog.V(6).Infof("[updateState] %s is marked as unschedulable node Total: %v, Used: %v, and Idle: %v will not be included in cluster state calculation.",
+							value.Name, value.Allocatable, value.Used, value.Idle)
+						continue
+					}
+
+					total = total.Add(value.Allocatable)
+					used = used.Add(value.Used)
+					idle = idle.Add(value.Idle)
+
+					// Collect Min and Max for histogram
+					if firstNode {
+						idleMin.MilliCPU = idle.MilliCPU
+						idleMin.Memory = idle.Memory
+						idleMin.GPU = idle.GPU
+
+						idleMax.MilliCPU = idle.MilliCPU
+						idleMax.Memory = idle.Memory
+						idleMax.GPU = idle.GPU
+						firstNode = false
+					} else {
+						if value.Idle.MilliCPU < idleMin.MilliCPU {
+							idleMin.MilliCPU = value.Idle.MilliCPU
+						} else if value.Idle.MilliCPU > idleMax.MilliCPU {
+							idleMax.MilliCPU = value.Idle.MilliCPU
+						}
+
+						if value.Idle.Memory < idleMin.Memory {
+							idleMin.Memory = value.Idle.Memory
+						} else if value.Idle.Memory > idleMax.Memory {
+							idleMax.Memory = value.Idle.Memory
+						}
+
+						if value.Idle.GPU < idleMin.GPU {
+							idleMin.GPU = value.Idle.GPU
+						} else if value.Idle.GPU > idleMax.GPU {
+							idleMax.GPU = value.Idle.GPU
+						}
+					}
+				}
+
+				// Create available histograms
+				newIdleHistogram := api.NewResourceHistogram(idleMin, idleMax)
+				for _, value := range cluster.Nodes {
+					newIdleHistogram.Observer(value.Idle)
+				}
+
+				klog.V(8).Infof("Total capacity %+v, used %+v, free space %+v", total, used, idle)
+				if klog.V(12).Enabled() {
+					// CPU histogram
+					metricCPU := &dto.Metric{}
+					(*newIdleHistogram.MilliCPU).Write(metricCPU)
+					klog.V(12).Infof("[updateState] CPU histogram:\n%s", proto.MarshalTextString(metricCPU))
+
+					// Memory histogram
+					metricMem := &dto.Metric{}
+					(*newIdleHistogram.Memory).Write(metricMem)
+					klog.V(12).Infof("[updateState] Memory histogram:\n%s", proto.MarshalTextString(metricMem))
+
+					// GPU histogram
+					metricGPU := &dto.Metric{}
+					(*newIdleHistogram.GPU).Write(metricGPU)
+					klog.V(12).Infof("[updateState] GPU histogram:\n%s", proto.MarshalTextString(metricGPU))
+				}
+
+				err = sc.saveState(idle, total, newIdleHistogram)
+
+			}
+
 		}
 
-		total = total.Add(value.Allocatable)
-		used = used.Add(value.Used)
-		idle = idle.Add(value.Idle)
-
-		// Collect Min and Max for histogram
-		if firstNode {
-			idleMin.MilliCPU = idle.MilliCPU
-			idleMin.Memory   = idle.Memory
-			idleMin.GPU      = idle.GPU
-
-			idleMax.MilliCPU = idle.MilliCPU
-			idleMax.Memory   = idle.Memory
-			idleMax.GPU      = idle.GPU
-			firstNode = false
-		} else {
-			if value.Idle.MilliCPU < idleMin.MilliCPU {
-				idleMin.MilliCPU = value.Idle.MilliCPU
-			} else if value.Idle.MilliCPU > idleMax.MilliCPU {
-				idleMax.MilliCPU = value.Idle.MilliCPU
-			}
-
-			if value.Idle.Memory < idleMin.Memory {
-				idleMin.Memory = value.Idle.Memory
-			} else if value.Idle.Memory > idleMax.Memory{
-				idleMax.Memory = value.Idle.Memory
-			}
-
-			if value.Idle.GPU < idleMin.GPU {
-				idleMin.GPU = value.Idle.GPU
-			} else if value.Idle.GPU > idleMax.GPU {
-				idleMax.GPU = value.Idle.GPU
-			}
-		}
 	}
-
-	// Create available histograms
-	newIdleHistogram := api.NewResourceHistogram(idleMin, idleMax)
-	for _, value := range cluster.Nodes {
-		newIdleHistogram.Observer(value.Idle)
-	}
-
-	klog.V(8).Infof("Total capacity %+v, used %+v, free space %+v", total, used, idle)
-	if klog.V(12).Enabled() {
-		// CPU histogram
-		metricCPU := &dto.Metric{}
-		(*newIdleHistogram.MilliCPU).Write(metricCPU)
-		klog.V(12).Infof("[updateState] CPU histogram:\n%s", proto.MarshalTextString(metricCPU))
-
-		// Memory histogram
-		metricMem := &dto.Metric{}
-		(*newIdleHistogram.Memory).Write(metricMem)
-		klog.V(12).Infof("[updateState] Memory histogram:\n%s", proto.MarshalTextString(metricMem))
-
-		// GPU histogram
-		metricGPU := &dto.Metric{}
-		(*newIdleHistogram.GPU).Write(metricGPU)
-		klog.V(12).Infof("[updateState] GPU histogram:\n%s", proto.MarshalTextString(metricGPU))
-	}
-
-	err := sc.saveState(idle, total, newIdleHistogram)
 	return err
 }
 
