@@ -56,6 +56,7 @@ type ServerOption struct {
 	QuotaRestURL          string
 	HealthProbeListenAddr string
 	DispatchResourceReservationTimeout int64
+	ReadinessProbeListenAddr string
 }
 
 // NewServerOption creates a new CMServer with a default config.

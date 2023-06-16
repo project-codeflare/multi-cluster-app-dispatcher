@@ -72,6 +72,11 @@ func Run(opt *options.ServerOption) error {
 		return err
 	}
 
+	err = listenReadinessProbe(opt)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -80,6 +85,18 @@ func listenHealthProbe(opt *options.ServerOption) error {
 	handler := http.NewServeMux()
 	handler.Handle("/healthz", &health.Handler{})
 	err := http.ListenAndServe(opt.HealthProbeListenAddr, handler)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Starts the readiness probe listener
+func listenReadinessProbe(opt *options.ServerOption) error {
+	handler := http.NewServeMux()
+	handler.Handle("/readyz", &health.Handler{})
+	err := http.ListenAndServe(opt.ReadinessProbeListenAddr, handler)
 	if err != nil {
 		return err
 	}
