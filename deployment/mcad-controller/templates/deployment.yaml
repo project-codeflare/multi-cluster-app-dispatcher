@@ -322,6 +322,18 @@ spec:
         imagePullPolicy: {{ .Values.httpServerImage.pullPolicy }}
         ports:
         - containerPort: 80
+        livesnessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 80
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
       - name: "quota-management"
         image: "{{ .Values.httpImage.repository }}:{{ .Values.httpImage.tag }}"
         imagePullPolicy: {{ .Values.httpImage.pullPolicy }}
@@ -333,6 +345,18 @@ spec:
 #{{ if .Values.volumes.hostPath }}
           - name: agent-config-vol
             mountPath: /root/kubernetes
+        livesnessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 80
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
 #{{ end }}
 #{{ end }}
       - name: {{ .Chart.Name }}
@@ -357,6 +381,18 @@ spec:
         - name: agent-config-vol
           mountPath: /root/kubernetes
 #{{ end }}
+        livesnessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 80
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
 #{{ if .Values.configMap.name }}
         envFrom:
         - configMapRef:

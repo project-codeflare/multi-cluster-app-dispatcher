@@ -38,6 +38,7 @@ import (
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejob"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/health"
+	ready "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/ready"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
@@ -79,6 +80,7 @@ func Run(opt *options.ServerOption) error {
 func listenHealthProbe(opt *options.ServerOption) error {
 	handler := http.NewServeMux()
 	handler.Handle("/healthz", &health.Handler{})
+	handler.Handle("/readyz", &ready.Handler{})
 	err := http.ListenAndServe(opt.HealthProbeListenAddr, handler)
 	if err != nil {
 		return err
@@ -86,3 +88,4 @@ func listenHealthProbe(opt *options.ServerOption) error {
 
 	return nil
 }
+
