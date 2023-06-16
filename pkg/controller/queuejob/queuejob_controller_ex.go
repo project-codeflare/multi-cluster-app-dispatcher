@@ -921,7 +921,10 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 			}
 			for _, genericItem := range value.Spec.AggrResources.GenericItems {
 				qjv, _ := genericresource.GetResources(&genericItem)
-				preemptable = preemptable.Add(qjv)
+				//only add resources when AWs are truly running
+				if value.Status.State == arbv1.AppWrapperStateActive && value.Status.QueueJobState == arbv1.AppWrapperConditionType(arbv1.AppWrapperStateActive) {
+					preemptable = preemptable.Add(qjv)
+				}
 			}
 
 			continue
