@@ -357,6 +357,18 @@ spec:
         - name: agent-config-vol
           mountPath: /root/kubernetes
 #{{ end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          periodSeconds: 5
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          periodSeconds: 5
+          timeoutSeconds: 5
 #{{ if .Values.configMap.name }}
         envFrom:
         - configMapRef:
