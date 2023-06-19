@@ -5,7 +5,7 @@ metadata:
   namespace: test
   labels:
     quota_context: "bronze"
-    quota_service: "service-root"
+    quota_service: "gold"
 spec:
   service:
     spec: {}

@@ -1,0 +1,17 @@
+# Verify AppWrapper without quota finished successfully
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 90
+---
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+    name: job-with-labels-no-quota
+    namespace: test
+    labels:
+        my-label-key: my-label-value
+        quota_context: default
+        quota_service: default
+status:
+    state: Running

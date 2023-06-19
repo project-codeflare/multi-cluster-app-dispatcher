@@ -530,20 +530,19 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 	klog.V(4).Infof("[Fits] Sending quota allocation request: %#v ", consumerInfo)
 	allocResponse, err := qm.quotaManagerBackend.AllocateForest(QuotaManagerForestName, consumerID)
 	if err != nil {
+		qm.removeConsumer(consumerID)
 		klog.Errorf("[Fits] Error allocating consumer: %s/%s, err=%#v.", aw.Namespace, aw.Name, err)
 		return false, nil, err.Error()
-	}
-	if allocResponse != nil && len(strings.TrimSpace(allocResponse.GetMessage())) > 0 {
-		klog.Errorf("[Fits] Error allocating consumer: %s/%s, msg=%s, err=%#v.",
-			aw.Namespace, aw.Name, allocResponse.GetMessage(), err)
-		return false, nil, allocResponse.GetMessage()
 	}
 	klog.V(4).Infof("[Fits] allocation response received. Quota Allocated: %t, Message: '%s', Preempted app wrappers count: %d", allocResponse.IsAllocated(),
 		strings.TrimSpace(allocResponse.GetMessage()), len(allocResponse.GetPreemptedIds()))
 	doesFit := allocResponse.IsAllocated()
+	if !doesFit {
+		qm.removeConsumer(consumerID)
+		return doesFit, preemptIds, strings.TrimSpace(allocResponse.GetMessage())
+	}
 	preemptIds = qm.getAppWrappers(allocResponse.GetPreemptedIds())
-
-	return doesFit, preemptIds, ""
+	return doesFit, preemptIds, strings.TrimSpace(allocResponse.GetMessage())
 }
 
 func (qm *QuotaManager) getAppWrappers(preemptIds []string) []*arbv1.AppWrapper {
@@ -613,4 +612,18 @@ func (qm *QuotaManager) Release(aw *arbv1.AppWrapper) bool {
 	}
 
 	return released
+}
+func (qm *QuotaManager) removeConsumer(consumerID string) {
+	// removing the consumer to allow for the consumer to be added if and when
+	// the function is called for the same app wrapper
+	removed, err := qm.quotaManagerBackend.RemoveConsumer(consumerID)
+	if err != nil {
+		klog.Warningf("Failed to remove consumer %s, %#v", consumerID, err)
+	}
+	if !removed {
+		klog.Warningf("Failed to remove consumer %s", consumerID)
+	}
+}
+func (qm *QuotaManager) GetValidQuotaLabels() []string {
+	return qm.quotaManagerBackend.GetTreeNames()
 }
