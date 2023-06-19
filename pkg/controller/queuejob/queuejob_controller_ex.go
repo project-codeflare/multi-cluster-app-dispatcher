@@ -917,7 +917,10 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 
 			for _, resctrl := range qjm.qjobResControls {
 				qjv := resctrl.GetAggregatedResources(value)
-				preemptable = preemptable.Add(qjv)
+				//only add resources when AWs are truly running
+				if value.Status.State == arbv1.AppWrapperStateActive && value.Status.QueueJobState == arbv1.AppWrapperConditionType(arbv1.AppWrapperStateActive) {
+					preemptable = preemptable.Add(qjv)
+				}
 			}
 			for _, genericItem := range value.Spec.AggrResources.GenericItems {
 				qjv, _ := genericresource.GetResources(&genericItem)
@@ -1262,7 +1265,8 @@ func (qjm *XController) ScheduleNext() {
 				qjm.cache.GetUnallocatedResources(), priorityindex, qj, "")
 			klog.Infof("[ScheduleNext] XQJ %s with resources %v to be scheduled on aggregated idle resources %v", qj.Name, aggqj, resources)
 
-			if aggqj.LessEqual(resources) && qjm.nodeChecks(qjm.cache.GetUnallocatedHistograms(), qj) {
+			// either AW fits inside a node with histogram check or has enough low priority AWs to dispatch
+			if aggqj.LessEqual(resources) && qjm.nodeChecks(qjm.cache.GetUnallocatedHistograms(), qj) || aggqj.LessEqual(resources) && len(proposedPreemptions) > 0 {
 				// Now evaluate quota
 				fits := true
 				klog.V(4).Infof("[ScheduleNext] HOL available resourse successful check for %s at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
