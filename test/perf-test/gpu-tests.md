@@ -1,5 +1,6 @@
 ## MCAD GPU Request Performance test with KWOK
-So, I have been doing some performance tests with MCAD using KWOK. The MCAD service for gpu requests is little weird . Here is the experiment I did and what I observed:
+This experiment assumes that you have a KWOK controller as well as MCAD controller running inside a kind cluster. If not, follow [this](https://github.com/vishakha-ramani/multi-cluster-app-dispatcher/blob/main/test/perf-test/simulatingnodesandappwrappers.md) for installation instructions.
+The MCAD service for gpu requests is little weird . Here is the experiment I did and what I observed:
 1. Created two fake nodes with 8 gpus each by running the script
    ```
    ./nodes.sh
