@@ -263,6 +263,14 @@ type AppWrapperStatus struct {
 
 	// Represents the latest available observations of pods under appwrapper
 	PendingPodConditions []PendingPodSpec `json:"pendingpodconditions"`
+
+	//Resources consumed
+
+	TotalCPU float64 `json:"totalcpu,omitempty"`
+
+	TotalMemory float64 `json:"totalmemory,omitempty"`
+
+	TotalGPU int64 `json:"totalgpu,omitempty"`
 }
 
 type AppWrapperState string

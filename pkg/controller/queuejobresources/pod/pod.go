@@ -243,6 +243,7 @@ func (qjrPod *QueueJobResPod) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) e
 	}
 
 	running := int32(queuejobresources.FilterPods(pods, v1.PodRunning))
+	totalResourcesConsumed := queuejobresources.GetPodResourcesByPhase(v1.PodRunning, pods)
 	pending := int32(queuejobresources.FilterPods(pods, v1.PodPending))
 	succeeded := int32(queuejobresources.FilterPods(pods, v1.PodSucceeded))
 	failed := int32(queuejobresources.FilterPods(pods, v1.PodFailed))
@@ -254,6 +255,10 @@ func (qjrPod *QueueJobResPod) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) e
 	queuejob.Status.Running = running
 	queuejob.Status.Succeeded = succeeded
 	queuejob.Status.Failed = failed
+	//Total resources by all running pods
+	queuejob.Status.TotalGPU = totalResourcesConsumed.GPU
+	queuejob.Status.TotalCPU = totalResourcesConsumed.MilliCPU
+	queuejob.Status.TotalMemory = totalResourcesConsumed.Memory
 
 	queuejob.Status.PendingPodConditions = nil
 	for podName, cond := range podsConditionMap {

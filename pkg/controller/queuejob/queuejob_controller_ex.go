@@ -915,20 +915,11 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 				klog.V(10).Infof("[getAggAvaiResPri] %s: Added %s to candidate preemptable job with priority %f.", time.Now().String(), value.Name, value.Status.SystemPriority)
 			}
 
-			for _, resctrl := range qjm.qjobResControls {
-				qjv := resctrl.GetAggregatedResources(value)
-				//only add resources when AWs are truly running
-				if value.Status.State == arbv1.AppWrapperStateActive && value.Status.QueueJobState == arbv1.AppWrapperConditionType(arbv1.AppWrapperStateActive) {
-					preemptable = preemptable.Add(qjv)
-				}
-			}
-			for _, genericItem := range value.Spec.AggrResources.GenericItems {
-				qjv, _ := genericresource.GetResources(&genericItem)
-				//only add resources when AWs are truly running
-				if value.Status.State == arbv1.AppWrapperStateActive && value.Status.QueueJobState == arbv1.AppWrapperConditionType(arbv1.AppWrapperStateActive) {
-					preemptable = preemptable.Add(qjv)
-				}
-			}
+			totalResource := clusterstateapi.EmptyResource()
+			totalResource.GPU = value.Status.TotalGPU
+			totalResource.MilliCPU = value.Status.TotalCPU
+			totalResource.Memory = value.Status.TotalMemory
+			preemptable = preemptable.Add(totalResource)
 
 			continue
 		} else if qjm.isDispatcher {
@@ -1265,117 +1256,117 @@ func (qjm *XController) ScheduleNext() {
 				qjm.cache.GetUnallocatedResources(), priorityindex, qj, "")
 			klog.Infof("[ScheduleNext] XQJ %s with resources %v to be scheduled on aggregated idle resources %v", qj.Name, aggqj, resources)
 
-			// either AW fits inside a node with histogram check or has enough low priority AWs to dispatch
+			// Assume preemption will remove low priroity AWs in the system, optimistically dispatch such AWs
 			if qjm.nodeChecks(qjm.cache.GetUnallocatedHistograms(), qj) {
-
-				if aggqj.LessEqual(resources) || aggqj.LessEqual(resources) && len(proposedPreemptions) > 0 {
-					// Now evaluate quota
-					fits := true
-					klog.V(4).Infof("[ScheduleNext] HOL available resourse successful check for %s at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
-					if qjm.serverOption.QuotaEnabled {
-						if qjm.quotaManager != nil {
-							// Quota tree design:
-							// - All AppWrappers without quota submission will consume quota from the 'default' node.
-							// - All quota trees in the system should have a 'default' node so AppWrappers without
-							//   quota specification can be dispatched
-							// - If the AppWrapper doesn't have a quota label, then one is added for every tree with the 'default' value
-							// - Depending on how the 'default' node is configured, AppWrappers that don't specify quota could be
-							//   preemptable by default (e.g., 'default' node with 'cpu: 0m' and 'memory: 0Mi' quota and 'hardLimit: false'
-							//   such node borrows quota from other nodes already in the system)
-							apiCacheAWJob, err := qjm.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
-							if err != nil {
-								klog.Errorf("[ScheduleNext] Failed to get AppWrapper from API Cache %v/%v: %v",
-									qj.Namespace, qj.Name, err)
-								continue
-							}
-							allTrees := qjm.quotaManager.GetValidQuotaLabels()
-							newLabels := make(map[string]string)
-							for key, value := range apiCacheAWJob.Labels {
-								newLabels[key] = value
-							}
-							updateLabels := false
-							for _, treeName := range allTrees {
-								if _, quotaSetForAW := newLabels[treeName]; !quotaSetForAW {
-									newLabels[treeName] = "default"
-									updateLabels = true
-								}
-							}
-							if updateLabels {
-								apiCacheAWJob.SetLabels(newLabels)
-								if err := qjm.updateEtcd(apiCacheAWJob, "ScheduleNext - setDefaultQuota"); err == nil {
-									klog.V(3).Infof("[ScheduleNext] Default quota added to AW %v", qj.Name)
-								} else {
-									klog.V(3).Infof("[ScheduleNext] Failed to added default quota to AW %v, skipping dispatch of AW", qj.Name)
-									return
-								}
-							}
-							var msg string
-							var preemptAWs []*arbv1.AppWrapper
-							quotaFits, preemptAWs, msg = qjm.quotaManager.Fits(qj, aggqj, proposedPreemptions)
-							if quotaFits {
-								klog.Infof("[ScheduleNext] HOL quota evaluation successful %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
-								// Set any jobs that are marked for preemption
-								qjm.preemptAWJobs(preemptAWs)
-							} else { // Not enough free quota to dispatch appwrapper
-								dispatchFailedMessage = "Insufficient quota to dispatch AppWrapper."
-								if len(msg) > 0 {
-									dispatchFailedReason += " "
-									dispatchFailedReason += msg
-								}
-								klog.V(3).Infof("[ScheduleNext] HOL Blocking by %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v msg=%s, due to quota limits",
-									qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, msg)
-							}
-							fits = quotaFits
-						} else {
-							fits = false
-							//Quota manager not initialized
-							dispatchFailedMessage = "Quota evaluation is enabled but not initialized. Insufficient quota to dispatch AppWrapper."
-							klog.Errorf("[ScheduleNext] Quota evaluation is enabled but not initialized.  AppWrapper %s/%s does not have enough quota\n", qj.Name, qj.Namespace)
+				klog.V(4).Infof("[ScheduleNext] Optimistic dispatch for AW %v in namespace %v requesting aggregated resources %v histogram for point in-time fragmented resources are available in the cluster %v", qj.Name, qj.Namespace, qjm.GetAggregatedResources(qj), qjm.cache.GetUnallocatedHistograms())
+			}
+			if aggqj.LessEqual(resources) {
+				// Now evaluate quota
+				fits := true
+				klog.V(4).Infof("[ScheduleNext] HOL available resourse successful check for %s at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+				if qjm.serverOption.QuotaEnabled {
+					if qjm.quotaManager != nil {
+						// Quota tree design:
+						// - All AppWrappers without quota submission will consume quota from the 'default' node.
+						// - All quota trees in the system should have a 'default' node so AppWrappers without
+						//   quota specification can be dispatched
+						// - If the AppWrapper doesn't have a quota label, then one is added for every tree with the 'default' value
+						// - Depending on how the 'default' node is configured, AppWrappers that don't specify quota could be
+						//   preemptable by default (e.g., 'default' node with 'cpu: 0m' and 'memory: 0Mi' quota and 'hardLimit: false'
+						//   such node borrows quota from other nodes already in the system)
+						apiCacheAWJob, err := qjm.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
+						if err != nil {
+							klog.Errorf("[ScheduleNext] Failed to get AppWrapper from API Cache %v/%v: %v",
+								qj.Namespace, qj.Name, err)
+							continue
 						}
+						allTrees := qjm.quotaManager.GetValidQuotaLabels()
+						newLabels := make(map[string]string)
+						for key, value := range apiCacheAWJob.Labels {
+							newLabels[key] = value
+						}
+						updateLabels := false
+						for _, treeName := range allTrees {
+							if _, quotaSetForAW := newLabels[treeName]; !quotaSetForAW {
+								newLabels[treeName] = "default"
+								updateLabels = true
+							}
+						}
+						if updateLabels {
+							apiCacheAWJob.SetLabels(newLabels)
+							if err := qjm.updateEtcd(apiCacheAWJob, "ScheduleNext - setDefaultQuota"); err == nil {
+								klog.V(3).Infof("[ScheduleNext] Default quota added to AW %v", qj.Name)
+							} else {
+								klog.V(3).Infof("[ScheduleNext] Failed to added default quota to AW %v, skipping dispatch of AW", qj.Name)
+								return
+							}
+						}
+						var msg string
+						var preemptAWs []*arbv1.AppWrapper
+						quotaFits, preemptAWs, msg = qjm.quotaManager.Fits(qj, aggqj, proposedPreemptions)
+						if quotaFits {
+							klog.Infof("[ScheduleNext] HOL quota evaluation successful %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+							// Set any jobs that are marked for preemption
+							qjm.preemptAWJobs(preemptAWs)
+						} else { // Not enough free quota to dispatch appwrapper
+							dispatchFailedMessage = "Insufficient quota to dispatch AppWrapper."
+							if len(msg) > 0 {
+								dispatchFailedReason += " "
+								dispatchFailedReason += msg
+							}
+							klog.V(3).Infof("[ScheduleNext] HOL Blocking by %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v msg=%s, due to quota limits",
+								qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, msg)
+						}
+						fits = quotaFits
 					} else {
-						klog.V(4).Infof("[ScheduleNext] HOL quota evaluation not enabled for %s at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+						fits = false
+						//Quota manager not initialized
+						dispatchFailedMessage = "Quota evaluation is enabled but not initialized. Insufficient quota to dispatch AppWrapper."
+						klog.Errorf("[ScheduleNext] Quota evaluation is enabled but not initialized.  AppWrapper %s/%s does not have enough quota\n", qj.Name, qj.Namespace)
 					}
-
-					// If quota evalauation sucedeed or quota evaluation not enabled set the appwrapper to be dispatched
-					if fits {
-						// aw is ready to go!
-						apiQueueJob, e := qjm.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
-						// apiQueueJob's ControllerFirstTimestamp is only microsecond level instead of nanosecond level
-						if e != nil {
-							klog.Errorf("[ScheduleNext] Unable to get AW %s from API cache &aw=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, err)
-							if qjm.quotaManager != nil && quotaFits {
-								//Quota was allocated for this appwrapper, release it.
-								qjm.quotaManager.Release(qj)
-							}
-							return
-						}
-						// make sure qj has the latest information
-						if larger(apiQueueJob.ResourceVersion, qj.ResourceVersion) {
-							klog.V(4).Infof("[ScheduleNext] %s found more recent copy from cache          &qj=%p          qj=%+v", qj.Name, qj, qj)
-							klog.V(4).Infof("[ScheduleNext] %s found more recent copy from cache &apiQueueJob=%p apiQueueJob=%+v", apiQueueJob.Name, apiQueueJob, apiQueueJob)
-							apiQueueJob.DeepCopyInto(qj)
-						}
-						desired := int32(0)
-						for i, ar := range qj.Spec.AggrResources.Items {
-							desired += ar.Replicas
-							qj.Spec.AggrResources.Items[i].AllocatedReplicas = ar.Replicas
-						}
-						qj.Status.CanRun = true
-						qj.Status.FilterIgnore = true // update CanRun & Spec.  no need to trigger event
-						// Handle k8s watch race condition
-						if err := qjm.updateEtcd(qj, "ScheduleNext - setCanRun"); err == nil {
-							// add to eventQueue for dispatching to Etcd
-							if err = qjm.eventQueue.Add(qj); err != nil { // unsuccessful add to eventQueue, add back to activeQ
-								klog.Errorf("[ScheduleNext] Fail to add %s to eventQueue, activeQ.Add_toSchedulingQueue &qj=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, err)
-								qjm.qjqueue.MoveToActiveQueueIfExists(qj)
-							} else { // successful add to eventQueue, remove from qjqueue
-								qjm.qjqueue.Delete(qj)
-								forwarded = true
-								klog.V(4).Infof("[ScheduleNext] %s Delay=%.6f seconds eventQueue.Add_afterHeadOfLine activeQ=%t, Unsched=%t &aw=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
-							}
-						} //updateEtcd
-					} //fits
+				} else {
+					klog.V(4).Infof("[ScheduleNext] HOL quota evaluation not enabled for %s at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				}
+
+				// If quota evalauation sucedeed or quota evaluation not enabled set the appwrapper to be dispatched
+				if fits {
+					// aw is ready to go!
+					apiQueueJob, e := qjm.queueJobLister.AppWrappers(qj.Namespace).Get(qj.Name)
+					// apiQueueJob's ControllerFirstTimestamp is only microsecond level instead of nanosecond level
+					if e != nil {
+						klog.Errorf("[ScheduleNext] Unable to get AW %s from API cache &aw=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, err)
+						if qjm.quotaManager != nil && quotaFits {
+							//Quota was allocated for this appwrapper, release it.
+							qjm.quotaManager.Release(qj)
+						}
+						return
+					}
+					// make sure qj has the latest information
+					if larger(apiQueueJob.ResourceVersion, qj.ResourceVersion) {
+						klog.V(4).Infof("[ScheduleNext] %s found more recent copy from cache          &qj=%p          qj=%+v", qj.Name, qj, qj)
+						klog.V(4).Infof("[ScheduleNext] %s found more recent copy from cache &apiQueueJob=%p apiQueueJob=%+v", apiQueueJob.Name, apiQueueJob, apiQueueJob)
+						apiQueueJob.DeepCopyInto(qj)
+					}
+					desired := int32(0)
+					for i, ar := range qj.Spec.AggrResources.Items {
+						desired += ar.Replicas
+						qj.Spec.AggrResources.Items[i].AllocatedReplicas = ar.Replicas
+					}
+					qj.Status.CanRun = true
+					qj.Status.FilterIgnore = true // update CanRun & Spec.  no need to trigger event
+					// Handle k8s watch race condition
+					if err := qjm.updateEtcd(qj, "ScheduleNext - setCanRun"); err == nil {
+						// add to eventQueue for dispatching to Etcd
+						if err = qjm.eventQueue.Add(qj); err != nil { // unsuccessful add to eventQueue, add back to activeQ
+							klog.Errorf("[ScheduleNext] Fail to add %s to eventQueue, activeQ.Add_toSchedulingQueue &qj=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, err)
+							qjm.qjqueue.MoveToActiveQueueIfExists(qj)
+						} else { // successful add to eventQueue, remove from qjqueue
+							qjm.qjqueue.Delete(qj)
+							forwarded = true
+							klog.V(4).Infof("[ScheduleNext] %s Delay=%.6f seconds eventQueue.Add_afterHeadOfLine activeQ=%t, Unsched=%t &aw=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+						}
+					} //updateEtcd
+				} //fits
 			} else { // Not enough free resources to dispatch HOL
 				dispatchFailedMessage = "Insufficient resources to dispatch AppWrapper."
 				klog.V(4).Infof("[ScheduleNext] HOL Blocking by %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
