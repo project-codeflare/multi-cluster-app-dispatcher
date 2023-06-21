@@ -1257,7 +1257,7 @@ func (qjm *XController) ScheduleNext() {
 			klog.Infof("[ScheduleNext] XQJ %s with resources %v to be scheduled on aggregated idle resources %v", qj.Name, aggqj, resources)
 
 			// Assume preemption will remove low priroity AWs in the system, optimistically dispatch such AWs
-			if qjm.nodeChecks(qjm.cache.GetUnallocatedHistograms(), qj) {
+			if !qjm.nodeChecks(qjm.cache.GetUnallocatedHistograms(), qj) {
 				klog.V(4).Infof("[ScheduleNext] Optimistic dispatch for AW %v in namespace %v requesting aggregated resources %v histogram for point in-time fragmented resources are available in the cluster %v", qj.Name, qj.Namespace, qjm.GetAggregatedResources(qj), qjm.cache.GetUnallocatedHistograms())
 			}
 			if aggqj.LessEqual(resources) {
