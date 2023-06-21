@@ -21,13 +21,13 @@ spec:
       value: fake
 status:
   allocatable:
-    cpu: 32
-    nvidia.com/gpu: 32
+    cpu: 256
+    nvidia.com/gpu: 8
     memory: 256Gi
     pods: 110
   capacity:
-    cpu: 32
-    nvidia.com/gpu: 32
+    cpu: 256
+    nvidia.com/gpu: 8
     memory: 256Gi
     pods: 110
   nodeInfo:

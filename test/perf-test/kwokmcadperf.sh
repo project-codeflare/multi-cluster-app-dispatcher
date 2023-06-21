@@ -95,12 +95,16 @@ echo
 check_kwok_installed_status
 
 echo
-read -p "How many fake KWOK appwrapper jobs do you want?" jobs
+read -p "How many fake KWOK appwrapper jobs do you want? " jobs
+read -p "How many GPUs do you want to allocate per job? " gpus
+read -p "How many pods in a job? " awjobs
 
 # Start the timer now
 SECONDS=0
 
 echo "jobs number is $jobs"
+echo "Number of GPUs per job: $gpus"
+echo "Number of pods per AppWrapper: $awjobs"
 export STARTTIME=`date +"%T"`
 echo " "
 echo "Jobs started at: $STARTTIME" |tee fake-job-$STARTTIME.log
@@ -116,11 +120,20 @@ do
 # Had to do this OSTYPE because sed acts differently on Linux versus Mac
     case "$OSTYPE" in
       linux-gnu*)
-        sed -i "s/fake-defaultaw-schd-spec-with-timeout-$num/fake-defaultaw-schd-spec-with-timeout-$next_num/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml ;;
+        sed -i "s/fake-defaultaw-schd-spec-with-timeout-$num/fake-defaultaw-schd-spec-with-timeout-$next_num/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i "s/nvidia.com\/gpu: 0/nvidia.com\/gpu: $gpus/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i "s/parallelism: 1/parallelism: $awjobs/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i "s/completions: 1/completions: $awjobs/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml ;;
       darwin*) 
-        sed -i '' "s/fake-defaultaw-schd-spec-with-timeout-$num/fake-defaultaw-schd-spec-with-timeout-$next_num/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml ;;
+        sed -i '' "s/fake-defaultaw-schd-spec-with-timeout-$num/fake-defaultaw-schd-spec-with-timeout-$next_num/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i '' "s/nvidia.com\/gpu: 0/nvidia.com\/gpu: $gpus/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i '' "s/parallelism: 1/parallelism: $awjobs/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i '' "s/completions: 1/completions: $awjobs/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml ;;
       *) 
-        sed -i "s/fake-defaultaw-schd-spec-with-timeout-$num/fake-defaultaw-schd-spec-with-timeout-$next_num/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml ;;
+        sed -i "s/fake-defaultaw-schd-spec-with-timeout-$num/fake-defaultaw-schd-spec-with-timeout-$next_num/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i "s/nvidia.com\/gpu: 0/nvidia.com\/gpu: $gpus/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i "s/parallelism: 1/parallelism: $awjobs/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i "s/completions: 1/completions: $awjobs/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml ;;
     esac
     kubectl apply -f ${SCRIPT_DIR}/preempt-exp-kwok.yaml
 done
@@ -128,11 +141,20 @@ done
     # Let's reset the original preempt-exp-kwok.yaml file back to original value 
     case "$OSTYPE" in
       linux-gnu*)
-        sed -i "s/fake-defaultaw-schd-spec-with-timeout-$next_num/fake-defaultaw-schd-spec-with-timeout-1/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml ;;
+        sed -i "s/fake-defaultaw-schd-spec-with-timeout-$next_num/fake-defaultaw-schd-spec-with-timeout-1/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml 
+        sed -i "s/nvidia.com\/gpu: $gpus/nvidia.com\/gpu: 0/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i "s/parallelism: $awjobs/parallelism: 1/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i "s/completions: $awjobs/completions: 1/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml ;;
       darwin*) 
-        sed -i '' "s/fake-defaultaw-schd-spec-with-timeout-$next_num/fake-defaultaw-schd-spec-with-timeout-1/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml ;;
+        sed -i '' "s/fake-defaultaw-schd-spec-with-timeout-$next_num/fake-defaultaw-schd-spec-with-timeout-1/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i '' "s/nvidia.com\/gpu: $gpus/nvidia.com\/gpu: 0/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i '' "s/parallelism: $awjobs/parallelism: 1/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i '' "s/completions: $awjobs/completions: 1/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml ;;
       *) 
-        sed -i "s/fake-defaultaw-schd-spec-with-timeout-$next_num/fake-defaultaw-schd-spec-with-timeout-1/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml ;;
+        sed -i "s/fake-defaultaw-schd-spec-with-timeout-$next_num/fake-defaultaw-schd-spec-with-timeout-1/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i "s/nvidia.com\/gpu: $gpus/nvidia.com\/gpu: 0/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i "s/parallelism: $awjobs/parallelism: 1/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml
+        sed -i "s/completions: $awjobs/completions: 1/g" ${SCRIPT_DIR}/preempt-exp-kwok.yaml ;;
     esac
 
 # Check for all jobs to report complete
@@ -141,7 +163,7 @@ jobstatus=`kubectl get jobs -n default --no-headers --field-selector status.succ
 while [ $jobstatus -lt $jobs ]
 do
    echo "Number of completed jobs is: " $jobstatus " and the goal is: " $jobs
-   sleep 10
+   sleep 1
    jobstatus=`kubectl get jobs -n default --no-headers --field-selector status.successful=1 |wc -l`
 done
 
