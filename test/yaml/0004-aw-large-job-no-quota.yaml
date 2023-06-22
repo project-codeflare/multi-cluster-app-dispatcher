@@ -1,0 +1,60 @@
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+    name: large-job-no-quota
+    namespace: test
+spec:
+    schedulingSpec:
+        minAvailable: 1
+    resources:
+        GenericItems:
+            - replicas: 1
+              completionstatus: Complete
+              custompodresources:
+                  - replicas: 1
+                    requests:
+                        cpu: 3000m
+                        nvidia.com/gpu: 0
+                        memory: 300Mi
+                    limits:
+                        cpu: 3000m
+                        nvidia.com/gpu: 0
+                        memory: 300Mi
+              generictemplate:
+                  apiVersion: batch/v1
+                  kind: Job
+                  metadata:
+                      name: large-job-no-quota
+                      namespace: test
+                      labels:
+                          appwrapper.mcad.ibm.com: large-job-no-quota
+                  spec:
+                      parallelism: 1
+                      completions: 1
+                      template:
+                          metadata:
+                              name: large-job-no-quota
+                              namespace: test
+                              labels:
+                                  appwrapper.mcad.ibm.com: large-job-no-quota
+                          spec:
+                              terminationGracePeriodSeconds: 1
+                              restartPolicy: Never
+                              containers:
+                                  - name: ubuntu
+                                    image: ubuntu:latest
+                                    imagePullPolicy: IfNotPresent
+                                    command:
+                                        - sh
+                                        - -c
+                                        - |
+                                          sleep 30
+                                    resources:
+                                        requests:
+                                            cpu: 3000m
+                                            nvidia.com/gpu: 0
+                                            memory: 300Mi
+                                        limits:
+                                            cpu: 3000m
+                                            nvidia.com/gpu: 0
+                                            memory: 300Mi
