@@ -3,18 +3,20 @@
 SCRIPT_DIR=$(readlink -f `dirname "${BASH_SOURCE[0]}"`)
 
 function help() {
-    echo "usage: nomcadkwokperf.sh [-h]"
+    echo "usage: nomcadkwokperf.sh [-h] [-j <jobs>] [-g <gpus>] [-a <awjobs>]"
     echo
     echo "Description: Runs performance test script(s) without MCAD in subdirectories under $SCRIPT_DIR."
     echo "NOTE: This runs on KWOK Fake nodes only."
     echo
     echo "Preconditions: "
     echo "   - The script assumes you've logged into your cluster already. If not, it will tell you to login."
-    #echo "   - The script checks that you have the mcad-controller installed, otherwise it'll tell you to install it first."
     echo "   - The script checks that you have the kwok-controller installed, otherwise it'll tell you to install it first."
     echo
     echo "Options:"
     echo "  -h       Print this help message"
+    echo "  -j <jobs>       Number of jobs to run (default: 1000)"
+    echo "  -g <gpus>       Number of GPUs per job (default: 0)"
+    echo "  -a <awjobs>     Number of pods per job (default: 1)"
     echo
 }
 
@@ -34,24 +36,6 @@ function check_kubectl_login_status() {
       fi
 }
 
-# function check_mcad_installed_status() {
-#     set +e
-#     kubectl get pod -A |grep mcad-controller &> /dev/null
-#     res2="$?"
-#     kubectl get crd |grep appwrapper &> /dev/null
-#     res3="$?"
-#     set -e
-#     MCAD="$res2"
-#     CRD="$res3"
-#       if [[ $MCAD == 1 ]] || [[ $CRD == 1 ]]
-#       then
-#         echo "You need Install MCAD Controller first before running this script"
-#         exit 1
-#       else
-#         echo "Nice, MCAD Controller is installed"
-#     fi
-# }
-
 function check_kwok_installed_status() {
     set +e
     kubectl get pod -A |grep kwok-controller &> /dev/null
@@ -67,12 +51,26 @@ function check_kwok_installed_status() {
     fi
 }
 
+# Set default values
+jobs=10
+gpus=0
+awjobs=1
 
-while getopts hf: option; do
+# Parse command-line options
+while getopts hj:g:a: option; do
     case $option in
         h)
             help
             exit 0
+            ;;
+        j)
+            jobs=$OPTARG
+            ;;
+        g)
+            gpus=$OPTARG
+            ;;
+        a)
+            awjobs=$OPTARG
             ;;
         *)
             ;;
@@ -84,36 +82,18 @@ shift $((OPTIND-1))
 echo "Checking whether we have a valid cluster login or not..."
 check_kubectl_login_status
 
-# # Track whether you have the MCAD controller installed
-# echo "Checking MCAD Controller installation status"
-# echo
-# check_mcad_installed_status
-
 # Track whether you have the KWOK controller installed
 echo "Checking MCAD Controller installation status"
 echo
 check_kwok_installed_status
 
-# echo
-# read -p "How many fake KWOK jobs do you want? " jobs
-# read -p "How many GPUs do you want to allocate per job? " gpus
-# read -p "How many pods in a job? " awjobs
-
-# Set default values
-jobs=1000
-gpus=0
-awjobs=1
-
 # Start the timer now
 SECONDS=0
 
 echo "jobs number is $jobs"
-echo "Number of GPUs per job: $gpus"
+echo "Number of GPUs per pod: $gpus"
 echo "Number of pods per job: $awjobs"
 export STARTTIME=`date +"%T"`
-# echo " "
-# echo "Jobs started at: $STARTTIME" |tee fake-job-$STARTTIME.log
-# echo " "
 
 # This fixes the number of jobs to be one less so the for loop gets the right amount
 ((realjobs=$jobs-1))
@@ -163,33 +143,15 @@ done
     esac
 
 # Check for all jobs to report complete
-jobstatus=`kubectl get jobs -n default --no-headers --field-selector status.successful=1 |wc -l`
+jobstatus=`kubectl get jobs -n default --no-headers --field-selector status.successful=$awjobs |wc -l`
 
 while [ $jobstatus -lt $jobs ]
 do
    echo "Number of completed jobs is: " $jobstatus " and the goal is: " $jobs
    sleep 1
-   jobstatus=`kubectl get jobs -n default --no-headers --field-selector status.successful=1 |wc -l`
+   jobstatus=`kubectl get jobs -n default --no-headers --field-selector status.successful=$awjobs |wc -l`
 done
 
 echo " "
 export FINISHTIME=`date +"%T"`
-# echo "All $jobstatus jobs finished: $FINISHTIME" |tee -a nomcad-fake-job-$STARTTIME.log
 echo "Total amount of time for $jobs fake jobs without MCAD is: $SECONDS seconds" 
-# |tee -a ${SCRIPT_DIR}/nomcad-fake-job-$STARTTIME.log
-# echo " "
-# echo "Test results are stored in this file: ${SCRIPT_DIR}/nomcad-fake-job-$next_num-$STARTTIME.log"
-
-# # Rename the log to show the number of jobs used
-# mv ${SCRIPT_DIR}/nomcad-fake-job-$STARTTIME.log ${SCRIPT_DIR}/nomcad-fake-job-$next_num-$STARTTIME.log
-
-# # Ask if you want to auto-cleanup the appwrapper jobs
-# echo "Do you want to cleanup the most recently created fake jobs without MCAD? [Y/n]"
-# read DELETE
-# DELETE="y"
-# if [[ $DELETE == "Y" || $DELETE == "y" ]]; then
-#         echo "OK, deleting"
-#         ${SCRIPT_DIR}/nomcad-cleanup-kwok.sh
-# else
-#         echo "OK, you'll need to cleanup yourself later using ./nomcad-cleanup-kwok.sh"
-# fi

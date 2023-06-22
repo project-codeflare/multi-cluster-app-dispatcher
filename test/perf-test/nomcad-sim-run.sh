@@ -8,12 +8,35 @@ extract_total_time() {
     awk '/fake jobs without MCAD is: .* seconds/ {print $(NF-1)}' "$1"
 }
 
+# Set default values
+jobs=50
+gpus=0
+awjobs=1
+
+# Parse command-line options
+while getopts j:g:a: option; do
+    case $option in
+        j)
+            jobs=$OPTARG
+            ;;
+        g)
+            gpus=$OPTARG
+            ;;
+        a)
+            awjobs=$OPTARG
+            ;;
+        *)
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
 # Perform the iterations
 total_time=0
 for ((i=1; i<=iterations; i++)); do
     # Run the script and capture the output in a temporary file
     output_file=$(mktemp)
-    ./nomcadkwokperf.sh > "$output_file"
+    ./nomcadkwokperf.sh -j "$jobs" -g "$gpus" -a "$awjobs" > "$output_file"
     # Extract the total time from the output
     time=$(extract_total_time "$output_file")
     # Accumulate the total time

@@ -96,14 +96,14 @@ check_kwok_installed_status
 
 echo
 read -p "How many fake KWOK appwrapper jobs do you want? " jobs
-read -p "How many GPUs do you want to allocate per job? " gpus
 read -p "How many pods in a job? " awjobs
+read -p "How many GPUs do you want to allocate per pod? " gpus
 
 # Start the timer now
 SECONDS=0
 
 echo "jobs number is $jobs"
-echo "Number of GPUs per job: $gpus"
+echo "Number of GPUs per pod: $gpus"
 echo "Number of pods per AppWrapper: $awjobs"
 export STARTTIME=`date +"%T"`
 echo " "

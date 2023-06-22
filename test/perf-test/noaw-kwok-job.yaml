@@ -4,8 +4,8 @@ metadata:
   namespace: default
   name: noaw-kwok-job-1
 spec:
-  parallelism: 
-  completions: 
+  parallelism: 1
+  completions: 1
   template:
     metadata:
       namespace: default
@@ -32,5 +32,5 @@ spec:
             limits:
               cpu: 10m
               memory: 10M
-              nvidia.com/gpu: 0
+              nvidia.com/gpu: 8
       restartPolicy: Never
