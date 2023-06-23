@@ -869,6 +869,17 @@ func (qjm *XController) getDispatchedAppWrappers() (map[string]*clusterstateapi.
 	return awrRetVal, awsRetVal
 }
 
+func (qjm *XController) addTotalSnapshotResourcesConsumedByAw(totalgpu int64, totalcpu float64, totalmemory float64) *clusterstateapi.Resource {
+
+	totalResource := clusterstateapi.EmptyResource()
+	totalResource.GPU = totalgpu
+	totalResource.MilliCPU = totalcpu
+	totalResource.Memory = totalmemory
+
+	return totalResource
+
+}
+
 func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClusterResources *clusterstateapi.
 	Resource, targetpr float64, requestingJob *arbv1.AppWrapper, agentId string) (*clusterstateapi.Resource, []*arbv1.AppWrapper) {
 	r := unallocatedClusterResources.Clone()
@@ -915,10 +926,7 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 				klog.V(10).Infof("[getAggAvaiResPri] %s: Added %s to candidate preemptable job with priority %f.", time.Now().String(), value.Name, value.Status.SystemPriority)
 			}
 
-			totalResource := clusterstateapi.EmptyResource()
-			totalResource.GPU = value.Status.TotalGPU
-			totalResource.MilliCPU = value.Status.TotalCPU
-			totalResource.Memory = value.Status.TotalMemory
+			totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
 			preemptable = preemptable.Add(totalResource)
 
 			continue
@@ -931,30 +939,17 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 			continue
 		} else if value.Status.State == arbv1.AppWrapperStateEnqueued {
 			// Don't count the resources that can run but not yet realized (job orchestration pending or partially running).
-			for _, resctrl := range qjm.qjobResControls {
-				qjv := resctrl.GetAggregatedResources(value)
-				pending = pending.Add(qjv)
-				klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v but state is still pending.", qjv, resctrl, value.Name, value.Status.CanRun)
-			}
-			for _, genericItem := range value.Spec.AggrResources.GenericItems {
-				qjv, _ := genericresource.GetResources(&genericItem)
-				pending = pending.Add(qjv)
-				klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v but state is still pending.", qjv, genericItem, value.Name, value.Status.CanRun)
-			}
+
+			totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
+			pending = pending.Add(totalResource)
+
 			continue
 		} else if value.Status.State == arbv1.AppWrapperStateActive {
 			if value.Status.Pending > 0 {
 				//Don't count partially running jobs with pods still pending.
-				for _, resctrl := range qjm.qjobResControls {
-					qjv := resctrl.GetAggregatedResources(value)
-					pending = pending.Add(qjv)
-					klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but %v pod(s) are pending.", qjv, resctrl, value.Name, value.Status.CanRun, value.Status.State, value.Status.Pending)
-				}
-				for _, genericItem := range value.Spec.AggrResources.GenericItems {
-					qjv, _ := genericresource.GetResources(&genericItem)
-					pending = pending.Add(qjv)
-					klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but %v pod(s) are pending.", qjv, genericItem, value.Name, value.Status.CanRun, value.Status.State, value.Status.Pending)
-				}
+				totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
+				pending = pending.Add(totalResource)
+
 			} else {
 				// TODO: Hack to handle race condition when Running jobs have not yet updated the pod counts (In-Flight AW Jobs)
 				// This hack uses the golang struct implied behavior of defining the object without a value.  In this case
