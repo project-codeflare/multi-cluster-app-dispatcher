@@ -440,8 +440,11 @@ func (qjm *XController) PreemptQueueJobs() {
 
 		var updateNewJob *arbv1.AppWrapper
 		var message string
-		newjob, e := qjm.queueJobLister.AppWrappers(aw.Namespace).Get(aw.Name)
-		if e != nil {
+		newjob, err := qjm.getAppWrapper(aw.Namespace, aw.Name, "[PreemptQueueJobs] get fresh appwrapper")
+		if err != nil {
+			if !apiErrors.IsNotFound(err) {
+				klog.Warningf("[PreemptQueueJobs] failed in retriving a fresh copy of the appwrapper '%s/%s', %v. Will try to preempt on the next run", aw.Namespace, aw.Name, err)
+			}
 			continue
 		}
 		newjob.Status.CanRun = false
@@ -463,8 +466,11 @@ func (qjm *XController) PreemptQueueJobs() {
 				newjob.Status.QueueJobState = arbv1.AppWrapperCondFailed
 				newjob.Status.Running = 0
 				updateNewJob = newjob.DeepCopy()
+
 				if err := qjm.updateStatusInEtcd(updateNewJob, "PreemptQueueJobs - CanRun: false"); err != nil {
-					klog.Errorf("Failed to update status of AppWrapper %v/%v: %v", aw.Namespace, aw.Name, err)
+					if !apiErrors.IsNotFound(err) {
+						klog.Warningf("[PreemptQueueJobs] to update status of AppWrapper %s/%s: err %v. Will try to preempt on the next run", aw.Namespace, aw.Name, err)
+					}
 				}
 				//cannot use cleanup AW, since it puts AW back in running state
 				go qjm.qjqueue.AddUnschedulableIfNotPresent(aw)
@@ -522,7 +528,9 @@ func (qjm *XController) PreemptQueueJobs() {
 			updateNewJob = newjob.DeepCopy()
 		}
 		if err := qjm.updateStatusInEtcd(updateNewJob, "PreemptQueueJobs - CanRun: false"); err != nil {
-			klog.Errorf("Failed to update status of AppWrapper %v/%v: %v", aw.Namespace, aw.Name, err)
+			if !apiErrors.IsNotFound(err) {
+				klog.Warningf("[PreemptQueueJobs] to update status of AppWrapper %s/%s: err %v. Will try to preempt on the next run", aw.Namespace, aw.Name, err)
+			}
 		}
 		if cleanAppWrapper {
 			klog.V(4).Infof("[PreemptQueueJobs] Deleting AppWrapper %s/%s due to maximum number of requeuings exceeded.", aw.Name, aw.Namespace)
@@ -543,16 +551,31 @@ func (qjm *XController) preemptAWJobs(preemptAWs []*arbv1.AppWrapper) {
 	}
 
 	for _, aw := range preemptAWs {
-		apiCacheAWJob, e := qjm.queueJobLister.AppWrappers(aw.Namespace).Get(aw.Name)
-		if e != nil {
-			klog.Errorf("[preemptQWJobs] Failed to get AppWrapper to from API Cache %v/%v: %v",
-				aw.Namespace, aw.Name, e)
-			continue
-		}
-		apiCacheAWJob.Status.CanRun = false
-		if err := qjm.updateStatusInEtcd(apiCacheAWJob, "preemptAWJobs - CanRun: false"); err != nil {
-			klog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
-				apiCacheAWJob.Namespace, apiCacheAWJob.Name, err)
+		preemptRetrier := retrier.New(retrier.ExponentialBackoff(10, 100*time.Millisecond), &EtcdErrorClassifier{})
+		preemptRetrier.SetJitter(0.05)
+		err := preemptRetrier.Run(func() error {
+			apiCacheAWJob, retryErr := qjm.getAppWrapper(aw.Namespace, aw.Name, "[preemptAWJobs] get fresh app wrapper")
+			if retryErr != nil {
+				if apiErrors.IsNotFound(retryErr) {
+					return nil
+				}
+
+				klog.Errorf("[preemptAWJobs] Failed to get AppWrapper to from API Cache %v/%v: %v",
+					aw.Namespace, aw.Name, retryErr)
+				return retryErr
+			}
+			apiCacheAWJob.Status.CanRun = false
+			if retryErr := qjm.updateStatusInEtcd(apiCacheAWJob, "preemptAWJobs - CanRun: false"); retryErr != nil {
+				klog.Warningf("[preemptAWJobs] Failed to update status of AppWrapper %v/%v: %v. Retrying",
+					apiCacheAWJob.Namespace, apiCacheAWJob.Name, retryErr)
+				return retryErr
+			}
+			return nil
+		})
+		if err != nil {
+			if !apiErrors.IsNotFound(err) {
+				klog.Warningf("[preemptAWJobs] Failed to preempt a ppWrapper %s/%s: err %v.", aw.Namespace, aw.Name, err)
+			}
 		}
 	}
 }
@@ -707,9 +730,9 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arb
 				}
 			}
 			if len(name) == 0 {
-				klog.Warningf("[getAppWrapperCompletionStatus] object name not present for appwrapper: %v in namespace: %v", caw.Name, caw.Namespace)
+				klog.Warningf("[getAppWrapperCompletionStatus] object name not present for appwrapper: %s in namespace: %s", caw.Name, caw.Namespace)
 			}
-			klog.Infof("[getAppWrapperCompletionStatus] Checking items completed for appwrapper: %v in namespace: %v", caw.Name, caw.Namespace)
+			klog.Infof("[getAppWrapperCompletionStatus] Checking items completed for appwrapper: %s in namespace: %s", caw.Name, caw.Namespace)
 
 			status := qjm.genericresources.IsItemCompleted(&genericItem, caw.Namespace, caw.Name, name)
 			if !status {
