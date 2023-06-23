@@ -1132,6 +1132,7 @@ func (qjm *XController) ScheduleNext() {
 	qj, err := qjm.qjqueue.Pop()
 	if err != nil {
 		klog.Errorf("[ScheduleNext] Cannot pop QueueJob from qjqueue! err=%#v", err)
+		qjm.schedulingMutex.Unlock()
 		return // Try to pop qjqueue again
 	}
 	qjm.schedulingAW = qj
