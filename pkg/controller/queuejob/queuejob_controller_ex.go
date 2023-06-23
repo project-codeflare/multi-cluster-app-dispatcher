@@ -36,6 +36,7 @@ import (
 	"math/rand"
 	"reflect"
 	"runtime/debug"
+	"sync"
 
 	//	"runtime/debug"
 	"sort"
@@ -171,7 +172,8 @@ type XController struct {
 	quotaManager quota.QuotaManagerInterface
 
 	// Active Scheduling AppWrapper
-	schedulingAW *ActiveAppWrapper
+	schedulingAW    *arbv1.AppWrapper
+	schedulingMutex sync.RWMutex
 }
 
 type JobAndClusterAgent struct {
@@ -230,7 +232,7 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		updateQueue:     cache.NewFIFO(GetQueueJobKey),
 		qjqueue:         NewSchedulingQueue(),
 		cache:           clusterstatecache.New(config),
-		schedulingAW:    NewActiveAppWrapper(),
+		schedulingAW:    nil,
 	}
 	cc.metricsAdapter = adapter.New(serverOption, config, cc.cache)
 
@@ -1103,15 +1105,17 @@ func (qjm *XController) ScheduleNext() {
 	// check if we have enough compute resources for it
 	// if we have enough compute resources then we set the AllocatedReplicas to the total
 	// amount of resources asked by the job
+	qjm.schedulingMutex.Lock()
 	qj, err := qjm.qjqueue.Pop()
 	if err != nil {
 		klog.Errorf("[ScheduleNext] Cannot pop QueueJob from qjqueue! err=%#v", err)
 		return // Try to pop qjqueue again
 	}
-	qjm.schedulingAW.AtomicSet(qj)
+	qjm.schedulingAW = qj
+	qjm.schedulingMutex.Unlock()
 	// ensure that current active appwrapper is reset at the end of this function, to prevent
 	// the appwrapper from being added in synch job
-	defer qjm.schedulingAW.AtomicSet(nil)
+	defer qjm.schedulingAWAtomicSet(nil)
 
 	scheduleNextRetrier := retrier.New(retrier.ExponentialBackoff(10, 100*time.Millisecond), &EtcdErrorClassifier{})
 	scheduleNextRetrier.SetJitter(0.05)
@@ -1183,7 +1187,7 @@ func (qjm *XController) ScheduleNext() {
 				return nil
 			}
 			apiCacheAWJob.DeepCopyInto(qj)
-			qjm.schedulingAW.AtomicSet(qj)
+			qjm.schedulingAWAtomicSet(qj)
 		}
 
 		qj.Status.QueueJobState = arbv1.AppWrapperCondHeadOfLine
@@ -1928,8 +1932,8 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 
 	// make sure qj has the latest information
 	if larger(cacheAWJob.ResourceVersion, qj.ResourceVersion) {
-		klog.V(4).Infof("[syncQueueJob]  '%s/%s' found more recent copy from cache       &qj=%p       qj=%+v", qj.Namespace, qj.Name, qj, qj)
-		klog.V(4).Infof("[syncQueueJobJ] '%s/%s' found more recent copy from cache &cacheAWJob=%p cacheAWJob=%+v", cacheAWJob.Namespace, cacheAWJob.Name, cacheAWJob, cacheAWJob)
+		klog.V(5).Infof("[syncQueueJob]  '%s/%s' found more recent copy from cache       &qj=%p       qj=%+v", qj.Namespace, qj.Name, qj, qj)
+		klog.V(5).Infof("[syncQueueJobJ] '%s/%s' found more recent copy from cache &cacheAWJob=%p cacheAWJob=%+v", cacheAWJob.Namespace, cacheAWJob.Name, cacheAWJob, cacheAWJob)
 		cacheAWJob.DeepCopyInto(qj)
 	}
 
@@ -2079,7 +2083,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 		//FIXME there is still are race condition here.
 		if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued && !cc.qjqueue.IfExistUnschedulableQ(qj) && !cc.qjqueue.IfExistActiveQ(qj) {
 			// One more check to ensure AW is not the current active schedule object
-			if cc.schedulingAW.IsActiveAppWrapper(qj.Name, qj.Namespace) {
+			if cc.IsActiveAppWrapper(qj.Name, qj.Namespace) {
 				cc.qjqueue.AddIfNotPresent(qj)
 				klog.V(3).Infof("[manageQueueJob] Recovered AppWrapper '%s/%s' - added to active queue, Status=%+v",
 					qj.Namespace, qj.Name, qj.Status)
@@ -2394,4 +2398,34 @@ func (c *EtcdErrorClassifier) Classify(err error) retrier.Action {
 	} else {
 		return retrier.Fail
 	}
+}
+
+// IsActiveAppWrapper safely performs the comparison that was done inside the if block
+// at line 1977 in the queuejob_controller_ex.go
+// The code looked like this:
+//
+//	if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued &&
+//		!cc.qjqueue.IfExistUnschedulableQ(qj) && !cc.qjqueue.IfExistActiveQ(qj) {
+//		// One more check to ensure AW is not the current active schedule object
+//		if cc.schedulingAW == nil ||
+//			(strings.Compare(cc.schedulingAW.Namespace, qj.Namespace) != 0 &&
+//				strings.Compare(cc.schedulingAW.Name, qj.Name) != 0) {
+//			cc.qjqueue.AddIfNotPresent(qj)
+//			klog.V(3).Infof("[manageQueueJob] Recovered AppWrapper %s%s - added to active queue, Status=%+v",
+//				qj.Namespace, qj.Name, qj.Status)
+//			return nil
+//		}
+//	}
+
+func (cc *XController) IsActiveAppWrapper(name, namespace string) bool {
+	cc.schedulingMutex.RLock()
+	defer cc.schedulingMutex.RUnlock()
+	return cc.schedulingAW == nil ||
+		(strings.Compare(cc.schedulingAW.Namespace, namespace) != 0 &&
+			strings.Compare(cc.schedulingAW.Name, name) != 0)
+}
+func (qjm *XController) schedulingAWAtomicSet(qj *arbv1.AppWrapper) {
+	qjm.schedulingMutex.Lock()
+	qjm.schedulingAW = qj
+	qjm.schedulingMutex.Unlock()
 }
