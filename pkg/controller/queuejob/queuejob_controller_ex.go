@@ -41,6 +41,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	qmutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotaforestmanager"
@@ -1252,10 +1253,12 @@ func (qjm *XController) ScheduleNext() {
 			klog.Infof("[ScheduleNext] XQJ %s with resources %v to be scheduled on aggregated idle resources %v", qj.Name, aggqj, resources)
 
 			// Assume preemption will remove low priroity AWs in the system, optimistically dispatch such AWs
-			if !qjm.nodeChecks(qjm.cache.GetUnallocatedHistograms(), qj) {
-				klog.V(4).Infof("[ScheduleNext] Optimistic dispatch for AW %v in namespace %v requesting aggregated resources %v histogram for point in-time fragmented resources are available in the cluster %v", qj.Name, qj.Namespace, qjm.GetAggregatedResources(qj), qjm.cache.GetUnallocatedHistograms())
-			}
+
 			if aggqj.LessEqual(resources) {
+				unallocatedHistogramMap := qjm.cache.GetUnallocatedHistograms()
+				if !qjm.nodeChecks(unallocatedHistogramMap, qj) {
+					klog.V(4).Infof("[ScheduleNext] Optimistic dispatch for AW %v in namespace %v requesting aggregated resources %v histogram for point in-time fragmented resources are available in the cluster %s", qj.Name, qj.Namespace, qjm.GetAggregatedResources(qj), proto.MarshalTextString(unallocatedHistogramMap["gpu"]))
+				}
 				// Now evaluate quota
 				fits := true
 				klog.V(4).Infof("[ScheduleNext] HOL available resourse successful check for %s at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
