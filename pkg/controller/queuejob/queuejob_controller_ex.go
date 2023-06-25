@@ -2171,7 +2171,9 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 					updateQj = qj.DeepCopy()
 				}
 				cc.updateEtcd(updateQj, "[syncQueueJob] setCompleted")
-				cc.quotaManager.Release(updateQj)
+				if cc.serverOption.QuotaEnabled {
+					cc.quotaManager.Release(updateQj)
+				}
 			}
 
 			// Bugfix to eliminate performance problem of overloading the event queue.
