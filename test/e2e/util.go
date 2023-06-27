@@ -1102,7 +1102,6 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 			"metadata": {
 				"labels": {
 					"app": "aw-deployment-2-550cpu"
-					"appwrapper.mcad.ibm.com": "aw-deployment-2-550cpu"
 				},
 				"annotations": {
 					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-550cpu"
