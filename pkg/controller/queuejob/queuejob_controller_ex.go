@@ -955,8 +955,16 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 		} else if value.Status.State == arbv1.AppWrapperStateActive {
 			if value.Status.Pending > 0 {
 				//Don't count partially running jobs with pods still pending.
-				totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
-				pending = pending.Add(totalResource)
+				for _, resctrl := range qjm.qjobResControls {
+					qjv := resctrl.GetAggregatedResources(value)
+					pending = pending.Add(qjv)
+					klog.V(4).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", qjv, resctrl, value.Name, value.Status.CanRun, value.Status.State)
+				}
+				for _, genericItem := range value.Spec.AggrResources.GenericItems {
+					qjv, _ := genericresource.GetResources(&genericItem)
+					pending = pending.Add(qjv)
+					klog.V(4).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", qjv, genericItem, value.Name, value.Status.CanRun, value.Status.State)
+				}
 
 			} else {
 				// TODO: Hack to handle race condition when Running jobs have not yet updated the pod counts (In-Flight AW Jobs)
