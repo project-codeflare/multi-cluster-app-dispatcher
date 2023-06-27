@@ -940,9 +940,16 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 			continue
 		} else if value.Status.State == arbv1.AppWrapperStateEnqueued {
 			// Don't count the resources that can run but not yet realized (job orchestration pending or partially running).
-
-			totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
-			pending = pending.Add(totalResource)
+			for _, resctrl := range qjm.qjobResControls {
+				qjv := resctrl.GetAggregatedResources(value)
+				pending = pending.Add(qjv)
+				klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v but state is still pending.", qjv, resctrl, value.Name, value.Status.CanRun)
+			}
+			for _, genericItem := range value.Spec.AggrResources.GenericItems {
+				qjv, _ := genericresource.GetResources(&genericItem)
+				pending = pending.Add(qjv)
+				klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v but state is still pending.", qjv, genericItem, value.Name, value.Status.CanRun)
+			}
 
 			continue
 		} else if value.Status.State == arbv1.AppWrapperStateActive {
