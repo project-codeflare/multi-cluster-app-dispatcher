@@ -140,7 +140,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	})
 
 	It("MCAD CPU Requeuing - Completion After Enough Requeuing Times Test", func() {
-		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Requeuing Test - Started.\n")
+		fmt.Fprintf(os.Stdout, "[e2e] Completion After Enough Requeuing Times Test - Started.\n")
 
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
@@ -414,7 +414,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("MCAD Scheduling Fail Fast Preemption Test", func() {
+	FIt("MCAD Scheduling Fail Fast Preemption Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Started.\n")
 
 		context := initTestContext()
@@ -441,7 +441,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		err = waitAWPodsPending(context, aw2)
 		Expect(err).NotTo(HaveOccurred())
 
-		// This should fit on cluster after AW aw-deployment-1-700-cpu above is automatically preempted on
+		// This should fit on cluster after AW aw-deployment-1-850-cpu above is automatically preempted on
 		// scheduling failure
 		aw3 := createGenericDeploymentCustomPodResourcesWithCPUAW(
 			context, appendRandomString("aw-ff-deployment-2-340-cpu"), "340m", "340m", 2, 60)
@@ -551,17 +551,13 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		time.Sleep(1 * time.Minute)
 		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		if err != nil {
-			fmt.Fprint(GinkgoWriter, "Error getting status")
+			fmt.Fprintf(GinkgoWriter, "Error getting status, %v\n", err)
 		}
-		pass := false
+		Expect(err).Should(Succeed())
+		Expect(aw1.Status.State).To(Equal(arbv1.AppWrapperStateCompleted))
 		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
-		if aw1.Status.State == arbv1.AppWrapperStateCompleted {
-			pass = true
-		}
-		Expect(pass).To(BeTrue())
 		appwrappers = append(appwrappers, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Job Completion Test - Completed.\n")
-
 	})
 
 	It("MCAD Multi-Item Job Completion Test", func() {

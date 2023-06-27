@@ -101,7 +101,7 @@ type AppWrapperService struct {
 }
 
 // AppWrapperResource is App Wrapper aggregation resource
-//todo: To be depricated
+// todo: To be depricated
 type AppWrapperResource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -263,11 +263,15 @@ type AppWrapperStatus struct {
 
 	// Represents the latest available observations of pods under appwrapper
 	PendingPodConditions []PendingPodSpec `json:"pendingpodconditions"`
+
+	// Re-queueing state fields
+	RequeueingTimeInSeconds int `json:"requeueing-time-seconds,omitempty"`
+	NumberOfRequeueings     int `json:"number-of-requeueings,omitempty"`
 }
 
 type AppWrapperState string
 
-//enqueued, active, deleting, succeeded, failed
+// enqueued, active, deleting, succeeded, failed
 const (
 	AppWrapperStateEnqueued              AppWrapperState = "Pending"
 	AppWrapperStateActive                AppWrapperState = "Running"
