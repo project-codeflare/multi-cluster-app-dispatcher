@@ -2432,11 +2432,11 @@ func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 	return nil
 }
 func (cc *XController) getAppWrapper(namespace string, name string, caller string) (*arbv1.AppWrapper, error) {
-	klog.V(5).Infof("[getAppWrapper] geting a copy of '%s/%s' when called by '%s'.", namespace, name, caller)
+	klog.V(5).Infof("[getAppWrapper] getting a copy of '%s/%s' when called by '%s'.", namespace, name, caller)
 	apiCacheAWJob, err := cc.queueJobLister.AppWrappers(namespace).Get(name)
 	// apiQueueJob's ControllerFirstTimestamp is only microsecond level instead of nanosecond level
 	if err != nil {
-		klog.Errorf("[getAppWrapper] geting a copy of '%s/%s' failed, when called  by '%s', err=%v", namespace, name, caller, err)
+		klog.Errorf("[getAppWrapper] getting a copy of '%s/%s' failed, when called  by '%s', err=%v", namespace, name, caller, err)
 		return nil, err
 	}
 	klog.V(5).Infof("[getAppWrapper] get a copy of '%s/%s' suceeded when called by '%s'", namespace, name, caller)
