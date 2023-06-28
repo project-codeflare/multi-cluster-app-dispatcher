@@ -23,7 +23,7 @@ ifneq ($(strip $(GIT_BRANCH)),)
 		RELEASE_VER:=${GIT_BRANCH}
 		TAG:=release-${TAG}
 	else
-		RELEASE_VER:= $(shell curl -s https://pkg.go.dev/github.com/project-codeflare/multi-cluster-app-dispatcher | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' | head -n 1)
+		RELEASE_VER:= $(shell git describe --tags --abbrev=0)
 		TAG:=${TAG}${GIT_BRANCH}
 		# replace invalid characters that might exist in the branch name
 		TAG:=$(shell echo ${TAG} | sed 's/[^a-zA-Z0-9]/-/g')
