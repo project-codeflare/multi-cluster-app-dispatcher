@@ -17,7 +17,8 @@ Refer to [deployment instructions here](./doc/deploy/deployment.md) on how to de
 
 ## Release Process
 
-1. Run the [mcad-release.yml](https://github.com/project-codeflare/actions/workflows/mcad-release.yml) action.
+1. Run the [mcad-release.yml](https://github.com/project-codeflare/actions/workflows/mcad-release.yml) action under `Actions` by entering the new release version in the `Release tag` input field and click `Run workflow`.
+   ![mcad-release](doc/images/mcad-release.png)
 
 2. Verify that [mcad-release.yml](https://github.com/project-codeflare/actions/workflows/mcad-release.yml) action passed successfully. This workflow will create GitHub release tag.
 

@@ -14,18 +14,16 @@ jobs:
   release:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     steps:
     - name: checkout code
       uses: actions/checkout@v3
 
-    - name: Configure Git
-      run: |
-        git config user.name "GitHub Actions"
-        git config user.email "github-actions@github.com"
-
     - name: check tag format
       run: |
-        if [[ "${{ github.event.inputs.tag }}" =~ "^v\d+\.\d+\.\d+$" ]]; then
+        if [[ "${{ github.event.inputs.tag }}" =~ ^v[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$ ]]; then
           echo "Tag format is valid."
         else
           echo "Invalid tag format: ${{ github.event.inputs.tag }}"
@@ -38,5 +36,8 @@ jobs:
            echo "Tag ${{ github.event.inputs.tag  }} already exist. Exiting workflow."
            exit 1
         else
-           gh release create ${{ github.event.inputs.tag }} --title "MCAD ${{ github.event.inputs.tag  }} Release" --generate-notes
+           gh release create ${{ github.event.inputs.tag }} --title "MCAD ${{ github.event.inputs.tag  }} Release" --generate-notes --target ${{ github.ref }}
         fi
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+

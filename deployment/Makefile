@@ -7,7 +7,7 @@ CAT_CMD=$(if $(filter $(OS),Windows_NT),type,cat)
 OPERATOR_VERSION_FILE=./OPERATOR_VERSION
 OPERATOR_VER=v$(shell $(CAT_CMD) $(OPERATOR_VERSION_FILE))
 OPERATOR_VER_NUM=$(shell $(CAT_CMD) $(OPERATOR_VERSION_FILE))
-CONTROLLER_VER=$(shell curl -s https://pkg.go.dev/github.com/project-codeflare/multi-cluster-app-dispatcher | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' | head -n 1)
+CONTROLLER_VER=$(shell git describe --tags --abbrev=0)
 
 check_delete_operator:
 	@echo "****************************************************************************************************"
