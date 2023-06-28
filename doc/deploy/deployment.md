@@ -15,7 +15,7 @@ Server Version: v1.11.9
 #
 ```
 ### - Install the Helm Package Manager
-Install the Helm Client on your local machine and the Helm Cerver on your kubernetes cluster.  Helm installation documentation is [here]
+Install the Helm Client on your local machine and the Helm Server on your kubernetes cluster.  Helm installation documentation is [here]
 (https://docs.helm.sh/using_helm/#installing-helm).  After you install Helm you can list the Help packages installed with the following command:
 ```
 # helm list
@@ -44,7 +44,7 @@ $ kubectl get nodes
      minikube   Ready     master    91d       v1.10.0
 ```
 
-To find out the available resources in you cluster inspect each node from the command output above with the following command:
+To find out the available resources in your cluster inspect each node from the command output above with the following command:
 ```
 $ kubectl describe node <node_name>
 ```
@@ -110,24 +110,24 @@ All Helm parameters are described in the table at the bottom of this section.
 #### 3.a)  Start the Multi-Cluster-App-Dispatcher Controller on All Target Deployment Clusters (*Agent Mode*).
 __Agent Mode__: Install and set up the `multi-cluster-app-dispatcher` controller (_MCAD_) in *Agent Mode* for each clusters that will orchestrate the resources defined within an _AppWrapper_ using Helm.  *Agent Mode* is the default mode when deploying the _MCAD_ controller.
 ```
-helm install mcad-controller --namespace kube-system --wait --set image.repository=<image repository and name> --set image.tag=<image tag> --set imagePullSecret.name=<Name of image pull kubernetes secret> --set imagePullSecret.password=<REPLACE_WITH_REGISTRY_TOKEN_GENERATED_IN_PREREQs_STAGE1_REGISTRY.d)>  --set localConfigName=<Local Kubernetes Config File for Current Cluster>  --set volumes.hostPath=<Host_Path_location_of_local_Kubernetes_config_file>
+helm install <release-name> mcad-controller --namespace kube-system --wait --set image.repository=<image repository and name> --set image.tag=<image tag> --set imagePullSecret.name=<Name of image pull kubernetes secret> --set imagePullSecret.password=<REPLACE_WITH_REGISTRY_TOKEN_GENERATED_IN_PREREQs_STAGE1_REGISTRY.d)>  --set localConfigName=<Local Kubernetes Config File for Current Cluster>  --set volumes.hostPath=<Host_Path_location_of_local_Kubernetes_config_file>
 ```
 
 ##### Example 1
 *Assuming the default for `image.repository` and `image.tag` fields*:
 ```
-helm install mcad-controller --namespace kube-system
+helm install <release-name> mcad-controller --namespace kube-system
 ```
 ##### Example 2
 *Assuming the MCAD controller image is already pulled onto the local target machine with the following image `image.repository=mcad-controller`, `image.tag=latest`*
 ```
-helm install mcad-controller --namespace kube-system --wait --set image.pullPolicy=Never --set image.repository=mcad-controller --set image.tag=latest
+helm install <release-name> mcad-controller --namespace kube-system --wait --set image.pullPolicy=Never --set image.repository=mcad-controller --set image.tag=latest
 ```
 ##### Example 3
 To adjust the cpu and memory demands of the deployment with command line overrides example:
 
 ```
-helm install mcad-controller --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=myContainerRegistry/mcad-controller --set image.tag=latest --set image.pullPolicy=Always
+helm install <release-name> mcad-controller --namespace kube-system --wait --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=1000m --set resources.limits.memory=1024Mi --set image.repository=myContainerRegistry/mcad-controller --set image.tag=latest --set image.pullPolicy=Always
 ```
 #### 3.b)  Start the Multi-Cluster-App-Dispatcher Controller on the Controller Cluster (*Dispatcher Mode*).
 _Dispatcher Mode__: Install and set up the Multi-Cluster-App-Dispatcher Controler (_MCAD_) in *Dispatcher Mode* for the control cluster that will dispatch the _MCAD_ controller to an *Agent* cluster using Helm.
@@ -135,12 +135,12 @@ _Dispatcher Mode__: Install and set up the Multi-Cluster-App-Dispatcher Controle
 
 __Dispatcher Mode__: Installing the Multi-Cluster-App-Dispatcher Controler in *Dispatcher Mode*.
 ```
-helm install mcad-controller --namespace kube-system --wait --set image.repository=<image repository and name> --set image.tag=<image tag> --set configMap.name=<Config> --set configMap.dispatcherMode='"true"' --set configMap.agentConfigs=agent101config:uncordon --set volumes.hostPath=<Host_Path_location_of_all_agent_Kubernetes_config_files>
+helm install <release-name> mcad-controller --namespace kube-system --wait --set image.repository=<image repository and name> --set image.tag=<image tag> --set configMap.name=<Config> --set configMap.dispatcherMode='"true"' --set configMap.agentConfigs=agent101config:uncordon --set volumes.hostPath=<Host_Path_location_of_all_agent_Kubernetes_config_files>
 ```
 
 For example:
 ```
-helm install mcad-controller --namespace kube-system --wait --set image.repository=tonghoon --set image.tag=both --set configMap.name=mcad-deployer --set configMap.dispatcherMode='"true"' --set configMap.agentConfigs=agent101config:uncordon --set volumes.hostPath=/etc/kubernetes
+helm install <release-name> mcad-controller --namespace kube-system --wait --set image.repository=tonghoon --set image.tag=both --set configMap.name=mcad-deployer --set configMap.dispatcherMode='"true"' --set configMap.agentConfigs=agent101config:uncordon --set volumes.hostPath=/etc/kubernetes
 ```
 ### Chart configuration
 
