@@ -1085,32 +1085,32 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "Deployment", 
 	"metadata": {
-		"name": "aw-deployment-2-550cpu",
+		"name": "`+name+`",
 		"namespace": "test",
 		"labels": {
-			"app": "aw-deployment-2-550cpu"
+			"app": "`+name+`"
 		}
 	},
 	"spec": {
 		"replicas": 2,
 		"selector": {
 			"matchLabels": {
-				"app": "aw-deployment-2-550cpu"
+				"app": "`+name+`"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "aw-deployment-2-550cpu"
+					"app": "`+name+`"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-550cpu"
+					"appwrapper.mcad.ibm.com/appwrapper-name": "`+name+`"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "aw-deployment-2-550cpu",
+						"name": "`+name+`",
 						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {

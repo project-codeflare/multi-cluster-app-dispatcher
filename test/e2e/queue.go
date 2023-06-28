@@ -217,7 +217,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createDeploymentAW(context, "aw-deployment-3")
 		appwrappers = append(appwrappers, aw)
 
-		fmt.Fprintf(os.Stdout, "[e2e] Awaiting %d pods running for AW %s.\n", aw.Spec.SchedSpec.MinAvailable, aw.Name)
+		fmt.Fprintf(GinkgoWriter, "[e2e] Awaiting %d pods running for AW %s.\n", aw.Spec.SchedSpec.MinAvailable, aw.Name)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -595,7 +595,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createAWGenericItemWithoutStatus(context, "aw-test-job-with-comp-44")
 		err1 := waitAWPodsReady(context, aw)
-		fmt.Fprintf(os.Stdout, "The error is: %v", err1)
+		fmt.Fprintf(GinkgoWriter, "The error is: %v", err1)
 		Expect(err1).To(HaveOccurred())
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD GenericItem Without Status Test - Completed.\n")
 
