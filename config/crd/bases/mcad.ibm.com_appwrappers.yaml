@@ -795,6 +795,18 @@ spec:
                 type: boolean
               message:
                 type: string
+              totalcpu:
+                description: The number of cpu consumed by all pods belonging to an appwrapper.
+                format: int32
+                type: integer
+              totalmemory:
+                description: The amount of memory consumed by all pods belonging to an appwrapper.
+                format: int32
+                type: integer
+              totalgpu:
+                description: The total number of GPUs consumed by all pods belonging to an appwrapper.
+                format: int32
+                type: integer
               pending:
                 description: The number of pending pods.
                 format: int32

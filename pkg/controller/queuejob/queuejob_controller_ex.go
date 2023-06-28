@@ -41,6 +41,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	qmutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotaforestmanager"
@@ -869,6 +870,17 @@ func (qjm *XController) getDispatchedAppWrappers() (map[string]*clusterstateapi.
 	return awrRetVal, awsRetVal
 }
 
+func (qjm *XController) addTotalSnapshotResourcesConsumedByAw(totalgpu int64, totalcpu float64, totalmemory float64) *clusterstateapi.Resource {
+
+	totalResource := clusterstateapi.EmptyResource()
+	totalResource.GPU = totalgpu
+	totalResource.MilliCPU = totalcpu
+	totalResource.Memory = totalmemory
+
+	return totalResource
+
+}
+
 func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClusterResources *clusterstateapi.
 	Resource, targetpr float64, requestingJob *arbv1.AppWrapper, agentId string) (*clusterstateapi.Resource, []*arbv1.AppWrapper) {
 	r := unallocatedClusterResources.Clone()
@@ -915,14 +927,8 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 				klog.V(10).Infof("[getAggAvaiResPri] %s: Added %s to candidate preemptable job with priority %f.", time.Now().String(), value.Name, value.Status.SystemPriority)
 			}
 
-			for _, resctrl := range qjm.qjobResControls {
-				qjv := resctrl.GetAggregatedResources(value)
-				preemptable = preemptable.Add(qjv)
-			}
-			for _, genericItem := range value.Spec.AggrResources.GenericItems {
-				qjv, _ := genericresource.GetResources(&genericItem)
-				preemptable = preemptable.Add(qjv)
-			}
+			totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
+			preemptable = preemptable.Add(totalResource)
 
 			continue
 		} else if qjm.isDispatcher {
@@ -944,6 +950,7 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 				pending = pending.Add(qjv)
 				klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v but state is still pending.", qjv, genericItem, value.Name, value.Status.CanRun)
 			}
+
 			continue
 		} else if value.Status.State == arbv1.AppWrapperStateActive {
 			if value.Status.Pending > 0 {
@@ -951,13 +958,14 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 				for _, resctrl := range qjm.qjobResControls {
 					qjv := resctrl.GetAggregatedResources(value)
 					pending = pending.Add(qjv)
-					klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but %v pod(s) are pending.", qjv, resctrl, value.Name, value.Status.CanRun, value.Status.State, value.Status.Pending)
+					klog.V(4).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", qjv, resctrl, value.Name, value.Status.CanRun, value.Status.State)
 				}
 				for _, genericItem := range value.Spec.AggrResources.GenericItems {
 					qjv, _ := genericresource.GetResources(&genericItem)
 					pending = pending.Add(qjv)
-					klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but %v pod(s) are pending.", qjv, genericItem, value.Name, value.Status.CanRun, value.Status.State, value.Status.Pending)
+					klog.V(4).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v and status set to: %s but no pod counts in the state have been defined.", qjv, genericItem, value.Name, value.Status.CanRun, value.Status.State)
 				}
+
 			} else {
 				// TODO: Hack to handle race condition when Running jobs have not yet updated the pod counts (In-Flight AW Jobs)
 				// This hack uses the golang struct implied behavior of defining the object without a value.  In this case
@@ -1259,7 +1267,13 @@ func (qjm *XController) ScheduleNext() {
 				qjm.cache.GetUnallocatedResources(), priorityindex, qj, "")
 			klog.Infof("[ScheduleNext] XQJ %s with resources %v to be scheduled on aggregated idle resources %v", qj.Name, aggqj, resources)
 
-			if aggqj.LessEqual(resources) && qjm.nodeChecks(qjm.cache.GetUnallocatedHistograms(), qj) {
+			// Assume preemption will remove low priroity AWs in the system, optimistically dispatch such AWs
+
+			if aggqj.LessEqual(resources) {
+				unallocatedHistogramMap := qjm.cache.GetUnallocatedHistograms()
+				if !qjm.nodeChecks(unallocatedHistogramMap, qj) {
+					klog.V(4).Infof("[ScheduleNext] Optimistic dispatch for AW %v in namespace %v requesting aggregated resources %v histogram for point in-time fragmented resources are available in the cluster %s", qj.Name, qj.Namespace, qjm.GetAggregatedResources(qj), proto.MarshalTextString(unallocatedHistogramMap["gpu"]))
+				}
 				// Now evaluate quota
 				fits := true
 				klog.V(4).Infof("[ScheduleNext] HOL available resourse successful check for %s at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
@@ -2172,7 +2186,9 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 					updateQj = qj.DeepCopy()
 				}
 				cc.updateEtcd(updateQj, "[syncQueueJob] setCompleted")
-				cc.quotaManager.Release(updateQj)
+				if cc.serverOption.QuotaEnabled {
+					cc.quotaManager.Release(updateQj)
+				}
 			}
 
 			// Bugfix to eliminate performance problem of overloading the event queue.

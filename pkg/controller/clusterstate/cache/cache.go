@@ -33,10 +33,11 @@ package cache
 import (
 	"context"
 	"fmt"
-	"github.com/golang/protobuf/proto"
-	dto "github.com/prometheus/client_model/go"
 	"sync"
 	"time"
+
+	"github.com/golang/protobuf/proto"
+	dto "github.com/prometheus/client_model/go"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -210,7 +211,6 @@ func (sc *ClusterStateCache) GetUnallocatedResources() *api.Resource {
 	return r.Add(sc.availableResources)
 }
 
-
 func (sc *ClusterStateCache) GetUnallocatedHistograms() map[string]*dto.Metric {
 	sc.Mutex.Lock()
 	defer sc.Mutex.Unlock()
@@ -238,7 +238,7 @@ func (sc *ClusterStateCache) GetResourceCapacities() *api.Resource {
 
 // Save the cluster state.
 func (sc *ClusterStateCache) saveState(available *api.Resource, capacity *api.Resource,
-								availableHistogram *api.ResourceHistogram) error {
+	availableHistogram *api.ResourceHistogram) error {
 	klog.V(12).Infof("Saving Cluster State")
 
 	sc.Mutex.Lock()
@@ -261,7 +261,7 @@ func (sc *ClusterStateCache) updateState() error {
 	idleMin := api.EmptyResource()
 	idleMax := api.EmptyResource()
 
-	firstNode :=  true
+	firstNode := true
 	for _, value := range cluster.Nodes {
 		// Do not use any Unschedulable nodes in calculations
 		if value.Unschedulable == true {
@@ -277,12 +277,12 @@ func (sc *ClusterStateCache) updateState() error {
 		// Collect Min and Max for histogram
 		if firstNode {
 			idleMin.MilliCPU = idle.MilliCPU
-			idleMin.Memory   = idle.Memory
-			idleMin.GPU      = idle.GPU
+			idleMin.Memory = idle.Memory
+			idleMin.GPU = idle.GPU
 
 			idleMax.MilliCPU = idle.MilliCPU
-			idleMax.Memory   = idle.Memory
-			idleMax.GPU      = idle.GPU
+			idleMax.Memory = idle.Memory
+			idleMax.GPU = idle.GPU
 			firstNode = false
 		} else {
 			if value.Idle.MilliCPU < idleMin.MilliCPU {
@@ -293,7 +293,7 @@ func (sc *ClusterStateCache) updateState() error {
 
 			if value.Idle.Memory < idleMin.Memory {
 				idleMin.Memory = value.Idle.Memory
-			} else if value.Idle.Memory > idleMax.Memory{
+			} else if value.Idle.Memory > idleMax.Memory {
 				idleMax.Memory = value.Idle.Memory
 			}
 
@@ -354,7 +354,7 @@ func (sc *ClusterStateCache) processCleanupJob() error {
 
 			if api.JobTerminated(job) {
 				delete(sc.Jobs, job.UID)
-				klog.V(3).Infof("[processCleanupJob] Job <%v:%v/%v> was deleted.", job.UID, job.Namespace, job.Name)
+				klog.V(10).Infof("[processCleanupJob] Job <%v:%v/%v> was deleted.", job.UID, job.Namespace, job.Name)
 			} else {
 				// Retry
 				sc.deleteJob(job)
@@ -432,7 +432,7 @@ func (sc *ClusterStateCache) Snapshot() *api.ClusterInfo {
 		// If no scheduling spec, does not handle it.
 		if value.SchedSpec == nil {
 			// Jobs.Tasks are more recognizable than Jobs.UID
-			klog.V(5).Infof("The scheduling spec of Job <%v> with tasks <%+v> is nil, ignore it.", value.UID, value.Tasks)
+			klog.V(10).Infof("The scheduling spec of Job <%v> with tasks <%+v> is nil, ignore it.", value.UID, value.Tasks)
 			continue
 		}
 
