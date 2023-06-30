@@ -956,7 +956,7 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 			totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
 			delta, err := qjv.NonNegSub(totalResource)
 			if err != nil {
-				klog.Errorf("[getAggAvaiResPri] Subtraction of resources failed, adding entire appwrapper resoources %v, %v", qjv, err)
+				klog.Warningf("[getAggAvaiResPri] Subtraction of resources failed, adding entire appwrapper resoources %v, %v", qjv, err)
 				pending = qjv
 			}
 			pending = pending.Add(delta)
