@@ -908,7 +908,7 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 			totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
 			preemptable = preemptable.Add(totalResource)
 			continue
-		} else if value.Status.SystemPriority < targetpr || !value.Status.CanRun {
+		} else if value.Status.SystemPriority < targetpr {
 			// Dispatcher Mode: Ensure this job is part of the target cluster
 			if qjm.isDispatcher {
 				// Get the job key
@@ -940,23 +940,26 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 			klog.V(10).Infof("[getAggAvaiResPri] %s: Skipping adjustments for %s since priority %f is >= %f of requesting job: %s.", time.Now().String(),
 				value.Name, value.Status.SystemPriority, targetpr, requestingJob.Name)
 			continue
-		} else if value.Status.CanRun && (targetpr < value.Status.SystemPriority) {
+		} else if value.Status.CanRun {
 			qjv := clusterstateapi.EmptyResource()
 			for _, resctrl := range qjm.qjobResControls {
-				qjv = resctrl.GetAggregatedResources(value)
+				res := resctrl.GetAggregatedResources(value)
+				qjv.Add(res)
 				klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v but state is still pending.", qjv, resctrl, value.Name, value.Status.CanRun)
 			}
 			for _, genericItem := range value.Spec.AggrResources.GenericItems {
-				qjv, _ = genericresource.GetResources(&genericItem)
+				res, _ := genericresource.GetResources(&genericItem)
+				qjv.Add(res)
 				klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in resctrlType=%T for job %s which can-run is set to: %v but state is still pending.", qjv, genericItem, value.Name, value.Status.CanRun)
 			}
 
 			totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
-			pending, err = qjv.NonNegSub(totalResource)
+			delta, err := qjv.NonNegSub(totalResource)
 			if err != nil {
-				klog.Errorf("[getAggAvaiResPri] Subtraction of resources failed, adding entire appwrapper resoources %v", qjv)
+				klog.Errorf("[getAggAvaiResPri] Subtraction of resources failed, adding entire appwrapper resoources %v, %v", qjv, err)
 				pending = qjv
 			}
+			pending = pending.Add(delta)
 			continue
 		} else {
 			//Do nothing
