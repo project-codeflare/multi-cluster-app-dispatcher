@@ -931,7 +931,7 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 
 			totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
 			preemptable = preemptable.Add(totalResource)
-
+			klog.V(6).Infof("[getAggAvaiResPri] %s proirity %v is lower target priority %v reclaiming total preemptable resources %v", value.Name, value.Status.SystemPriority, targetpr, totalResource)
 			continue
 		} else if qjm.isDispatcher {
 			// Dispatcher job does not currently track pod states.  This is
