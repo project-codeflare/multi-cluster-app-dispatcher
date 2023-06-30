@@ -696,7 +696,7 @@ func awNamespacePhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.NamespacePh
 }
 
 func waitAWPodsReady(ctx *context, aw *arbv1.AppWrapper) error {
-	return waitAWPodsReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), false)
+	return waitAWPodsReadyEx(ctx, aw, ninetySeconds, int(aw.Spec.SchedSpec.MinAvailable), false)
 }
 
 func waitAWPodsCompleted(ctx *context, aw *arbv1.AppWrapper, timeout time.Duration) error {
@@ -708,7 +708,7 @@ func waitAWPodsNotCompleted(ctx *context, aw *arbv1.AppWrapper) error {
 }
 
 func waitAWReadyQuiet(ctx *context, aw *arbv1.AppWrapper) error {
-	return waitAWPodsReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), true)
+	return waitAWPodsReadyEx(ctx, aw, ninetySeconds, int(aw.Spec.SchedSpec.MinAvailable), true)
 }
 
 func waitAWAnyPodsExists(ctx *context, aw *arbv1.AppWrapper) error {
@@ -736,8 +736,8 @@ func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
 		[]v1.PodPhase{v1.PodPending}, int(aw.Spec.SchedSpec.MinAvailable), false))
 }
 
-func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
-	return wait.Poll(100*time.Millisecond, ninetySeconds, awPodPhase(ctx, aw,
+func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, waitDuration time.Duration, taskNum int, quite bool) error {
+	return wait.Poll(100*time.Millisecond, waitDuration, awPodPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite))
 }
 
@@ -1085,32 +1085,32 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "Deployment", 
 	"metadata": {
-		"name": "`+name+`",
+		"name": "` + name + `",
 		"namespace": "test",
 		"labels": {
-			"app": "`+name+`"
+			"app": "` + name + `"
 		}
 	},
 	"spec": {
 		"replicas": 2,
 		"selector": {
 			"matchLabels": {
-				"app": "`+name+`"
+				"app": "` + name + `"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "`+name+`"
+					"app": "` + name + `"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "`+name+`"
+					"appwrapper.mcad.ibm.com/appwrapper-name": "` + name + `"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "`+name+`",
+						"name": "` + name + `",
 						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {

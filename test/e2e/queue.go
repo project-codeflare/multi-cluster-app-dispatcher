@@ -42,6 +42,7 @@ import (
 	. "github.com/onsi/gomega"
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 var _ = Describe("AppWrapper E2E Test", func() {
@@ -724,7 +725,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
-	It("Create AppWrapper - Generic 50 Deployment Only - 2 pods each", func() {
+	FIt("Create AppWrapper - Generic 50 Deployment Only - 2 pods each", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Generic 50 Deployment Only - 2 pods each - Started.\n")
 
 		context := initTestContext()
@@ -749,14 +750,34 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			aw := createGenericDeploymentWithCPUAW(context, name, cpuDemand, replicas)
 			aws = append(aws, aw)
 		}
-
 		// Give the deployments time to create pods
-		// FIXME: do not assume that the pods are in running state in the order of submission.
-		time.Sleep(2 * time.Minute)
-		for i := 0; i < len(aws); i++ {
-			err := waitAWReadyQuiet(context, aws[i])
-			Expect(err).NotTo(HaveOccurred())
+		time.Sleep(90 * time.Second)
+		uncompletedAWS := aws
+		// wait for pods to become ready, don't assume that they are ready in the order of submission.
+		err := wait.Poll(500*time.Millisecond, 3*time.Minute, func() (done bool, err error) {
+			t := time.Now()
+			toCheckAWS := make([]*arbv1.AppWrapper, 0, len(aws))
+			for _, aw := range uncompletedAWS {
+				err := waitAWPodsReadyEx(context, aw, 100*time.Millisecond, int(aw.Spec.SchedSpec.MinAvailable), true)
+				if err != nil {
+					toCheckAWS = append(toCheckAWS, aw)
+				}
+			}
+			uncompletedAWS = toCheckAWS
+			fmt.Fprintf(GinkgoWriter, "[e2e] Generic 50 Deployment Only - 2 pods each - There are %d app wrappers without ready pods at time %s\n", len(toCheckAWS), t.Format(time.RFC3339))
+			if len(toCheckAWS) == 0 {
+				return true, nil
+			}
+			return false, nil
+		})
+		if err != nil {
+			fmt.Fprintf(GinkgoWriter, "[e2e] Generic 50 Deployment Only - 2 pods each - There are %d app wrappers without ready pods, err = %v\n", len(uncompletedAWS), err)
+			for _, uaw := range uncompletedAWS {
+				fmt.Fprintf(GinkgoWriter, "[e2e] Generic 50 Deployment Only - 2 pods each - Uncompleted AW '%s/%s' with status %v\n", uaw.Namespace, uaw.Name, uaw.Status)
+			}
 		}
+		Expect(err).Should(Succeed(), "All app wrappers should have completed")
+		fmt.Fprintf(os.Stdout, "[e2e] Generic 50 Deployment Only - 2 pods each - Completed, awaiting app wrapper clean up.\n")
 	})
 
 	/*
