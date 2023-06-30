@@ -725,7 +725,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
-	FIt("Create AppWrapper - Generic 50 Deployment Only - 2 pods each", func() {
+	It("Create AppWrapper - Generic 50 Deployment Only - 2 pods each", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Generic 50 Deployment Only - 2 pods each - Started.\n")
 
 		context := initTestContext()
