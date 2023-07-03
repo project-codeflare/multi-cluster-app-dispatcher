@@ -500,7 +500,11 @@ func (qjm *XController) PreemptQueueJobs() {
 					aw.Spec.SchedSpec.Requeuing.InitialTimeInSeconds = aw.Spec.SchedSpec.Requeuing.TimeInSeconds
 				}
 				if aw.Spec.SchedSpec.Requeuing.GrowthType == "exponential" {
-					newjob.Status.RequeueingTimeInSeconds += aw.Spec.SchedSpec.Requeuing.TimeInSeconds
+					if newjob.Status.RequeueingTimeInSeconds == 0 {
+						newjob.Status.RequeueingTimeInSeconds += aw.Spec.SchedSpec.Requeuing.TimeInSeconds
+					} else {
+						newjob.Status.RequeueingTimeInSeconds += newjob.Status.RequeueingTimeInSeconds
+					}
 				} else if aw.Spec.SchedSpec.Requeuing.GrowthType == "linear" {
 					newjob.Status.RequeueingTimeInSeconds += aw.Spec.SchedSpec.Requeuing.InitialTimeInSeconds
 				}
@@ -658,8 +662,15 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 				} else {
 					condition = lastCondition
 				}
+				var requeuingTimeInSeconds int
+				if value.Status.RequeueingTimeInSeconds > 0 {
+					requeuingTimeInSeconds = value.Status.RequeueingTimeInSeconds
+				} else if value.Spec.SchedSpec.Requeuing.InitialTimeInSeconds == 0 {
+					requeuingTimeInSeconds = value.Spec.SchedSpec.Requeuing.TimeInSeconds
+				} else {
+					requeuingTimeInSeconds = value.Spec.SchedSpec.Requeuing.InitialTimeInSeconds
+				}
 
-				requeuingTimeInSeconds := value.Status.RequeueingTimeInSeconds
 				minAge := condition.LastTransitionMicroTime.Add(time.Duration(requeuingTimeInSeconds) * time.Second)
 				currentTime := time.Now()
 
@@ -2344,7 +2355,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 
 // Cleanup function
 func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
-	klog.V(3).Infof("[Cleanup] begin AppWrapper %s Version=%s Status=%+v\n", appwrapper.Name, appwrapper.ResourceVersion, appwrapper.Status)
+	klog.V(3).Infof("[Cleanup] begin AppWrapper '%s/%s' Version=%s Status=%v", appwrapper.Namespace, appwrapper.Name, appwrapper.ResourceVersion, appwrapper.Status)
 
 	if !cc.isDispatcher {
 		if appwrapper.Spec.AggrResources.Items != nil {
@@ -2352,8 +2363,8 @@ func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 			for _, ar := range appwrapper.Spec.AggrResources.Items {
 				err00 := cc.qjobResControls[ar.Type].Cleanup(appwrapper, &ar)
 				if err00 != nil {
-					klog.Errorf("[Cleanup] Error deleting item %s from job=%s Status=%+v err=%+v.",
-						ar.Type, appwrapper.Name, appwrapper.Status, err00)
+					klog.Errorf("[Cleanup] Error deleting item %s from app wrapper='%s/%s' Status=%+v err=%+v.",
+						ar.Type, appwrapper.Namespace, appwrapper.Name, appwrapper.Status, err00)
 				}
 			}
 		}
@@ -2361,10 +2372,10 @@ func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 			for _, ar := range appwrapper.Spec.AggrResources.GenericItems {
 				genericResourceName, gvk, err00 := cc.genericresources.Cleanup(appwrapper, &ar)
 				if err00 != nil {
-					klog.Errorf("[Cleanup] Error deleting generic item %s, from app wrapper=%s Status=%+v err=%+v.",
-						genericResourceName, appwrapper.Name, appwrapper.Status, err00)
+					klog.Errorf("[Cleanup] Error deleting generic item %s, from app wrapper='%s/%s' Status=%+v err=%+v.",
+						genericResourceName, appwrapper.Namespace, appwrapper.Name, appwrapper.Status, err00)
 				}
-				klog.Info("[Cleanup] Delete generic item %s, GVK=%s.%s.%s from app wrapper=%s Status=%+v",
+				klog.Infof("[Cleanup] Delete generic item %s, GVK=%s.%s.%s from app wrapper=%s Status=%+v",
 					genericResourceName, gvk.Group, gvk.Version, gvk.Kind, appwrapper.Name, appwrapper.Status)
 			}
 		}
@@ -2389,7 +2400,7 @@ func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 	appwrapper.Status.Running = 0
 	appwrapper.Status.Succeeded = 0
 	appwrapper.Status.Failed = 0
-	klog.V(10).Infof("[Cleanup] end AppWrapper %s Version=%s Status=%+v\n", appwrapper.Name, appwrapper.ResourceVersion, appwrapper.Status)
+	klog.V(10).Infof("[Cleanup] end AppWrapper '%s/%s' Version=%s Status=%+v", appwrapper.Namespace, appwrapper.Name, appwrapper.ResourceVersion, appwrapper.Status)
 
 	return nil
 }

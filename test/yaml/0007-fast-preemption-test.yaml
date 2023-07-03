@@ -1,0 +1,146 @@
+#apiVersion: mcad.ibm.com/v1beta1
+#kind: AppWrapper
+#metadata:
+#    name: aw-deployment-2-550cpu-bbskat
+#    namespace: test
+#spec:
+#  schedulingSpec:
+#    minAvailable: 2
+#    requeuing:
+#      growthType: exponential
+#      maxNumRequeuings: 0
+#      maxTimeInSeconds: 0
+#      timeInSeconds: 60
+#  resources:
+#   Items:
+#      - allocatedreplicas: 0
+#        priorityslope: 0
+#       replicas: 1
+#        template:
+#          apiVersion: apps/v1
+#          kind: Deployment
+#          metadata:
+#            labels:
+#              app: aw-deployment-2-550cpu-bbskat
+#            name: aw-deployment-2-550cpu-bbskat
+#            namespace: test
+#          spec:
+#            replicas: 2
+#            selector:
+#              matchLabels:
+#                app: aw-deployment-2-550cpu-bbskat
+#            template:
+#              metadata:
+#                annotations:
+#                  appwrapper.mcad.ibm.com/appwrapper-name: aw-deployment-2-550cpu-bbskat
+#                labels:
+#                  app: aw-deployment-2-550cpu-bbskat
+#              spec:
+#                containers:
+#                - image: kicbase/echo-server:1.0
+#                  name:  aw-deployment-2-550cpu-bbskat
+#                  ports:
+#                  - containerPort: 80
+#                  resources:
+#                    requests:
+#                      cpu: 550m
+---
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+    name: aw-ff-deployment-1-850-cpu-ccdc29
+    namespace: test
+spec:
+  schedulingSpec:
+    minAvailable: 1
+    requeuing:
+      growthType: exponential
+      maxNumRequeuings: 0
+      maxTimeInSeconds: 0
+      numRequeuings: 0
+      timeInSeconds: 60
+  resources:
+    custompodresources:
+      - replicas: 1
+        requests:
+          cpu: 850m
+        generictemplate:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            labels:
+              app: aw-ff-deployment-1-850-cpu-wkh8pa
+            name: aw-ff-deployment-1-850-cpu-wkh8pa
+            namespace: test
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: aw-ff-deployment-1-850-cpu-wkh8pa
+            template:
+              metadata:
+                annotations:
+                  appwrapper.mcad.ibm.com/appwrapper-name: aw-ff-deployment-1-850-cpu-wkh8pa
+                labels:
+                  app: aw-ff-deployment-1-850-cpu-wkh8pa
+              spec:
+                containers:
+                  - image: kicbase/echo-server:1.0
+                    name: aw-ff-deployment-1-850-cpu-wkh8pa
+                    ports:
+                  - containerPort: 80
+                resources:
+                  requests:
+                    cpu: 850m
+    priority: 0
+    priorityslope: 0
+---
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+    name: aw-ff-deployment-2-340-cpu-w6xkoe
+    namespace: test
+spec:
+  schedulingSpec:
+    minAvailable: 2
+    requeuing:
+      growthType: exponential
+      maxNumRequeuings: 0
+      timeInSeconds: 60
+  resources:
+    GenericItems:
+      - allocated: 0
+        custompodresources:
+        - replicas: 2
+          requests:
+            cpu: 340m
+          generictemplate:
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              labels:
+                app: aw-ff-deployment-2-340-cpu-w6xkoe
+              name: aw-ff-deployment-2-340-cpu-w6xkoe
+              namespace: test
+            spec:
+              replicas: 2
+              selector:
+                matchLabels:
+                  app: aw-ff-deployment-2-340-cpu-w6xkoe
+              template:
+                metadata:
+                  annotations:
+                    appwrapper.mcad.ibm.com/appwrapper-name: aw-ff-deployment-2-340-cpu-w6xkoe
+                  labels:
+                    app: aw-ff-deployment-2-340-cpu-w6xkoe
+                spec:
+                  containers:
+                  - image: kicbase/echo-server:1.0
+                    name: aw-ff-deployment-2-340-cpu-w6xkoe
+                    ports:
+                    - containerPort: 80
+                    resources:
+                      requests:
+                        cpu: 340m
+          priority: 0
+          priorityslope: 0

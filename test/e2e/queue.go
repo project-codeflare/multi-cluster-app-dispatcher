@@ -156,8 +156,8 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createJobAWWithInitContainer(context, "aw-job-3-init-container", 60, "exponential", 0)
 		appwrappers = append(appwrappers, aw)
 
-		err := waitAWPodsCompleted(context, aw, 720*time.Second) // This test waits for 10 minutes to make sure all PODs complete
-		Expect(err).NotTo(HaveOccurred())
+		err := waitAWPodsCompleted(context, aw, 12*time.Minute) // This test waits for 12 minutes to make sure all PODs complete
+		Expect(err).NotTo(HaveOccurred(), "Waiting for the pods to be completed")
 	})
 
 	It("MCAD CPU Requeuing - Deletion After Maximum Requeuing Times Test", func() {
@@ -611,14 +611,14 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createGenericJobAWWithScheduleSpec(context, "aw-test-job-with-scheduling-spec")
 		err1 := waitAWPodsReady(context, aw)
-		Expect(err1).NotTo(HaveOccurred())
+		Expect(err1).NotTo(HaveOccurred(), "Waiting for pods to be ready")
 		err2 := waitAWPodsCompleted(context, aw, 90*time.Second)
-		Expect(err2).NotTo(HaveOccurred())
+		Expect(err2).NotTo(HaveOccurred(), "Waiting for pods to be completed")
 
 		// Once pods are completed, we wait for them to see if they change their status to anything BUT "Completed"
 		// which SHOULD NOT happen because the job is done
 		err3 := waitAWPodsNotCompleted(context, aw)
-		Expect(err3).To(HaveOccurred())
+		Expect(err3).To(HaveOccurred(), "Waiting for pods not to be completed")
 
 		appwrappers = append(appwrappers, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Job Completion No-requeue Test - Completed.\n")
@@ -751,7 +751,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			aws = append(aws, aw)
 		}
 		// Give the deployments time to create pods
-		time.Sleep(90 * time.Second)
+		time.Sleep(70 * time.Second)
 		uncompletedAWS := aws
 		// wait for pods to become ready, don't assume that they are ready in the order of submission.
 		err := wait.Poll(500*time.Millisecond, 3*time.Minute, func() (done bool, err error) {
@@ -773,7 +773,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		if err != nil {
 			fmt.Fprintf(GinkgoWriter, "[e2e] Generic 50 Deployment Only - 2 pods each - There are %d app wrappers without ready pods, err = %v\n", len(uncompletedAWS), err)
 			for _, uaw := range uncompletedAWS {
-				fmt.Fprintf(GinkgoWriter, "[e2e] Generic 50 Deployment Only - 2 pods each - Uncompleted AW '%s/%s' with status %v\n", uaw.Namespace, uaw.Name, uaw.Status)
+				fmt.Fprintf(GinkgoWriter, "[e2e] Generic 50 Deployment Only - 2 pods each - Uncompleted AW '%s/%s'\n", uaw.Namespace, uaw.Name)
 			}
 		}
 		Expect(err).Should(Succeed(), "All app wrappers should have completed")
