@@ -1,19 +1,4 @@
 /*
-Copyright 2018 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
 Copyright 2019, 2021 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package v1beta1
 
 import (
@@ -42,11 +28,10 @@ const AppWrapperPlural string = "appwrappers"
 // which AppWrapper it belongs to.
 const AppWrapperAnnotationKey = "appwrapper.mcad.ibm.com/appwrapper-name"
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:subresource:status
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Definition of AppWrapper class
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type AppWrapper struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -54,10 +39,9 @@ type AppWrapper struct {
 	Status            AppWrapperStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // AppWrapperList is a collection of AppWrappers.
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type AppWrapperList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
@@ -101,10 +85,8 @@ type AppWrapperService struct {
 }
 
 // AppWrapperResource is App Wrapper aggregation resource
-//todo: To be depricated
+// TODO: To be deprecated
 type AppWrapperResource struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata"`
 	// Replicas is the number of desired replicas
 	Replicas int32 `json:"replicas,omitempty" protobuf:"bytes,2,opt,name=replicas"`
 
@@ -125,20 +107,18 @@ type AppWrapperResource struct {
 	// +kubebuilder:validation:Format=float
 	PrioritySlope float64 `json:"priorityslope"`
 
-	//The type of the resource (is the resource a Pod, a ReplicaSet, a ... ?)
+	// The type of the resource (is the resource a Pod, a ReplicaSet, a ... ?)
 	// +optional
 	Type ResourceType `json:"type"`
 
-	//The template for the resource; it is now a raw text because we don't know for what resource
-	//it should be instantiated
+	// The template for the resource; it is now a raw text because we don't know for what resource
+	// it should be instantiated
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Template runtime.RawExtension `json:"template"`
 }
 
 // AppWrapperResource is App Wrapper aggregation resource
 type AppWrapperGenericResource struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata"`
 	// Replicas is the number of desired replicas
 	DesiredAvailable int32 `json:"replicas,omitempty" protobuf:"bytes,2,opt,name=desiredavailable"`
 
@@ -161,25 +141,25 @@ type AppWrapperGenericResource struct {
 	// +kubebuilder:validation:Format=float
 	PrioritySlope float64 `json:"priorityslope"`
 
-	//The template for the resource; it is now a raw text because we don't know for what resource
-	//it should be instantiated
+	// The template for the resource; it is now a raw text because we don't know for what resource
+	// it should be instantiated
 	// +optional
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:EmbeddedResource
 	GenericTemplate runtime.RawExtension `json:"generictemplate"`
 
-	//Optional section that specifies resource requirements for non-standard k8s resources, follows same format as that
+	// Optional section that specifies resource requirements for non-standard k8s resources, follows same format as that
 	// of standard k8s resources
 	CustomPodResources []CustomPodResourceTemplate `json:"custompodresources,omitempty"`
 
-	//Optional field for users to determine completion status of item
+	// Optional field for users to determine completion status of item
 	CompletionStatus string `json:"completionstatus,omitempty"`
 }
 
 type CustomPodResourceTemplate struct {
 	Replicas int `json:"replicas"`
-	//todo: replace with
-	//Containers []Container Contain v1.ResourceRequirements
+	// todo: replace with
+	// Containers []Container Contain v1.ResourceRequirements
 	Requests v1.ResourceList `json:"requests"`
 
 	// +optional
@@ -224,13 +204,13 @@ type AppWrapperStatus struct {
 	// +optional
 	MinAvailable int32 `json:"template,omitempty" protobuf:"bytes,4,opt,name=template"`
 
-	//Can run?
+	// Can run?
 	CanRun bool `json:"canrun,omitempty" protobuf:"bytes,1,opt,name=canrun"`
 
-	//Is Dispatched?
+	// Is Dispatched?
 	IsDispatched bool `json:"isdispatched,omitempty" protobuf:"bytes,1,opt,name=isdispatched"`
 
-	//State - Pending, Running, Failed, Deleted
+	// State - Pending, Running, Failed, Deleted
 	State AppWrapperState `json:"state,omitempty"`
 
 	Message string `json:"message,omitempty"`
@@ -275,7 +255,7 @@ type AppWrapperStatus struct {
 
 type AppWrapperState string
 
-//enqueued, active, deleting, succeeded, failed
+// enqueued, active, deleting, succeeded, failed
 const (
 	AppWrapperStateEnqueued              AppWrapperState = "Pending"
 	AppWrapperStateActive                AppWrapperState = "Running"
