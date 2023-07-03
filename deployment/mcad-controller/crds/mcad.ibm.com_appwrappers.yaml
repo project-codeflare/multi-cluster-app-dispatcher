@@ -54,13 +54,24 @@ spec:
                           format: int32
                           type: integer
                         completionstatus:
-                          description: Optional field for users to determine completion
-                            status of item
+                          description: 'Optional field that drives completion status
+                            of this AppWrapper. This field within an item of an AppWrapper
+                            determines the full state of the AppWrapper. The completionstatus
+                            field contains a list of conditions that make the associate
+                            item considered completed, for instance: - completion
+                            conditions could be "Complete" or "Failed". The associated
+                            item''s level .status.conditions[].type field is monitored
+                            for any one of these conditions. Once all items with this
+                            option is set and the conditionstatus is met the entire
+                            AppWrapper state will be changed to one of the valid AppWrapper
+                            completion state. Note: - this is an AND operation for
+                            all items where this option is set. See the list of AppWrapper
+                            states for a list of valid complete states.'
                           type: string
                         custompodresources:
                           description: Optional section that specifies resource requirements
                             for non-standard k8s resources, follows same format as
-                            that of standard k8s resources
+                            that of standard k8s resources.
                           items:
                             properties:
                               limits:
@@ -104,8 +115,8 @@ spec:
                           type: integer
                         priority:
                           description: The priority of this resource
-                          format: float
-                          type: number
+                          format: int32
+                          type: integer
                         priorityslope:
                           description: The increasing rate of priority value for this
                             resource
@@ -120,7 +131,7 @@ spec:
                   Items:
                     items:
                       description: 'AppWrapperResource is App Wrapper aggregation
-                        resource todo: To be depricated'
+                        resource TODO: To be deprecated'
                       properties:
                         allocatedreplicas:
                           description: The number of allocated replicas from this
@@ -133,8 +144,9 @@ spec:
                           format: int32
                           type: integer
                         priority:
-                          format: float
-                          type: number
+                          description: The priority of this resource
+                          format: int32
+                          type: integer
                         priorityslope:
                           description: The increasing rate of priority value for this
                             resource
@@ -155,7 +167,6 @@ spec:
                             Pod, a ReplicaSet, a ... ?)
                           type: string
                       required:
-                      - priorityslope
                       - template
                       type: object
                     type: array
@@ -222,7 +233,9 @@ spec:
                 - metadata
                 type: object
               schedulingSpec:
-                description: SchedSpec specifies the parameters for scheduling.
+                description: SchedSpec specifies the parameters used for scheduling
+                  generic items wrapped inside AppWrappers. It defines the policy
+                  for requeuing jobs based on the number of running pods.
                 properties:
                   clusterScheduling:
                     properties:
@@ -286,6 +299,7 @@ spec:
                         type: array
                     type: object
                   dispatchDuration:
+                    description: Wall clock duration time of appwrapper in seconds.
                     properties:
                       expected:
                         type: integer
@@ -322,24 +336,57 @@ spec:
                         type: object
                     type: object
                   minAvailable:
+                    description: Expected number of pods in running and/or completed
+                      state. Requeuing is triggered when the number of running/completed
+                      pods is not equal to this value. When not specified, requeuing
+                      is disabled and no check is performed.
                     type: integer
                   nodeSelector:
                     additionalProperties:
                       type: string
                     type: object
                   requeuing:
+                    description: Specification of the requeuing strategy based on
+                      waiting time. Values in this field control how often the pod
+                      check should happen, and if requeuing has reached its maximum
+                      number of times.
                     properties:
                       growthType:
+                        default: exponential
+                        description: Growth strategy to increase the waiting time
+                          between requeuing checks. The values available are 'exponential',
+                          'linear', or 'none'. For example, 'exponential' growth would
+                          double the 'timeInSeconds' value every time a requeuing
+                          event is triggered. If the string value is misspelled or
+                          not one of the possible options, the growth behavior is
+                          defaulted to 'none'.
                         type: string
                       initialTimeInSeconds:
+                        description: Value to keep track of the initial wait time.
+                          Users cannot set this as it is taken from 'timeInSeconds'.
                         type: integer
                       maxNumRequeuings:
+                        default: 0
+                        description: Maximum number of requeuing events allowed. Once
+                          this value is reached (e.g., 'numRequeuings = maxNumRequeuings',
+                          no more requeuing checks are performed and the generic items
+                          are stopped and removed from the cluster (AppWrapper remains
+                          deployed).
                         type: integer
                       maxTimeInSeconds:
+                        default: 0
+                        description: Maximum waiting time for requeuing checks.
                         type: integer
                       numRequeuings:
+                        default: 0
+                        description: Field to keep track of how many times a requeuing
+                          event has been triggered.
                         type: integer
                       timeInSeconds:
+                        default: 300
+                        description: Initial waiting time before requeuing conditions
+                          are checked. This value is specified by the user, but it
+                          may grow as requeuing events happen.
                         type: integer
                     type: object
                 type: object
@@ -727,10 +774,10 @@ spec:
                 description: Can run?
                 type: boolean
               conditions:
-                description: Represents the latest available observations of a appwrapper's
+                description: Represents the latest available observations of the AppWrapper's
                   current condition.
                 items:
-                  description: DeploymentCondition describes the state of a deployment
+                  description: AppWrapperCondition describes the state of an AppWrapper
                     at a certain point.
                   properties:
                     lastTransitionMicroTime:
@@ -743,7 +790,7 @@ spec:
                       format: date-time
                       type: string
                     message:
-                      description: A human readable message indicating details about
+                      description: A human-readable message indicating details about
                         the transition.
                       type: string
                     reason:
@@ -762,7 +809,7 @@ spec:
                 type: array
               controllerfirstdispatchtimestamp:
                 description: Microsecond level timestamp when controller first sets
-                  appwrapper in state Running
+                  the AppWrapper in state Running
                 format: date-time
                 type: string
               controllerfirsttimestamp:
@@ -787,25 +834,13 @@ spec:
                 type: boolean
               message:
                 type: string
-              totalcpu:
-                description: The number of cpu consumed by all pods belonging to an appwrapper.
-                format: int32
-                type: integer
-              totalmemory:
-                description: The amount of memory consumed by all pods belonging to an appwrapper.
-                format: int32
-                type: integer
-              totalgpu:
-                description: The total number of GPUs consumed by all pods belonging to an appwrapper.
-                format: int32
-                type: integer
               pending:
                 description: The number of pending pods.
                 format: int32
                 type: integer
               pendingpodconditions:
                 description: Represents the latest available observations of pods
-                  under appwrapper
+                  belonging to the AppWrapper.
                 items:
                   properties:
                     conditions:
@@ -870,8 +905,21 @@ spec:
                   (is this different from the MinAvailable from JobStatus)
                 format: int32
                 type: integer
-            required:
-            - pendingpodconditions
+              totalcpu:
+                description: The number of CPU consumed by all pods belonging to the
+                  AppWrapper.
+                format: int32
+                type: integer
+              totalgpu:
+                description: The total number of GPUs consumed by all pods belonging
+                  to the AppWrapper.
+                format: int64
+                type: integer
+              totalmemory:
+                description: The amount of memory consumed by all pods belonging to
+                  the AppWrapper.
+                format: int32
+                type: integer
             type: object
         required:
         - spec
