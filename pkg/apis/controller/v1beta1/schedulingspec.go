@@ -40,9 +40,7 @@ type SchedulingSpecTemplate struct {
 	// Specification of the requeuing strategy based on waiting time.
 	// Values in this field control how often the pod check should happen,
 	// and if requeuing has reached its maximum number of times.
-	Requeuing         RequeuingTemplate     `json:"requeuing,omitempty" protobuf:"bytes,1,rep,name=requeuing"`
-	ClusterScheduling ClusterSchedulingSpec `json:"clusterScheduling,omitempty"`
-	DispatchingWindow DispatchingWindowSpec `json:"dispatchingWindow,omitempty"`
+	Requeuing RequeuingTemplate `json:"requeuing,omitempty" protobuf:"bytes,1,rep,name=requeuing"`
 	// Wall clock duration time of appwrapper in seconds.
 	DispatchDuration DispatchDurationSpec `json:"dispatchDuration,omitempty"`
 }
