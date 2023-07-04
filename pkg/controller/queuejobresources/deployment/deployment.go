@@ -65,7 +65,7 @@ const (
 	ControllerUIDLabel string = "controller-uid"
 )
 
-//QueueJobResDeployment contains the resources of this queuejob
+// QueueJobResDeployment contains the resources of this queuejob
 type QueueJobResDeployment struct {
 	clients    *kubernetes.Clientset
 	arbclients *clientset.Clientset
@@ -78,14 +78,14 @@ type QueueJobResDeployment struct {
 	refManager queuejobresources.RefManager
 }
 
-//Register registers a queue job resource type
+// Register registers a queue job resource type
 func Register(regs *queuejobresources.RegisteredResources) {
 	regs.Register(arbv1.ResourceTypeDeployment, func(config *rest.Config) queuejobresources.Interface {
 		return NewQueueJobResDeployment(config)
 	})
 }
 
-//NewQueueJobResDeployment returns a new deployment controller
+// NewQueueJobResDeployment returns a new deployment controller
 func NewQueueJobResDeployment(config *rest.Config) queuejobresources.Interface {
 	qjrDeployment := &QueueJobResDeployment{
 		clients:    kubernetes.NewForConfigOrDie(config),
@@ -126,7 +126,7 @@ func (qjrDeployment *QueueJobResDeployment) GetPodTemplate(qjobRes *arbv1.AppWra
 		return nil, -1, err
 	}
 
-        // Validate template field
+	// Validate template field
 	if res.Spec.Replicas == nil {
 		return nil, 0, fmt.Errorf("spec.replicas field not defined in resource object: %#v", qjobRes)
 	}
@@ -136,7 +136,7 @@ func (qjrDeployment *QueueJobResDeployment) GetPodTemplate(qjobRes *arbv1.AppWra
 func (qjrDeployment *QueueJobResDeployment) GetAggregatedResources(job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	total := clusterstateapi.EmptyResource()
 	if job.Spec.AggrResources.Items != nil {
-		//calculate scaling
+		// calculate scaling
 		for _, ar := range job.Spec.AggrResources.Items {
 			if ar.Type == arbv1.ResourceTypeDeployment {
 				template, replicas, err := qjrDeployment.GetPodTemplate(&ar)
@@ -144,8 +144,8 @@ func (qjrDeployment *QueueJobResDeployment) GetAggregatedResources(job *arbv1.Ap
 					klog.Errorf("Pod Template not found in item: %#v error: %#v.  Aggregated resources set to 0.", ar, err)
 				} else {
 					myres := queuejobresources.GetPodResources(template)
-					myres.MilliCPU = float64(replicas) * myres.MilliCPU
-					myres.Memory = float64(replicas) * myres.Memory
+					myres.MilliCPU = int64(replicas) * myres.MilliCPU
+					myres.Memory = int64(replicas) * myres.Memory
 					myres.GPU = int64(replicas) * myres.GPU
 					total = total.Add(myres)
 				}
@@ -155,10 +155,10 @@ func (qjrDeployment *QueueJobResDeployment) GetAggregatedResources(job *arbv1.Ap
 	return total
 }
 
-func (qjrDeployment *QueueJobResDeployment) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrDeployment *QueueJobResDeployment) GetAggregatedResourcesByPriority(priority int32, job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	total := clusterstateapi.EmptyResource()
 	if job.Spec.AggrResources.Items != nil {
-		//calculate scaling
+		// calculate scaling
 		for _, ar := range job.Spec.AggrResources.Items {
 			if ar.Priority < priority {
 				continue
@@ -166,8 +166,8 @@ func (qjrDeployment *QueueJobResDeployment) GetAggregatedResourcesByPriority(pri
 			if ar.Type == arbv1.ResourceTypeDeployment {
 				template, replicas, _ := qjrDeployment.GetPodTemplate(&ar)
 				myres := queuejobresources.GetPodResources(template)
-				myres.MilliCPU = float64(replicas) * myres.MilliCPU
-				myres.Memory = float64(replicas) * myres.Memory
+				myres.MilliCPU = int64(replicas) * myres.MilliCPU
+				myres.Memory = int64(replicas) * myres.Memory
 				myres.GPU = int64(replicas) * myres.GPU
 				total = total.Add(myres)
 			}
@@ -176,7 +176,7 @@ func (qjrDeployment *QueueJobResDeployment) GetAggregatedResourcesByPriority(pri
 	return total
 }
 
-//func (qjrDeployment *QueueJobResDeployment) GetAggregatedResourcesByPhase(phase v1.PodPhase, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+// func (qjrDeployment *QueueJobResDeployment) GetAggregatedResourcesByPhase(phase v1.PodPhase, job *arbv1.AppWrapper) *clusterstateapi.Resource {
 //	total := clusterstateapi.EmptyResource()
 //	if job.Spec.AggrResources.Items != nil {
 //		//calculate scaling
@@ -192,9 +192,9 @@ func (qjrDeployment *QueueJobResDeployment) GetAggregatedResourcesByPriority(pri
 //		}
 //	}
 //	return total
-//}
+// }
 
-//Run the main goroutine responsible for watching and deployments.
+// Run the main goroutine responsible for watching and deployments.
 func (qjrDeployment *QueueJobResDeployment) Run(stopCh <-chan struct{}) {
 	qjrDeployment.deployInformer.Informer().Run(stopCh)
 }
@@ -275,7 +275,7 @@ func (qjrDeployment *QueueJobResDeployment) SyncQueueJob(queuejob *arbv1.AppWrap
 	klog.V(4).Infof("QJob: %s had %d Deployments and %d desired Deployments", queuejob.Name, deploymentLen, replicas)
 
 	if diff > 0 {
-		//TODO: need set reference after Service has been really added
+		// TODO: need set reference after Service has been really added
 		tmpDeployment := apps.Deployment{}
 		err = qjrDeployment.refManager.AddReference(qjobRes, &tmpDeployment)
 		if err != nil {
@@ -379,7 +379,7 @@ func (qjrDeployment *QueueJobResDeployment) deleteQueueJobResDeployments(qjobRes
 	return nil
 }
 
-//Cleanup deletes all services
+// Cleanup deletes all services
 func (qjrDeployment *QueueJobResDeployment) Cleanup(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 	return qjrDeployment.deleteQueueJobResDeployments(qjobRes, queuejob)
 }

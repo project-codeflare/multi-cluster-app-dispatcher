@@ -32,8 +32,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: Specification of the desired behavior of a cron job, including
-              the minAvailable
+            description: Specification of the desired behavior of a cron job
             properties:
               schedulerName:
                 type: string

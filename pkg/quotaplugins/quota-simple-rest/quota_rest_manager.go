@@ -23,6 +23,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httputil"
+	"reflect"
+	"strings"
+	"time"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
@@ -30,14 +36,6 @@ import (
 	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
-
-	"io/ioutil"
-	"math"
-	"net/http"
-	"net/http/httputil"
-	"reflect"
-	"strings"
-	"time"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
@@ -272,8 +270,8 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 
 	groups := qm.getQuotaDesignation(aw)
 	preemptable := qm.preemptionEnabled
-	awCPU_Demand := int(math.Trunc(awResDemands.MilliCPU))
-	awMem_Demand := int(math.Trunc(awResDemands.Memory) / 1000000)
+	awCPU_Demand := int(awResDemands.MilliCPU)
+	awMem_Demand := int(awResDemands.Memory / 1000000)
 	var demand []int
 	demand = append(demand, awCPU_Demand)
 	demand = append(demand, awMem_Demand)

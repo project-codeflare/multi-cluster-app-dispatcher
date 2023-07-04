@@ -820,7 +820,7 @@ spec:
               totalcpu:
                 description: The number of CPU consumed by all pods belonging to the
                   AppWrapper.
-                format: int32
+                format: int64
                 type: integer
               totalgpu:
                 description: The total number of GPUs consumed by all pods belonging
@@ -830,7 +830,7 @@ spec:
               totalmemory:
                 description: The amount of memory consumed by all pods belonging to
                   the AppWrapper.
-                format: int32
+                format: int64
                 type: integer
             type: object
         required:

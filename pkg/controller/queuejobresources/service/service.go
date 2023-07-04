@@ -1,16 +1,4 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
 Copyright 2019, 2021 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,11 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package service
 
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
@@ -39,9 +30,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
-
-	"sync"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -67,7 +55,7 @@ const (
 	ControllerUIDLabel string = "controller-uid"
 )
 
-//QueueJobResService contains service info
+// QueueJobResService contains service info
 type QueueJobResService struct {
 	clients    *kubernetes.Clientset
 	arbclients *clientset.Clientset
@@ -80,14 +68,14 @@ type QueueJobResService struct {
 	refManager queuejobresources.RefManager
 }
 
-//Register registers a queue job resource type
+// Register registers a queue job resource type
 func Register(regs *queuejobresources.RegisteredResources) {
 	regs.Register(arbv1.ResourceTypeService, func(config *rest.Config) queuejobresources.Interface {
 		return NewQueueJobResService(config)
 	})
 }
 
-//NewQueueJobResService creates a service controller
+// NewQueueJobResService creates a service controller
 func NewQueueJobResService(config *rest.Config) queuejobresources.Interface {
 	qjrService := &QueueJobResService{
 		clients:    kubernetes.NewForConfigOrDie(config),
@@ -147,7 +135,7 @@ func (qjrService *QueueJobResService) deleteService(obj interface{}) {
 	return
 }
 
-func (qjrService *QueueJobResService) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrService *QueueJobResService) GetAggregatedResourcesByPriority(priority int32, job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	total := clusterstateapi.EmptyResource()
 	return total
 }
@@ -219,7 +207,7 @@ func (qjrService *QueueJobResService) SyncQueueJob(queuejob *arbv1.AppWrapper, q
 	klog.V(4).Infof("QJob: %s had %d Services and %d desired Services", queuejob.Name, serviceLen, replicas)
 
 	if diff > 0 {
-		//TODO: need set reference after Service has been really added
+		// TODO: need set reference after Service has been really added
 		tmpService := v1.Service{}
 		err = qjrService.refManager.AddReference(qjobRes, &tmpService)
 		if err != nil {
@@ -331,7 +319,7 @@ func (qjrService *QueueJobResService) deleteQueueJobResServices(qjobRes *arbv1.A
 	return nil
 }
 
-//Cleanup deletes all services
+// Cleanup deletes all services
 func (qjrService *QueueJobResService) Cleanup(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 	return qjrService.deleteQueueJobResServices(qjobRes, queuejob)
 }

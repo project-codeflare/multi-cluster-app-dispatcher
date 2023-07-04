@@ -30,6 +30,8 @@ package persistentvolume
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
@@ -39,9 +41,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
-
-	"sync"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -67,7 +66,7 @@ const (
 	ControllerUIDLabel string = "controller-uid"
 )
 
-//QueueJobResService contains service info
+// QueueJobResService contains service info
 type QueueJobResPersistentvolume struct {
 	clients    *kubernetes.Clientset
 	arbclients *clientset.Clientset
@@ -80,14 +79,14 @@ type QueueJobResPersistentvolume struct {
 	refManager queuejobresources.RefManager
 }
 
-//Register registers a queue job resource type
+// Register registers a queue job resource type
 func Register(regs *queuejobresources.RegisteredResources) {
 	regs.Register(arbv1.ResourceTypePersistentVolume, func(config *rest.Config) queuejobresources.Interface {
 		return NewQueueJobResPersistentvolume(config)
 	})
 }
 
-//NewQueueJobResService creates a service controller
+// NewQueueJobResService creates a service controller
 func NewQueueJobResPersistentvolume(config *rest.Config) queuejobresources.Interface {
 	qjrPersistentvolume := &QueueJobResPersistentvolume{
 		clients:    kubernetes.NewForConfigOrDie(config),
@@ -147,7 +146,7 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) deletePersistentVolume(o
 	return
 }
 
-func (qjrPersistentvolume *QueueJobResPersistentvolume) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrPersistentvolume *QueueJobResPersistentvolume) GetAggregatedResourcesByPriority(priority int32, job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	total := clusterstateapi.EmptyResource()
 	return total
 }
@@ -198,7 +197,7 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) UpdateQueueJobStatus(que
 	return nil
 }
 
-//SyncQueueJob syncs the services
+// SyncQueueJob syncs the services
 func (qjrPersistentvolume *QueueJobResPersistentvolume) SyncQueueJob(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 
 	startTime := time.Now()
@@ -224,7 +223,7 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) SyncQueueJob(queuejob *a
 			klog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
 			return err
 		}
-		//TODO: need set reference after Service has been really added
+		// TODO: need set reference after Service has been really added
 		tmpPersistentVolume := v1.PersistentVolume{}
 		err = qjrPersistentvolume.refManager.AddReference(qjobRes, &tmpPersistentVolume)
 		if err != nil {
@@ -333,7 +332,7 @@ func (qjrPersistentvolume *QueueJobResPersistentvolume) deleteQueueJobResPersist
 	return nil
 }
 
-//Cleanup deletes all services
+// Cleanup deletes all services
 func (qjrPersistentvolume *QueueJobResPersistentvolume) Cleanup(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 	return qjrPersistentvolume.deleteQueueJobResPersistentVolumes(qjobRes, queuejob)
 }

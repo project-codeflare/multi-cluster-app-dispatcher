@@ -20,6 +20,7 @@ package quotaforestmanager
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
@@ -33,9 +34,6 @@ import (
 	qmbackendutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/utils"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
 	"k8s.io/client-go/rest"
-
-	"math"
-	"reflect"
 
 	"k8s.io/klog/v2"
 )
@@ -335,18 +333,6 @@ func (qm *QuotaManager) convertInt64Demand(int64Demand int64) (int, error) {
 	}
 }
 
-func (qm *QuotaManager) convertFloat64Demand(floatDemand float64) (int, error) {
-	var err error
-	err = nil
-	if floatDemand > float64(MaxInt) {
-		err = fmt.Errorf("demand %f is larger than Max Quota Management Backend size, resetting demand to %d",
-			floatDemand, MaxInt)
-		return MaxInt, err
-	} else {
-		return int(math.Trunc(floatDemand)), err
-	}
-}
-
 func (qm *QuotaManager) getQuotaTreeResourceTypesDemands(awResDemands *clusterstateapi.Resource, treeToResourceTypes []string) (map[string]int, error) {
 	demands := map[string]int{}
 	var err error
@@ -358,7 +344,7 @@ func (qm *QuotaManager) getQuotaTreeResourceTypesDemands(awResDemands *clusterst
 		// CPU Demands
 		if strings.Contains(strings.ToLower(treeResourceType), "cpu") {
 			// Handle type conversions
-			demand, converErr := qm.convertFloat64Demand(awResDemands.MilliCPU)
+			demand, converErr := qm.convertInt64Demand(awResDemands.MilliCPU)
 			if converErr != nil {
 				if err == nil {
 					err = fmt.Errorf("resource type: %s %s",
@@ -375,7 +361,7 @@ func (qm *QuotaManager) getQuotaTreeResourceTypesDemands(awResDemands *clusterst
 		// Memory Demands
 		if strings.Contains(strings.ToLower(treeResourceType), "memory") {
 			// Handle type conversions
-			demand, converErr := qm.convertFloat64Demand(awResDemands.Memory)
+			demand, converErr := qm.convertInt64Demand(awResDemands.Memory)
 			if converErr != nil {
 				if err == nil {
 					err = fmt.Errorf("resource type: %s %s",

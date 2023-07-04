@@ -30,6 +30,8 @@ package networkpolicy
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
@@ -45,9 +47,6 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-
-	"sync"
-	"time"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -68,7 +67,7 @@ const (
 	ControllerUIDLabel string = "controller-uid"
 )
 
-//QueueJobResService contains service info
+// QueueJobResService contains service info
 type QueueJobResNetworkPolicy struct {
 	clients    *kubernetes.Clientset
 	arbclients *clientset.Clientset
@@ -81,14 +80,14 @@ type QueueJobResNetworkPolicy struct {
 	refManager queuejobresources.RefManager
 }
 
-//Register registers a queue job resource type
+// Register registers a queue job resource type
 func Register(regs *queuejobresources.RegisteredResources) {
 	regs.Register(arbv1.ResourceTypeNetworkPolicy, func(config *rest.Config) queuejobresources.Interface {
 		return NewQueueJobResNetworkPolicy(config)
 	})
 }
 
-//NewQueueJobResService creates a service controller
+// NewQueueJobResService creates a service controller
 func NewQueueJobResNetworkPolicy(config *rest.Config) queuejobresources.Interface {
 	qjrNetworkPolicy := &QueueJobResNetworkPolicy{
 		clients:    kubernetes.NewForConfigOrDie(config),
@@ -149,7 +148,7 @@ func (qjrNetworkPolicy *QueueJobResNetworkPolicy) deleteNetworkPolicy(obj interf
 	return
 }
 
-func (qjrNetworkPolicy *QueueJobResNetworkPolicy) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrNetworkPolicy *QueueJobResNetworkPolicy) GetAggregatedResourcesByPriority(priority int32, job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	total := clusterstateapi.EmptyResource()
 	return total
 }
@@ -220,7 +219,7 @@ func (qjrNetworkPolicy *QueueJobResNetworkPolicy) SyncQueueJob(queuejob *arbv1.A
 	klog.V(4).Infof("QJob: %s had %d NetworkPolicies and %d desired NetworkPolicies", queuejob.Name, networkPolicyLen, replicas)
 
 	if diff > 0 {
-		//TODO: need set reference after Service has been really added
+		// TODO: need set reference after Service has been really added
 		tmpNetworkPolicy := networkingv1.NetworkPolicy{}
 		err = qjrNetworkPolicy.refManager.AddReference(qjobRes, &tmpNetworkPolicy)
 		if err != nil {
@@ -319,7 +318,7 @@ func (qjrNetworkPolicy *QueueJobResNetworkPolicy) deleteQueueJobResNetworkPolici
 	return nil
 }
 
-//Cleanup deletes all services
+// Cleanup deletes all services
 func (qjrNetworkPolicy *QueueJobResNetworkPolicy) Cleanup(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 	return qjrNetworkPolicy.deleteQueueJobResNetworkPolicies(qjobRes, queuejob)
 }

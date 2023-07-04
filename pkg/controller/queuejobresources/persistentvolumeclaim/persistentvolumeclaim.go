@@ -30,13 +30,12 @@ package persistentvolumeclaim
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
-
-	"sync"
-	"time"
 
 	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	v1 "k8s.io/api/core/v1"
@@ -66,7 +65,7 @@ const (
 	ControllerUIDLabel string = "controller-uid"
 )
 
-//QueueJobResService contains service info
+// QueueJobResService contains service info
 type QueueJobResPersistentVolumeClaim struct {
 	clients    *kubernetes.Clientset
 	arbclients *clientset.Clientset
@@ -79,14 +78,14 @@ type QueueJobResPersistentVolumeClaim struct {
 	refManager queuejobresources.RefManager
 }
 
-//Register registers a queue job resource type
+// Register registers a queue job resource type
 func Register(regs *queuejobresources.RegisteredResources) {
 	regs.Register(arbv1.ResourceTypePersistentVolumeClaim, func(config *rest.Config) queuejobresources.Interface {
 		return NewQueueJobResPersistentVolumeClaim(config)
 	})
 }
 
-//NewQueueJobResService creates a service controller
+// NewQueueJobResService creates a service controller
 func NewQueueJobResPersistentVolumeClaim(config *rest.Config) queuejobresources.Interface {
 	qjrPersistentVolumeClaim := &QueueJobResPersistentVolumeClaim{
 		clients:    kubernetes.NewForConfigOrDie(config),
@@ -146,7 +145,7 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) deletePersiste
 	return
 }
 
-func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) GetAggregatedResourcesByPriority(priority int32, job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	total := clusterstateapi.EmptyResource()
 	return total
 }
@@ -218,7 +217,7 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) SyncQueueJob(q
 	klog.V(4).Infof("QJob: %s had %d PersistVolumeClaims and %d desired PersistVolumeClaims", queuejob.Name, persistentVolumeClaimLen, replicas)
 
 	if diff > 0 {
-		//TODO: need set reference after Service has been really added
+		// TODO: need set reference after Service has been really added
 		tmpPersistentVolumeClaim := v1.PersistentVolumeClaim{}
 		err = qjrPersistentVolumeClaim.refManager.AddReference(qjobRes, &tmpPersistentVolumeClaim)
 		if err != nil {
@@ -318,7 +317,7 @@ func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) deleteQueueJob
 	return nil
 }
 
-//Cleanup deletes all services
+// Cleanup deletes all services
 func (qjrPersistentVolumeClaim *QueueJobResPersistentVolumeClaim) Cleanup(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 	return qjrPersistentVolumeClaim.deleteQueueJobResPersistentVolumeClaims(qjobRes, queuejob)
 }

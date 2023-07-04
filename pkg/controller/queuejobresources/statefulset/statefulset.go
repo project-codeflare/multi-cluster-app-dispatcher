@@ -30,12 +30,11 @@ package statefulset
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
-
-	"sync"
-	"time"
 
 	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	apps "k8s.io/api/apps/v1"
@@ -69,7 +68,7 @@ const (
 	ControllerUIDLabel string = "controller-uid"
 )
 
-//QueueJobResStatefulSet - stateful sets
+// QueueJobResStatefulSet - stateful sets
 type QueueJobResStatefulSet struct {
 	clients    *kubernetes.Clientset
 	arbclients *clientset.Clientset
@@ -89,7 +88,7 @@ func Register(regs *queuejobresources.RegisteredResources) {
 	})
 }
 
-//NewQueueJobResStatefulSet - creates a controller for SS
+// NewQueueJobResStatefulSet - creates a controller for SS
 func NewQueueJobResStatefulSet(config *rest.Config) queuejobresources.Interface {
 	qjrd := &QueueJobResStatefulSet{
 		clients:    kubernetes.NewForConfigOrDie(config),
@@ -129,7 +128,7 @@ func (qjrStatefulSet *QueueJobResStatefulSet) Run(stopCh <-chan struct{}) {
 	qjrStatefulSet.deployInformer.Informer().Run(stopCh)
 }
 
-//GetPodTemplate Parse queue job api object to get Pod template
+// GetPodTemplate Parse queue job api object to get Pod template
 func (qjrStatefulSet *QueueJobResStatefulSet) GetPodTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.PodTemplateSpec, int32, error) {
 	res, err := qjrStatefulSet.getStatefulSetTemplate(qjobRes)
 	if err != nil {
@@ -141,13 +140,13 @@ func (qjrStatefulSet *QueueJobResStatefulSet) GetPodTemplate(qjobRes *arbv1.AppW
 func (qjrStatefulSet *QueueJobResStatefulSet) GetAggregatedResources(queueJob *arbv1.AppWrapper) *clusterstateapi.Resource {
 	total := clusterstateapi.EmptyResource()
 	if queueJob.Spec.AggrResources.Items != nil {
-		//calculate scaling
+		// calculate scaling
 		for _, ar := range queueJob.Spec.AggrResources.Items {
 			if ar.Type == arbv1.ResourceTypeStatefulSet {
 				podTemplate, replicas, _ := qjrStatefulSet.GetPodTemplate(&ar)
 				myres := queuejobresources.GetPodResources(podTemplate)
-				myres.MilliCPU = float64(replicas) * myres.MilliCPU
-				myres.Memory = float64(replicas) * myres.Memory
+				myres.MilliCPU = int64(replicas) * myres.MilliCPU
+				myres.Memory = int64(replicas) * myres.Memory
 				myres.GPU = int64(replicas) * myres.GPU
 				total = total.Add(myres)
 			}
@@ -156,10 +155,10 @@ func (qjrStatefulSet *QueueJobResStatefulSet) GetAggregatedResources(queueJob *a
 	return total
 }
 
-func (qjrStatefulSet *QueueJobResStatefulSet) GetAggregatedResourcesByPriority(priority float64, queueJob *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrStatefulSet *QueueJobResStatefulSet) GetAggregatedResourcesByPriority(priority int32, queueJob *arbv1.AppWrapper) *clusterstateapi.Resource {
 	total := clusterstateapi.EmptyResource()
 	if queueJob.Spec.AggrResources.Items != nil {
-		//calculate scaling
+		// calculate scaling
 		for _, ar := range queueJob.Spec.AggrResources.Items {
 			if ar.Priority < priority {
 				continue
@@ -167,8 +166,8 @@ func (qjrStatefulSet *QueueJobResStatefulSet) GetAggregatedResourcesByPriority(p
 			if ar.Type == arbv1.ResourceTypeStatefulSet {
 				podTemplate, replicas, _ := qjrStatefulSet.GetPodTemplate(&ar)
 				myres := queuejobresources.GetPodResources(podTemplate)
-				myres.MilliCPU = float64(replicas) * myres.MilliCPU
-				myres.Memory = float64(replicas) * myres.Memory
+				myres.MilliCPU = int64(replicas) * myres.MilliCPU
+				myres.Memory = int64(replicas) * myres.Memory
 				myres.GPU = int64(replicas) * myres.GPU
 				total = total.Add(myres)
 			}
@@ -250,7 +249,7 @@ func (qjrStatefulSet *QueueJobResStatefulSet) SyncQueueJob(queuejob *arbv1.AppWr
 	klog.V(4).Infof("QJob: %s had %d StatefulSets and %d desired StatefulSets", queuejob.Name, statefulSetLen, replicas)
 
 	if diff > 0 {
-		//TODO: need set reference after Service has been really added
+		// TODO: need set reference after Service has been really added
 		tmpStatefulSet := apps.StatefulSet{}
 		err = qjrStatefulSet.refManager.AddReference(qjobRes, &tmpStatefulSet)
 		if err != nil {
@@ -365,7 +364,7 @@ func (qjrStatefulSet *QueueJobResStatefulSet) deleteQueueJobResStatefulSets(qjob
 	return nil
 }
 
-//Cleanup deletes all services
+// Cleanup deletes all services
 func (qjrStatefulSet *QueueJobResStatefulSet) Cleanup(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 	return qjrStatefulSet.deleteQueueJobResStatefulSets(qjobRes, queuejob)
 }

@@ -30,13 +30,12 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
-
-	"sync"
-	"time"
 
 	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	v1 "k8s.io/api/core/v1"
@@ -67,7 +66,7 @@ const (
 	ControllerUIDLabel string = "controller-uid"
 )
 
-//QueueJobResService contains service info
+// QueueJobResService contains service info
 type QueueJobResNamespace struct {
 	clients    *kubernetes.Clientset
 	arbclients *clientset.Clientset
@@ -80,14 +79,14 @@ type QueueJobResNamespace struct {
 	refManager queuejobresources.RefManager
 }
 
-//Register registers a queue job resource type
+// Register registers a queue job resource type
 func Register(regs *queuejobresources.RegisteredResources) {
 	regs.Register(arbv1.ResourceTypeNamespace, func(config *rest.Config) queuejobresources.Interface {
 		return NewQueueJobResNamespace(config)
 	})
 }
 
-//NewQueueJobResService creates a service controller
+// NewQueueJobResService creates a service controller
 func NewQueueJobResNamespace(config *rest.Config) queuejobresources.Interface {
 	qjrNamespace := &QueueJobResNamespace{
 		clients:    kubernetes.NewForConfigOrDie(config),
@@ -147,7 +146,7 @@ func (qjrNamespace *QueueJobResNamespace) deleteNamespace(obj interface{}) {
 	return
 }
 
-func (qjrNamespace *QueueJobResNamespace) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrNamespace *QueueJobResNamespace) GetAggregatedResourcesByPriority(priority int32, job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	total := clusterstateapi.EmptyResource()
 	return total
 }
@@ -199,7 +198,7 @@ func (qjrNamespace *QueueJobResNamespace) UpdateQueueJobStatus(queuejob *arbv1.A
 	return nil
 }
 
-//SyncQueueJob syncs the services
+// SyncQueueJob syncs the services
 func (qjrNamespace *QueueJobResNamespace) SyncQueueJob(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 
 	startTime := time.Now()
@@ -225,7 +224,7 @@ func (qjrNamespace *QueueJobResNamespace) SyncQueueJob(queuejob *arbv1.AppWrappe
 			klog.Errorf("Cannot read template from resource %+v %+v", qjobRes, err)
 			return err
 		}
-		//TODO: need set reference after Service has been really added
+		// TODO: need set reference after Service has been really added
 		tmpNamespace := v1.Namespace{}
 		err = qjrNamespace.refManager.AddReference(qjobRes, &tmpNamespace)
 		if err != nil {
@@ -321,7 +320,7 @@ func (qjrNamespace *QueueJobResNamespace) deleteQueueJobResNamespaces(qjobRes *a
 	return nil
 }
 
-//Cleanup deletes all services
+// Cleanup deletes all services
 func (qjrNamespace *QueueJobResNamespace) Cleanup(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 	return qjrNamespace.deleteQueueJobResNamespaces(qjobRes, queuejob)
 }

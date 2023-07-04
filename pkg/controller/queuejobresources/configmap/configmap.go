@@ -30,6 +30,8 @@ package configmap
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
@@ -40,9 +42,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
-
-	"sync"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -68,7 +67,7 @@ const (
 	ControllerUIDLabel string = "controller-uid"
 )
 
-//QueueJobResService contains service info
+// QueueJobResService contains service info
 type QueueJobResConfigMap struct {
 	clients    *kubernetes.Clientset
 	arbclients *clientset.Clientset
@@ -81,14 +80,14 @@ type QueueJobResConfigMap struct {
 	refManager queuejobresources.RefManager
 }
 
-//Register registers a queue job resource type
+// Register registers a queue job resource type
 func Register(regs *queuejobresources.RegisteredResources) {
 	regs.Register(arbv1.ResourceTypeConfigMap, func(config *rest.Config) queuejobresources.Interface {
 		return NewQueueJobResConfigMap(config)
 	})
 }
 
-//NewQueueJobResService creates a service controller
+// NewQueueJobResService creates a service controller
 func NewQueueJobResConfigMap(config *rest.Config) queuejobresources.Interface {
 	qjrConfigMap := &QueueJobResConfigMap{
 		clients:    kubernetes.NewForConfigOrDie(config),
@@ -148,7 +147,7 @@ func (qjrConfigMap *QueueJobResConfigMap) deleteConfigMap(obj interface{}) {
 	return
 }
 
-func (qjrConfigMap *QueueJobResConfigMap) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrConfigMap *QueueJobResConfigMap) GetAggregatedResourcesByPriority(priority int32, job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	total := clusterstateapi.EmptyResource()
 	return total
 }
@@ -217,7 +216,7 @@ func (qjrConfigMap *QueueJobResConfigMap) SyncQueueJob(queuejob *arbv1.AppWrappe
 	klog.V(4).Infof("QJob: %s had %d configMaps and %d desired configMaps", queuejob.Name, configMapLen, replicas)
 
 	if diff > 0 {
-		//TODO: need set reference after Service has been really added
+		// TODO: need set reference after Service has been really added
 		tmpConfigMap := v1.ConfigMap{}
 		err = qjrConfigMap.refManager.AddReference(qjobRes, &tmpConfigMap)
 		if err != nil {
@@ -318,7 +317,7 @@ func (qjrConfigMap *QueueJobResConfigMap) deleteQueueJobResConfigMaps(qjobRes *a
 	return nil
 }
 
-//Cleanup deletes all services
+// Cleanup deletes all services
 func (qjrConfigMap *QueueJobResConfigMap) Cleanup(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 	return qjrConfigMap.deleteQueueJobResConfigMaps(qjobRes, queuejob)
 }

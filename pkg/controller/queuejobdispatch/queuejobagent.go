@@ -241,10 +241,10 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 						res.Items[i].MetricName, res.Items[i].MetricLabels, res.Items[i].Value, qa.AgentId, qa.DeploymentName)
 					clusterMetricType := res.Items[i].MetricLabels["cluster"]
 
-					if strings.Compare(clusterMetricType, "cpu") == 0  || strings.Compare(clusterMetricType, "memory") == 0 {
+					if strings.Compare(clusterMetricType, "cpu") == 0 || strings.Compare(clusterMetricType, "memory") == 0 {
 						val, units, _ := getFloatString(res.Items[i].Value)
 						num, err := strconv.ParseFloat(val, 64)
-						if err !=nil {
+						if err != nil {
 							klog.Warningf("[Dispatcher: UpdateAggrResources] Possible issue converting %s string value of %s due to error: %v\n",
 								clusterMetricType, res.Items[i].Value, err)
 						} else {
@@ -255,11 +255,11 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 							f_zero := math.Float64bits(0.0)
 							if f_num > f_zero {
 								if strings.Compare(clusterMetricType, "cpu") == 0 {
-									qa.AggrResources.MilliCPU = num
+									qa.AggrResources.MilliCPU = int64(num)
 									klog.V(10).Infof("[Dispatcher: UpdateAggrResources] Updated %s from %f to %f for metrics: %v from deployment Agent ID: %s with Agent Name: %s\n",
 										clusterMetricType, qa.AggrResources.MilliCPU, num, res, qa.AgentId, qa.DeploymentName)
 								} else {
-									qa.AggrResources.Memory = num
+									qa.AggrResources.Memory = int64(num)
 									klog.V(10).Infof("[Dispatcher: UpdateAggrResources] Updated %s from %f to %f for metrics: %v from deployment Agent ID: %s with Agent Name: %s\n",
 										clusterMetricType, qa.AggrResources.Memory, num, res, qa.AgentId, qa.DeploymentName)
 								}
@@ -269,8 +269,8 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 							} // Float value resulted in zero value.
 						} // Converting string to float success
 					} else if strings.Compare(clusterMetricType, "gpu") == 0 {
-						 num, err := getInt64String(res.Items[i].Value)
-						if err !=nil {
+						num, err := getInt64String(res.Items[i].Value)
+						if err != nil {
 							klog.Warningf("[Dispatcher: UpdateAggrResources] Possible issue converting %s string value of %s due to int64 type, error: %v\n",
 								clusterMetricType, res.Items[i].Value, err)
 						} else {
@@ -309,7 +309,7 @@ func getFloatString(num string) (string, string, error) {
 	} else {
 		validatedNum = num
 	}
-	return  validatedNum, numUnits, err
+	return validatedNum, numUnits, err
 }
 func getInt64String(num string) (int64, error) {
 	var validatedNum int64 = 0
@@ -317,7 +317,7 @@ func getInt64String(num string) (int64, error) {
 	if err == nil {
 		validatedNum = n
 	}
-	return  validatedNum, err
+	return validatedNum, err
 }
 
 func buildResource(cpu string, memory string) *clusterstateapi.Resource {

@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"reflect"
 	"runtime/debug"
 	"strings"
@@ -85,7 +84,7 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 	name := ""
 
 	namespaced := true
-	//todo:DELETEME	dd := common.KubeClient.Discovery()
+	// todo:DELETEME	dd := common.KubeClient.Discovery()
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
@@ -106,7 +105,7 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 		return name, gvk, err
 	}
 
-	//todo:DELETEME		restconfig := common.KubeConfig
+	// todo:DELETEME		restconfig := common.KubeConfig
 	restconfig := gr.kubeClientConfig
 	restconfig.GroupVersion = &schema.GroupVersion{
 		Group:   mapping.GroupVersionKind.Group,
@@ -144,7 +143,7 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 		return name, gvk, err
 	}
 
-	unstruct.Object = blob.(map[string]interface{}) //set object to the content of the blob after Unmarshalling
+	unstruct.Object = blob.(map[string]interface{}) // set object to the content of the blob after Unmarshalling
 	namespace := ""
 	if md, ok := unstruct.Object["metadata"]; ok {
 
@@ -197,7 +196,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	}()
 
 	namespaced := true
-	//todo:DELETEME	dd := common.KubeClient.Discovery()
+	// todo:DELETEME	dd := common.KubeClient.Discovery()
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
@@ -206,8 +205,8 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	}
 	ext := awr.GenericTemplate
 	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
-	//versions := &unstructured.Unstructured{}
-	//_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, versions)
+	// versions := &unstructured.Unstructured{}
+	// _, gvk, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, versions)
 	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, nil)
 	if err != nil {
 		klog.Errorf("Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
@@ -219,7 +218,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 		return []*v1.Pod{}, err
 	}
 
-	//todo:DELETEME		restconfig := common.KubeConfig
+	// todo:DELETEME		restconfig := common.KubeConfig
 	restconfig := gr.kubeClientConfig
 	restconfig.GroupVersion = &schema.GroupVersion{
 		Group:   mapping.GroupVersionKind.Group,
@@ -256,7 +255,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 		return []*v1.Pod{}, err
 	}
 	ownerRef := metav1.NewControllerRef(aw, appWrapperKind)
-	unstruct.Object = blob.(map[string]interface{}) //set object to the content of the blob after Unmarshalling
+	unstruct.Object = blob.(map[string]interface{}) // set object to the content of the blob after Unmarshalling
 	unstruct.SetOwnerReferences(append(unstruct.GetOwnerReferences(), *ownerRef))
 	namespace := "default"
 	name := ""
@@ -337,7 +336,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	return pods, nil
 }
 
-//checks if object has pod template spec and add new labels
+// checks if object has pod template spec and add new labels
 func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map[string]string) (hasFields bool) {
 	spec, isFound, _ := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
 	if !isFound {
@@ -379,7 +378,7 @@ func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map
 	return isFound
 }
 
-//checks if object has replicas and containers field
+// checks if object has replicas and containers field
 func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, containers []v1.Container) {
 	var unstruct unstructured.Unstructured
 	unstruct.Object = make(map[string]interface{})
@@ -552,22 +551,21 @@ func getPodResources(pod arbv1.CustomPodResourceTemplate) (resource *clusterstat
 	replicas := pod.Replicas
 	req := clusterstateapi.NewResource(pod.Requests)
 	limit := clusterstateapi.NewResource(pod.Limits)
-	tolerance := 0.001
 
 	// Use limit if request is 0
-	if diff := math.Abs(req.MilliCPU - float64(0.0)); diff < tolerance {
+	if req.MilliCPU == 0 {
 		req.MilliCPU = limit.MilliCPU
 	}
 
-	if diff := math.Abs(req.Memory - float64(0.0)); diff < tolerance {
+	if req.Memory == 0 {
 		req.Memory = limit.Memory
 	}
 
 	if req.GPU <= 0 {
 		req.GPU = limit.GPU
 	}
-	req.MilliCPU = req.MilliCPU * float64(replicas)
-	req.Memory = req.Memory * float64(replicas)
+	req.MilliCPU = req.MilliCPU * int64(replicas)
+	req.Memory = req.Memory * int64(replicas)
 	req.GPU = req.GPU * int64(replicas)
 	return req
 }
@@ -576,14 +574,12 @@ func getContainerResources(container v1.Container, replicas float64) *clustersta
 	req := clusterstateapi.NewResource(container.Resources.Requests)
 	limit := clusterstateapi.NewResource(container.Resources.Limits)
 
-	tolerance := 0.001
-
 	// Use limit if request is 0
-	if diff := math.Abs(req.MilliCPU - float64(0.0)); diff < tolerance {
+	if req.MilliCPU == 0 {
 		req.MilliCPU = limit.MilliCPU
 	}
 
-	if diff := math.Abs(req.Memory - float64(0.0)); diff < tolerance {
+	if req.Memory == 0 {
 		req.Memory = limit.Memory
 	}
 
@@ -591,13 +587,13 @@ func getContainerResources(container v1.Container, replicas float64) *clustersta
 		req.GPU = limit.GPU
 	}
 
-	req.MilliCPU = req.MilliCPU * float64(replicas)
-	req.Memory = req.Memory * float64(replicas)
+	req.MilliCPU = req.MilliCPU * int64(replicas)
+	req.Memory = req.Memory * int64(replicas)
 	req.GPU = req.GPU * int64(replicas)
 	return req
 }
 
-//returns status of an item present in etcd
+// returns status of an item present in etcd
 func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResource, namespace string, appwrapperName string, genericItemName string) (completed bool) {
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
@@ -637,7 +633,7 @@ func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResourc
 	}
 
 	for _, job := range inEtcd.Items {
-		//job.UnstructuredContent() has status information
+		// job.UnstructuredContent() has status information
 		unstructuredObjectName := job.GetName()
 		if unstructuredObjectName != genericItemName {
 			continue
@@ -654,8 +650,8 @@ func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResourc
 			continue
 		}
 
-		//check with a false status field
-		//check also conditions object
+		// check with a false status field
+		// check also conditions object
 		jobMap := job.UnstructuredContent()
 		if jobMap == nil {
 			continue
@@ -665,14 +661,14 @@ func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResourc
 			status := job.Object["status"].(map[string]interface{})
 			if status["conditions"] != nil {
 				conditions, ok := job.Object["status"].(map[string]interface{})["conditions"].([]interface{})
-				//if condition not found skip for this interation
+				// if condition not found skip for this interation
 				if !ok {
 					klog.Errorf("[IsItemCompleted] Error processing of unstructured object %v in namespace %v with labels %v, err: %v", job.GetName(), job.GetNamespace(), job.GetLabels(), err)
 					continue
 				}
 				for _, item := range conditions {
 					completionType := fmt.Sprint(item.(map[string]interface{})["type"])
-					//Move this to utils package?
+					// Move this to utils package?
 					userSpecfiedCompletionConditions := strings.Split(awgr.CompletionStatus, ",")
 					for _, condition := range userSpecfiedCompletionConditions {
 						if strings.Contains(strings.ToLower(completionType), strings.ToLower(condition)) {

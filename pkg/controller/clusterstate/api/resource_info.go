@@ -1,19 +1,4 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
 Copyright 2019, 2021 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,18 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package api
 
 import (
 	"fmt"
-	"math"
 
 	v1 "k8s.io/api/core/v1"
 )
 
 type Resource struct {
-	MilliCPU float64
-	Memory   float64
+	MilliCPU int64
+	Memory   int64
 	GPU      int64
 }
 
@@ -65,17 +50,17 @@ func (r *Resource) Clone() *Resource {
 	return clone
 }
 
-var minMilliCPU float64 = 10
-var minMemory float64 = 10 * 1024 * 1024
+var minMilliCPU int64 = 10
+var minMemory int64 = 10 * 1024 * 1024
 
 func NewResource(rl v1.ResourceList) *Resource {
 	r := EmptyResource()
 	for rName, rQuant := range rl {
 		switch rName {
 		case v1.ResourceCPU:
-			r.MilliCPU += float64(rQuant.MilliValue())
+			r.MilliCPU += rQuant.MilliValue()
 		case v1.ResourceMemory:
-			r.Memory += float64(rQuant.Value())
+			r.Memory += rQuant.Value()
 		case GPUResourceName:
 			q, _ := rQuant.AsInt64()
 			r.GPU += q
@@ -116,12 +101,12 @@ func (r *Resource) Replace(rr *Resource) *Resource {
 	return r
 }
 
-//Sub subtracts two Resource objects.
+// Sub subtracts two Resource objects.
 func (r *Resource) Sub(rr *Resource) (*Resource, error) {
 	return r.NonNegSub(rr)
 }
 
-//Sub subtracts two Resource objects and return zero for negative subtractions.
+// Sub subtracts two Resource objects and return zero for negative subtractions.
 func (r *Resource) NonNegSub(rr *Resource) (*Resource, error) {
 	// Check for negative calculation
 	var isNegative bool
@@ -164,24 +149,24 @@ func (r *Resource) Less(rr *Resource) bool {
 }
 
 func (r *Resource) LessEqual(rr *Resource) bool {
-	return (r.MilliCPU < rr.MilliCPU || math.Abs(rr.MilliCPU-r.MilliCPU) < 0.01) &&
-		(r.Memory < rr.Memory || math.Abs(rr.Memory-r.Memory) < 1) &&
-		(r.GPU <= rr.GPU)
+	return r.MilliCPU < rr.MilliCPU &&
+		r.Memory < rr.Memory &&
+		r.GPU <= rr.GPU
 }
 
 func (r *Resource) String() string {
-	return fmt.Sprintf("cpu %0.2f, memory %0.2f, GPU %d",
+	return fmt.Sprintf("cpu %d, memory %d, GPU %d",
 		r.MilliCPU, r.Memory, r.GPU)
 }
 
-func (r *Resource) Get(rn v1.ResourceName) (float64, error) {
+func (r *Resource) Get(rn v1.ResourceName) (int64, error) {
 	switch rn {
 	case v1.ResourceCPU:
 		return r.MilliCPU, nil
 	case v1.ResourceMemory:
 		return r.Memory, nil
 	case GPUResourceName:
-		return float64(r.GPU), nil
+		return r.GPU, nil
 	default:
 		err := fmt.Errorf("resource not supported %v", rn)
 		return 0.0, err

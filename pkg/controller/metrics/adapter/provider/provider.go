@@ -1,19 +1,4 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
 Copyright 2019, 2021 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package provider
 
 import (
@@ -37,7 +23,6 @@ import (
 	"time"
 
 	"github.com/emicklei/go-restful"
-	"k8s.io/klog/v2"
 
 	apierr "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -47,12 +32,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/klog/v2"
 	"k8s.io/metrics/pkg/apis/custom_metrics"
 	"k8s.io/metrics/pkg/apis/external_metrics"
 
-	clusterstatecache "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
 	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/provider"
 	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/provider/helpers"
+	clusterstatecache "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
 )
 
 // CustomMetricResource wraps provider.CustomMetricInfo in a struct which stores the Name and Namespace of the resource
@@ -157,7 +143,7 @@ func NewFakeProvider(client dynamic.Interface, mapper apimeta.RESTMapper, cluste
 // webService creates a restful.WebService with routes set up for receiving fake metrics
 // These writing routes have been set up to be identical to the format of routes which metrics are read from.
 // There are 3 metric types available: namespaced, root-scoped, and namespaces.
-// (Note: Namespaces, we're assuming, are themselves namespaced resources, but for consistency with how metrics are retreived they have a separate route)
+// (Note: Namespaces, we're assuming, are themselves namespaced resources, but for consistency with how metrics are retrieved they have a separate route)
 func (p *clusterMetricsProvider) webService() *restful.WebService {
 	klog.V(10).Infof("Entered webService()")
 	ws := new(restful.WebService)
@@ -360,7 +346,7 @@ func (p *clusterMetricsProvider) GetExternalMetric(namespace string, metricSelec
 	p.valuesLock.RLock()
 	defer p.valuesLock.RUnlock()
 
-	matchingMetrics := []external_metrics.ExternalMetricValue{}
+	var matchingMetrics []external_metrics.ExternalMetricValue
 	for _, metric := range p.externalMetrics {
 		klog.V(9).Infof("[GetExternalMetric] externalMetricsInfo: %s, externalMetricValue: %v, externalMetricLabels: %v ",
 			metric.info.Metric, metric.Value, metric.labels)
@@ -374,15 +360,15 @@ func (p *clusterMetricsProvider) GetExternalMetric(namespace string, metricSelec
 				klog.V(9).Infof("[GetExternalMetric] Cache resources: %v", resources)
 
 				klog.V(10).Infof("[GetExternalMetric] Setting memory metric Value: %f.", resources.Memory)
-				metricValue.Value = *resource.NewQuantity(int64(resources.Memory), resource.DecimalSI)
-				//metricValue.Value = *resource.NewQuantity(4500000000, resource.DecimalSI)
+				metricValue.Value = *resource.NewQuantity(resources.Memory, resource.DecimalSI)
+				// metricValue.Value = *resource.NewQuantity(4500000000, resource.DecimalSI)
 			} else if strings.Compare(labelVal, "cpu") == 0 {
 				// Set cpu Value
 				resources := p.cache2.GetUnallocatedResources()
 				klog.V(9).Infof("[GetExternalMetric] Cache resources: %f", resources)
 
 				klog.V(10).Infof("[GetExternalMetric] Setting cpu metric Value: %v.", resources.MilliCPU)
-				metricValue.Value = *resource.NewQuantity(int64(resources.MilliCPU), resource.DecimalSI)
+				metricValue.Value = *resource.NewQuantity(resources.MilliCPU, resource.DecimalSI)
 			} else if strings.Compare(labelVal, "gpu") == 0 {
 				// Set gpu Value
 				resources := p.cache2.GetUnallocatedResources()

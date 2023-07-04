@@ -33,14 +33,13 @@ package pod
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/maputils"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
-
-	"sync"
-	"time"
 
 	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	v1 "k8s.io/api/core/v1"
@@ -70,7 +69,7 @@ const (
 	ControllerUIDLabel string = "controller-uid"
 )
 
-//QueueJobResPod Controller for QueueJob pods
+// QueueJobResPod Controller for QueueJob pods
 type QueueJobResPod struct {
 	clients    *kubernetes.Clientset
 	arbclients *clientset.Clientset
@@ -105,7 +104,7 @@ func Register(regs *queuejobresources.RegisteredResources) {
 	})
 }
 
-//NewQueueJobResPod Creates a new controller for QueueJob pods
+// NewQueueJobResPod Creates a new controller for QueueJob pods
 func NewQueueJobResPod(config *rest.Config) queuejobresources.Interface {
 	// create k8s clientset
 
@@ -205,13 +204,13 @@ func isPodActive(p *v1.Pod) bool {
 		p.DeletionTimestamp == nil
 }
 
-//SyncQueueJob : method to sync the resources of this job
+// SyncQueueJob : method to sync the resources of this job
 func (qjrPod *QueueJobResPod) SyncQueueJob(queuejob *arbv1.AppWrapper, qjobRes *arbv1.AppWrapperResource) error {
 	// check if there are still terminating pods for this QueueJob
-	//counter, ok := qjrPod.deletedPodsCounter.Get(fmt.Sprintf("%s/%s", queuejob.Namespace, queuejob.Name))
-	//if ok && counter >= 0 {
+	// counter, ok := qjrPod.deletedPodsCounter.Get(fmt.Sprintf("%s/%s", queuejob.Namespace, queuejob.Name))
+	// if ok && counter >= 0 {
 	//	return fmt.Errorf("There are still terminating pods for QueueJob %s/%s, can not sync it now", queuejob.Namespace, queuejob.Name)
-	//}
+	// }
 
 	pods, err := qjrPod.getPodsForQueueJob(queuejob)
 	if err != nil {
@@ -255,7 +254,7 @@ func (qjrPod *QueueJobResPod) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) e
 	queuejob.Status.Running = running
 	queuejob.Status.Succeeded = succeeded
 	queuejob.Status.Failed = failed
-	//Total resources by all running pods
+	// Total resources by all running pods
 	queuejob.Status.TotalGPU = totalResourcesConsumed.GPU
 	queuejob.Status.TotalCPU = totalResourcesConsumed.MilliCPU
 	queuejob.Status.TotalMemory = totalResourcesConsumed.Memory
@@ -541,7 +540,7 @@ func createQueueJobSchedulingSpec(qj *arbv1.AppWrapper) *arbv1.SchedulingSpec {
 	}
 }
 
-//GetPodTemplate Parse queue job api object to get Pod template
+// GetPodTemplate Parse queue job api object to get Pod template
 func (qjrPod *QueueJobResPod) GetPodTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.PodTemplateSpec, error) {
 
 	podGVK := schema.GroupVersion{Group: v1.GroupName, Version: "v1"}.WithKind("PodTemplate")
@@ -563,7 +562,7 @@ func (qjrPod *QueueJobResPod) GetPodTemplate(qjobRes *arbv1.AppWrapperResource) 
 func (qjrPod *QueueJobResPod) GetAggregatedResources(job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	total := clusterstateapi.EmptyResource()
 	if job.Spec.AggrResources.Items != nil {
-		//calculate scaling
+		// calculate scaling
 		for _, ar := range job.Spec.AggrResources.Items {
 			if ar.Type == arbv1.ResourceTypePod {
 				template, err := qjrPod.GetPodTemplate(&ar)
@@ -573,8 +572,8 @@ func (qjrPod *QueueJobResPod) GetAggregatedResources(job *arbv1.AppWrapper) *clu
 					replicas := ar.Replicas
 					myres := queuejobresources.GetPodResources(template)
 
-					myres.MilliCPU = float64(replicas) * myres.MilliCPU
-					myres.Memory = float64(replicas) * myres.Memory
+					myres.MilliCPU = int64(replicas) * myres.MilliCPU
+					myres.Memory = int64(replicas) * myres.Memory
 					myres.GPU = int64(replicas) * myres.GPU
 					total = total.Add(myres)
 				}
@@ -584,10 +583,10 @@ func (qjrPod *QueueJobResPod) GetAggregatedResources(job *arbv1.AppWrapper) *clu
 	return total
 }
 
-func (qjrPod *QueueJobResPod) GetAggregatedResourcesByPriority(priority float64, job *arbv1.AppWrapper) *clusterstateapi.Resource {
+func (qjrPod *QueueJobResPod) GetAggregatedResourcesByPriority(priority int32, job *arbv1.AppWrapper) *clusterstateapi.Resource {
 	total := clusterstateapi.EmptyResource()
 	if job.Spec.AggrResources.Items != nil {
-		//calculate scaling
+		// calculate scaling
 		for _, ar := range job.Spec.AggrResources.Items {
 			if ar.Priority < priority {
 				continue
@@ -623,7 +622,7 @@ func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, 
 	if tmpl == nil {
 		tmpl = make(map[string]string)
 	}
-	
+
 	tmpl[queueJobName] = qj.Name
 
 	// Include pre-defined metadata info, e.g. annotations
@@ -634,12 +633,12 @@ func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, 
 	templateObjMetadata.SetNamespace(qj.Namespace)
 	templateObjMetadata.SetOwnerReferences([]metav1.OwnerReference{
 		*metav1.NewControllerRef(qj, queueJobKind),
-	},)
+	})
 	templateObjMetadata.SetLabels(tmpl)
 
 	return &v1.Pod{
 		ObjectMeta: templateObjMetadata,
-		Spec: templateCopy.Spec,
+		Spec:       templateCopy.Spec,
 	}
 }
 
