@@ -33,7 +33,7 @@ type ResourceHistogram struct {
 }
 
 func NewResourceHistogram(min *Resource, max *Resource) *ResourceHistogram {
-	start := max.MilliCPU
+	start := min.MilliCPU
 	width := 1.0
 	count := 2
 	diff := max.MilliCPU - min.MilliCPU
@@ -42,13 +42,13 @@ func NewResourceHistogram(min *Resource, max *Resource) *ResourceHistogram {
 		width = float64(diff) / (BucketCount - 1)
 		count = BucketCount + 1
 	}
-	klog.V(10).Infof("[NewResourceHistogram] Start histogram numbers for CPU: start=%f, width=%f, count=%d",
+	klog.V(10).Infof("[NewResourceHistogram] Start histogram numbers for CPU: start=%d, width=%d, count=%d",
 		start, width, count)
 	millicpuHist := prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:    "millicpu",
 		Buckets: prometheus.LinearBuckets(float64(start), width, count)})
 
-	start = max.Memory
+	start = min.Memory
 	width = 1.0
 	count = 2
 	diff = max.Memory - min.Memory
@@ -57,22 +57,22 @@ func NewResourceHistogram(min *Resource, max *Resource) *ResourceHistogram {
 		width = float64(diff) / (BucketCount - 1)
 		count = BucketCount + 1
 	}
-	klog.V(10).Infof("[NewResourceHistogram] Start histogram numbers for Memory: start=%f, width=%f, count=%d",
+	klog.V(10).Infof("[NewResourceHistogram] Start histogram numbers for Memory: start=%d, width=%d, count=%d",
 		start, width, count)
 	memoryHist := prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:    "memory",
 		Buckets: prometheus.LinearBuckets(float64(start), width, count)})
 
-	start = max.GPU
+	start = min.GPU
 	width = 1.0
 	count = 2
 	diff = max.GPU - min.GPU
-	if diff >= 0 {
+	if diff > 0 {
 		start = min.GPU
 		width = float64(diff) / (BucketCount - 1)
 		count = BucketCount + 1
 	}
-	klog.V(10).Infof("[NewResourceHistogram] Start histogram numbers for GPU: start=%f, width=%f, count=%d",
+	klog.V(10).Infof("[NewResourceHistogram] Start histogram numbers for GPU: start=%d, width=%d, count=%d",
 		start, width, count)
 	gpuHist := prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name:    "gpu",
