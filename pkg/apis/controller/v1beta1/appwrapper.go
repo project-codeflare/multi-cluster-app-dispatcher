@@ -70,9 +70,6 @@ type AppWrapperSpec struct {
 
 // a collection of AppWrapperResource
 type AppWrapperResourceList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
 	// +optional
 	Items []AppWrapperResource `json:"Items"`
 	// +optional
