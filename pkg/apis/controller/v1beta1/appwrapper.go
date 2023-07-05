@@ -84,6 +84,8 @@ type AppWrapperService struct {
 // AppWrapperResource is App Wrapper aggregation resource
 // TODO: To be deprecated
 type AppWrapperResource struct {
+	metav1.ObjectMeta `json:"metadata"`
+
 	// Replicas is the number of desired replicas
 	Replicas int32 `json:"replicas,omitempty" protobuf:"bytes,2,opt,name=replicas"`
 

@@ -85,7 +85,7 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 
 .PHONY: manifests
 manifests: controller-gen ## Generate CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) crd:allowDangerousTypes=true paths="./pkg/apis/..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) crd:allowDangerousTypes=true,generateEmbeddedObjectMeta=true paths="./pkg/apis/..." output:crd:artifacts:config=config/crd/bases
 
 generate-code: pkg/apis/controller/v1beta1/zz_generated.deepcopy.go
 
