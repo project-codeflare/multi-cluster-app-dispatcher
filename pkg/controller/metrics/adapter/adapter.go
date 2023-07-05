@@ -32,39 +32,40 @@ package adapter
 
 import (
 	"flag"
+	"net/http"
+	"os"
+
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	openapinamer "k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
-	"net/http"
-	"os"
 
 	"github.com/emicklei/go-restful"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
-	adapterprov "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter/provider"
 	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/apiserver"
 	basecmd "github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/cmd"
 	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/provider"
 	generatedopenapi "github.com/kubernetes-sigs/custom-metrics-apiserver/test-adapter/generated/openapi"
+	adapterprov "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter/provider"
 
 	clusterstatecache "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
 )
 
 // New returns a Cache implementation.
-func New(serverOptions *options.ServerOption, config *rest.Config, clusterStateCache clusterstatecache.Cache) *MetricsAdpater {
+func New(serverOptions *options.ServerOption, config *rest.Config, clusterStateCache clusterstatecache.Cache) *MetricsAdapter {
 	return newMetricsAdpater(serverOptions, config, clusterStateCache)
 }
 
-type MetricsAdpater struct {
+type MetricsAdapter struct {
 	basecmd.AdapterBase
 
 	// Message is printed on succesful startup
 	Message string
 }
 
-func (a *MetricsAdpater) makeProviderOrDie(clusterStateCache clusterstatecache.Cache) (provider.MetricsProvider, *restful.WebService) {
+func (a *MetricsAdapter) makeProviderOrDie(clusterStateCache clusterstatecache.Cache) (provider.MetricsProvider, *restful.WebService) {
 	klog.Infof("[makeProviderOrDie] Entered makeProviderOrDie()")
 	client, err := a.DynamicClient()
 	if err != nil {
@@ -79,7 +80,7 @@ func (a *MetricsAdpater) makeProviderOrDie(clusterStateCache clusterstatecache.C
 	return adapterprov.NewFakeProvider(client, mapper, clusterStateCache)
 }
 
-func covertServerOptionsToMetricsServerOptions(serverOptions *options.ServerOption) []string{
+func covertServerOptionsToMetricsServerOptions(serverOptions *options.ServerOption) []string {
 	var portedArgs = make([]string, 0)
 	if serverOptions == nil {
 		return portedArgs
@@ -91,11 +92,10 @@ func covertServerOptionsToMetricsServerOptions(serverOptions *options.ServerOpti
 	}
 	return portedArgs
 }
-func newMetricsAdpater(serverOptions *options.ServerOption, config *rest.Config, clusterStateCache clusterstatecache.Cache) *MetricsAdpater {
+func newMetricsAdpater(serverOptions *options.ServerOption, config *rest.Config, clusterStateCache clusterstatecache.Cache) *MetricsAdapter {
 	klog.V(10).Infof("[newMetricsAdpater] Entered newMetricsAdpater()")
 
-	cmd := &MetricsAdpater{
-	}
+	cmd := &MetricsAdapter{}
 
 	cmd.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(generatedopenapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(apiserver.Scheme))
 	cmd.OpenAPIConfig.Info.Title = "MetricsAdpater"

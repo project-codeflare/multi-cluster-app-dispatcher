@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/eapache/go-resiliency v1.3.0
 	github.com/emicklei/go-restful v2.16.0+incompatible
+	github.com/gogo/protobuf v1.3.1
 	github.com/golang/protobuf v1.4.3
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kubernetes-sigs/custom-metrics-apiserver v0.0.0-20210311094424-0ca2b1909cdc
@@ -45,7 +46,6 @@ require (
 	github.com/go-openapi/jsonreference v0.19.5 // indirect
 	github.com/go-openapi/spec v0.20.0 // indirect
 	github.com/go-openapi/swag v0.19.12 // indirect
-	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/google/go-cmp v0.5.5 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect

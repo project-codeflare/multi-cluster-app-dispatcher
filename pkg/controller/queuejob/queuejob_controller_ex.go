@@ -44,6 +44,7 @@ import (
 
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/gogo/protobuf/proto"
+	"github.com/hashicorp/go-multierror"
 	qmutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotaforestmanager"
@@ -53,8 +54,8 @@ import (
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota"
 	"k8s.io/apimachinery/pkg/api/equality"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -97,7 +98,6 @@ import (
 
 	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	clusterstatecache "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
-	apiErrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -107,9 +107,6 @@ const (
 	// ControllerUIDLabel label string for queuejob controller uid
 	ControllerUIDLabel string = "controller-uid"
 )
-
-// controllerKind contains the schema.GroupVersionKind for this controller type.
-var controllerKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
 
 // XController the AppWrapper Controller type
 type XController struct {
@@ -162,7 +159,7 @@ type XController struct {
 	dispatchMap map[string]string
 
 	// Metrics API Server
-	metricsAdapter *adapter.MetricsAdpater
+	metricsAdapter *adapter.MetricsAdapter
 
 	// EventQueueforAgent
 	agentEventQueue *cache.FIFO
@@ -187,7 +184,7 @@ func NewJobAndClusterAgent(qjKey string, qaKey string) *JobAndClusterAgent {
 	}
 }
 
-// RegisterAllQueueJobResourceTypes - gegisters all resources
+// RegisterAllQueueJobResourceTypes - registers all resources
 func RegisterAllQueueJobResourceTypes(regs *queuejobresources.RegisteredResources) {
 	respod.Register(regs)
 	resservice.Register(regs)
@@ -442,12 +439,14 @@ func (qjm *XController) PreemptQueueJobs() {
 		err := preemptRetrier.Run(func() error {
 			var updateNewJob *arbv1.AppWrapper
 			var message string
-			newjob, retryErr := qjm.getAppWrapper(aw.Namespace, aw.Name, "[PreemptQueueJobs] get fresh appwrapper")
+			newjob, retryErr := qjm.getAppWrapper(aw.Namespace, aw.Name, "[PreemptQueueJobs] get fresh app wrapper")
 			if retryErr != nil {
-				if apiErrors.IsNotFound(retryErr) {
+				if apierrors.IsNotFound(retryErr) {
+					klog.Warningf("[PreemptQueueJobs] App wrapper '%s/%s' was not found. ", aw.Namespace, aw.Name)
 					return nil
+				} else {
+					klog.Warningf("[PreemptQueueJobs] failed in retrieving a fresh copy of the app wrapper '%s/%s', err=%v. Will try to preempt on the next run.", aw.Namespace, aw.Name, retryErr)
 				}
-				klog.Warningf("[PreemptQueueJobs] failed in retriving a fresh copy of the appwrapper '%s/%s', %v. Will try to preempt on the next run", aw.Namespace, aw.Name, retryErr)
 			}
 			newjob.Status.CanRun = false
 			newjob.Status.FilterIgnore = true // update QueueJobState only
@@ -471,10 +470,12 @@ func (qjm *XController) PreemptQueueJobs() {
 					updateNewJob = newjob.DeepCopy()
 
 					if retryErr := qjm.updateStatusInEtcd(updateNewJob, "PreemptQueueJobs - CanRun: false -- DispatchDeadlineExceeded"); retryErr != nil {
-						if apiErrors.IsNotFound(retryErr) {
+						if apierrors.IsNotFound(retryErr) {
+							klog.Warningf("[PreemptQueueJobs] App wrapper '%s/%s' was not found when updating status. ", aw.Namespace, aw.Name)
 							return nil
+						} else if apierrors.IsConflict(retryErr) {
+							klog.Warningf("[PreemptQueueJobs] status update for '%s/%s' detected conflict. Retrying", aw.Namespace, aw.Name)
 						}
-						klog.Warningf("[PreemptQueueJobs] status update for '%s/%s' failed, err=%v. Retrying", aw.Namespace, aw.Name, retryErr)
 						return retryErr
 					}
 					//cannot use cleanup AW, since it puts AW back in running state
@@ -542,27 +543,29 @@ func (qjm *XController) PreemptQueueJobs() {
 
 			retryErr = qjm.updateStatusInEtcd(updateNewJob, "PreemptQueueJobs - CanRun: false -- MinPodsNotRunning")
 			if retryErr != nil {
-				if apiErrors.IsNotFound(retryErr) {
+				if apierrors.IsNotFound(retryErr) {
+					klog.Warningf("[PreemptQueueJobs] App wrapper '%s/%s' was not found when updating status. ", aw.Namespace, aw.Name)
 					return nil
+				} else if apierrors.IsConflict(retryErr) {
+					klog.Warningf("[PreemptQueueJobs] status update for '%s/%s' detected conflict. Retrying", aw.Namespace, aw.Name)
 				}
-				klog.Warningf("[PreemptQueueJobs] update of spec and status for '%s/%s' failed, err=%v. Will try to preempt on the next run", aw.Namespace, aw.Name, retryErr)
 				return retryErr
 			}
 
 			if cleanAppWrapper {
-				klog.V(4).Infof("[PreemptQueueJobs] Deleting AppWrapper %s/%s due to maximum number of requeuings exceeded.", aw.Name, aw.Namespace)
+				klog.V(4).Infof("[PreemptQueueJobs] Deleting AppWrapper %s/%s due to maximum number of re-queueing(s) exceeded.", aw.Name, aw.Namespace)
 				go qjm.Cleanup(updateNewJob)
 			} else {
 				//Only back-off AWs that are in state running and not in state Failed
 				if updateNewJob.Status.State != arbv1.AppWrapperStateFailed {
-					klog.V(4).Infof("[PreemptQueueJobs] Adding preempted AppWrapper %s/%s to backoff queue.", aw.Name, aw.Namespace)
+					klog.Infof("[PreemptQueueJobs] Adding preempted AppWrapper %s/%s to back off queue.", aw.Name, aw.Namespace)
 					go qjm.backoff(updateNewJob, "PreemptionTriggered", string(message))
 				}
 			}
 			return nil
 		})
 		if err != nil {
-			klog.Infof("[PreemptQueueJobs] failed preemption for  app wrapper  %s/%s, err= %v. Will attempt on the next run", aw.Name, aw.Namespace, err)
+			klog.Errorf("[PreemptQueueJobs] failed preemption for  app wrapper  %s/%s, err= %v. Will attempt on the next run", aw.Name, aw.Namespace, err)
 		}
 	}
 }
@@ -578,26 +581,28 @@ func (qjm *XController) preemptAWJobs(preemptAWs []*arbv1.AppWrapper) {
 		err := preemptRetrier.Run(func() error {
 			apiCacheAWJob, retryErr := qjm.getAppWrapper(aw.Namespace, aw.Name, "[preemptAWJobs] get fresh app wrapper")
 			if retryErr != nil {
-				if apiErrors.IsNotFound(retryErr) {
+				if apierrors.IsNotFound(retryErr) {
+					klog.Warningf("[preemptAWJobs] App wrapper '%s/%s' was not found when getting a fresh copy. ", aw.Namespace, aw.Name)
 					return nil
 				}
-
-				klog.Errorf("[preemptAWJobs] Failed to get AppWrapper to from API Cache %v/%v: %v",
+				klog.Errorf("[preemptAWJobs] Failed to get AppWrapper to from API Cache %s/%s: err = %v",
 					aw.Namespace, aw.Name, retryErr)
 				return retryErr
 			}
 			apiCacheAWJob.Status.CanRun = false
 			if retryErr := qjm.updateStatusInEtcd(apiCacheAWJob, "preemptAWJobs - CanRun: false"); retryErr != nil {
-				klog.Warningf("[preemptAWJobs] Failed to update status of AppWrapper %v/%v: %v. Retrying",
-					apiCacheAWJob.Namespace, apiCacheAWJob.Name, retryErr)
+				if apierrors.IsNotFound(retryErr) {
+					klog.Warningf("[preemptAWJobs] App wrapper '%s/%s' was not found when updating status. ", aw.Namespace, aw.Name)
+					return nil
+				} else if apierrors.IsConflict(retryErr) {
+					klog.Warningf("[preemptAWJobs] status update for '%s/%s' detected conflict. Retrying", aw.Namespace, aw.Name)
+				}
 				return retryErr
 			}
 			return nil
 		})
 		if err != nil {
-			if !apiErrors.IsNotFound(err) {
-				klog.Warningf("[preemptAWJobs] Failed to preempt app Wrapper '%s/%s'. App wrapper is not found", aw.Namespace, aw.Name)
-			}
+			klog.Errorf("[preemptAWJobs] Failed to preempt app Wrapper '%s/%s'. App wrapper is not found", aw.Namespace, aw.Name)
 		}
 	}
 }
@@ -761,6 +766,7 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arb
 
 			status := qjm.genericresources.IsItemCompleted(&genericItem, caw.Namespace, caw.Name, name)
 			if !status {
+				klog.Infof("[getAppWrapperCompletionStatus] Items not completed for appwrapper: %s in namespace: %s", caw.Name, caw.Namespace)
 				//early termination because a required item is not completed
 				return caw.Status.State
 			}
@@ -830,7 +836,7 @@ func (qjm *XController) getProposedPreemptions(requestingJob *arbv1.AppWrapper, 
 	//Sort keys of map
 	priorityKeyValues := make([]float64, len(preemptableAWs))
 	i := 0
-	for key, _ := range preemptableAWs {
+	for key := range preemptableAWs {
 		priorityKeyValues[i] = key
 		i++
 	}
@@ -1128,7 +1134,7 @@ func (qjm *XController) ScheduleNext() {
 	qjm.schedulingAW = qj
 	qjm.schedulingMutex.Unlock()
 	// ensure that current active appwrapper is reset at the end of this function, to prevent
-	// the appwrapper from being added in synch job
+	// the appwrapper from being added in syncjob
 	defer qjm.schedulingAWAtomicSet(nil)
 
 	scheduleNextRetrier := retrier.New(retrier.ExponentialBackoff(10, 100*time.Millisecond), &EtcdErrorClassifier{})
@@ -1140,7 +1146,8 @@ func (qjm *XController) ScheduleNext() {
 
 		apiCacheAWJob, retryErr := qjm.getAppWrapper(qj.Namespace, qj.Name, "[ScheduleNext] -- get fresh copy after queue pop")
 		if retryErr != nil {
-			if apiErrors.IsNotFound(retryErr) {
+			if apierrors.IsNotFound(retryErr) {
+				klog.Warningf("[ScheduleNext] app wrapper '%s/%s' not found skiping dispatch", qj.Namespace, qj.Name)
 				return nil
 			}
 			klog.Errorf("[ScheduleNext] Unable to get AW %s from API cache &aw=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, retryErr)
@@ -1153,7 +1160,7 @@ func (qjm *XController) ScheduleNext() {
 			apiCacheAWJob.DeepCopyInto(qj)
 		}
 		if qj.Status.CanRun {
-			klog.V(4).Infof("[ScheduleNext] AppWrapper '%s/%s' from prioirty queue is already scheduled. Ignoring request: Status=%v", qj.Namespace, qj.Name, qj.Status)
+			klog.V(4).Infof("[ScheduleNext] AppWrapper '%s/%s' from priority queue is already scheduled. Ignoring request: Status=%+v", qj.Namespace, qj.Name, qj.Status)
 			return nil
 		}
 
@@ -1195,14 +1202,14 @@ func (qjm *XController) ScheduleNext() {
 			klog.V(3).Infof("[ScheduleNext] activeQ.Pop_afterPriorityUpdate %s *Delay=%.6f seconds RemainingLength=%d &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qjm.qjqueue.Length(), qj, qj.ResourceVersion, qj.Status)
 			apiCacheAWJob, retryErr := qjm.getAppWrapper(qj.Namespace, qj.Name, "[ScheduleNext] -- after dynamic priority pop")
 			if retryErr != nil {
-				if apiErrors.IsNotFound(retryErr) {
+				if apierrors.IsNotFound(retryErr) {
 					return nil
 				}
 				klog.Errorf("[ScheduleNext] failed to get a fresh copy of the app wrapper '%s/%s', err=%#v", qj.Namespace, qj.Name, retryErr)
 				return err
 			}
 			if apiCacheAWJob.Status.CanRun {
-				klog.Infof("[ScheduleNext] AppWrapper job: %s from API is already scheduled. Ignoring request: Status=%+v\n", qj.Name, qj.Status)
+				klog.Infof("[ScheduleNext] AppWrapper job: %s from API is already scheduled. Ignoring request: Status=%+v", qj.Name, qj.Status)
 				return nil
 			}
 			apiCacheAWJob.DeepCopyInto(qj)
@@ -1213,17 +1220,22 @@ func (qjm *XController) ScheduleNext() {
 		qjm.addOrUpdateCondition(qj, arbv1.AppWrapperCondHeadOfLine, v1.ConditionTrue, "FrontOfQueue.", "")
 
 		qj.Status.FilterIgnore = true // update QueueJobState only
-		err = qjm.updateStatusInEtcd(qj, "ScheduleNext - setHOL")
-		if err != nil {
-			return err
+		retryErr = qjm.updateStatusInEtcd(qj, "ScheduleNext - setHOL")
+		if retryErr != nil {
+			if apierrors.IsConflict(err) {
+				klog.Warningf("[ScheduleNext] Conflict error detected when updating status in etcd for app wrapper '%s/%s, status = %+v. Retrying update.", qj.Namespace, qj.Name, qj.Status)
+			} else {
+				klog.Errorf("[ScheduleNext] Failed to updated status in etcd for app wrapper '%s/%s', status = %+v, err=%v", qj.Namespace, qj.Name, qj.Status, err)
+			}
+			return retryErr
 		}
 		qjm.qjqueue.AddUnschedulableIfNotPresent(qj) // working on qj, avoid other threads putting it back to activeQ
 
-		klog.V(4).Infof("[ScheduleNext] after Pop qjqLength=%d qj %s Version=%s activeQ=%t Unsched=%t Status=%+v", qjm.qjqueue.Length(), qj.Name, qj.ResourceVersion, qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj.Status)
+		klog.V(4).Infof("[ScheduleNext] after Pop qjqLength=%d qj %s Version=%s activeQ=%t Unsched=%t Status=%v", qjm.qjqueue.Length(), qj.Name, qj.ResourceVersion, qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj.Status)
 		if qjm.isDispatcher {
-			klog.Infof("[ScheduleNext] [Dispatcher Mode] Dispatch next appwrapper: '%s/%s Status=%v", qj.Namespace, qj.Name, qj.Status)
+			klog.Infof("[ScheduleNext] [Dispatcher Mode] Attempting to dispatch next appwrapper: '%s/%s Status=%v", qj.Namespace, qj.Name, qj.Status)
 		} else {
-			klog.Infof("[ScheduleNext] [Agent Mode] Dispatch next appwrapper: '%s/%s' Status=%v", qj.Namespace, qj.Name, qj.Status)
+			klog.Infof("[ScheduleNext] [Agent Mode] Attempting to dispatch next appwrapper: '%s/%s' Status=%v", qj.Namespace, qj.Name, qj.Status)
 		}
 
 		dispatchFailedReason := "AppWrapperNotRunnable."
@@ -1235,6 +1247,10 @@ func (qjm *XController) ScheduleNext() {
 				// Add XQJ -> Agent Map
 				apiCacheAWJob, retryErr := qjm.getAppWrapper(qj.Namespace, qj.Name, "[ScheduleNext] [Dispatcher Mode] get appwrapper")
 				if retryErr != nil {
+					if apierrors.IsNotFound(retryErr) {
+						klog.Warningf("[ScheduleNext] app wrapper '%s/%s' not found skiping dispatch", qj.Namespace, qj.Name)
+						return nil
+					}
 					klog.Errorf("[ScheduleNext] [Dispatcher Mode] failed to retrieve the app wrapper '%s/%s', err=%#v", qj.Namespace, qj.Name, err)
 					return err
 				}
@@ -1250,10 +1266,14 @@ func (qjm *XController) ScheduleNext() {
 				klog.V(10).Infof("[ScheduleNext] [Dispatcher Mode] %s, %s: ScheduleNextBeforeEtcd", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 				retryErr = qjm.updateStatusInEtcd(qj, "[ScheduleNext] [Dispatcher Mode] - setCanRun")
 				if retryErr != nil {
-					klog.Errorf("[ScheduleNext] [Dispatcher Mode] failed to update status in etcd the app wrapper '%s/%s', err=%#v", qj.Namespace, qj.Name, err)
+					if apierrors.IsConflict(err) {
+						klog.Warningf("[ScheduleNext] [Dispatcher Mode] Conflict error detected when updating status in etcd for app wrapper '%s/%s, status = %+v. Retrying update.", qj.Namespace, qj.Name, qj.Status)
+					} else {
+						klog.Errorf("[ScheduleNext] [Dispatcher Mode] Failed to updated status in etcd for app wrapper '%s/%s', status = %+v, err=%v", qj.Namespace, qj.Name, qj.Status, err)
+					}
 					return retryErr
 				}
-				if err := qjm.eventQueue.Add(qj); err != nil { // unsuccessful add to eventQueue, add back to activeQ
+				if err00 := qjm.eventQueue.Add(qj); err00 != nil { // unsuccessful add to eventQueue, add back to activeQ
 					klog.Errorf("[ScheduleNext] [Dispatcher Mode] Fail to add %s to eventQueue, activeQ.Add_toSchedulingQueue &qj=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, err)
 					qjm.qjqueue.MoveToActiveQueueIfExists(qj)
 				} else { // successful add to eventQueue, remove from qjqueue
@@ -1279,7 +1299,7 @@ func (qjm *XController) ScheduleNext() {
 			quotaFits := false
 			// Try to forward to eventQueue for at most HeadOfLineHoldingTime
 			for !forwarded {
-				klog.Infof("[ScheduleNext] [Agent Mode] Forwarding loop iteration: %d", fowardingLoopCount)
+				klog.V(4).Infof("[ScheduleNext] [Agent Mode] Forwarding loop iteration: %d", fowardingLoopCount)
 				priorityindex := qj.Status.SystemPriority
 				// Support for Non-Preemption
 				if !qjm.serverOption.Preemption {
@@ -1298,12 +1318,12 @@ func (qjm *XController) ScheduleNext() {
 				if aggqj.LessEqual(resources) {
 					unallocatedHistogramMap := qjm.cache.GetUnallocatedHistograms()
 					if !qjm.nodeChecks(unallocatedHistogramMap, qj) {
-						klog.V(4).Infof("[ScheduleNext] [Agent Mode] Optimistic dispatch for AW '%s/%s' requesting aggregated resources %v histogram for point in-time fragmented resources are available in the cluster %s",
+						klog.Infof("[ScheduleNext] [Agent Mode] Optimistic dispatch for AW '%s/%s' requesting aggregated resources %v histogram for point in-time fragmented resources are available in the cluster %s",
 							qj.Name, qj.Namespace, qjm.GetAggregatedResources(qj), proto.MarshalTextString(unallocatedHistogramMap["gpu"]))
 					}
 					// Now evaluate quota
 					fits := true
-					klog.V(4).Infof("[ScheduleNext] [Agent Mode] available resourse successful check for '%s/%s' at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits",
+					klog.Infof("[ScheduleNext] [Agent Mode] available resourse successful check for '%s/%s' at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v.",
 						qj.Name, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 					if qjm.serverOption.QuotaEnabled {
 						if qjm.quotaManager != nil {
@@ -1330,15 +1350,20 @@ func (qjm *XController) ScheduleNext() {
 							if updateLabels {
 								tempAW, retryErr := qjm.getAppWrapper(qj.Namespace, qj.Name, "[ScheduleNext] [Agent Mode] update labels")
 								if retryErr != nil {
-									if apiErrors.IsNotFound(retryErr) {
+									if apierrors.IsNotFound(retryErr) {
+										klog.Warningf("[ScheduleNext] [Agent Mode] app wrapper '%s/%s' not found while trying to update labels, skiping dispatch.", qj.Namespace, qj.Name)
 										return nil
 									}
-									klog.Warningf("[ScheduleNext] [Agent Mode] Failed to added get fresh copy of the app wrapper '%s/%s' to update quota lables, err = %v", qj.Namespace, qj.Name, retryErr)
 									return retryErr
 								}
 								tempAW.SetLabels(newLabels)
 								updatedAW, retryErr := qjm.updateEtcd(tempAW, "ScheduleNext [Agent Mode] - setDefaultQuota")
 								if retryErr != nil {
+									if apierrors.IsConflict(err) {
+										klog.Warningf("[ScheduleNext] [Agent mode] Conflict error detected when updating labels in etcd for app wrapper '%s/%s, status = %+v. Retrying update.", qj.Namespace, qj.Name, qj.Status)
+									} else {
+										klog.Errorf("[ScheduleNext] [Agent mode] Failed to update labels in etcd for app wrapper '%s/%s', status = %+v, err=%v", qj.Namespace, qj.Name, qj.Status, err)
+									}
 									return retryErr
 								}
 								klog.Infof("[ScheduleNext] [Agent Mode] Default quota added to AW '%s/%s'", qj.Namespace, qj.Name)
@@ -1348,7 +1373,8 @@ func (qjm *XController) ScheduleNext() {
 							var preemptAWs []*arbv1.AppWrapper
 							quotaFits, preemptAWs, msg = qjm.quotaManager.Fits(qj, aggqj, proposedPreemptions)
 							if quotaFits {
-								klog.Infof("[ScheduleNext] HOL quota evaluation successful %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v due to quota limits", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+								klog.Infof("[ScheduleNext] [Agent mode] quota evaluation successful for app wrapper '%s/%s' activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
+									qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 								// Set any jobs that are marked for preemption
 								qjm.preemptAWJobs(preemptAWs)
 							} else { // Not enough free quota to dispatch appwrapper
@@ -1357,8 +1383,8 @@ func (qjm *XController) ScheduleNext() {
 									dispatchFailedReason += " "
 									dispatchFailedReason += msg
 								}
-								klog.V(3).Infof("[ScheduleNext] [Agent Mode] HOL Blocking by %s for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v msg=%s, due to quota limits",
-									qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, msg)
+								klog.Infof("[ScheduleNext] [Agent Mode] Blocking dispatch for app wrapper '%s/%s' due to quota limits, activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v msg=%s",
+									qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, msg)
 							}
 							fits = quotaFits
 						} else {
@@ -1368,7 +1394,7 @@ func (qjm *XController) ScheduleNext() {
 							klog.Errorf("[ScheduleNext] [Agent Mode] Quota evaluation is enabled but not initialized.  AppWrapper '%s/%s' does not have enough quota", qj.Namespace, qj.Name)
 						}
 					} else {
-						klog.V(4).Infof("[ScheduleNext] [Agent Mode] HOL quota evaluation not enabled for '%s/%s' at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Namespace,
+						klog.V(4).Infof("[ScheduleNext] [Agent Mode]  quota evaluation not enabled for '%s/%s' at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Namespace,
 							qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 					}
 					// If quota evalauation sucedeed or quota evaluation not enabled set the appwrapper to be dispatched
@@ -1376,6 +1402,9 @@ func (qjm *XController) ScheduleNext() {
 						// aw is ready to go!
 						tempAW, retryErr := qjm.getAppWrapper(qj.Namespace, qj.Name, "[ScheduleNext] [Agent Mode]  -- ready to dispatch")
 						if retryErr != nil {
+							if apierrors.IsNotFound(retryErr) {
+								return nil
+							}
 							klog.Errorf("[ScheduleNext] [Agent Mode] Failed to get fresh copy of the app wrapper '%s/%s' to update status, err = %v", qj.Namespace, qj.Name, err)
 							return retryErr
 						}
@@ -1393,30 +1422,33 @@ func (qjm *XController) ScheduleNext() {
 								//Quota was allocated for this appwrapper, release it.
 								qjm.quotaManager.Release(qj)
 							}
-							if apiErrors.IsNotFound(retryErr) {
-								klog.Warningf("[ScheduleNext] app wrapper '%s/%s' not found skiping dispatch", qj.Namespace, qj.Name)
+							if apierrors.IsNotFound(retryErr) {
+								klog.Warningf("[ScheduleNext] [Agent Mode] app wrapper '%s/%s' not found after status update, skiping dispatch.", qj.Namespace, qj.Name)
 								return nil
+							} else if apierrors.IsConflict(err) {
+								klog.Warningf("[ScheduleNext] [Agent mode] Conflict error detected when updating status in etcd for app wrapper '%s/%s, status = %+v. Retrying update.", qj.Namespace, qj.Name, qj.Status)
+							} else {
+								klog.Errorf("[ScheduleNext] [Agent mode] Failed to update status in etcd for app wrapper '%s/%s', status = %+v, err=%v", qj.Namespace, qj.Name, qj.Status, err)
 							}
 							return retryErr
 						}
 						tempAW.DeepCopyInto(qj)
 						// add to eventQueue for dispatching to Etcd
-						if err = qjm.eventQueue.Add(qj); err != nil { // unsuccessful add to eventQueue, add back to activeQ
-							klog.Errorf("[ScheduleNext] [Agent Mode]  Fail to add '%s/%s' to eventQueue, activeQ.Add_toSchedulingQueue &qj=%p Version=%s Status=%+v err=%#v", qj.Namespace,
+						if err00 := qjm.eventQueue.Add(qj); err00 != nil { // unsuccessful add to eventQueue, add back to activeQ
+							klog.Errorf("[ScheduleNext] [Agent Mode]  Failed to add '%s/%s' to eventQueue, activeQ.Add_toSchedulingQueue &qj=%p Version=%s Status=%+v err=%#v", qj.Namespace,
 								qj.Name, qj, qj.ResourceVersion, qj.Status, err)
 							qjm.qjqueue.MoveToActiveQueueIfExists(qj)
 						} else { // successful add to eventQueue, remove from qjqueue
 							qjm.qjqueue.Delete(qj)
 							forwarded = true
-							klog.V(4).Infof("[ScheduleNext] [Agent Mode]'%s/%s' Delay=%.6f seconds eventQueue.Add_afterHeadOfLine activeQ=%t, Unsched=%t &aw=%p Version=%s Status=%+v",
-								qj.Namespace, qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qjm.qjqueue.IfExistActiveQ(qj),
-								qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+							klog.Infof("[ScheduleNext] [Agent Mode] Successfully dispatched app wrapper '%s/%s' activeQ=%t, Unsched=%t &aw=%p Version=%s Status=%+v",
+								qj.Namespace, qj.Name, qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 						}
 					} //fits
 				} else { // Not enough free resources to dispatch HOL
 					dispatchFailedMessage = "Insufficient resources to dispatch AppWrapper."
-					klog.V(4).Infof("[ScheduleNext] [Agent Mode] HOL Blocking by '%s/%s' for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
-						qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj),
+					klog.Infof("[ScheduleNext] [Agent Mode] Failed to dispatch app wrapper '%s/%s' due to insuficient resources, activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
+						qj.Namespace, qj.Name, qjm.qjqueue.IfExistActiveQ(qj),
 						qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				}
 				// if the HeadOfLineHoldingTime option is not set it will break the loop
@@ -1441,7 +1473,8 @@ func (qjm *XController) ScheduleNext() {
 				fowardingLoopCount += 1
 			}
 			if !forwarded { // start thread to backoff
-				klog.V(3).Infof("[ScheduleNext][Agent Mode] HOL backoff %s after waiting for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+				klog.Infof("[ScheduleNext] [Agent Mode] backing off app wrapper '%s/%s' after waiting for %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
+					qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				if qjm.quotaManager != nil && quotaFits {
 					qjm.quotaManager.Release(qj)
 				}
@@ -1450,7 +1483,7 @@ func (qjm *XController) ScheduleNext() {
 		}
 		return nil
 	})
-	if apiErrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) {
 		klog.Warningf("[ScheduleNext] app wrapper '%s/%s' not found skiping dispatch", qj.Namespace, qj.Name)
 		return
 	}
@@ -1495,82 +1528,6 @@ func (cc *XController) updateStatusInEtcd(currentAppwrapper *arbv1.AppWrapper, c
 	return nil
 }
 
-func (qjm *XController) waitForPodCountUpdates(searchCond *arbv1.AppWrapperCondition) bool {
-
-	// Continue reserviing resourses if dispatched condition not found
-	if searchCond == nil {
-		klog.V(10).Infof("[waitForPodCountUpdates] No condition not found.")
-		return true
-	}
-
-	// Current time
-	now := metav1.NowMicro()
-	nowPtr := &now
-
-	// Last time AW was dispatched
-	dispactedTS := searchCond.LastUpdateMicroTime
-	dispactedTSPtr := &dispactedTS
-
-	// Error checking
-	if nowPtr.Before(dispactedTSPtr) {
-		klog.Errorf("[waitForPodCountUpdates] Current timestamp: %s is before condition latest update timestamp: %s",
-			now.String(), dispactedTS.String())
-		return true
-	}
-
-	// Duration since last time AW was dispatched
-	timeSinceDispatched := now.Sub(dispactedTS.Time)
-
-	// Convert timeout default from milli-seconds to microseconds
-	timeoutMicroSeconds := qjm.serverOption.DispatchResourceReservationTimeout * 1000
-
-	// Don't reserve resources if timeout is hit
-	if timeSinceDispatched.Microseconds() > timeoutMicroSeconds {
-		klog.V(10).Infof("[waitForPodCountUpdates] Dispatch duration time %d microseconds has reached timeout value of %d microseconds",
-			timeSinceDispatched.Microseconds(), timeoutMicroSeconds)
-
-		return false
-	}
-
-	klog.V(10).Infof("[waitForPodCountUpdates] Dispatch duration time %d microseconds has not reached timeout value of %d microseconds",
-		timeSinceDispatched.Microseconds(), timeoutMicroSeconds)
-	return true
-}
-
-func (qjm *XController) getLatestStatusConditionType(aw *arbv1.AppWrapper, condType arbv1.AppWrapperConditionType) *arbv1.AppWrapperCondition {
-	var latestConditionBasedOnType arbv1.AppWrapperCondition
-	if aw.Status.Conditions != nil && len(aw.Status.Conditions) > 0 {
-		// Find the latest matching condition based on type not related other condition fields
-		for _, condition := range aw.Status.Conditions {
-			// Matching condition?
-			if condition.Type == condType {
-				//First time match?
-				if (arbv1.AppWrapperCondition{} == latestConditionBasedOnType) {
-					latestConditionBasedOnType = condition
-				} else {
-					// Compare current condition to last match and get keep the later condition
-					currentCondLastUpdate := condition.LastUpdateMicroTime
-					currentCondLastUpdatePtr := &currentCondLastUpdate
-					lastCondLastUpdate := latestConditionBasedOnType.LastUpdateMicroTime
-					lastCondLastUpdatePtr := &lastCondLastUpdate
-					if lastCondLastUpdatePtr.Before(currentCondLastUpdatePtr) {
-						latestConditionBasedOnType = condition
-					}
-				}
-			} // Condition type match check
-		} // Loop through conditions of AW
-	} // AW has conditions?
-
-	// If no matching condition found return nil otherwise return matching latest condition
-	if (arbv1.AppWrapperCondition{} == latestConditionBasedOnType) {
-		klog.V(10).Infof("[getLatestStatusConditionType] No disptach condition found for AppWrapper=%s/%s.",
-			aw.Name, aw.Namespace)
-		return nil
-	} else {
-		return &latestConditionBasedOnType
-	}
-}
-
 func (qjm *XController) addOrUpdateCondition(aw *arbv1.AppWrapper, condType arbv1.AppWrapperConditionType,
 	condStatus v1.ConditionStatus, condReason string, condMsg string) {
 	var dupConditionExists bool = false
@@ -1601,23 +1558,25 @@ func (qjm *XController) backoff(q *arbv1.AppWrapper, reason string, message stri
 
 	etcUpdateRetrier := retrier.New(retrier.ExponentialBackoff(10, 100*time.Millisecond), &EtcdErrorClassifier{})
 	err := etcUpdateRetrier.Run(func() error {
-		apiCacheAWJob, err := qjm.getAppWrapper(q.Namespace, q.Name, "[backoff] - Rejoining")
-		if err != nil {
-			return err
+		apiCacheAWJob, retryErr := qjm.getAppWrapper(q.Namespace, q.Name, "[backoff] - Rejoining")
+		if retryErr != nil {
+			return retryErr
 		}
 		q.Status.DeepCopyInto(&apiCacheAWJob.Status)
 		apiCacheAWJob.Status.QueueJobState = arbv1.AppWrapperCondBackoff
 		apiCacheAWJob.Status.FilterIgnore = true // update QueueJobState only, no work needed
 		// Update condition
 		qjm.addOrUpdateCondition(apiCacheAWJob, arbv1.AppWrapperCondBackoff, v1.ConditionTrue, reason, message)
-		if err := qjm.updateStatusInEtcd(apiCacheAWJob, "[backoff] - Rejoining"); err != nil {
-			klog.Warningf("[backoff] Failed to updated AW status in etcd '%s/%s'.  Continuing with possible stale object without updating conditions. Retrying.", apiCacheAWJob.Namespace, apiCacheAWJob.Name)
-			return err
+		if retryErr := qjm.updateStatusInEtcd(apiCacheAWJob, "[backoff] - Rejoining"); retryErr != nil {
+			if apierrors.IsConflict(retryErr) {
+				klog.Warningf("[backoff] Conflict on when upating AW status in etcd '%s/%s'. Retrying.", apiCacheAWJob.Namespace, apiCacheAWJob.Name)
+			}
+			return retryErr
 		}
 		return nil
 	})
 	if err != nil {
-		klog.Errorf("[backoff] Failed to retrieve cached object for %s/%s.  Continuing with possible stale object without updating conditions.", q.Namespace, q.Name)
+		klog.Errorf("[backoff] Failed to update status for %s/%s.  Continuing with possible stale object without updating conditions. err=%s", q.Namespace, q.Name, err)
 	}
 	qjm.qjqueue.AddUnschedulableIfNotPresent(q)
 	klog.V(3).Infof("[backoff] %s move to unschedulableQ before sleep for %d seconds. activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", q.Name,
@@ -1671,7 +1630,6 @@ func (cc *XController) Run(stopCh chan struct{}) {
 		go wait.Until(cc.agentEventQueueWorker, time.Second, stopCh) // Update Agent Worker
 	}
 
-	// go wait.Until(cc.worker, time.Second, stopCh)
 	go wait.Until(cc.worker, 0, stopCh)
 }
 
@@ -1939,27 +1897,47 @@ func (cc *XController) worker() {
 	if err != nil {
 		klog.Warningf("[worker] Fail to process item from eventQueue, err %v. Attempting to re-enqueque...", err)
 		if err00 := cc.enqueueIfNotPresent(item); err00 != nil {
-			klog.Errorf("[worker] Failed to re-enqueue item, err %v", err00)
+			klog.Errorf("[worker] Fatal error railed to re-enqueue item, err %v", err00)
+		} else {
+			klog.Warning("[worker] Item re-enqueued")
 		}
-		klog.Warning("[worker] Item re-enqueued")
 		return
 	}
 }
 
 func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
+	// validate that app wraper has not been marked for deletion by the infomer's delete handler
+	if qj.DeletionTimestamp != nil {
+		klog.Infof("[syncQueueJob] AW job=%s/%s set for deletion.", qj.Name, qj.Namespace)
+		// cleanup resources for running job, ignoring errors
+		if err00 := cc.Cleanup(qj); err00 != nil {
+			klog.Warningf("Failed to cleanup resources for app wrapper '%s/%s', err = %v", qj.Namespace, qj.Name, err00)
+		}
+		//empty finalizers and delete the queuejob again
+		if accessor, err00 := meta.Accessor(qj); err00 == nil {
+			accessor.SetFinalizers(nil)
+		}
+		// we delete the job from the queue if it is there, ignoring errors
+		cc.qjqueue.Delete(qj)
+		klog.Infof("[syncQueueJob] AW job=%s/%s deleted.", qj.Name, qj.Namespace)
+		return nil
+	}
 	cacheAWJob, err := cc.getAppWrapper(qj.Namespace, qj.Name, "[syncQueueJob] get fresh appwrapper ")
 	if err != nil {
-		// Implicit detection of deletion
 		if apierrors.IsNotFound(err) {
-			klog.Warningf("[syncQueueJob] AppWrapper '%s/%s' not found in cache.", qj.Namespace, qj.Name)
-			cc.Cleanup(qj)
+			klog.Warningf("[syncQueueJob] AppWrapper '%s/%s' not found in cache and will be deleted", qj.Namespace, qj.Name)
+			// clean up app wrapper resources including quota
+			if err := cc.Cleanup(qj); err != nil {
+				klog.Errorf("Failed to delete resources associated with app wrapper: '%s/%s', err %v", qj.Namespace, qj.Name, err)
+				// return error so operation can be retried
+				return err
+			}
 			cc.qjqueue.Delete(qj)
 			return nil
 		}
-		klog.Errorf("[syncQueueJob] Failed to get fresh copy of appwrapper AppWrapper '%s/%s', err %v", qj.Namespace, qj.Name, err)
 		return err
 	}
-	klog.V(10).Infof("[syncQueueJob] Cache AW %s &qj=%p Version=%s Status=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status)
+	klog.V(10).Infof("[syncQueueJob] Cache AW '%s/%s' &qj=%p Version=%s Status=%+v", qj.Namespace, qj.Name, qj, qj.ResourceVersion, qj.Status)
 
 	// make sure qj has the latest information
 	if larger(cacheAWJob.ResourceVersion, qj.ResourceVersion) {
@@ -1988,9 +1966,13 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunning, v1.ConditionTrue, "PodsRunning", "")
 				awNew.Status.Conditions = append(awNew.Status.Conditions, cond)
 				awNew.Status.FilterIgnore = true // Update AppWrapperCondRunning
-				err := cc.updateStatusInEtcd(awNew, "[syncQueueJob] setRunning")
+				err := cc.updateStatusInEtcd(awNew, "[syncQueueJob] Update pod counts")
 				if err != nil {
-					klog.Errorf("[syncQueueJob] Error updating pod status counts for AppWrapper job: '%s/%s', err=%+v", qj.Namespace, qj.Name, err)
+					if apierrors.IsConflict(err) {
+						klog.Warningf("[syncQueueJob] Conflict detected when updating pod status counts for AppWrapper: '%s/%s'. Retrying", qj.Namespace, qj.Name)
+					} else {
+						klog.Warningf("[syncQueueJob] Error updating pod status counts for AppWrapper job: '%s/%s', err=%+v.", qj.Namespace, qj.Name, err)
+					}
 					return err
 				}
 			}
@@ -2015,374 +1997,404 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 // pods according to what is specified in the job.Spec.
 // Does NOT modify <activePods>.
 func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool) error {
-	var err error
 	startTime := time.Now()
 	defer func() {
 		klog.V(10).Infof("[manageQueueJob] Ending %s manageQJ time=%s &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(startTime), qj, qj.ResourceVersion, qj.Status)
 	}()
-
-	if !cc.isDispatcher { // Agent Mode
-
-		if qj.DeletionTimestamp != nil {
-
-			klog.V(4).Infof("[manageQueueJob] AW job=%s/%s set for deletion.", qj.Name, qj.Namespace)
-
-			// cleanup resources for running job
-			err = cc.Cleanup(qj)
-			if err != nil {
-				return err
-			}
-			//empty finalizers and delete the queuejob again
-			accessor, err := meta.Accessor(qj)
-			if err != nil {
-				return err
-			}
-			accessor.SetFinalizers(nil)
-
-			// we delete the job from the queue if it is there
-			cc.qjqueue.Delete(qj)
-
-			return nil
-		}
-		//Job is Complete only update pods if needed.
-		if qj.Status.State == arbv1.AppWrapperStateCompleted || qj.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
-			if podPhaseChanges {
-				// Only update etcd if AW status has changed.  This can happen for periodic
-				// updates of pod phase counts done in caller of this function.
-				if err := cc.updateStatusInEtcd(qj, "manageQueueJob - podPhaseChanges"); err != nil {
-					klog.Errorf("[manageQueueJob] Error updating etc for AW job=%s Status=%+v err=%+v", qj.Name, qj.Status, err)
+	preemptRetrier := retrier.New(retrier.ExponentialBackoff(10, 100*time.Millisecond), &EtcdErrorClassifier{})
+	preemptRetrier.SetJitter(0.05)
+	err := preemptRetrier.Run(func() error {
+		cacheAWJob, retryErr := cc.getAppWrapper(qj.Namespace, qj.Name, "[manageQueueJob] get fresh appwrapper ")
+		if retryErr != nil {
+			// Implicit detection of deletion
+			if apierrors.IsNotFound(retryErr) {
+				klog.Warningf("[manageQueueJob] AppWrapper '%s/%s' not found in cache and will be deleted.", qj.Namespace, qj.Name)
+				// clean up app wrapper resources including quota
+				if err := cc.Cleanup(qj); err != nil {
+					klog.Errorf("Failed to delete resources associated with app wrapper: '%s/%s', err %v", qj.Namespace, qj.Name, err)
+					// return error so operation can be retried from synch queue job
 					return err
 				}
-			}
-			return nil
-		}
-
-		// First execution of qj to set Status.State = Enqueued
-		if !qj.Status.CanRun && (qj.Status.State != arbv1.AppWrapperStateEnqueued && qj.Status.State != arbv1.AppWrapperStateDeleted) {
-			// if there are running resources for this job then delete them because the job was put in
-			// pending state...
-
-			// If this the first time seeing this AW, no need to delete.
-			stateLen := len(qj.Status.State)
-			if stateLen > 0 {
-				klog.V(2).Infof("[manageQueueJob] Deleting resources for AppWrapper Job '%s/%s' because it was preempted, status=%+v", qj.Namespace, qj.Name, qj.Status)
-				err = cc.Cleanup(qj)
-				klog.V(8).Infof("[manageQueueJob] Validation after deleting resources for AppWrapper Job '%s/%s' because it was be preempted, status=%+v", qj.Namespace, qj.Name, qj.Status)
-				if err != nil {
-					klog.Errorf("[manageQueueJob] Fail to delete resources for AppWrapper Job '%s/%s', err=%v", qj.Namespace, qj.Name, err)
-					return err
-				}
-			}
-
-			qj.Status.State = arbv1.AppWrapperStateEnqueued
-			//  add qj to qjqueue only when it is not in UnschedulableQ
-			if cc.qjqueue.IfExistUnschedulableQ(qj) {
-				klog.V(10).Infof("[manageQueueJob] leaving '%s/%s' to qjqueue.UnschedulableQ activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Namespace, qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+				cc.qjqueue.Delete(qj)
 				return nil
 			}
-
-			klog.V(10).Infof("[manageQueueJob] before add to activeQ %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
-			index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondQueueing, "AwaitingHeadOfLine")
-			if index < 0 {
-				qj.Status.QueueJobState = arbv1.AppWrapperCondQueueing
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "AwaitingHeadOfLine", "")
-				qj.Status.Conditions = append(qj.Status.Conditions, cond)
-			} else {
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "AwaitingHeadOfLine", "")
-				qj.Status.Conditions[index] = *cond.DeepCopy()
-			}
-
-			qj.Status.FilterIgnore = true // Update Queueing status, add to qjqueue for ScheduleNext
-			err := cc.updateStatusInEtcd(qj, "manageQueueJob - setQueueing")
-			if err != nil {
-				klog.Errorf("[manageQueueJob] Failed to updated etcd for AppWrapper Job '%s/%s', err=%v", qj.Namespace, qj.Name, err)
-				return err
-			}
-			klog.V(10).Infof("[manageQueueJob] before add to activeQ %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
-			if err = cc.qjqueue.AddIfNotPresent(qj); err != nil {
-				klog.Errorf("manageQueueJob] Fail to add %s to activeQueue. Back to eventQueue activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v err=%#v",
-					qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, err)
-				cc.enqueue(qj)
-			} else {
-				klog.V(3).Infof("[worker-manageQJ] %s 1Delay=%.6f seconds activeQ.Add_success activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
-					qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
-			}
-			return nil
-		} // End of first execution of qj to add to qjqueue for ScheduleNext
-
-		//Handle recovery condition
-		if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued && !cc.qjqueue.IfExistUnschedulableQ(qj) && !cc.qjqueue.IfExistActiveQ(qj) {
-			// One more check to ensure AW is not the current active schedule object
-			if cc.IsActiveAppWrapper(qj.Name, qj.Namespace) {
-				cc.qjqueue.AddIfNotPresent(qj)
-				klog.V(3).Infof("[manageQueueJob] Recovered AppWrapper '%s/%s' - added to active queue, Status=%+v",
-					qj.Namespace, qj.Name, qj.Status)
-				return nil
-			}
+			klog.Errorf("[manageQueueJob] Failed to get fresh copy of appwrapper AppWrapper '%s/%s', err %v", qj.Namespace, qj.Name, retryErr)
+			return retryErr
 		}
+		klog.V(10).Infof("[manageQueueJob] Cache AW '%s/%s' &qj=%p Version=%s Status=%+v", qj.Namespace, qj.Name, qj, qj.ResourceVersion, qj.Status)
 
-		// add qj to Etcd for dispatch
-		if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive &&
-			qj.Status.State != arbv1.AppWrapperStateCompleted &&
-			qj.Status.State != arbv1.AppWrapperStateRunningHoldCompletion {
-			//keep conditions until the appwrapper is re-dispatched
-			qj.Status.PendingPodConditions = nil
+		// make sure qj has the latest information
+		if larger(cacheAWJob.ResourceVersion, qj.ResourceVersion) {
+			klog.V(5).Infof("[manageQueueJob] '%s/%s' found more recent copy from cache         &qj=%p         qj=%+v", qj.Namespace, qj.Name, qj, qj)
+			klog.V(5).Infof("[manageQueueJob] '%s/%s' found more recent copy from cache &cacheAWJob=%p cacheAWJob=%+v", cacheAWJob.Namespace, cacheAWJob.Name, cacheAWJob, cacheAWJob)
+			cacheAWJob.DeepCopyInto(qj)
+		}
+		if !cc.isDispatcher { // Agent Mode
 
-			qj.Status.State = arbv1.AppWrapperStateActive
-			// Bugfix to eliminate performance problem of overloading the event queue.}
-
-			if qj.Spec.AggrResources.Items != nil {
-				for i := range qj.Spec.AggrResources.Items {
-					err := cc.refManager.AddTag(&qj.Spec.AggrResources.Items[i], func() string {
-						return strconv.Itoa(i)
-					})
-					if err != nil {
-						return err
+			//Job is Complete only update pods if needed.
+			if qj.Status.State == arbv1.AppWrapperStateCompleted || qj.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
+				if podPhaseChanges {
+					// Only update etcd if AW status has changed.  This can happen for periodic
+					// updates of pod phase counts done in caller of this function.
+					if retryErr := cc.updateStatusInEtcd(qj, "manageQueueJob - podPhaseChanges"); retryErr != nil {
+						if apierrors.IsConflict(retryErr) {
+							klog.Warningf("[manageQueueJob] Conflict detected when updating status counts for AppWrapper: '%s/%s'. Retrying", qj.Namespace, qj.Name)
+						} else {
+							klog.Errorf("[manageQueueJob] Error updating status counts AppWrapper: '%s/%s',Status=%+v, err=%+v.", qj.Namespace, qj.Name, qj.Status, retryErr)
+						}
+						return retryErr
 					}
 				}
-			}
-			klog.V(3).Infof("[worker-manageQJ] %s 3Delay=%.6f seconds BeforeDispatchingToEtcd Version=%s Status=%+v",
-				qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qj.ResourceVersion, qj.Status)
-			dispatched := true
-			dispatchFailureReason := "ItemCreationFailure."
-			dispatchFailureMessage := ""
-			for _, ar := range qj.Spec.AggrResources.Items {
-				klog.V(10).Infof("[worker-manageQJ] before dispatch [%v].SyncQueueJob %s &qj=%p Version=%s Status=%+v", ar.Type, qj.Name, qj, qj.ResourceVersion, qj.Status)
-				// Call Resource Controller of ar.Type to issue REST call to Etcd for resource creation
-				err00 := cc.qjobResControls[ar.Type].SyncQueueJob(qj, &ar)
-				if err00 != nil {
-					dispatchFailureMessage = fmt.Sprintf("%s/%s creation failure: %+v", qj.Namespace, qj.Name, err00)
-					klog.V(3).Infof("[worker-manageQJ] Error dispatching job=%s type=%v Status=%+v err=%+v", qj.Name, ar.Type, qj.Status, err00)
-					dispatched = false
-					break
-				}
-			}
-			// Handle generic resources
-			for _, ar := range qj.Spec.AggrResources.GenericItems {
-				klog.V(10).Infof("[worker-manageQJ] before dispatch Generic.SyncQueueJob %s &qj=%p Version=%s Status=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status)
-				_, err00 := cc.genericresources.SyncQueueJob(qj, &ar)
-				if err00 != nil {
-					dispatchFailureMessage = fmt.Sprintf("%s/%s creation failure: %+v", qj.Namespace, qj.Name, err00)
-					klog.Errorf("[worker-manageQJ] Error dispatching job=%s Status=%+v err=%+v", qj.Name, qj.Status, err00)
-					dispatched = false
-				}
+				return nil
 			}
 
-			if dispatched { // set AppWrapperCondRunning if all resources are successfully dispatched
-				qj.Status.QueueJobState = arbv1.AppWrapperCondDispatched
-				index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondDispatched, "AppWrapperRunnable")
+			// First execution of qj to set Status.State = Enqueued
+			if !qj.Status.CanRun && (qj.Status.State != arbv1.AppWrapperStateEnqueued && qj.Status.State != arbv1.AppWrapperStateDeleted) {
+				// if there are running resources for this job then delete them because the job was put in
+				// pending state...
+
+				// If this the first time seeing this AW, no need to delete.
+				stateLen := len(qj.Status.State)
+				if stateLen > 0 {
+					klog.V(2).Infof("[manageQueueJob] Deleting resources for AppWrapper Job '%s/%s' because it was preempted, status=%v", qj.Namespace, qj.Name, qj.Status)
+					err00 := cc.Cleanup(qj)
+					if err00 != nil {
+						klog.Errorf("[manageQueueJob] Failed to delete resources for AppWrapper Job '%s/%s', err=%v", qj.Namespace, qj.Name, err00)
+						return err00
+					}
+					klog.V(2).Infof("[manageQueueJob] Deleting resources for AppWrapper Job '%s/%s' because it was be preempted was sucessfull, status=%v", qj.Namespace, qj.Name, qj.Status)
+				}
+
+				qj.Status.State = arbv1.AppWrapperStateEnqueued
+				//  add qj to qjqueue only when it is not in UnschedulableQ
+				if cc.qjqueue.IfExistUnschedulableQ(qj) {
+					klog.V(10).Infof("[manageQueueJob] leaving '%s/%s' to qjqueue.UnschedulableQ activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Namespace, qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+					return nil
+				}
+
+				klog.V(10).Infof("[manageQueueJob] before add to activeQ %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+				index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondQueueing, "AwaitingHeadOfLine")
 				if index < 0 {
-					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondDispatched, v1.ConditionTrue, "AppWrapperRunnable", "")
+					qj.Status.QueueJobState = arbv1.AppWrapperCondQueueing
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "AwaitingHeadOfLine", "")
 					qj.Status.Conditions = append(qj.Status.Conditions, cond)
 				} else {
-					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondDispatched, v1.ConditionTrue, "AppWrapperRunnable", "")
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondQueueing, v1.ConditionTrue, "AwaitingHeadOfLine", "")
 					qj.Status.Conditions[index] = *cond.DeepCopy()
 				}
 
-				klog.V(3).Infof("[worker-manageQJ] %s 4Delay=%.6f seconds AllResourceDispatchedToEtcd Version=%s Status=%+v",
+				qj.Status.FilterIgnore = true // Update Queueing status, add to qjqueue for ScheduleNext
+				retryErr := cc.updateStatusInEtcd(qj, "manageQueueJob - setQueueing")
+				if retryErr != nil {
+					if apierrors.IsConflict(retryErr) {
+						klog.Warningf("[manageQueueJob] Conflict detected when updating status counts for AppWrapper: '%s/%s'. Retrying", qj.Namespace, qj.Name)
+					} else {
+						klog.Errorf("[manageQueueJob] Error updating status counts AppWrapper: '%s/%s',Status=%+v, err=%+v.", qj.Namespace, qj.Name, qj.Status, retryErr)
+					}
+					return retryErr
+				}
+				klog.V(10).Infof("[manageQueueJob] before add to activeQ %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+				if err00 := cc.qjqueue.AddIfNotPresent(qj); err00 != nil {
+					klog.Errorf("manageQueueJob] Fail to add '%s/%s' to activeQueue. Back to eventQueue activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v err=%#v",
+						qj.Namespace, qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, err00)
+					cc.enqueue(qj)
+				} else {
+					klog.V(3).Infof("[manageQueueJob] '%s/%s' 1Delay=%.6f seconds activeQ.Add_success activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
+						qj.Namespace, qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+				}
+				return nil
+			}
+			// Handle recovery condition
+			if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued && !cc.qjqueue.IfExistUnschedulableQ(qj) && !cc.qjqueue.IfExistActiveQ(qj) {
+				// One more check to ensure AW is not the current active scheduled object
+				if cc.IsActiveAppWrapper(qj.Name, qj.Namespace) {
+					cc.qjqueue.AddIfNotPresent(qj)
+					klog.V(3).Infof("[manageQueueJob] Recovered AppWrapper '%s/%s' - added to active queue, Status=%+v",
+						qj.Namespace, qj.Name, qj.Status)
+					return nil
+				}
+			}
+
+			// add qj to Etcd for dispatch
+			if qj.Status.CanRun && qj.Status.State != arbv1.AppWrapperStateActive &&
+				qj.Status.State != arbv1.AppWrapperStateCompleted &&
+				qj.Status.State != arbv1.AppWrapperStateRunningHoldCompletion {
+				//keep conditions until the appwrapper is re-dispatched
+				qj.Status.PendingPodConditions = nil
+
+				qj.Status.State = arbv1.AppWrapperStateActive
+				if qj.Spec.AggrResources.Items != nil {
+					for i := range qj.Spec.AggrResources.Items {
+						err00 := cc.refManager.AddTag(&qj.Spec.AggrResources.Items[i], func() string {
+							return strconv.Itoa(i)
+						})
+						if err00 != nil {
+							klog.Warningf("Failed to add tag to aggregate resource item %s of app apprapper '%s/%s', err = %v", qj.Spec.AggrResources.Items[i].Name, qj.Namespace, qj.Name, err00)
+						}
+					}
+				}
+				klog.V(4).Infof("[manageQueueJob] %s 3Delay=%.6f seconds BeforeDispatchingToEtcd Version=%s Status=%+v",
 					qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qj.ResourceVersion, qj.Status)
-
-			} else {
-				qj.Status.State = arbv1.AppWrapperStateFailed
-				qj.Status.QueueJobState = arbv1.AppWrapperCondFailed
-				if !isLastConditionDuplicate(qj, arbv1.AppWrapperCondFailed, v1.ConditionTrue, dispatchFailureReason, dispatchFailureMessage) {
-					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondFailed, v1.ConditionTrue, dispatchFailureReason, dispatchFailureMessage)
-					qj.Status.Conditions = append(qj.Status.Conditions, cond)
+				dispatched := true
+				dispatchFailureReason := "ItemCreationFailure."
+				dispatchFailureMessage := ""
+				for _, ar := range qj.Spec.AggrResources.Items {
+					klog.V(10).Infof("[manageQueueJob] before dispatch [%v].SyncQueueJob %s &qj=%p Version=%s Status=%+v", ar.Type, qj.Name, qj, qj.ResourceVersion, qj.Status)
+					// Call Resource Controller of ar.Type to issue REST call to Etcd for resource creation
+					err00 := cc.qjobResControls[ar.Type].SyncQueueJob(qj, &ar)
+					if err00 != nil {
+						if apierrors.IsInvalid(err00) {
+							klog.Warningf("[manageQueueJob] Invalid item sent for dispatching by app wrapper='%s/%s' type=%v err=%v", qj.Namespace, qj.Name, ar.Type, err00)
+						} else {
+							klog.Errorf("[manageQueueJob] Error dispatching item for app wrapper='%s/%s' type=%v err=%v", qj.Namespace, qj.Name, ar.Type, err00)
+						}
+						dispatchFailureMessage = fmt.Sprintf("%s/%s creation failure: %+v", qj.Namespace, qj.Name, err00)
+						dispatched = false
+						break
+					}
 				}
-				cc.Cleanup(qj)
-			}
+				if dispatched {
+					// Handle generic resources
+					for _, ar := range qj.Spec.AggrResources.GenericItems {
+						klog.V(10).Infof("[manageQueueJob] before dispatch Generic.SyncQueueJob %s &qj=%p Version=%s Status=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status)
+						_, err00 := cc.genericresources.SyncQueueJob(qj, &ar)
+						if err00 != nil {
+							if apierrors.IsInvalid(err00) {
+								klog.Warningf("[manageQueueJob] Invalid generic item sent for dispatching by app wrapper='%s/%s' err=%v", qj.Namespace, qj.Name, err00)
+							} else {
+								klog.Errorf("[manageQueueJob] Error dispatching generic item for app wrapper='%s/%s' type=%v err=%v", qj.Namespace, qj.Name, err00)
+							}
+							dispatchFailureMessage = fmt.Sprintf("%s/%s creation failure: %+v", qj.Namespace, qj.Name, err00)
+							klog.Errorf("[manageQueueJob] Error dispatching job=%s Status=%+v err=%+v", qj.Name, qj.Status, err00)
+							dispatched = false
+						}
+					}
+				}
 
-			qj.Status.FilterIgnore = true // update State & QueueJobState after dispatch
-			err := cc.updateStatusInEtcd(qj, "manageQueueJob - afterEtcdDispatching")
-			if err != nil {
-				klog.Errorf("[manageQueueJob] Error updating etc for AW job='%s/%s' Status=%v err=%v", qj.Namespace, qj.Name, qj.Status, err)
-				return err
-			}
+				if dispatched { // set AppWrapperCondRunning if all resources are successfully dispatched
+					qj.Status.QueueJobState = arbv1.AppWrapperCondDispatched
+					index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondDispatched, "AppWrapperRunnable")
+					if index < 0 {
+						cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondDispatched, v1.ConditionTrue, "AppWrapperRunnable", "")
+						qj.Status.Conditions = append(qj.Status.Conditions, cond)
+					} else {
+						cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondDispatched, v1.ConditionTrue, "AppWrapperRunnable", "")
+						qj.Status.Conditions[index] = *cond.DeepCopy()
+					}
 
-		} else if qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateActive {
-			//set appwrapper status to Complete or RunningHoldCompletion
-			derivedAwStatus := cc.getAppWrapperCompletionStatus(qj)
+					klog.V(3).Infof("[manageQueueJob] %s 4Delay=%.6f seconds AllResourceDispatchedToEtcd Version=%s Status=%+v",
+						qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qj.ResourceVersion, qj.Status)
 
-			//Set Appwrapper state to complete if all items in Appwrapper
-			//are completed
-			if derivedAwStatus == arbv1.AppWrapperStateRunningHoldCompletion {
-				qj.Status.State = derivedAwStatus
-				var updateQj *arbv1.AppWrapper
-				index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondRunningHoldCompletion, "SomeItemsCompleted")
-				if index < 0 {
-					qj.Status.QueueJobState = arbv1.AppWrapperCondRunningHoldCompletion
-					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
-					qj.Status.Conditions = append(qj.Status.Conditions, cond)
-					qj.Status.FilterIgnore = true // Update AppWrapperCondRunningHoldCompletion
-					updateQj = qj.DeepCopy()
 				} else {
-					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
-					qj.Status.Conditions[index] = *cond.DeepCopy()
-					updateQj = qj.DeepCopy()
+					qj.Status.State = arbv1.AppWrapperStateFailed
+					qj.Status.QueueJobState = arbv1.AppWrapperCondFailed
+					if !isLastConditionDuplicate(qj, arbv1.AppWrapperCondFailed, v1.ConditionTrue, dispatchFailureReason, dispatchFailureMessage) {
+						cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondFailed, v1.ConditionTrue, dispatchFailureReason, dispatchFailureMessage)
+						qj.Status.Conditions = append(qj.Status.Conditions, cond)
+					}
+					// clean up app wrapper resources including quota
+					if err00 := cc.Cleanup(qj); err00 != nil {
+						klog.Errorf("Failed to delete resources associated with app wrapper: '%s/%s', err %v", qj.Namespace, qj.Name, err00)
+						// return error so operation can be retried
+						return err00
+					}
+					cc.qjqueue.Delete(qj)
 				}
-				if err := cc.updateStatusInEtcd(updateQj, "[syncQueueJob] setRunningHoldCompletion"); err != nil {
-					klog.Errorf("[manageQueueJob] Error updating etc for AW job=%s Status=%+v err=%+v", qj.Name, qj.Status, err)
-					return err
+
+				qj.Status.FilterIgnore = true // update State & QueueJobState after dispatch
+				retryErr := cc.updateStatusInEtcd(qj, "manageQueueJob - afterEtcdDispatching")
+				if retryErr != nil {
+					if apierrors.IsConflict(retryErr) {
+						klog.Warningf("[manageQueueJob] Conflict detected when updating status counts for AppWrapper: '%s/%s'. Retrying", qj.Namespace, qj.Name)
+					} else {
+						klog.Errorf("[manageQueueJob] Error updating status counts AppWrapper: '%s/%s',Status=%+v, err=%+v.", qj.Namespace, qj.Name, qj.Status, retryErr)
+					}
+					return retryErr
 				}
-			}
-			//Set appwrapper status to complete
-			if derivedAwStatus == arbv1.AppWrapperStateCompleted {
-				qj.Status.State = derivedAwStatus
-				qj.Status.CanRun = false
-				var updateQj *arbv1.AppWrapper
-				index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondCompleted, "PodsCompleted")
-				if index < 0 {
-					qj.Status.QueueJobState = arbv1.AppWrapperCondCompleted
-					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
-					qj.Status.Conditions = append(qj.Status.Conditions, cond)
-					qj.Status.FilterIgnore = true // Update AppWrapperCondCompleted
-					updateQj = qj.DeepCopy()
-				} else {
-					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
-					qj.Status.Conditions[index] = *cond.DeepCopy()
-					updateQj = qj.DeepCopy()
+
+			} else if qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateActive {
+				//set appwrapper status to Complete or RunningHoldCompletion
+				derivedAwStatus := cc.getAppWrapperCompletionStatus(qj)
+
+				//Set Appwrapper state to complete if all items in Appwrapper
+				//are completed
+				if derivedAwStatus == arbv1.AppWrapperStateRunningHoldCompletion {
+					qj.Status.State = derivedAwStatus
+					var updateQj *arbv1.AppWrapper
+					index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondRunningHoldCompletion, "SomeItemsCompleted")
+					if index < 0 {
+						qj.Status.QueueJobState = arbv1.AppWrapperCondRunningHoldCompletion
+						cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
+						qj.Status.Conditions = append(qj.Status.Conditions, cond)
+						qj.Status.FilterIgnore = true // Update AppWrapperCondRunningHoldCompletion
+						updateQj = qj.DeepCopy()
+					} else {
+						cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunningHoldCompletion, v1.ConditionTrue, "SomeItemsCompleted", "")
+						qj.Status.Conditions[index] = *cond.DeepCopy()
+						updateQj = qj.DeepCopy()
+					}
+					if retryErr := cc.updateStatusInEtcd(updateQj, "[syncQueueJob] setRunningHoldCompletion"); retryErr != nil {
+						if apierrors.IsConflict(retryErr) {
+							klog.Warningf("[manageQueueJob] Conflict detected when updating status counts for AppWrapper: '%s/%s'. Retrying", qj.Namespace, qj.Name)
+						} else {
+							klog.Errorf("[manageQueueJob] Error updating status counts AppWrapper: '%s/%s',Status=%+v, err=%+v.", qj.Namespace, qj.Name, qj.Status, retryErr)
+						}
+						return retryErr
+					}
 				}
-				err := cc.updateStatusInEtcd(updateQj, "[syncQueueJob] setCompleted")
-				if err != nil {
+				//Set appwrapper status to complete
+				if derivedAwStatus == arbv1.AppWrapperStateCompleted {
+					qj.Status.State = derivedAwStatus
+					qj.Status.CanRun = false
+					var updateQj *arbv1.AppWrapper
+					index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondCompleted, "PodsCompleted")
+					if index < 0 {
+						qj.Status.QueueJobState = arbv1.AppWrapperCondCompleted
+						cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
+						qj.Status.Conditions = append(qj.Status.Conditions, cond)
+						qj.Status.FilterIgnore = true // Update AppWrapperCondCompleted
+						updateQj = qj.DeepCopy()
+					} else {
+						cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondCompleted, v1.ConditionTrue, "PodsCompleted", "")
+						qj.Status.Conditions[index] = *cond.DeepCopy()
+						updateQj = qj.DeepCopy()
+					}
+					if retryErr := cc.updateStatusInEtcd(updateQj, "[syncQueueJob] setCompleted"); retryErr != nil {
+						if cc.quotaManager != nil {
+							cc.quotaManager.Release(updateQj)
+						}
+						if apierrors.IsConflict(retryErr) {
+							klog.Warningf("[manageQueueJob] Conflict detected when updating status counts for AppWrapper: '%s/%s'. Retrying", qj.Namespace, qj.Name)
+						} else {
+							klog.Errorf("[manageQueueJob] Error updating status counts AppWrapper: '%s/%s',Status=%+v, err=%+v.", qj.Namespace, qj.Name, qj.Status, retryErr)
+						}
+						return retryErr
+					}
 					if cc.quotaManager != nil {
 						cc.quotaManager.Release(updateQj)
 					}
-					klog.Errorf("[manageQueueJob] Error updating etc for AW job=%s Status=%+v err=%+v", qj.Name, qj.Status, err)
-					return err
 				}
-				if cc.quotaManager != nil {
-					cc.quotaManager.Release(updateQj)
+			} else if podPhaseChanges { // Continued bug fix
+				// Only update etcd if AW status has changed.  This can happen for periodic
+				// updates of pod phase counts done in caller of this function.
+				if retryErr := cc.updateStatusInEtcd(qj, "manageQueueJob - podPhaseChanges"); retryErr != nil {
+					if apierrors.IsConflict(retryErr) {
+						klog.Warningf("[manageQueueJob] Conflict detected when updating status counts for AppWrapper: '%s/%s'. Retrying", qj.Namespace, qj.Name)
+					} else {
+						klog.Errorf("[manageQueueJob] Error updating status counts AppWrapper: '%s/%s',Status=%+v, err=%+v.", qj.Namespace, qj.Name, qj.Status, retryErr)
+					}
+					return retryErr
 				}
 			}
-
-			// Bugfix to eliminate performance problem of overloading the event queue.
-		} else if podPhaseChanges { // Continued bug fix
-			// Only update etcd if AW status has changed.  This can happen for periodic
-			// updates of pod phase counts done in caller of this function.
-			if err := cc.updateStatusInEtcd(qj, "manageQueueJob - podPhaseChanges"); err != nil {
-				klog.Errorf("[manageQueueJob] Error updating etc for AW job=%s Status=%+v err=%+v", qj.Name, qj.Status, err)
-				return err
-			}
-		}
-		// Finish adding qj to Etcd for dispatch
-
-	} else { // Dispatcher Mode
-
-		if qj.DeletionTimestamp != nil {
-			// cleanup resources for running job
-			err = cc.Cleanup(qj)
-			if err != nil {
-				return err
-			}
-			//empty finalizers and delete the queuejob again
-			accessor, err := meta.Accessor(qj)
-			if err != nil {
-				return err
-			}
-			accessor.SetFinalizers(nil)
-
-			cc.qjqueue.Delete(qj)
-
 			return nil
-		}
+		} else { // Dispatcher Mode
 
-		if !qj.Status.CanRun && (qj.Status.State != arbv1.AppWrapperStateEnqueued && qj.Status.State != arbv1.AppWrapperStateDeleted) {
-			// if there are running resources for this job then delete them because the job was put in
-			// pending state...
-			klog.V(3).Infof("[worker-manageQJ] Deleting AppWrapper resources because it will be preempted! %s", qj.Name)
-			err = cc.Cleanup(qj)
-			if err != nil {
-				return err
-			}
-
-			qj.Status.State = arbv1.AppWrapperStateEnqueued
-			if cc.qjqueue.IfExistUnschedulableQ(qj) {
-				klog.V(10).Infof("[worker-manageQJ] leaving %s to qjqueue.UnschedulableQ activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
-			} else {
-				klog.V(10).Infof("[worker-manageQJ] before add to activeQ %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
-				qj.Status.QueueJobState = arbv1.AppWrapperCondQueueing
-				qj.Status.FilterIgnore = true // Update Queueing status, add to qjqueue for ScheduleNext
-				if err := cc.updateStatusInEtcd(qj, "manageQueueJob - setQueueing"); err != nil {
-					return err
+			if !qj.Status.CanRun && (qj.Status.State != arbv1.AppWrapperStateEnqueued && qj.Status.State != arbv1.AppWrapperStateDeleted) {
+				// if there are running resources for this job then delete them because the job was put in
+				// pending state...
+				klog.V(3).Infof("[manageQueueJob] [Dispatcher] Deleting AppWrapper resources because it will be preempted! %s", qj.Name)
+				err00 := cc.Cleanup(qj)
+				if err00 != nil {
+					klog.Errorf("Failed to clean up resources for app wrapper '%s/%s', err =%v", qj.Namespace, qj.Name, err00)
+					return err00
 				}
-				if err = cc.qjqueue.AddIfNotPresent(qj); err != nil {
-					klog.Errorf("[worker-manageQJ] Fail to add %s to activeQueue. Back to eventQueue activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v err=%#v",
-						qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, err)
-					cc.enqueue(qj)
+
+				qj.Status.State = arbv1.AppWrapperStateEnqueued
+				if cc.qjqueue.IfExistUnschedulableQ(qj) {
+					klog.V(10).Infof("[manageQueueJob] [Dispatcher] leaving '%s/%s' to qjqueue.UnschedulableQ activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Namespace, qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				} else {
-					klog.V(4).Infof("[worker-manageQJ] %s 1Delay=%.6f seconds activeQ.Add_success activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
-						qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+					klog.V(10).Infof("[manageQueueJob] [Dispatcher] before add to activeQ '%s/%s' activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Namespace, qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+					qj.Status.QueueJobState = arbv1.AppWrapperCondQueueing
+					qj.Status.FilterIgnore = true // Update Queueing status, add to qjqueue for ScheduleNext
+					if retryErr := cc.updateStatusInEtcd(qj, "manageQueueJob - setQueueing"); retryErr != nil {
+						if apierrors.IsConflict(retryErr) {
+							klog.Warningf("[manageQueueJob] Conflict detected when updating status counts for AppWrapper: '%s/%s'. Retrying", qj.Namespace, qj.Name)
+						} else {
+							klog.Errorf("[manageQueueJob] Error updating status counts AppWrapper: '%s/%s',Status=%+v, err=%+v.", qj.Namespace, qj.Name, qj.Status, retryErr)
+						}
+						return retryErr
+					}
+					if err00 = cc.qjqueue.AddIfNotPresent(qj); err00 != nil {
+						klog.Errorf("[manageQueueJob] [Dispatcher] Fail to add '%s/%s' to activeQueue. Back to eventQueue activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v err=%#v",
+							qj.Namespace, qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, err00)
+						cc.enqueue(qj)
+					} else {
+						klog.V(4).Infof("[manageQueueJob] [Dispatcher] '%s/%s' 1Delay=%.6f seconds activeQ.Add_success activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
+							qj.Namespace, qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+					}
 				}
+				return nil
 			}
-			return nil
-		}
-		if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued {
-			cc.qjqueue.AddIfNotPresent(qj)
-			return nil
-		}
-		if qj.Status.CanRun && !qj.Status.IsDispatched {
-			if klog.V(10).Enabled() {
-				current_time := time.Now()
-				klog.V(10).Infof("[worker-manageQJ] XQJ %s has Overhead Before Dispatching: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
-				klog.V(10).Infof("[worker-manageQJ] %s, %s: WorkerBeforeDispatch", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
+			if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued {
+				cc.qjqueue.AddIfNotPresent(qj)
+				return nil
 			}
+			if qj.Status.CanRun && !qj.Status.IsDispatched {
+				if klog.V(10).Enabled() {
+					current_time := time.Now()
+					klog.V(10).Infof("[manageQueueJob] [Dispatcher]  XQJ '%s/%s' has Overhead Before Dispatching: %s", qj.Namespace, qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
+					klog.V(10).Infof("[manageQueueJob] [Dispatcher]  '%s/%s', %s: WorkerBeforeDispatch", qj.Namespace, qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
+				}
 
-			queuejobKey, _ := GetQueueJobKey(qj)
-			if cc.isDispatcher {
+				queuejobKey, _ := GetQueueJobKey(qj)
 				if agentId, ok := cc.dispatchMap[queuejobKey]; ok {
-					klog.V(10).Infof("[worker-manageQJ] Dispatched AppWrapper %s to Agent ID: %s.", qj.Name, agentId)
+					klog.V(10).Infof("[manageQueueJob] [Dispatcher]  Dispatched AppWrapper %s to Agent ID: %s.", qj.Name, agentId)
 					cc.agentMap[agentId].CreateJob(qj)
 					qj.Status.IsDispatched = true
 				} else {
-					klog.Errorf("[worker-manageQJ] AppWrapper %s not found in dispatcher mapping.", qj.Name)
+					klog.Errorf("[manageQueueJob] [Dispatcher]  AppWrapper %s not found in dispatcher mapping.", qj.Name)
+				}
+				if klog.V(10).Enabled() {
+					current_time := time.Now()
+					klog.V(10).Infof("[manageQueueJob] [Dispatcher]  XQJ %s has Overhead After Dispatching: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
+					klog.V(10).Infof("[manageQueueJob] [Dispatcher]  %s, %s: WorkerAfterDispatch", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
+				}
+				if retryErr := cc.updateStatusInEtcd(qj, "[manageQueueJob] [Dispatcher]  -- set dispatched true"); retryErr != nil {
+					klog.Errorf("Failed to update status of AppWrapper %s/%s: err=%v",
+						qj.Namespace, qj.Name, retryErr)
+					return retryErr
 				}
 			}
-			if klog.V(10).Enabled() {
-				current_time := time.Now()
-				klog.V(10).Infof("[worker-manageQJ] XQJ %s has Overhead After Dispatching: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
-				klog.V(10).Infof("[worker-manageQJ] %s, %s: WorkerAfterDispatch", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
-			}
-			if err := cc.updateStatusInEtcd(qj, "[worker-manageQJ] -- set dispatched true"); err != nil {
-				klog.Errorf("Failed to update status of AppWrapper %s/%s: %s",
-					qj.Namespace, qj.Name, err)
-				return err
-			}
+			return nil
 		}
-
-	}
+	})
 	return err
 }
 
 // Cleanup function
 func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
-	klog.V(3).Infof("[Cleanup] begin AppWrapper '%s/%s' Version=%s Status=%v", appwrapper.Namespace, appwrapper.Name, appwrapper.ResourceVersion, appwrapper.Status)
-
+	klog.V(3).Infof("[Cleanup] begin AppWrapper '%s/%s' Version=%s", appwrapper.Namespace, appwrapper.Name, appwrapper.ResourceVersion)
+	var err *multierror.Error
 	if !cc.isDispatcher {
 		if appwrapper.Spec.AggrResources.Items != nil {
 			// we call clean-up for each controller
 			for _, ar := range appwrapper.Spec.AggrResources.Items {
 				err00 := cc.qjobResControls[ar.Type].Cleanup(appwrapper, &ar)
-				if err00 != nil {
-					klog.Errorf("[Cleanup] Error deleting item %s from app wrapper='%s/%s' Status=%+v err=%+v.",
-						ar.Type, appwrapper.Namespace, appwrapper.Name, appwrapper.Status, err00)
+				if err00 != nil && !apierrors.IsNotFound(err00) {
+					klog.Errorf("[Cleanup] Error deleting item %s from app wrapper='%s/%s' err=%v.",
+						ar.Type, appwrapper.Namespace, appwrapper.Name, err00)
+					err = multierror.Append(err, err00)
+					continue
 				}
+				klog.V(3).Infof("[Cleanup] Deleted  item from app wrapper='%s/%s'",
+					appwrapper.Namespace, appwrapper.Name)
 			}
 		}
 		if appwrapper.Spec.AggrResources.GenericItems != nil {
 			for _, ar := range appwrapper.Spec.AggrResources.GenericItems {
 				genericResourceName, gvk, err00 := cc.genericresources.Cleanup(appwrapper, &ar)
-				if err00 != nil {
-					klog.Errorf("[Cleanup] Error deleting generic item %s, from app wrapper='%s/%s' Status=%+v err=%+v.",
-						genericResourceName, appwrapper.Namespace, appwrapper.Name, appwrapper.Status, err00)
+				if err00 != nil && !apierrors.IsNotFound(err00) {
+					klog.Errorf("[Cleanup] Error deleting generic item %s, from app wrapper='%s/%s' err=%v.",
+						genericResourceName, appwrapper.Namespace, appwrapper.Name, err00)
+					err = multierror.Append(err, err00)
+					continue
 				}
-				klog.Infof("[Cleanup] Delete generic item %s, GVK=%s.%s.%s from app wrapper=%s Status=%+v",
-					genericResourceName, gvk.Group, gvk.Version, gvk.Kind, appwrapper.Name, appwrapper.Status)
+				klog.V(3).Infof("[Cleanup] Deleted generic item %s, GVK=%s.%s.%s from app wrapper='%s/%s",
+					genericResourceName, gvk.Group, gvk.Version, gvk.Kind, appwrapper.Namespace, appwrapper.Name)
 			}
 		}
 
 	} else {
-		// klog.Infof("[Dispatcher] Cleanup: State=%s\n", appwrapper.Status.State)
-		//if ! appwrapper.Status.CanRun && appwrapper.Status.IsDispatched {
 		if appwrapper.Status.IsDispatched {
 			queuejobKey, _ := GetQueueJobKey(appwrapper)
 			if obj, ok := cc.dispatchMap[queuejobKey]; ok {
@@ -2400,16 +2412,17 @@ func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 	appwrapper.Status.Running = 0
 	appwrapper.Status.Succeeded = 0
 	appwrapper.Status.Failed = 0
-	klog.V(10).Infof("[Cleanup] end AppWrapper '%s/%s' Version=%s Status=%+v", appwrapper.Namespace, appwrapper.Name, appwrapper.ResourceVersion, appwrapper.Status)
+	klog.V(3).Infof("[Cleanup] end AppWrapper '%s/%s' Version=%s", appwrapper.Namespace, appwrapper.Name, appwrapper.ResourceVersion)
 
-	return nil
+	return err.ErrorOrNil()
 }
 func (cc *XController) getAppWrapper(namespace string, name string, caller string) (*arbv1.AppWrapper, error) {
 	klog.V(5).Infof("[getAppWrapper] getting a copy of '%s/%s' when called by '%s'.", namespace, name, caller)
 	apiCacheAWJob, err := cc.queueJobLister.AppWrappers(namespace).Get(name)
-	// apiQueueJob's ControllerFirstTimestamp is only microsecond level instead of nanosecond level
 	if err != nil {
-		klog.Errorf("[getAppWrapper] getting a copy of '%s/%s' failed, when called  by '%s', err=%v", namespace, name, caller, err)
+		if !apierrors.IsNotFound(err) {
+			klog.Errorf("[getAppWrapper] getting a copy of '%s/%s' failed, when called  by '%s', err=%v", namespace, name, caller, err)
+		}
 		return nil, err
 	}
 	klog.V(5).Infof("[getAppWrapper] get a copy of '%s/%s' suceeded when called by '%s'", namespace, name, caller)
@@ -2422,7 +2435,7 @@ type EtcdErrorClassifier struct {
 func (c *EtcdErrorClassifier) Classify(err error) retrier.Action {
 	if err == nil {
 		return retrier.Succeed
-	} else if apiErrors.IsConflict(err) {
+	} else if apierrors.IsConflict(err) {
 		return retrier.Retry
 	} else {
 		return retrier.Fail
