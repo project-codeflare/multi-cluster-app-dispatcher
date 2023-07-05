@@ -471,7 +471,7 @@ func deleteObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 		err = res.Delete(context.Background(), name, delOptions)
 	}
 
-	if err != nil && errors.IsNotFound(err) {
+	if err != nil && !errors.IsNotFound(err) {
 		klog.Errorf("[deleteObject] Error deleting the object `%v`, the error is `%v`.", name, errors.ReasonForError(err))
 		return err
 	} else {

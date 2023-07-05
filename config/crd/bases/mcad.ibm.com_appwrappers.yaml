@@ -833,12 +833,12 @@ spec:
                   (is this different from the MinAvailable from JobStatus)
                 format: int32
                 type: integer
-              number-of-requeueings:
+              numberOfRequeueings:
                 description: Field to keep track of how many times a requeuing event has been triggered
                 format: int32
                 type: integer
                 default: 0
-              requeueing-time-seconds:
+              requeueingTimeInSeconds:
                 description: Field to keep track of total number of seconds spent in requeueing 
                 format: int32
                 type: integer

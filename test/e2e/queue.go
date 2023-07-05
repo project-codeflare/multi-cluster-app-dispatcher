@@ -671,20 +671,13 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createGenericDeploymentAWWithMultipleItems(context, appendRandomString("aw-deployment-2-status"))
 		time.Sleep(1 * time.Minute)
 		err1 := waitAWPodsReady(context, aw)
-		Expect(err1).NotTo(HaveOccurred())
+		Expect(err1).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: aw-deployment-2-status")
 		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
-		if err != nil {
-			fmt.Fprintf(GinkgoWriter, "Error getting status, %v", err)
-		}
-		pass := false
+		Expect(err).NotTo(HaveOccurred(), "Expecting to get app wrapper status")
 		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
-		if aw1.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
-			pass = true
-		}
-		Expect(pass).To(BeTrue())
+		Expect(aw1.Status.State).To(Equal(arbv1.AppWrapperStateRunningHoldCompletion))
 		appwrappers = append(appwrappers, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Deployment RuningHoldCompletion Test - Completed.\n")
-
 	})
 
 	It("MCAD Service no RuningHoldCompletion or Complete Test", func() {

@@ -2258,7 +2258,7 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 					"app": "aw-deployment-2-status"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-status"
+					"appwrapper.mcad.ibm.com/appwrapper-name": "` + name + `"
 				}
 			},
 			"spec": {
@@ -2299,7 +2299,7 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 				"app": "aw-deployment-3-status"
 			},
 			"annotations": {
-				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-3-status"
+				"appwrapper.mcad.ibm.com/appwrapper-name": "` + name + `"
 			}
 		},
 		"spec": {

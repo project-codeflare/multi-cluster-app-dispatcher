@@ -1222,10 +1222,10 @@ func (qjm *XController) ScheduleNext() {
 		qj.Status.FilterIgnore = true // update QueueJobState only
 		retryErr = qjm.updateStatusInEtcd(qj, "ScheduleNext - setHOL")
 		if retryErr != nil {
-			if apierrors.IsConflict(err) {
+			if apierrors.IsConflict(retryErr) {
 				klog.Warningf("[ScheduleNext] Conflict error detected when updating status in etcd for app wrapper '%s/%s, status = %+v. Retrying update.", qj.Namespace, qj.Name, qj.Status)
 			} else {
-				klog.Errorf("[ScheduleNext] Failed to updated status in etcd for app wrapper '%s/%s', status = %+v, err=%v", qj.Namespace, qj.Name, qj.Status, err)
+				klog.Errorf("[ScheduleNext] Failed to updated status in etcd for app wrapper '%s/%s', status = %+v, err=%v", qj.Namespace, qj.Name, qj.Status, retryErr)
 			}
 			return retryErr
 		}
@@ -1908,7 +1908,7 @@ func (cc *XController) worker() {
 func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 	// validate that app wraper has not been marked for deletion by the infomer's delete handler
 	if qj.DeletionTimestamp != nil {
-		klog.Infof("[syncQueueJob] AW job=%s/%s set for deletion.", qj.Name, qj.Namespace)
+		klog.V(3).Infof("[syncQueueJob] AW job=%s/%s set for deletion.", qj.Namespace, qj.Name)
 		// cleanup resources for running job, ignoring errors
 		if err00 := cc.Cleanup(qj); err00 != nil {
 			klog.Warningf("Failed to cleanup resources for app wrapper '%s/%s', err = %v", qj.Namespace, qj.Name, err00)
@@ -1919,7 +1919,7 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 		}
 		// we delete the job from the queue if it is there, ignoring errors
 		cc.qjqueue.Delete(qj)
-		klog.Infof("[syncQueueJob] AW job=%s/%s deleted.", qj.Name, qj.Namespace)
+		klog.V(3).Infof("[syncQueueJob] AW job=%s/%s deleted.", qj.Namespace, qj.Name)
 		return nil
 	}
 	cacheAWJob, err := cc.getAppWrapper(qj.Namespace, qj.Name, "[syncQueueJob] get fresh appwrapper ")
@@ -1962,19 +1962,25 @@ func (cc *XController) syncQueueJob(qj *arbv1.AppWrapper) error {
 
 			// Update etcd conditions if AppWrapper Job has at least 1 running pod and transitioning from dispatched to running.
 			if (awNew.Status.QueueJobState != arbv1.AppWrapperCondRunning) && (awNew.Status.Running > 0) {
-				awNew.Status.QueueJobState = arbv1.AppWrapperCondRunning
-				cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunning, v1.ConditionTrue, "PodsRunning", "")
-				awNew.Status.Conditions = append(awNew.Status.Conditions, cond)
-				awNew.Status.FilterIgnore = true // Update AppWrapperCondRunning
-				err := cc.updateStatusInEtcd(awNew, "[syncQueueJob] Update pod counts")
-				if err != nil {
-					if apierrors.IsConflict(err) {
-						klog.Warningf("[syncQueueJob] Conflict detected when updating pod status counts for AppWrapper: '%s/%s'. Retrying", qj.Namespace, qj.Name)
-					} else {
-						klog.Warningf("[syncQueueJob] Error updating pod status counts for AppWrapper job: '%s/%s', err=%+v.", qj.Namespace, qj.Name, err)
+				syncQueueJob := retrier.New(retrier.ExponentialBackoff(10, 100*time.Millisecond), &EtcdErrorClassifier{})
+				syncQueueJob.SetJitter(0.05)
+				err := syncQueueJob.Run(func() error {
+					awNew.Status.QueueJobState = arbv1.AppWrapperCondRunning
+					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondRunning, v1.ConditionTrue, "PodsRunning", "")
+					awNew.Status.Conditions = append(awNew.Status.Conditions, cond)
+					awNew.Status.FilterIgnore = true // Update AppWrapperCondRunning
+					retryErr := cc.updateStatusInEtcd(awNew, "[syncQueueJob] Update pod counts")
+					if retryErr != nil {
+						if apierrors.IsConflict(retryErr) {
+							klog.Warningf("[syncQueueJob] Conflict detected when updating pod status counts for AppWrapper: '%s/%s'. Retrying", qj.Namespace, qj.Name)
+						} else {
+							klog.Warningf("[syncQueueJob] Error updating pod status counts for AppWrapper job: '%s/%s', err=%+v.", qj.Namespace, qj.Name, retryErr)
+						}
+						return retryErr
 					}
-					return err
-				}
+					return nil
+				})
+				return err
 			}
 
 			//For debugging?
@@ -2001,9 +2007,9 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 	defer func() {
 		klog.V(10).Infof("[manageQueueJob] Ending %s manageQJ time=%s &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(startTime), qj, qj.ResourceVersion, qj.Status)
 	}()
-	preemptRetrier := retrier.New(retrier.ExponentialBackoff(10, 100*time.Millisecond), &EtcdErrorClassifier{})
-	preemptRetrier.SetJitter(0.05)
-	err := preemptRetrier.Run(func() error {
+	manageQueueJobRetrier := retrier.New(retrier.ExponentialBackoff(10, 100*time.Millisecond), &EtcdErrorClassifier{})
+	manageQueueJobRetrier.SetJitter(0.05)
+	err := manageQueueJobRetrier.Run(func() error {
 		cacheAWJob, retryErr := cc.getAppWrapper(qj.Namespace, qj.Name, "[manageQueueJob] get fresh appwrapper ")
 		if retryErr != nil {
 			// Implicit detection of deletion

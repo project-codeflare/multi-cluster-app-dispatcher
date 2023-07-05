@@ -246,7 +246,7 @@ type AppWrapperStatus struct {
 	// Microsecond level timestamp when controller first sees QueueJob (by Informer)
 	ControllerFirstTimestamp metav1.MicroTime `json:"controllerfirsttimestamp,omitempty"`
 
-	// Microsecond level timestamp when controller first sets appwrapper in state Running
+	// Microsecond level timestamp when controller first dispatches appwrapper
 	ControllerFirstDispatchTimestamp metav1.MicroTime `json:"controllerfirstdispatchtimestamp,omitempty"`
 
 	// Tell Informer to ignore this update message (do not generate a controller event)
@@ -264,17 +264,20 @@ type AppWrapperStatus struct {
 	// Represents the latest available observations of pods under appwrapper
 	PendingPodConditions []PendingPodSpec `json:"pendingpodconditions"`
 
-	//Resources consumed
-
+	// Represents the number of cpu consumed by all pods belonging to an appwrapper.
 	TotalCPU float64 `json:"totalcpu,omitempty"`
 
+	// Represents the amount of memory consumed by all pods belonging to an appwrapper.
 	TotalMemory float64 `json:"totalmemory,omitempty"`
 
+	// Represents the total number of GPUs consumed by all pods belonging to an appwrapper.
 	TotalGPU int64 `json:"totalgpu,omitempty"`
 
-	// Re-queueing state fields
-	RequeueingTimeInSeconds int `json:"requeueing-time-seconds,omitempty"`
-	NumberOfRequeueings     int `json:"number-of-requeueings,omitempty"`
+	// Field to keep track of total number of seconds spent in requeueing
+	RequeueingTimeInSeconds int `json:"requeueingTimeInSeconds,omitempty"`
+
+	// Field to keep track of how many times a requeuing event has been triggered
+	NumberOfRequeueings int `json:"numberOfRequeueings,omitempty"`
 }
 
 type AppWrapperState string
