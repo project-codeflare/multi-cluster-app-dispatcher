@@ -1,19 +1,4 @@
 /*
-Copyright 2014 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
 Copyright 2019, 2021 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,20 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package queuejobresources
 
 import (
 	"sync"
 
-	qjobv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
+
+	qjobv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 )
 
 // Factory is a function that returns an Interface for queue job resources.
 type Factory func(config *rest.Config) Interface
 
-//RegisteredResources : registered resources
+// RegisteredResources : registered resources
 type RegisteredResources struct {
 	lock     sync.Mutex
 	registry map[qjobv1.ResourceType]Factory
@@ -77,8 +64,8 @@ func (rres *RegisteredResources) Register(t qjobv1.ResourceType, factory Factory
 
 }
 
-// InitQueueJobResource creates an instance of the type queue job resource.  It returns
-//`false` if the type is not known.
+// InitQueueJobResource creates an instance of the type queue job resource.
+// It returns `false` if the type is not known.
 func (rres *RegisteredResources) InitQueueJobResource(t qjobv1.ResourceType,
 	config *rest.Config) (Interface, bool, error) {
 	rres.lock.Lock()

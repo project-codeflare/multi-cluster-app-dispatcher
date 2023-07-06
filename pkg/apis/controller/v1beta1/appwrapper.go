@@ -42,8 +42,8 @@ const AppWrapperPlural string = "appwrappers"
 // which AppWrapper it belongs to.
 const AppWrapperAnnotationKey = "appwrapper.mcad.ibm.com/appwrapper-name"
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // Definition of AppWrapper class
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -54,7 +54,7 @@ type AppWrapper struct {
 	Status            AppWrapperStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // AppWrapperList is a collection of AppWrappers.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -90,8 +90,6 @@ type AppWrapperResourceList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	// +optional
-	Items []AppWrapperResource `json:"Items"`
-	// +optional
 	GenericItems []AppWrapperGenericResource `json:"GenericItems"`
 }
 
@@ -100,42 +98,7 @@ type AppWrapperService struct {
 	Spec v1.ServiceSpec `json:"spec"`
 }
 
-// AppWrapperResource is App Wrapper aggregation resource
-// todo: To be depricated
-type AppWrapperResource struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata"`
-	// Replicas is the number of desired replicas
-	Replicas int32 `json:"replicas,omitempty" protobuf:"bytes,2,opt,name=replicas"`
-
-	// The minimal available pods to run for this AppWrapper; the default value is nil
-	MinAvailable *int32 `json:"minavailable,omitempty" protobuf:"bytes,3,opt,name=minavailable"`
-
-	// The number of allocated replicas from this resource type
-	// +optional
-	AllocatedReplicas int32 `json:"allocatedreplicas"`
-
-	// +kubebuilder:validation:Type=number
-	// +kubebuilder:validation:Format=float
-	// +optional
-	Priority float64 `json:"priority,omitempty"`
-
-	// The increasing rate of priority value for this resource
-	// +kubebuilder:validation:Type=number
-	// +kubebuilder:validation:Format=float
-	PrioritySlope float64 `json:"priorityslope"`
-
-	//The type of the resource (is the resource a Pod, a ReplicaSet, a ... ?)
-	// +optional
-	Type ResourceType `json:"type"`
-
-	//The template for the resource; it is now a raw text because we don't know for what resource
-	//it should be instantiated
-	// +kubebuilder:pruning:PreserveUnknownFields
-	Template runtime.RawExtension `json:"template"`
-}
-
-// AppWrapperResource is App Wrapper aggregation resource
+// AppWrapperGenericResource is App Wrapper aggregation resource
 type AppWrapperGenericResource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -161,25 +124,25 @@ type AppWrapperGenericResource struct {
 	// +kubebuilder:validation:Format=float
 	PrioritySlope float64 `json:"priorityslope"`
 
-	//The template for the resource; it is now a raw text because we don't know for what resource
-	//it should be instantiated
+	// The template for the resource; it is now a raw text because we don't know for what resource
+	// it should be instantiated
 	// +optional
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:EmbeddedResource
 	GenericTemplate runtime.RawExtension `json:"generictemplate"`
 
-	//Optional section that specifies resource requirements for non-standard k8s resources, follows same format as that
+	// Optional section that specifies resource requirements for non-standard k8s resources, follows same format as that
 	// of standard k8s resources
 	CustomPodResources []CustomPodResourceTemplate `json:"custompodresources,omitempty"`
 
-	//Optional field for users to determine completion status of item
+	// Optional field for users to determine completion status of item
 	CompletionStatus string `json:"completionstatus,omitempty"`
 }
 
 type CustomPodResourceTemplate struct {
 	Replicas int `json:"replicas"`
-	//todo: replace with
-	//Containers []Container Contain v1.ResourceRequirements
+	// todo: replace with
+	// Containers []Container Contain v1.ResourceRequirements
 	Requests v1.ResourceList `json:"requests"`
 
 	// +optional
@@ -190,17 +153,7 @@ type CustomPodResourceTemplate struct {
 type ResourceType string
 
 const (
-	ResourceTypePod                   ResourceType = "Pod"
-	ResourceTypeService               ResourceType = "Service"
-	ResourceTypeSecret                ResourceType = "Secret"
-	ResourceTypeStatefulSet           ResourceType = "StatefulSet"
-	ResourceTypeDeployment            ResourceType = "Deployment"
-	ResourceTypeReplicaSet            ResourceType = "ReplicaSet"
-	ResourceTypePersistentVolume      ResourceType = "PersistentVolume"
-	ResourceTypePersistentVolumeClaim ResourceType = "PersistentVolumeClaim"
-	ResourceTypeNamespace             ResourceType = "Namespace"
-	ResourceTypeConfigMap             ResourceType = "ConfigMap"
-	ResourceTypeNetworkPolicy         ResourceType = "NetworkPolicy"
+	ResourceTypePod ResourceType = "Pod"
 )
 
 // AppWrapperStatus represents the current state of a AppWrapper
@@ -224,13 +177,13 @@ type AppWrapperStatus struct {
 	// +optional
 	MinAvailable int32 `json:"template,omitempty" protobuf:"bytes,4,opt,name=template"`
 
-	//Can run?
+	// Can run?
 	CanRun bool `json:"canrun,omitempty" protobuf:"bytes,1,opt,name=canrun"`
 
-	//Is Dispatched?
+	// Is Dispatched?
 	IsDispatched bool `json:"isdispatched,omitempty" protobuf:"bytes,1,opt,name=isdispatched"`
 
-	//State - Pending, Running, Failed, Deleted
+	// State - Pending, Running, Failed, Deleted
 	State AppWrapperState `json:"state,omitempty"`
 
 	Message string `json:"message,omitempty"`
