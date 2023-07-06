@@ -115,11 +115,10 @@ ifeq ($(strip $(git_repository_id)),main)
 	docker tag mcad-controller:${TAG}  ${quay_repository}/mcad-controller:latest
 	docker push ${quay_repository}/mcad-controller:latest
 endif
-ifeq ($(filter release-v%,$(TAG)),)
+ifneq ($(TAG:release-v%=%),$(TAG))
 	$(info Update the `stable` tag to point `latest` release image)
-	STABLE_TAG:= stable
-	docker tag mcad-controller:latest ${quay_repository}/mcad-controller:$(STABLE_TAG)
-	docker push ${quay_repository}/mcad-controller:$(STABLE_TAG)
+	docker tag mcad-controller:${TAG} ${quay_repository}/mcad-controller:stable
+	docker push ${quay_repository}/mcad-controller:stable
 endif
 endif
 
