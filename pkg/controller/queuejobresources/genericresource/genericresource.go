@@ -310,6 +310,9 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 			}
 		}
 	}
+	//force nil so that Go can GC
+	unstruct.Object = nil
+	gvk = nil
 
 	// Get the related resources of created object
 	var thisObj *unstructured.Unstructured
@@ -375,7 +378,11 @@ func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map
 		klog.Warning(err)
 		return false
 	}
-
+	//force nil so that Go can GC
+	m = nil
+	spec = nil
+	template = nil
+	marshal = nil
 	return isFound
 }
 
@@ -488,18 +495,22 @@ func GetListOfPodResourcesFromOneGenericItem(awr *arbv1.AppWrapperGenericResourc
 	podTotalresource := clusterstateapi.EmptyResource()
 	var err error
 	err = nil
+	var replicasFromCustomPodResources int
 	if awr.GenericTemplate.Raw != nil {
-		hasContainer, replicas, containers := hasFields(awr.GenericTemplate)
+		//Turning off logic to extract resource requirements from containers.
+		//hasContainer, replicas, containers := hasFields(awr.GenericTemplate)
+		hasContainer := false
 		if hasContainer {
 			// Add up all the containers in a pod
-			for _, container := range containers {
-				res := getContainerResources(container, 1)
-				podTotalresource = podTotalresource.Add(res)
-			}
+			// for _, container := range containers {
+			// 	res := getContainerResources(container, 1)
+			// 	podTotalresource = podTotalresource.Add(res)
+			// }
 			klog.V(8).Infof("[GetListOfPodResourcesFromOneGenericItem] Requested total pod allocation resource from containers `%v`.\n", podTotalresource)
 		} else {
 			podresources := awr.CustomPodResources
 			for _, item := range podresources {
+				replicasFromCustomPodResources += item.Replicas
 				res := getPodResources(item)
 				podTotalresource = podTotalresource.Add(res)
 			}
@@ -507,7 +518,7 @@ func GetListOfPodResourcesFromOneGenericItem(awr *arbv1.AppWrapperGenericResourc
 		}
 
 		// Addd individual pods to results
-		var replicaCount int = int(replicas)
+		var replicaCount int = replicasFromCustomPodResources
 		for i := 0; i < replicaCount; i++ {
 			podResourcesList = append(podResourcesList, podTotalresource)
 		}
@@ -617,6 +628,8 @@ func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResourc
 		klog.Errorf("[IsItemCompleted] mapping error from raw object: `%v`", err)
 		return false
 	}
+	//Force nil for go GC
+	gvk = nil
 	restconfig := gr.kubeClientConfig
 	restconfig.GroupVersion = &schema.GroupVersion{
 		Group:   mapping.GroupVersionKind.Group,
