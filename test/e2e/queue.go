@@ -661,14 +661,15 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).To(HaveOccurred(), "No pods for app wrapper `aw-deployment-2-426cpu` are expected.")
 	})
 
-	It("MCAD Deployment RuningHoldCompletion Test", func() {
-		fmt.Fprintf(os.Stdout, "[e2e] MCAD Deployment RuningHoldCompletion Test - Started.\n")
+	It("MCAD Deployment RunningHoldCompletion Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Deployment RunningHoldCompletion Test - Started.\n")
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
 		appwrappersPtr := &appwrappers
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		aw := createGenericDeploymentAWWithMultipleItems(context, appendRandomString("aw-deployment-2-status"))
+		appwrappers = append(appwrappers, aw)
 		time.Sleep(1 * time.Minute)
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: aw-deployment-2-status")
@@ -676,12 +677,11 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred(), "Expecting to get app wrapper status")
 		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
 		Expect(aw1.Status.State).To(Equal(arbv1.AppWrapperStateRunningHoldCompletion))
-		appwrappers = append(appwrappers, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Deployment RuningHoldCompletion Test - Completed.\n")
 	})
 
-	It("MCAD Service no RuningHoldCompletion or Complete Test", func() {
-		fmt.Fprintf(os.Stdout, "[e2e] MCAD Service no RuningHoldCompletion or Complete Test - Started.\n")
+	It("MCAD Service no RunningHoldCompletion or Complete Test", func() {
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Service no RunningHoldCompletion or Complete Test - Started.\n")
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
 		appwrappersPtr := &appwrappers

@@ -2237,25 +2237,78 @@ func createGenericServiceAWWithNoStatus(context *context, name string) *arbv1.Ap
 
 func createGenericDeploymentAWWithMultipleItems(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "apps/v1",
-		"kind": "Deployment", 
+		"kind": "Deployment",
+		"metadata": {
+			"name": "` + name + `-deployment-1",
+			"namespace": "test",
+			"labels": {
+				"app": "` + name + `-deployment-1"
+			}
+		},
+		"spec": {
+			"replicas": 1,
+			"selector": {
+				"matchLabels": {
+					"app": "` + name + `-deployment-1"
+				}
+			},
+			"template": {
+				"metadata": {
+					"labels": {
+						"app": "` + name + `-deployment-1"
+					},
+					"annotations": {
+						"appwrapper.mcad.ibm.com/appwrapper-name": "` + name + `"
+					}
+				},
+				"spec": {
+					"initContainers": [
+						{
+							"name": "job-init-container",
+							"image": "k8s.gcr.io/busybox:latest",
+							"command": ["sleep", "200"],
+							"resources": {
+								"requests": {
+									"cpu": "500m"
+								}
+							}
+						}
+					],
+					"containers": [
+						{
+							"name": "` + name + `-deployment-1",
+							"image": "kicbase/echo-server:1.0",
+							"ports": [
+								{
+									"containerPort": 80
+								}
+							]
+						}
+					]
+				}
+			}
+		}} `)
+	rb1 := []byte(`{"apiVersion": "apps/v1",
+	"kind": "Deployment",
 	"metadata": {
-		"name": "aw-deployment-2-status",
+		"name": "` + name + `-deployment-2",
 		"namespace": "test",
 		"labels": {
-			"app": "aw-deployment-2-status"
+			"app": "` + name + `-deployment-2"
 		}
 	},
+
 	"spec": {
 		"replicas": 1,
 		"selector": {
 			"matchLabels": {
-				"app": "aw-deployment-2-status"
+				"app": "` + name + `-deployment-2"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "aw-deployment-2-status"
+					"app": "` + name + `-deployment-2"
 				},
 				"annotations": {
 					"appwrapper.mcad.ibm.com/appwrapper-name": "` + name + `"
@@ -2264,7 +2317,7 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 			"spec": {
 				"containers": [
 					{
-						"name": "aw-deployment-2-status",
+						"name": "` + name + `-deployment-2",
 						"image": "kicbase/echo-server:1.0",
 						"ports": [
 							{
@@ -2276,47 +2329,6 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 			}
 		}
 	}} `)
-
-	rb1 := []byte(`{"apiVersion": "apps/v1",
-	"kind": "Deployment", 
-"metadata": {
-	"name": "aw-deployment-3-status",
-	"namespace": "test",
-	"labels": {
-		"app": "aw-deployment-3-status"
-	}
-},
-"spec": {
-	"replicas": 1,
-	"selector": {
-		"matchLabels": {
-			"app": "aw-deployment-3-status"
-		}
-	},
-	"template": {
-		"metadata": {
-			"labels": {
-				"app": "aw-deployment-3-status"
-			},
-			"annotations": {
-				"appwrapper.mcad.ibm.com/appwrapper-name": "` + name + `"
-			}
-		},
-		"spec": {
-			"containers": [
-				{
-					"name": "aw-deployment-3-status",
-					"image": "kicbase/echo-server:1.0",
-					"ports": [
-						{
-							"containerPort": 80
-						}
-					]
-				}
-			]
-		}
-	}
-}} `)
 
 	var schedSpecMin int = 1
 
@@ -2333,7 +2345,7 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-%s", name, "aw-deployment-2-status"),
+							Name:      fmt.Sprintf("%s-%s", name, "deployment-1"),
 							Namespace: "test",
 						},
 						DesiredAvailable: 1,
@@ -2344,7 +2356,7 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 					},
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-%s", name, "aw-deployment-3-status"),
+							Name:      fmt.Sprintf("%s-%s", name, "deployment-2"),
 							Namespace: "test",
 						},
 						DesiredAvailable: 1,
