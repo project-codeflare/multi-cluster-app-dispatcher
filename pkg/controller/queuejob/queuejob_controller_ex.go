@@ -702,12 +702,11 @@ func (qjm *XController) getDispatchedAppWrappers() (map[string]*clusterstateapi.
 	return awrRetVal, awsRetVal
 }
 
-func (qjm *XController) addTotalSnapshotResourcesConsumedByAw(totalgpu int64, totalcpu float64, totalmemory float64) *clusterstateapi.Resource {
-
+func (qjm *XController) addTotalSnapshotResourcesConsumedByAw(totalgpu int32, totalcpu int32, totalmemory int32) *clusterstateapi.Resource {
 	totalResource := clusterstateapi.EmptyResource()
-	totalResource.GPU = totalgpu
-	totalResource.MilliCPU = totalcpu
-	totalResource.Memory = totalmemory
+	totalResource.GPU = int64(totalgpu)
+	totalResource.MilliCPU = float64(totalcpu)
+	totalResource.Memory = float64(totalmemory)
 
 	return totalResource
 

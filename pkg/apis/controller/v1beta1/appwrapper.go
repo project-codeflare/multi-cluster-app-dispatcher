@@ -212,13 +212,13 @@ type AppWrapperStatus struct {
 	// Resources consumed
 
 	// The number of CPU consumed by all pods belonging to the AppWrapper.
-	TotalCPU float64 `json:"totalcpu,omitempty"`
+	TotalCPU int32 `json:"totalcpu,omitempty"`
 
 	// The amount of memory consumed by all pods belonging to the AppWrapper.
-	TotalMemory float64 `json:"totalmemory,omitempty"`
+	TotalMemory int32 `json:"totalmemory,omitempty"`
 
 	// The total number of GPUs consumed by all pods belonging to the AppWrapper.
-	TotalGPU int64 `json:"totalgpu,omitempty"`
+	TotalGPU int32 `json:"totalgpu,omitempty"`
 
 	// Field to keep track of total number of seconds spent in requeueing
 	RequeueingTimeInSeconds int `json:"requeueingTimeInSeconds,omitempty"`
