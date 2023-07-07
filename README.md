@@ -20,13 +20,11 @@ Refer to [deployment instructions here](./doc/deploy/deployment.md) on how to de
 1. Run the [mcad-release.yml](https://github.com/project-codeflare/actions/workflows/mcad-release.yml) action under `Actions` by entering the new release version in the `Release tag` input field and click `Run workflow`.
    ![mcad-release](doc/images/mcad-release.png)
 
-2. Verify that [mcad-release.yml](https://github.com/project-codeflare/actions/workflows/mcad-release.yml) action passed successfully. This workflow will create GitHub release tag.
+2. Verify that [mcad-release.yml](https://github.com/project-codeflare/actions/workflows/mcad-release.yml) action passed successfully. The workflow will Build and push the image to [mcad-controller quay repository](https://quay.io/repository/project-codeflare/mcad-controller?tab=tags) with specified release version tag and create GitHub release tag.
 
-3. The release tag then trigger the [image build/push pipeline](https://app.travis-ci.com/github/project-codeflare/multi-cluster-app-dispatcher/branches) and push the image to [mcad-controller quay repository](https://quay.io/repository/project-codeflare/mcad-controller?tab=tags) with specified release version tag.
+3. Verify a new release is created on the [Releases page](https://github.com/project-codeflare/multi-cluster-app-dispatcher/releases).
 
-4. Verify a new release is created on the [Releases page](https://github.com/project-codeflare/multi-cluster-app-dispatcher/releases) .
-
-5. The latest release changes should also reflect in the [mcad go package module](https://pkg.go.dev/github.com/project-codeflare/multi-cluster-app-dispatcher).
+4. The latest release changes should also reflect in the [mcad go package module](https://pkg.go.dev/github.com/project-codeflare/multi-cluster-app-dispatcher).
 
 ## Tutorial
 
