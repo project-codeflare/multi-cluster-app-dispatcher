@@ -1596,7 +1596,7 @@ func (cc *XController) Run(stopCh chan struct{}) {
 	cc.cache.Run(stopCh)
 
 	// go wait.Until(cc.ScheduleNext, 2*time.Second, stopCh)
-	go wait.Until(cc.ScheduleNext, 2*time.Second, stopCh)
+	go wait.Until(cc.ScheduleNext, 0, stopCh)
 	// start preempt thread based on preemption of pods
 
 	// TODO - scheduleNext...Job....
