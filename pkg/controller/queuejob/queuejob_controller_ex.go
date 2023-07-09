@@ -936,11 +936,6 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 				klog.Warningf("[getAggAvaiResPri] Error updating pod status counts for AppWrapper job: %s, err=%+v", value.Name, err)
 			}
 
-			updateErr := qjm.updateStatusInEtcd(value, "getAggAvaiResPri")
-			if updateErr != nil {
-				klog.Warningf("[getAggAvaiResPri] Error updating pod status counts for AppWrapper in etcd: %s, err=%+v", value.Name, updateErr)
-			}
-
 			totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
 			klog.V(10).Infof("[getAggAvaiResPri] total resources consumed by Appwrapper %v when lower priority compared to target are %v", value.Name, totalResource)
 			preemptable = preemptable.Add(totalResource)
@@ -969,10 +964,6 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 			err := qjm.qjobResControls[arbv1.ResourceTypePod].UpdateQueueJobStatus(value)
 			if err != nil {
 				klog.Warningf("[getAggAvaiResPri] Error updating pod status counts for AppWrapper job: %s, err=%+v", value.Name, err)
-			}
-			updateErr := qjm.updateStatusInEtcd(value, "getAggAvaiResPri")
-			if updateErr != nil {
-				klog.Warningf("[getAggAvaiResPri] Error updating pod status counts for AppWrapper in etcd: %s, err=%+v", value.Name, updateErr)
 			}
 
 			totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
