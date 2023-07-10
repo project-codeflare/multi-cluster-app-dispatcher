@@ -932,9 +932,11 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 			klog.V(11).Infof("[getAggAvaiResPri] %s: Skipping adjustments for %s since it is the job being processed.", time.Now().String(), value.Name)
 			continue
 		} else if !value.Status.CanRun {
-			totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
-			klog.V(6).Infof("[getAggAvaiResPri] %s: AW %s cannot run, adding any dangling pod resources %v while it being preempted.", time.Now().String(), value.Name, totalResource)
-			preemptable = preemptable.Add(totalResource)
+			// canRun is false when AW completes or it is preempted
+			// when preempted AW is cleanedup and resources will be released by preempt thread
+			// when AW is completed cluster state will reflect available resources
+			// in both cases we do not account for resources.
+			klog.V(6).Infof("[getAggAvaiResPri] %s: AW %s cannot run, so not accounting resoources", time.Now().String(), value.Name)
 			continue
 		} else if value.Status.SystemPriority < targetpr {
 			// Dispatcher Mode: Ensure this job is part of the target cluster
@@ -957,7 +959,13 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 				klog.V(10).Infof("[getAggAvaiResPri] %s: Added %s to candidate preemptable job with priority %f.", time.Now().String(), value.Name, value.Status.SystemPriority)
 			}
 
+			err := qjm.qjobResControls[arbv1.ResourceTypePod].UpdateQueueJobStatus(value)
+			if err != nil {
+				klog.Warningf("[getAggAvaiResPri] Error updating pod status counts for AppWrapper job: %s, err=%+v", value.Name, err)
+			}
+
 			totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
+			klog.V(10).Infof("[getAggAvaiResPri] total resources consumed by Appwrapper %v when lower priority compared to target are %v", value.Name, totalResource)
 			preemptable = preemptable.Add(totalResource)
 			klog.V(6).Infof("[getAggAvaiResPri] %s proirity %v is lower target priority %v reclaiming total preemptable resources %v", value.Name, value.Status.SystemPriority, targetpr, totalResource)
 			continue
@@ -981,13 +989,19 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 				klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in genericItem=%T for job %s which can-run is set to: %v but state is still pending.", qjv, genericItem, value.Name, value.Status.CanRun)
 			}
 
+			err := qjm.qjobResControls[arbv1.ResourceTypePod].UpdateQueueJobStatus(value)
+			if err != nil {
+				klog.Warningf("[getAggAvaiResPri] Error updating pod status counts for AppWrapper job: %s, err=%+v", value.Name, err)
+			}
+
 			totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
-			delta, err := qjv.NonNegSub(totalResource)
+			klog.V(6).Infof("[getAggAvaiResPri] total resources consumed by Appwrapper %v when CanRun are %v", value.Name, totalResource)
+			pending, err = qjv.NonNegSub(totalResource)
 			if err != nil {
 				klog.Warningf("[getAggAvaiResPri] Subtraction of resources failed, adding entire appwrapper resoources %v, %v", qjv, err)
 				pending = qjv
 			}
-			pending = pending.Add(delta)
+			klog.V(6).Infof("[getAggAvaiResPri] The value of pending is %v", pending)
 			continue
 		}
 	}
@@ -1613,7 +1627,7 @@ func (cc *XController) Run(stopCh chan struct{}) {
 	cc.cache.Run(stopCh)
 
 	// go wait.Until(cc.ScheduleNext, 2*time.Second, stopCh)
-	go wait.Until(cc.ScheduleNext, 0, stopCh)
+	go wait.Until(cc.ScheduleNext, 2*time.Second, stopCh)
 	// start preempt thread based on preemption of pods
 
 	// TODO - scheduleNext...Job....

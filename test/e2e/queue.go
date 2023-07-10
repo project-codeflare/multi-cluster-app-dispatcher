@@ -105,6 +105,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// Using quite mode due to creating of pods in earlier step.
 		err = waitAWReadyQuiet(context, aw2)
+		fmt.Fprintf(os.Stdout, "The error is %v", err)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -119,7 +120,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
-
+		time.Sleep(2 * time.Minute)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -137,6 +138,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// Since preemption takes some time, increasing timeout wait time to 2 minutes
 		err = waitAWPodsExists(context, aw3, 120000*time.Millisecond)
+		fmt.Fprintf(os.Stdout, "[e2e] The error is %v", err)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -426,7 +428,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
-
+		time.Sleep(1 * time.Minute)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred(), "Expecting pods for app wrapper: aw-deployment-2-550cpu")
 
@@ -499,6 +501,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
+		time.Sleep(1 * time.Minute)
 
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred(), "Waiting for pods to be ready for app wrapper: aw-deployment-2-550cpu")
@@ -508,7 +511,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			context, appendRandomString("aw-deployment-2-427-vs-425-cpu"), "427m", "425m", 2, 60)
 
 		appwrappers = append(appwrappers, aw2)
-
+		time.Sleep(1 * time.Minute)
 		err = waitAWAnyPodsExists(context, aw2)
 		Expect(err).To(HaveOccurred(), "Waiting for no pods to exist for app wrapper: aw-deployment-2-427-vs-425-cpu")
 
@@ -649,7 +652,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
-
+		time.Sleep(1 * time.Minute)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred(), "Waiting for pods to be ready for app wrapper: aw-deployment-2-550cpu")
 

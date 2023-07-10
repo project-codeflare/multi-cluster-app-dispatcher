@@ -9,7 +9,6 @@ COPY go.sum go.sum
 COPY cmd cmd
 COPY pkg pkg
 COPY hack hack
-COPY CONTROLLER_VERSION CONTROLLER_VERSION
 
 RUN cd /workdir && curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/$(go env GOARCH)/kubectl && chmod +x kubectl
 ENV GO_BUILD_ARGS=$GO_BUILD_ARGS
