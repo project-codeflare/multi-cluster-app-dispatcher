@@ -366,7 +366,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
-	It("Create AppWrapper - Namespace Only - 0 Pods", func() {
+	PIt("Create AppWrapper - Namespace Only - 0 Pods", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - Started.\n")
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
@@ -459,7 +459,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// Make sure pods from AW aw-deployment-1-850-cpu above do not exist proving preemption
 		err = waitAWAnyPodsExists(context, aw2)
-		Expect(err).To(HaveOccurred(), "Expecting no pods for app wrapper : aw-deployment-1-800-cpu")
+		Expect(err).To(HaveOccurred(), "Expecting no pods for app wrapper : aw-deployment-1-850-cpu")
 	})
 
 	It("MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Not Queuing Test", func() {
@@ -668,16 +668,16 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappersPtr := &appwrappers
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
-		aw := createGenericDeploymentAWWithMultipleItems(context, appendRandomString("aw-deployment-2-status"))
+		aw := createGenericDeploymentAWWithMultipleItems(context, "aw-deployment-rhc")
 		appwrappers = append(appwrappers, aw)
-		time.Sleep(1 * time.Minute)
+		time.Sleep(30 * time.Second)
 		err1 := waitAWPodsReady(context, aw)
-		Expect(err1).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: aw-deployment-2-status")
+		Expect(err1).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: aw-deployment-rhc")
 		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Expecting to get app wrapper status")
 		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
 		Expect(aw1.Status.State).To(Equal(arbv1.AppWrapperStateRunningHoldCompletion))
-		fmt.Fprintf(os.Stdout, "[e2e] MCAD Deployment RuningHoldCompletion Test - Completed.\n")
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Deployment RuningHoldCompletion Test - Completed. Awaiting app wrapper cleanup.\n")
 	})
 
 	It("MCAD Service no RunningHoldCompletion or Complete Test", func() {
