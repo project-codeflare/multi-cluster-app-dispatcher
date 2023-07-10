@@ -1,8 +1,16 @@
 approvers:
-  - animeshsingh
-  - dmatch01
-  - scostache
+  - anishasthana
+  - asm582
+  - astefanutti
+  - metalcycling 
+  - z103cb
 reviewers:
-  - animeshsingh
+  - anishasthana
+  - asm582
+  - astefanutti
+  - dimakis
   - dmatch01
-  - scostache
+  - KPostOffice
+  - metalcycling 
+  - tardieu
+  - z103cb
