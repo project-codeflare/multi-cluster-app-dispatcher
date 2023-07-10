@@ -1,7 +1,6 @@
 BIN_DIR=_output/bin
 CAT_CMD=$(if $(filter $(OS),Windows_NT),type,cat)
-VERSION_FILE=./CONTROLLER_VERSION
-RELEASE_VER=v$(shell $(CAT_CMD) $(VERSION_FILE))
+RELEASE_VER:=
 CURRENT_DIR=$(shell pwd)
 GIT_BRANCH:=$(shell git symbolic-ref --short HEAD 2>&1 | grep -v fatal)
 #define the GO_BUILD_ARGS if you need to pass additional arguments to the go build
@@ -18,19 +17,18 @@ ifneq ($(strip $(git_repository_id)),)
 	TAG:=${TAG}${git_repository_id}-
 endif
 
-# Check for current branch name
+# Check for current branch name and update 'RELEASE_VER' and 'TAG'
 ifneq ($(strip $(GIT_BRANCH)),)
-	TAG:=${TAG}${GIT_BRANCH}
-
-# 	replace invalid characters that might exist in the branch name
-	TAG:=$(shell echo ${TAG} | sed 's/[^a-zA-Z0-9]/-/g')
-endif
-
-# Check if the string does not contain "release"
-ifeq (,$(findstring release,$(GIT_BRANCH)))
-	TAG:=${TAG}-${RELEASE_VER}
-else
-	TAG:=$(shell echo ${TAG} | sed 's/\(release-v[0-9]\)-\([0-9]*\)-\([0-9]*\)/\1.\2.\3/g')
+	ifeq ($(shell echo $(GIT_BRANCH) | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$'),$(GIT_BRANCH))
+		RELEASE_VER:=${GIT_BRANCH}
+		TAG:=release-${TAG}
+	else
+		RELEASE_VER:= $(shell git describe --tags --abbrev=0)
+		TAG:=${TAG}${GIT_BRANCH}
+		# replace invalid characters that might exist in the branch name
+		TAG:=$(shell echo ${TAG} | sed 's/[^a-zA-Z0-9]/-/g')
+		TAG:=${TAG}-${RELEASE_VER}
+	endif
 endif
 
 .PHONY: print-global-variables
@@ -116,6 +114,11 @@ ifeq ($(strip $(git_repository_id)),main)
 	$(info Update the `latest` tag when built from `main`)
 	docker tag mcad-controller:${TAG}  ${quay_repository}/mcad-controller:latest
 	docker push ${quay_repository}/mcad-controller:latest
+endif
+ifneq ($(TAG:release-v%=%),$(TAG))
+	$(info Update the `stable` tag to point `latest` release image)
+	docker tag mcad-controller:${TAG} ${quay_repository}/mcad-controller:stable
+	docker push ${quay_repository}/mcad-controller:stable
 endif
 endif
 

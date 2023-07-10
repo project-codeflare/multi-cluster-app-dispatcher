@@ -737,7 +737,7 @@ func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
 }
 
 func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
-	return wait.Poll(100*time.Millisecond, ninetySeconds, awPodPhase(ctx, aw,
+	return wait.Poll(100*time.Millisecond, threeHundredSeconds, awPodPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite))
 }
 
