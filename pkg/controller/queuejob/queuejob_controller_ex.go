@@ -968,17 +968,12 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 
 			totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
 			klog.V(6).Infof("[getAggAvaiResPri] total resources consumed by Appwrapper %v when CanRun are %v", value.Name, totalResource)
-			if totalResource.Less(qjv) {
-				delta, err := qjv.NonNegSub(totalResource)
-				if err != nil {
-					klog.Warningf("[getAggAvaiResPri] Subtraction of resources failed, adding entire appwrapper resoources %v, %v", qjv, err)
-					pending = qjv
-				}
-				pending = pending.Add(delta)
-			} else {
-				pending = pending.Add(qjv)
+			pending, err = qjv.NonNegSub(totalResource)
+			if err != nil {
+				klog.Warningf("[getAggAvaiResPri] Subtraction of resources failed, adding entire appwrapper resoources %v, %v", qjv, err)
+				pending = qjv
 			}
-
+			klog.V(6).Infof("[getAggAvaiResPri] The value of pending is %v", pending)
 			continue
 		} else {
 			//Do nothing
@@ -1587,7 +1582,7 @@ func (cc *XController) Run(stopCh chan struct{}) {
 	cc.cache.Run(stopCh)
 
 	// go wait.Until(cc.ScheduleNext, 2*time.Second, stopCh)
-	go wait.Until(cc.ScheduleNext, 0, stopCh)
+	go wait.Until(cc.ScheduleNext, 2*time.Second, stopCh)
 	// start preempt thread based on preemption of pods
 
 	// TODO - scheduleNext...Job....

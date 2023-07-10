@@ -243,26 +243,26 @@ func (qjrPod *QueueJobResPod) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) e
 	}
 
 	running := int32(queuejobresources.FilterPods(pods, v1.PodRunning))
-	podPhases := []v1.PodPhase{v1.PodRunning, v1.PodPending, v1.PodFailed, v1.PodSucceeded, v1.PodUnknown}
-	totalResourcesConsumed := clusterstateapi.EmptyResource()
+	podPhases := []v1.PodPhase{v1.PodRunning, v1.PodSucceeded}
+	totalResourcesConsumedForPodPhases := clusterstateapi.EmptyResource()
 	for _, phase := range podPhases {
-		totalResourcesConsumed.Add(queuejobresources.GetPodResourcesByPhase(phase, pods))
+		totalResourcesConsumedForPodPhases.Add(queuejobresources.GetPodResourcesByPhase(phase, pods))
 	}
 	pending := int32(queuejobresources.FilterPods(pods, v1.PodPending))
 	succeeded := int32(queuejobresources.FilterPods(pods, v1.PodSucceeded))
 	failed := int32(queuejobresources.FilterPods(pods, v1.PodFailed))
 	podsConditionMap := queuejobresources.PendingPodsFailedSchd(pods)
 	klog.V(10).Infof("[UpdateQueueJobStatus] There are %d pods of AppWrapper %s:  pending %d, running %d, succeeded %d, failed %d, pendingpodsfailedschd %d, total resource consumed %v",
-		len(pods), queuejob.Name, pending, running, succeeded, failed, len(podsConditionMap), totalResourcesConsumed)
+		len(pods), queuejob.Name, pending, running, succeeded, failed, len(podsConditionMap), totalResourcesConsumedForPodPhases)
 
 	queuejob.Status.Pending = pending
 	queuejob.Status.Running = running
 	queuejob.Status.Succeeded = succeeded
 	queuejob.Status.Failed = failed
 	//Total resources by all running pods
-	queuejob.Status.TotalGPU = totalResourcesConsumed.GPU
-	queuejob.Status.TotalCPU = totalResourcesConsumed.MilliCPU
-	queuejob.Status.TotalMemory = totalResourcesConsumed.Memory
+	queuejob.Status.TotalGPU = totalResourcesConsumedForPodPhases.GPU
+	queuejob.Status.TotalCPU = totalResourcesConsumedForPodPhases.MilliCPU
+	queuejob.Status.TotalMemory = totalResourcesConsumedForPodPhases.Memory
 
 	queuejob.Status.PendingPodConditions = nil
 	for podName, cond := range podsConditionMap {
@@ -627,7 +627,7 @@ func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, 
 	if tmpl == nil {
 		tmpl = make(map[string]string)
 	}
-	
+
 	tmpl[queueJobName] = qj.Name
 
 	// Include pre-defined metadata info, e.g. annotations
@@ -638,12 +638,12 @@ func (qjrPod *QueueJobResPod) createQueueJobPod(qj *arbv1.AppWrapper, ix int32, 
 	templateObjMetadata.SetNamespace(qj.Namespace)
 	templateObjMetadata.SetOwnerReferences([]metav1.OwnerReference{
 		*metav1.NewControllerRef(qj, queueJobKind),
-	},)
+	})
 	templateObjMetadata.SetLabels(tmpl)
 
 	return &v1.Pod{
 		ObjectMeta: templateObjMetadata,
-		Spec: templateCopy.Spec,
+		Spec:       templateCopy.Spec,
 	}
 }
 
