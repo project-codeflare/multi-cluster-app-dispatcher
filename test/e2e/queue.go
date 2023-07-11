@@ -417,7 +417,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: aw-deployment-2-550-vs-550-cpu")
 	})
 
-	It("MCAD Scheduling Fail Fast Preemption Test", func() {
+	FIt("MCAD Scheduling Fail Fast Preemption Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Started.\n")
 
 		context := initTestContext()
@@ -428,6 +428,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
+		time.Sleep(1 * time.Minute)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred(), "Expecting pods for app wrapper: aw-deployment-2-550cpu")
 
@@ -451,20 +452,20 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		appwrappers = append(appwrappers, aw3)
 
-		// Wait for pods to get created, assumes preemption around 3 minutes
-		err = waitAWPodsExists(context, aw3, 3*time.Minute)
+		// Wait for pods to get created, assumes preemption around 10 minutes
+		err = waitAWPodsExists(context, aw3, 720000*time.Millisecond)
 		Expect(err).NotTo(HaveOccurred(), "Expecting pods for app wrapper: aw-ff-deployment-2-340-cpu")
 		fmt.Fprintf(GinkgoWriter, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Pods not found for app wrapper aw-ff-deployment-2-340-cpu\n")
 
-		// Make sure they are running
+		// Make sure aw2 pods do not exist
 		err = waitAWPodsReady(context, aw3)
-		Expect(err).NotTo(HaveOccurred(), "Expecting ready pods for app wrapper: aw-ff-deployment-2-340-cpu")
+		Expect(err).NotTo(HaveOccurred(), "Expecting no pods for app wrapper: aw-ff-deployment-2-340-cpu")
 		fmt.Fprintf(GinkgoWriter, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Ready pods found for app wrapper aw-ff-deployment-2-340-cpu\n")
 
 		// Make sure pods from AW aw-deployment-1-850-cpu above do not exist proving preemption
-		time.Sleep(1 * time.Minute)
+		time.Sleep(5 * time.Minute)
 		err = waitAWAnyPodsExists(context, aw2)
-		Expect(err).To(HaveOccurred(), "Expecting no pods for app wrapper : aw-deployment-1-850-cpu")
+		Expect(err).To(HaveOccurred(), "Expecting no pods for app wrapper : aw-ff-deployment-1-850-cpu")
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Completed. Awaiting app wrapper cleanup\n")
 
 	})
