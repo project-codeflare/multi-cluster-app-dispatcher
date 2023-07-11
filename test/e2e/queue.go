@@ -417,7 +417,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: aw-deployment-2-550-vs-550-cpu")
 	})
 
-	FIt("MCAD Scheduling Fail Fast Preemption Test", func() {
+	It("MCAD Scheduling Fail Fast Preemption Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Started.\n")
 
 		context := initTestContext()
