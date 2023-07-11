@@ -178,11 +178,11 @@ for ((i=1; i<=iterations; i++)); do
     time=$(extract_total_time "$output_file")
     # Accumulate the total time
     total_time=$(bc <<< "$total_time + $time")
-    # # Remove the temporary file
-    # echo " "
-    # echo "Iteration $i complete"
-    # echo "Deleting all jobs for the fresh next run"
-    # ./cleanup-mcadkwok-cpu-j-s.sh > "$output_file"
+    # Remove the temporary file
+    echo " "
+    echo "Iteration $i complete"
+    echo "Deleting all jobs for the fresh next run"
+    ./cleanup-mcadkwok-cpu-j-s.sh > "$output_file"
     rm "$output_file"
     echo " "
     kubectl scale deployment mcad-controller --replicas=0 -n kube-system
