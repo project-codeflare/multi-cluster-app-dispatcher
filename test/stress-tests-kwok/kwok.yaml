@@ -263,7 +263,6 @@ spec:
           state:
             running:
               startedAt: '{{ $now }}'
-              command: ["/bin/sh", "-c", "sleep 30"]  # Added sleep command here
         {{ end }}
       phase: Running
 ---
