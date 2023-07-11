@@ -97,7 +97,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred(), "Ready pods are expected for app wrapper: aw-deployment-2-550cpu")
 
 		// This should fill up the master node
 		aw2 := createDeploymentAWwith350CPU(context, appendRandomString("aw-deployment-2-350cpu"))
@@ -105,8 +105,8 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		// Using quite mode due to creating of pods in earlier step.
 		err = waitAWReadyQuiet(context, aw2)
-		fmt.Fprintf(os.Stdout, "The error is %v", err)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred(), "Ready pods are expected for app wrapper: aw-deployment-2-350cpu")
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Accounting Test - Completed. Awaiting app wrapper cleanup...\n")
 	})
 
 	It("MCAD CPU Preemption Test", func() {
@@ -428,7 +428,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
-		time.Sleep(1 * time.Minute)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred(), "Expecting pods for app wrapper: aw-deployment-2-550cpu")
 
@@ -443,6 +442,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		err = waitAWPodsPending(context, aw2)
 		Expect(err).NotTo(HaveOccurred(), "Expecting pending pods (try 2) for app wrapper: aw-ff-deployment-1-850-cpu")
+		fmt.Fprintf(GinkgoWriter, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Pending pods found for app wrapper aw-ff-deployment-1-850-cpu\n")
 
 		// This should fit on cluster after AW aw-deployment-1-850-cpu above is automatically preempted on
 		// scheduling failure
@@ -451,17 +451,22 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		appwrappers = append(appwrappers, aw3)
 
-		// Wait for pods to get created, assumes preemption around 12 minutes
-		err = waitAWPodsExists(context, aw3, 12*time.Minute)
+		// Wait for pods to get created, assumes preemption around 3 minutes
+		err = waitAWPodsExists(context, aw3, 3*time.Minute)
 		Expect(err).NotTo(HaveOccurred(), "Expecting pods for app wrapper: aw-ff-deployment-2-340-cpu")
+		fmt.Fprintf(GinkgoWriter, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Pods not found for app wrapper aw-ff-deployment-2-340-cpu\n")
 
 		// Make sure they are running
 		err = waitAWPodsReady(context, aw3)
 		Expect(err).NotTo(HaveOccurred(), "Expecting ready pods for app wrapper: aw-ff-deployment-2-340-cpu")
+		fmt.Fprintf(GinkgoWriter, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Ready pods found for app wrapper aw-ff-deployment-2-340-cpu\n")
 
 		// Make sure pods from AW aw-deployment-1-850-cpu above do not exist proving preemption
+		time.Sleep(1 * time.Minute)
 		err = waitAWAnyPodsExists(context, aw2)
 		Expect(err).To(HaveOccurred(), "Expecting no pods for app wrapper : aw-deployment-1-850-cpu")
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Completed. Awaiting app wrapper cleanup\n")
+
 	})
 
 	It("MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Not Queuing Test", func() {

@@ -696,7 +696,7 @@ func awNamespacePhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.NamespacePh
 }
 
 func waitAWPodsReady(ctx *context, aw *arbv1.AppWrapper) error {
-	return waitAWPodsReadyEx(ctx, aw, ninetySeconds, int(aw.Spec.SchedSpec.MinAvailable), false)
+	return waitAWPodsReadyEx(ctx, aw, threeHundredSeconds, int(aw.Spec.SchedSpec.MinAvailable), false)
 }
 
 func waitAWPodsCompleted(ctx *context, aw *arbv1.AppWrapper, timeout time.Duration) error {
@@ -708,7 +708,7 @@ func waitAWPodsNotCompleted(ctx *context, aw *arbv1.AppWrapper) error {
 }
 
 func waitAWReadyQuiet(ctx *context, aw *arbv1.AppWrapper) error {
-	return waitAWPodsReadyEx(ctx, aw, ninetySeconds, int(aw.Spec.SchedSpec.MinAvailable), true)
+	return waitAWPodsReadyEx(ctx, aw, threeHundredSeconds, int(aw.Spec.SchedSpec.MinAvailable), true)
 }
 
 func waitAWAnyPodsExists(ctx *context, aw *arbv1.AppWrapper) error {
