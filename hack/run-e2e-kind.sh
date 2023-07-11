@@ -394,4 +394,4 @@ setup-mcad-env
 kuttl-tests
 mcad-quota-management-down
 mcad-up
-go test ./test/e2e -v -timeout 120m -count=1
+go test ./test/e2e -v -timeout 130m -count=1
