@@ -137,9 +137,8 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappers = append(appwrappers, aw3)
 
 		// Since preemption takes some time, increasing timeout wait time to 2 minutes
-		err = waitAWPodsExists(context, aw3, 120000*time.Millisecond)
-		fmt.Fprintf(os.Stdout, "[e2e] The error is %v", err)
-		Expect(err).NotTo(HaveOccurred())
+		err = waitAWPodsExists(context, aw3, 2*time.Minute)
+		Expect(err).NotTo(HaveOccurred(), "Expecting pods for app wrapper : aw-deployment-2-425cpu")
 	})
 
 	It("MCAD CPU Requeuing - Completion After Enough Requeuing Times Test", func() {
@@ -368,7 +367,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
-	PIt("Create AppWrapper - Namespace Only - 0 Pods", func() {
+	It("Create AppWrapper - Namespace Only - 0 Pods", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - Started.\n")
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
