@@ -334,7 +334,7 @@ func (sc *ClusterStateCache) updateState() error {
 }
 
 func (sc *ClusterStateCache) deleteJob(job *api.JobInfo) {
-	klog.V(4).Infof("[deleteJob] Attempting to delete Job <%v:%v/%v>", job.UID, job.Namespace, job.Name)
+	klog.V(10).Infof("[deleteJob] Attempting to delete Job <%v:%v/%v>", job.UID, job.Namespace, job.Name)
 
 	time.AfterFunc(5*time.Second, func() {
 		sc.deletedJobs.AddIfNotPresent(job)

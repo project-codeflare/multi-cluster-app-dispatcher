@@ -696,7 +696,7 @@ func awNamespacePhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.NamespacePh
 }
 
 func waitAWPodsReady(ctx *context, aw *arbv1.AppWrapper) error {
-	return waitAWPodsReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), false)
+	return waitAWPodsReadyEx(ctx, aw, threeHundredSeconds, int(aw.Spec.SchedSpec.MinAvailable), false)
 }
 
 func waitAWPodsCompleted(ctx *context, aw *arbv1.AppWrapper, timeout time.Duration) error {
@@ -708,7 +708,7 @@ func waitAWPodsNotCompleted(ctx *context, aw *arbv1.AppWrapper) error {
 }
 
 func waitAWReadyQuiet(ctx *context, aw *arbv1.AppWrapper) error {
-	return waitAWPodsReadyEx(ctx, aw, int(aw.Spec.SchedSpec.MinAvailable), true)
+	return waitAWPodsReadyEx(ctx, aw, threeHundredSeconds, int(aw.Spec.SchedSpec.MinAvailable), true)
 }
 
 func waitAWAnyPodsExists(ctx *context, aw *arbv1.AppWrapper) error {
@@ -736,8 +736,8 @@ func waitAWPending(ctx *context, aw *arbv1.AppWrapper) error {
 		[]v1.PodPhase{v1.PodPending}, int(aw.Spec.SchedSpec.MinAvailable), false))
 }
 
-func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, taskNum int, quite bool) error {
-	return wait.Poll(100*time.Millisecond, threeHundredSeconds, awPodPhase(ctx, aw,
+func waitAWPodsReadyEx(ctx *context, aw *arbv1.AppWrapper, waitDuration time.Duration, taskNum int, quite bool) error {
+	return wait.Poll(100*time.Millisecond, waitDuration, awPodPhase(ctx, aw,
 		[]v1.PodPhase{v1.PodRunning, v1.PodSucceeded}, taskNum, quite))
 }
 
@@ -1085,32 +1085,32 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 	rb := []byte(`{"apiVersion": "apps/v1",
 		"kind": "Deployment", 
 	"metadata": {
-		"name": "aw-deployment-2-550cpu",
+		"name": "` + name + `",
 		"namespace": "test",
 		"labels": {
-			"app": "aw-deployment-2-550cpu"
+			"app": "` + name + `"
 		}
 	},
 	"spec": {
 		"replicas": 2,
 		"selector": {
 			"matchLabels": {
-				"app": "aw-deployment-2-550cpu"
+				"app": "` + name + `"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "aw-deployment-2-550cpu"
+					"app": "` + name + `"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-550cpu"
+					"appwrapper.mcad.ibm.com/appwrapper-name": "` + name + `"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "aw-deployment-2-550cpu",
+						"name": "` + name + `",
 						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
@@ -1490,36 +1490,36 @@ func createDeploymentAWwith426CPU(context *context, name string) *arbv1.AppWrapp
 	rb := []byte(`{"apiVersion": "apps/v1",
 	"kind": "Deployment", 
 	"metadata": {
-		"name": "aw-deployment-2-426cpu",
+		"name": "` + name + `",
 		"namespace": "test",
 		"labels": {
-			"app": "aw-deployment-2-426cpu"
+			"app": "` + name + `"
 		}
 	},
 	"spec": {
 		"replicas": 2,
 		"selector": {
 			"matchLabels": {
-				"app": "aw-deployment-2-426cpu"
+				"app": "` + name + `"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "aw-deployment-2-426cpu"
+					"app": "` + name + `"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-426cpu"
+					"appwrapper.mcad.ibm.com/appwrapper-name": "` + name + `"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "aw-deployment-2-426cpu",
+						"name": "` + name + `",
 						"image": "kicbase/echo-server:1.0",
 						"resources": {
 							"requests": {
-								"cpu": "426m"
+								"cpu": "427m"
 							}
 						},
 						"ports": [
@@ -2237,34 +2237,87 @@ func createGenericServiceAWWithNoStatus(context *context, name string) *arbv1.Ap
 
 func createGenericDeploymentAWWithMultipleItems(context *context, name string) *arbv1.AppWrapper {
 	rb := []byte(`{"apiVersion": "apps/v1",
-		"kind": "Deployment", 
+		"kind": "Deployment",
+		"metadata": {
+			"name": "` + name + `-deployment-1",
+			"namespace": "test",
+			"labels": {
+				"app": "` + name + `-deployment-1"
+			}
+		},
+		"spec": {
+			"replicas": 1,
+			"selector": {
+				"matchLabels": {
+					"app": "` + name + `-deployment-1"
+				}
+			},
+			"template": {
+				"metadata": {
+					"labels": {
+						"app": "` + name + `-deployment-1"
+					},
+					"annotations": {
+						"appwrapper.mcad.ibm.com/appwrapper-name": "` + name + `"
+					}
+				},
+				"spec": {
+					"initContainers": [
+						{
+							"name": "job-init-container",
+							"image": "k8s.gcr.io/busybox:latest",
+							"command": ["sleep", "200"],
+							"resources": {
+								"requests": {
+									"cpu": "500m"
+								}
+							}
+						}
+					],
+					"containers": [
+						{
+							"name": "` + name + `-deployment-1",
+							"image": "kicbase/echo-server:1.0",
+							"ports": [
+								{
+									"containerPort": 80
+								}
+							]
+						}
+					]
+				}
+			}
+		}} `)
+	rb1 := []byte(`{"apiVersion": "apps/v1",
+	"kind": "Deployment",
 	"metadata": {
-		"name": "aw-deployment-2-status",
+		"name": "` + name + `-deployment-2",
 		"namespace": "test",
 		"labels": {
-			"app": "aw-deployment-2-status"
+			"app": "` + name + `-deployment-2"
 		}
 	},
+
 	"spec": {
 		"replicas": 1,
 		"selector": {
 			"matchLabels": {
-				"app": "aw-deployment-2-status"
+				"app": "` + name + `-deployment-2"
 			}
 		},
 		"template": {
 			"metadata": {
 				"labels": {
-					"app": "aw-deployment-2-status"
+					"app": "` + name + `-deployment-2"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-status"
+					"appwrapper.mcad.ibm.com/appwrapper-name": "` + name + `"
 				}
 			},
 			"spec": {
 				"containers": [
 					{
-						"name": "aw-deployment-2-status",
+						"name": "` + name + `-deployment-2",
 						"image": "kicbase/echo-server:1.0",
 						"ports": [
 							{
@@ -2276,47 +2329,6 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 			}
 		}
 	}} `)
-
-	rb1 := []byte(`{"apiVersion": "apps/v1",
-	"kind": "Deployment", 
-"metadata": {
-	"name": "aw-deployment-3-status",
-	"namespace": "test",
-	"labels": {
-		"app": "aw-deployment-3-status"
-	}
-},
-"spec": {
-	"replicas": 1,
-	"selector": {
-		"matchLabels": {
-			"app": "aw-deployment-3-status"
-		}
-	},
-	"template": {
-		"metadata": {
-			"labels": {
-				"app": "aw-deployment-3-status"
-			},
-			"annotations": {
-				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-3-status"
-			}
-		},
-		"spec": {
-			"containers": [
-				{
-					"name": "aw-deployment-3-status",
-					"image": "kicbase/echo-server:1.0",
-					"ports": [
-						{
-							"containerPort": 80
-						}
-					]
-				}
-			]
-		}
-	}
-}} `)
 
 	var schedSpecMin int = 1
 
@@ -2333,7 +2345,7 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-%s", name, "aw-deployment-2-status"),
+							Name:      fmt.Sprintf("%s-%s", name, "deployment-1"),
 							Namespace: "test",
 						},
 						DesiredAvailable: 1,
@@ -2344,7 +2356,7 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 					},
 					{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      fmt.Sprintf("%s-%s", name, "aw-deployment-3-status"),
+							Name:      fmt.Sprintf("%s-%s", name, "deployment-2"),
 							Namespace: "test",
 						},
 						DesiredAvailable: 1,
