@@ -1,5 +1,3 @@
-
----
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -778,6 +776,10 @@ spec:
                   QueueJob (by Informer)
                 format: date-time
                 type: string
+              controllerfirstdispatchtimestamp:
+                description: Microsecond level timestamp when controller first dispatches appwrapper
+                format: date-time
+                type: string
               failed:
                 description: The number of resources which reached phase Failed.
                 format: int32
@@ -790,25 +792,34 @@ spec:
                 description: Is Dispatched?
                 type: boolean
               local:
-                description: Indicate if message is a duplicate (for Informer to recognize
-                  duplicate messages)
+                description: Indicate if message is a duplicate (for Informer to recognize duplicate messages)
                 type: boolean
               message:
                 type: string
+              totalcpu:
+                description: The number of cpu consumed by all pods belonging to an appwrapper.
+                format: int32
+                type: integer
+              totalmemory:
+                description: The amount of memory consumed by all pods belonging to an appwrapper.
+                format: int32
+                type: integer
+              totalgpu:
+                description: The total number of GPUs consumed by all pods belonging to an appwrapper.
+                format: int32
+                type: integer
               pending:
                 description: The number of pending pods.
                 format: int32
                 type: integer
               queuejobstate:
-                description: State of QueueJob - Init, Queueing, HeadOfLine, Rejoining,
-                  ...
+                description: State of QueueJob - Init, Queueing, HeadOfLine, Rejoining ...
                 type: string
               running:
                 format: int32
                 type: integer
               sender:
-                description: Indicate sender of this message (extremely useful for
-                  debugging)
+                description: Indicate sender of this message (extremely useful for debugging)
                 type: string
               state:
                 description: State - Pending, Running, Failed, Deleted
@@ -822,9 +833,22 @@ spec:
                   (is this different from the MinAvailable from JobStatus)
                 format: int32
                 type: integer
+              numberOfRequeueings:
+                description: Field to keep track of how many times a requeuing event has been triggered
+                format: int32
+                type: integer
+                default: 0
+              requeueingTimeInSeconds:
+                description: Field to keep track of total number of seconds spent in requeueing 
+                format: int32
+                type: integer
+                default: 0
             type: object
         required:
         - spec
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}
+

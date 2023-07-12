@@ -34,6 +34,7 @@ export CLUSTER_CONTEXT="--name test"
 export IMAGE_ECHOSERVER="kicbase/echo-server:1.0"
 export IMAGE_UBUNTU_LATEST="ubuntu:latest"
 export IMAGE_UBI_LATEST="registry.access.redhat.com/ubi8/ubi:latest"
+export IMAGE_BUSY_BOX_LATEST="k8s.gcr.io/busybox:latest"
 export KIND_OPT=${KIND_OPT:=" --config ${ROOT_DIR}/hack/e2e-kind-config.yaml"}
 export KA_BIN=_output/bin
 export WAIT_TIME="20s"
@@ -212,7 +213,14 @@ function kind-up-cluster {
     echo "Failed to pull ${IMAGE_UBI_LATEST}"
     exit 1
   fi
-
+  
+  docker pull ${IMAGE_BUSY_BOX_LATEST}
+  if [ $? -ne 0 ]
+  then
+    echo "Failed to pull ${IMAGE_BUSY_BOX_LATEST}"
+    exit 1
+  fi
+ 
   if [[ "$MCAD_IMAGE_PULL_POLICY" = "Always" ]]
   then
     docker pull ${IMAGE_MCAD}
@@ -229,7 +237,7 @@ function kind-up-cluster {
   fi
   docker images
 
-  for image in ${IMAGE_ECHOSERVER} ${IMAGE_UBUNTU_LATEST} ${IMAGE_MCAD} ${IMAGE_UBI_LATEST}
+  for image in ${IMAGE_ECHOSERVER} ${IMAGE_UBUNTU_LATEST} ${IMAGE_MCAD} ${IMAGE_UBI_LATEST} ${IMAGE_BUSY_BOX_LATEST}
   do
     kind load docker-image ${image} ${CLUSTER_CONTEXT}
     if [ $? -ne 0 ]
@@ -391,4 +399,4 @@ setup-mcad-env
 # MCAD with quotamanagement options is started by kuttl-tests
 kuttl-tests
 mcad-up
-go test ./test/e2e -v -timeout 120m -count=1
+go test ./test/e2e -v -timeout 130m -count=1
