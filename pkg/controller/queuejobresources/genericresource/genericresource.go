@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-	http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -173,10 +173,12 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 
 		err = deleteObject(namespaced, namespace, newName, rsrc, dclient)
 		if err != nil {
-			if !errors.IsNotFound(err) {
+			if errors.IsAlreadyExists(err) {
+				klog.V(4).Infof("%v\n", err.Error())
+			} else {
 				klog.Errorf("[Cleanup] Error deleting the object `%v`, the error is `%v`.", newName, errors.ReasonForError(err))
+				return name, gvk, err
 			}
-			return name, gvk, err
 		}
 	} else {
 		klog.Warningf("[Cleanup] %s/%s not found using label selector: %s.\n", name, namespace, labelSelector)
@@ -335,7 +337,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	return pods, nil
 }
 
-// checks if object has pod template spec and add new labels
+//checks if object has pod template spec and add new labels
 func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map[string]string) (hasFields bool) {
 	spec, isFound, _ := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
 	if !isFound {
@@ -377,7 +379,7 @@ func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map
 	return isFound
 }
 
-// checks if object has replicas and containers field
+//checks if object has replicas and containers field
 func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, containers []v1.Container) {
 	var unstruct unstructured.Unstructured
 	unstruct.Object = make(map[string]interface{})
@@ -459,7 +461,7 @@ func createObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 	}
 }
 
-func deleteObject(namespaced bool, namespace string, name string, rsrc schema.GroupVersionResource, dclient dynamic.Interface) error {
+func deleteObject(namespaced bool, namespace string, name string, rsrc schema.GroupVersionResource, dclient dynamic.Interface) (erro error) {
 	var err error
 	backGround := metav1.DeletePropagationBackground
 	delOptions := metav1.DeleteOptions{PropagationPolicy: &backGround}
@@ -471,7 +473,7 @@ func deleteObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 		err = res.Delete(context.Background(), name, delOptions)
 	}
 
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil {
 		klog.Errorf("[deleteObject] Error deleting the object `%v`, the error is `%v`.", name, errors.ReasonForError(err))
 		return err
 	} else {
@@ -595,7 +597,7 @@ func getContainerResources(container v1.Container, replicas float64) *clustersta
 	return req
 }
 
-// returns status of an item present in etcd
+//returns status of an item present in etcd
 func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResource, namespace string, appwrapperName string, genericItemName string) (completed bool) {
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)

@@ -101,7 +101,7 @@ type AppWrapperService struct {
 }
 
 // AppWrapperResource is App Wrapper aggregation resource
-// todo: To be depricated
+//todo: To be depricated
 type AppWrapperResource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -246,7 +246,7 @@ type AppWrapperStatus struct {
 	// Microsecond level timestamp when controller first sees QueueJob (by Informer)
 	ControllerFirstTimestamp metav1.MicroTime `json:"controllerfirsttimestamp,omitempty"`
 
-	// Microsecond level timestamp when controller first dispatches appwrapper
+	// Microsecond level timestamp when controller first sets appwrapper in state Running
 	ControllerFirstDispatchTimestamp metav1.MicroTime `json:"controllerfirstdispatchtimestamp,omitempty"`
 
 	// Tell Informer to ignore this update message (do not generate a controller event)
@@ -264,25 +264,18 @@ type AppWrapperStatus struct {
 	// Represents the latest available observations of pods under appwrapper
 	PendingPodConditions []PendingPodSpec `json:"pendingpodconditions"`
 
-	// Represents the number of cpu consumed by all pods belonging to an appwrapper.
+	//Resources consumed
+
 	TotalCPU float64 `json:"totalcpu,omitempty"`
 
-	// Represents the amount of memory consumed by all pods belonging to an appwrapper.
 	TotalMemory float64 `json:"totalmemory,omitempty"`
 
-	// Represents the total number of GPUs consumed by all pods belonging to an appwrapper.
 	TotalGPU int64 `json:"totalgpu,omitempty"`
-
-	// Field to keep track of total number of seconds spent in requeueing
-	RequeueingTimeInSeconds int `json:"requeueingTimeInSeconds,omitempty"`
-
-	// Field to keep track of how many times a requeuing event has been triggered
-	NumberOfRequeueings int `json:"numberOfRequeueings,omitempty"`
 }
 
 type AppWrapperState string
 
-// enqueued, active, deleting, succeeded, failed
+//enqueued, active, deleting, succeeded, failed
 const (
 	AppWrapperStateEnqueued              AppWrapperState = "Pending"
 	AppWrapperStateActive                AppWrapperState = "Running"

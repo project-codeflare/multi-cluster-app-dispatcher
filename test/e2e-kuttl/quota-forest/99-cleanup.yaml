@@ -6,4 +6,4 @@ error: []
 unitTest: false
 delete: []
 commands:  
-  - command: kubectl delete namespace test --wait
+  - command: kubectl delete namespace test 
