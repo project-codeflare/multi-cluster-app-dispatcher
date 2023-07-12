@@ -368,7 +368,10 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 	})
 
-	PIt("Create AppWrapper - Namespace Only - 0 Pods", func() {
+	// This test is flawed, the namespace created by this appwrapper is not cleaned up.
+	// FIXME https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/471
+	// Leaving it here so that the builds no longer fail
+	It("Create AppWrapper - Namespace Only - 0 Pods", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - Started.\n")
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
@@ -377,9 +380,11 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createNamespaceAW(context, "aw-namespace-0")
 		appwrappers = append(appwrappers, aw)
+		fmt.Fprintf(GinkgoWriter, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - app wrappers len %d.\n", len(appwrappers))
 
 		err := waitAWNonComputeResourceActive(context, aw)
 		Expect(err).NotTo(HaveOccurred())
+		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - Completed. Awaiting app wrapper cleanup\n")
 	})
 
 	It("Create AppWrapper - Generic Namespace Only - 0 Pods", func() {
