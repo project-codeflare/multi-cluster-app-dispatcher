@@ -1,4 +1,4 @@
-# This workflow will create a GitHub release tag
+# This workflow will Build image and push to mcad quay repository and create a GitHub release tag
 
 name: mcad Release
 on:
@@ -8,6 +8,11 @@ on:
         description: 'Release tag'
         required: true
         default: 'v0.0.0-dev'
+        type: string
+      quay-organization:
+        description: 'Quay organization used to push the built images to'
+        required: true
+        default: 'project-codeflare'
         type: string
 
 jobs:
@@ -20,6 +25,8 @@ jobs:
     steps:
     - name: checkout code
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
     - name: check tag format
       run: |
@@ -40,4 +47,15 @@ jobs:
         fi
       env:
         GITHUB_TOKEN: ${{ github.token }}
+
+    - name: Build
+      run: make mcad-controller
+
+    - name: Image Build and Push
+      env:
+        GIT_BRANCH: ${{ github.event.inputs.tag }}
+        TAG: release-${{ github.event.inputs.tag }}
+      run: |
+        make images -e GIT_BRANCH=$GIT_BRANCH TAG=$TAG
+        make push-images -e GIT_BRANCH=$GIT_BRANCH TAG=$TAG quay_repository=quay.io/${{ github.event.inputs.quay-organization }} quay_id=${{ secrets.QUAY_ID }} quay_token=${{ secrets.QUAY_TOKEN }}
 
