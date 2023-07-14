@@ -6,4 +6,4 @@ error: []
 unitTest: false
 delete: []
 commands:  
-  - command: kubectl delete namespace quota-errors 
+  - command: kubectl delete namespace quota-errors --wait

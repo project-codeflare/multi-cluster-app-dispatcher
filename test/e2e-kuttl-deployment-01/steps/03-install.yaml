@@ -1,0 +1,114 @@
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+    name: hold-completion-job-03
+    namespace: start-up
+spec:
+    schedulingSpec:
+        minAvailable: 1
+        requeuing:
+            timeInSeconds: 60
+            growthType: "none"
+            maxNumRequeuings: 3
+    resources:
+        Items: []
+        GenericItems:
+            - replicas: 1
+              completionstatus: Complete
+              custompodresources:
+                  - replicas: 1
+                    requests:
+                        cpu: 500m
+                        nvidia.com/gpu: 0
+                        memory: 1Gi
+                    limits:
+                        cpu: 500m
+                        nvidia.com/gpu: 0
+                        memory: 1Gi
+              generictemplate:
+                  apiVersion: batch/v1
+                  kind: Job
+                  metadata:
+                      name: hold-completion-job-03-01
+                      namespace: start-up
+                      labels:
+                          appwrapper.mcad.ibm.com: hold-completion-job-03
+                  spec:
+                      parallelism: 1
+                      completions: 1
+                      template:
+                          metadata:
+                              name: hold-completion-job-03-01
+                              namespace: start-up
+                              labels:
+                                  appwrapper.mcad.ibm.com: hold-completion-job-03
+                          spec:
+                              terminationGracePeriodSeconds: 1
+                              restartPolicy: Never
+                              containers:
+                                  - name: ubuntu
+                                    image: ubuntu:latest
+                                    imagePullPolicy: IfNotPresent
+                                    command:
+                                        - sh
+                                        - -c
+                                        - |
+                                          sleep 5
+                                    resources:
+                                        requests:
+                                            cpu: 500m
+                                            nvidia.com/gpu: 0
+                                            memory: 1Gi
+                                        limits:
+                                            cpu: 500m
+                                            nvidia.com/gpu: 0
+                                            memory: 1Gi
+            - replicas: 1
+              custompodresources:
+                  - replicas: 1
+                    requests:
+                        cpu: 1000m
+                        nvidia.com/gpu: 0
+                        memory: 1Gi
+                    limits:
+                        cpu: 1000m
+                        nvidia.com/gpu: 0
+                        memory: 1Gi
+              generictemplate:
+                  apiVersion: batch/v1
+                  kind: Job
+                  metadata:
+                      name: hold-completion-job-03-02
+                      namespace: start-up
+                      labels:
+                          appwrapper.mcad.ibm.com: hold-completion-job-03
+                  spec:
+                      parallelism: 1
+                      completions: 1
+                      template:
+                          metadata:
+                              name: hold-completion-job-03-02
+                              namespace: start-up
+                              labels:
+                                  appwrapper.mcad.ibm.com: hold-completion-job-03
+                          spec:
+                              terminationGracePeriodSeconds: 1
+                              restartPolicy: Never
+                              containers:
+                                  - name: ubuntu
+                                    image: ubuntu:latest
+                                    imagePullPolicy: IfNotPresent
+                                    command:
+                                        - sh
+                                        - -c
+                                        - |
+                                          sleep infinity
+                                    resources:
+                                        requests:
+                                            cpu: 5000m
+                                            nvidia.com/gpu: 0
+                                            memory: 1Gi
+                                        limits:
+                                            cpu: 5000m
+                                            nvidia.com/gpu: 0
+                                            memory: 1Gi

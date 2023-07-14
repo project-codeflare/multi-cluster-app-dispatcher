@@ -1,0 +1,49 @@
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: context-root
+  namespace: kube-system
+  labels:
+    tree: quota_context
+spec:
+  children:
+    - name: context-root
+      quotas:
+        requests:
+          cpu: 1950m
+          memory: 1500Mi
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: context-root-children
+  namespace: kube-system
+  labels:
+    tree: quota_context
+spec:
+  parent: context-root
+  children:
+    - name: gold
+      quotas:
+        requests:
+          cpu: 1075m
+          memory: 450Mi
+    - name: silver
+      quotas:
+        hardLimit: false
+        requests:
+          cpu: 1075m
+          memory: 400Mi
+    - name: bronze
+      quotas:
+        hardLimit: true
+        requests:
+          cpu: 900m
+          memory: 300Mi
+    - name: default
+      quotas:
+        hardLimit: false
+        requests:
+          cpu: 0m
+          memory: 0Mi
