@@ -1,0 +1,11 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+apply: [] 
+assert: [] 
+error: [] 
+unitTest: false
+delete: []
+commands: 
+# the rollout restart doesn't seem to reliably kill running pods on the kind cluster
+#  - command: kubectl rollout restart deployment/mcad-controller -n kube-system
+  - script: "kubectl -n kube-system get pods | grep mcad-controller | cut -d' ' -f1 | xargs kubectl -n kube-system delete pod $1"  

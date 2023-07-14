@@ -44,9 +44,8 @@ export MCAD_IMAGE_PULL_POLICY="${3-Always}"
 export IMAGE_MCAD="${IMAGE_REPOSITORY_MCAD}:${IMAGE_TAG_MCAD}"
 CLUSTER_STARTED="false"
 export KUTTL_VERSION=0.15.0
-export KUTTL_TEST_OPT="--config ${ROOT_DIR}/kuttl-test.yaml"
-# FOR DEBUGGING
-#export KUTTL_TEST_OPT="--config ${ROOT_DIR}/kuttl-test.yaml --skip-delete"
+export KUTTL_OPTIONS=${TEST_KUTTL_OPTIONS}
+export KUTTL_TEST_SUITES=("${ROOT_DIR}/test/kuttl-test.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-03.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-02.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-01.yaml") 
 
 function update_test_host {
   
@@ -310,15 +309,14 @@ function cleanup {
     fi 
 }
 
-function mcad-quota-management-down {
-
+function undeploy_mcad_helm {
     # Helm chart install name
     local helm_chart_name=$(helm list -n kube-system --short | grep mcad-controller)
 
     # start mcad controller
     echo "Stopping MCAD Controller for Quota Management Testing..."
     echo "helm delete ${helm_chart_name}"
-    helm delete -n kube-system ${helm_chart_name}
+    helm delete -n kube-system ${helm_chart_name} --wait
     if [ $? -ne 0 ]
     then
       echo "Failed to undeploy controller"
@@ -372,16 +370,24 @@ function setup-mcad-env {
 }
 
 function kuttl-tests {
-  echo "kubectl kuttl test ${KUTTL_TEST_OPT}"
-  kubectl kuttl test ${KUTTL_TEST_OPT}
-  if [ $? -ne 0 ]
-  then
-    echo "quota management kuttl e2e tests failure, exiting."
-    exit 1
-  else
-    # Takes a bit of time for namespace created in kuttl testing to completely delete.
-    sleep 40
-  fi
+  for kuttl_test in ${KUTTL_TEST_SUITES[@]}; do
+    echo "kubectl kuttl test --config ${kuttl_test}"
+    kubectl kuttl test --config ${kuttl_test}
+    if [ $? -ne 0 ]
+    then
+      echo "kuttl e2e test '${kuttl_test}' failure, exiting."
+      exit 1
+    fi
+    #clean up after sucessfull execution of a test by removing all quota subtrees
+    #and undeploying mcad helm chart.
+    kubectl delete quotasubtrees -n kube-system --all --wait
+    if [ $? -ne 0 ]
+    then
+      echo "Failed to delete quotasubtrees for test: '${kuttl_test}'"
+      exit 1
+    fi  
+    undeploy_mcad_helm
+  done
   rm -f kubeconfig
 }
 
@@ -392,6 +398,5 @@ kind-up-cluster
 setup-mcad-env
 # MCAD with quotamanagement options is started by kuttl-tests
 kuttl-tests
-mcad-quota-management-down
 mcad-up
 go test ./test/e2e -v -timeout 130m -count=1

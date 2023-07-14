@@ -1,0 +1,63 @@
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+    name: bronze-quota-job-01
+    namespace: start-up-02
+    labels:
+        quota_context: bronze
+        quota_service: gold
+spec:
+    schedulingSpec:
+        minAvailable: 1
+    resources:
+        GenericItems:
+            - replicas: 1
+              completionstatus: Complete
+              custompodresources:
+                  - replicas: 1
+                    requests:
+                        cpu: 100m
+                        nvidia.com/gpu: 0
+                        memory: 30Mi
+                    limits:
+                        cpu: 100m
+                        nvidia.com/gpu: 0
+                        memory: 30Mi
+              generictemplate:
+                  apiVersion: batch/v1
+                  kind: Job
+                  metadata:
+                      name: bronze-quota-job-01
+                      namespace: start-up-02
+                      labels:
+                          appwrapper.mcad.ibm.com: bronze-quota-job-01
+                  spec:
+                      parallelism: 1
+                      completions: 1
+                      template:
+                          metadata:
+                              name: bronze-quota-job-01
+                              namespace: start-up-02
+                              labels:
+                                  appwrapper.mcad.ibm.com: bronze-quota-job-01
+                          spec:
+                              terminationGracePeriodSeconds: 1
+                              restartPolicy: Never
+                              containers:
+                                  - name: ubuntu
+                                    image: ubuntu:latest
+                                    imagePullPolicy: IfNotPresent
+                                    command:
+                                        - sh
+                                        - -c
+                                        - |
+                                          sleep infinity    
+                                    resources:
+                                        requests:
+                                            cpu: 100m
+                                            nvidia.com/gpu: 0
+                                            memory: 30Mi
+                                        limits:
+                                            cpu: 100m
+                                            nvidia.com/gpu: 0
+                                            memory: 30Mi
