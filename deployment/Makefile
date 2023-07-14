@@ -7,8 +7,7 @@ CAT_CMD=$(if $(filter $(OS),Windows_NT),type,cat)
 OPERATOR_VERSION_FILE=./OPERATOR_VERSION
 OPERATOR_VER=v$(shell $(CAT_CMD) $(OPERATOR_VERSION_FILE))
 OPERATOR_VER_NUM=$(shell $(CAT_CMD) $(OPERATOR_VERSION_FILE))
-CONTROLLER_VERSION_FILE=../CONTROLLER_VERSION
-CONTROLLER_VER=v$(shell $(CAT_CMD) $(CONTROLLER_VERSION_FILE))
+CONTROLLER_VER=$(shell git describe --tags --abbrev=0)
 
 check_delete_operator:
 	@echo "****************************************************************************************************"

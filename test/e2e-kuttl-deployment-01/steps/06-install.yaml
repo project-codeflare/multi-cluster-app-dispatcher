@@ -1,0 +1,65 @@
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: no-quota-job-06
+  namespace: start-up
+spec:
+    schedulingSpec:
+        minAvailable: 1
+        requeuing:
+            timeInSeconds: 10
+            growthType: "none"
+            maxNumRequeuings: 1
+    resources:
+        Items: []
+        GenericItems:
+            - replicas: 1
+              completionstatus: Complete
+              custompodresources:
+                  - replicas: 1
+                    requests:
+                        cpu: 1500m
+                        nvidia.com/gpu: 0
+                        memory: 300Mi
+                    limits:
+                        cpu: 1500m
+                        nvidia.com/gpu: 0
+                        memory: 300Mi
+              generictemplate:
+                  apiVersion: batch/v1
+                  kind: Job
+                  metadata:
+                      name: no-quota-job-06
+                      namespace: start-up
+                      labels:
+                          appwrapper.mcad.ibm.com: no-quota-job-06
+                  spec:
+                      parallelism: 1
+                      completions: 1
+                      template:
+                          metadata:
+                              name: no-quota-job-06
+                              namespace: start-up
+                              labels:
+                                  appwrapper.mcad.ibm.com: no-quota-job-06
+                          spec:
+                              terminationGracePeriodSeconds: 1
+                              restartPolicy: Never
+                              containers:
+                                  - name: ubuntu
+                                    image: ubuntu:latest
+                                    imagePullPolicy: IfNotPresent
+                                    command:
+                                        - sh
+                                        - -c
+                                        - |
+                                          sleep 5
+                                    resources:
+                                        requests:
+                                            cpu: 1500m
+                                            nvidia.com/gpu: 0
+                                            memory: 300Mi
+                                        limits:
+                                            cpu: 1500m
+                                            nvidia.com/gpu: 0
+                                            memory: 300Mi

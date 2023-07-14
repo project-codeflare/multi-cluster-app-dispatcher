@@ -61,6 +61,7 @@ func newQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Mana
 	qstm := &QuotaSubtreeManager{
 		quotaManagerBackend: quotaManagerBackend,
 		qstMap:              make(map[string]*qstv1.QuotaSubtree),
+		qstChanged:          true,
 	}
 	// QuotaSubtree informer setup
 	qstClient, err := qst.NewForConfigOrDie(config)
@@ -83,11 +84,11 @@ func newQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Mana
 
 	// Start resource plan informers
 	neverStop := make(chan struct{})
-	klog.V(10).Infof("[newQuotaSubtreeManager] Starting QuotaSubtree Informer.")
+	klog.V(4).Infof("[newQuotaSubtreeManager] Starting QuotaSubtree Informer.")
 	go qstm.quotaSubtreeInformer.Informer().Run(neverStop)
 
 	// Wait for cache sync
-	klog.V(10).Infof("[newQuotaSubtreeManager] Waiting for QuotaSubtree informer cache sync. to complete.")
+	klog.V(4).Infof("[newQuotaSubtreeManager] Waiting for QuotaSubtree informer cache sync. to complete.")
 	qstm.qstSynced = qstm.quotaSubtreeInformer.Informer().HasSynced
 	if !cache.WaitForCacheSync(neverStop, qstm.qstSynced) {
 		return nil, errors.New("failed to wait for the quota sub tree informer to synch")
@@ -95,7 +96,7 @@ func newQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Mana
 
 	// Initialize Quota Trees
 	qstm.initializeQuotaTreeBackend()
-	klog.V(10).Infof("[newQuotaSubtreeManager] QuotaSubtree Manager initialization complete.")
+	klog.V(4).Infof("[newQuotaSubtreeManager] QuotaSubtree Manager initialization complete.")
 	return qstm, nil
 }
 
@@ -129,7 +130,7 @@ func (qstm *QuotaSubtreeManager) clearQuotasubtreeChanged() {
 func (qstm *QuotaSubtreeManager) IsQuotasubtreeChanged() bool {
 	qstm.qstMutex.RLock()
 	defer qstm.qstMutex.RUnlock()
-
+	klog.V(4).Infof("[IsQuotasubtreeChanged] QuotaSubtree Manager changed %t.", qstm.qstChanged)
 	return qstm.qstChanged
 }
 
@@ -178,7 +179,7 @@ func (qstm *QuotaSubtreeManager) createTreeNodesFromQST(qst *qstv1.QuotaSubtree)
 			Quota:  quota,
 			Hard:   strconv.FormatBool(qstChild.Quotas.HardLimit),
 		}
-		klog.V(10).Infof("[createTreeNodesFromQST] Created node: %s=%#v for QuotaSubtree  %s completed.",
+		klog.V(4).Infof("[createTreeNodesFromQST] Created node: %s=%#v for QuotaSubtree  %s completed.",
 			child_key, *node, qst.Name)
 
 		//Add to the list of nodes from this quotasubtree

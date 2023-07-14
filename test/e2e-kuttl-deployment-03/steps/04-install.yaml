@@ -1,0 +1,62 @@
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+    name: gold-quota-job-04
+    namespace: start-up-03
+    labels:
+        quota_actinides: lawrencium
+spec:
+    schedulingSpec:
+        minAvailable: 1
+    resources:
+        GenericItems:
+            - replicas: 1
+              completionstatus: Complete
+              custompodresources:
+                  - replicas: 1
+                    requests:
+                        cpu: 300m
+                        nvidia.com/gpu: 0
+                        memory: 30Mi
+                    limits:
+                        cpu: 300m
+                        nvidia.com/gpu: 0
+                        memory: 30Mi
+              generictemplate:
+                  apiVersion: batch/v1
+                  kind: Job
+                  metadata:
+                      name: gold-quota-job-04
+                      namespace: start-up-03
+                      labels:
+                          appwrapper.mcad.ibm.com: gold-quota-job-04
+                  spec:
+                      parallelism: 1
+                      completions: 1
+                      template:
+                          metadata:
+                              name: gold-quota-job-04
+                              namespace: start-up-03
+                              labels:
+                                  appwrapper.mcad.ibm.com: gold-quota-job-04
+                          spec:
+                              terminationGracePeriodSeconds: 1
+                              restartPolicy: Never
+                              containers:
+                                  - name: ubuntu
+                                    image: ubuntu:latest
+                                    imagePullPolicy: IfNotPresent
+                                    command:
+                                        - sh
+                                        - -c
+                                        - |
+                                          sleep 5    
+                                    resources:
+                                        requests:
+                                            cpu: 300m
+                                            nvidia.com/gpu: 0
+                                            memory: 30Mi
+                                        limits:
+                                            cpu: 300m
+                                            nvidia.com/gpu: 0
+                                            memory: 30Mi

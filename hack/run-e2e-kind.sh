@@ -34,6 +34,7 @@ export CLUSTER_CONTEXT="--name test"
 export IMAGE_ECHOSERVER="kicbase/echo-server:1.0"
 export IMAGE_UBUNTU_LATEST="ubuntu:latest"
 export IMAGE_UBI_LATEST="registry.access.redhat.com/ubi8/ubi:latest"
+export IMAGE_BUSY_BOX_LATEST="k8s.gcr.io/busybox:latest"
 export KIND_OPT=${KIND_OPT:=" --config ${ROOT_DIR}/hack/e2e-kind-config.yaml"}
 export KA_BIN=_output/bin
 export WAIT_TIME="20s"
@@ -43,9 +44,8 @@ export MCAD_IMAGE_PULL_POLICY="${3-Always}"
 export IMAGE_MCAD="${IMAGE_REPOSITORY_MCAD}:${IMAGE_TAG_MCAD}"
 CLUSTER_STARTED="false"
 export KUTTL_VERSION=0.15.0
-export KUTTL_TEST_OPT="--config ${ROOT_DIR}/kuttl-test.yaml"
-# FOR DEBUGGING
-#export KUTTL_TEST_OPT="--config ${ROOT_DIR}/kuttl-test.yaml --skip-delete"
+export KUTTL_OPTIONS=${TEST_KUTTL_OPTIONS}
+export KUTTL_TEST_SUITES=("${ROOT_DIR}/test/kuttl-test.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-03.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-02.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-01.yaml") 
 
 function update_test_host {
   
@@ -207,27 +207,20 @@ function kind-up-cluster {
     exit 1
   fi
 
-  docker pull ${IMAGE_ECHOSERVER} 
-  if [ $? -ne 0 ]
-  then
-    echo "Failed to pull ${IMAGE_ECHOSERVER}"
-    exit 1
-  fi
-
-  docker pull ${IMAGE_UBUNTU_LATEST}
-  if [ $? -ne 0 ]
-  then
-    echo "Failed to pull ${IMAGE_UBUNTU_LATEST}"
-    exit 1
-  fi
-
   docker pull ${IMAGE_UBI_LATEST}
   if [ $? -ne 0 ]
   then
     echo "Failed to pull ${IMAGE_UBI_LATEST}"
     exit 1
   fi
-
+  
+  docker pull ${IMAGE_BUSY_BOX_LATEST}
+  if [ $? -ne 0 ]
+  then
+    echo "Failed to pull ${IMAGE_BUSY_BOX_LATEST}"
+    exit 1
+  fi
+ 
   if [[ "$MCAD_IMAGE_PULL_POLICY" = "Always" ]]
   then
     docker pull ${IMAGE_MCAD}
@@ -244,7 +237,7 @@ function kind-up-cluster {
   fi
   docker images
 
-  for image in ${IMAGE_ECHOSERVER} ${IMAGE_UBUNTU_LATEST} ${IMAGE_MCAD} ${IMAGE_UBI_LATEST}
+  for image in ${IMAGE_ECHOSERVER} ${IMAGE_UBUNTU_LATEST} ${IMAGE_MCAD} ${IMAGE_UBI_LATEST} ${IMAGE_BUSY_BOX_LATEST}
   do
     kind load docker-image ${image} ${CLUSTER_CONTEXT}
     if [ $? -ne 0 ]
@@ -316,22 +309,19 @@ function cleanup {
     fi 
 }
 
-function mcad-quota-management-down {
-
+function undeploy_mcad_helm {
     # Helm chart install name
     local helm_chart_name=$(helm list -n kube-system --short | grep mcad-controller)
 
     # start mcad controller
     echo "Stopping MCAD Controller for Quota Management Testing..."
     echo "helm delete ${helm_chart_name}"
-    helm delete -n kube-system ${helm_chart_name}
+    helm delete -n kube-system ${helm_chart_name} --wait
     if [ $? -ne 0 ]
     then
       echo "Failed to undeploy controller"
       exit 1
     fi
-    echo "Waiting for the test namespace to be cleaned up.."
-    sleep 60
 }
 
 function mcad-up {
@@ -380,16 +370,24 @@ function setup-mcad-env {
 }
 
 function kuttl-tests {
-  echo "kubectl kuttl test ${KUTTL_TEST_OPT}"
-  kubectl kuttl test ${KUTTL_TEST_OPT}
-  if [ $? -ne 0 ]
-  then
-    echo "quota management kuttl e2e tests failure, exiting."
-    exit 1
-  else
-    # Takes a bit of time for namespace created in kuttl testing to completely delete.
-    sleep 40
-  fi
+  for kuttl_test in ${KUTTL_TEST_SUITES[@]}; do
+    echo "kubectl kuttl test --config ${kuttl_test}"
+    kubectl kuttl test --config ${kuttl_test}
+    if [ $? -ne 0 ]
+    then
+      echo "kuttl e2e test '${kuttl_test}' failure, exiting."
+      exit 1
+    fi
+    #clean up after sucessfull execution of a test by removing all quota subtrees
+    #and undeploying mcad helm chart.
+    kubectl delete quotasubtrees -n kube-system --all --wait
+    if [ $? -ne 0 ]
+    then
+      echo "Failed to delete quotasubtrees for test: '${kuttl_test}'"
+      exit 1
+    fi  
+    undeploy_mcad_helm
+  done
   rm -f kubeconfig
 }
 
@@ -400,6 +398,5 @@ kind-up-cluster
 setup-mcad-env
 # MCAD with quotamanagement options is started by kuttl-tests
 kuttl-tests
-mcad-quota-management-down
 mcad-up
-go test ./test/e2e -v -timeout 120m -count=1
+go test ./test/e2e -v -timeout 130m -count=1

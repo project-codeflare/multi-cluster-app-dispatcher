@@ -1,0 +1,43 @@
+# This workflow will create a GitHub release tag
+
+name: mcad Release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag'
+        required: true
+        default: 'v0.0.0-dev'
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v3
+
+    - name: check tag format
+      run: |
+        if [[ "${{ github.event.inputs.tag }}" =~ ^v[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$ ]]; then
+          echo "Tag format is valid."
+        else
+          echo "Invalid tag format: ${{ github.event.inputs.tag }}"
+          exit 1
+        fi
+
+    - name: Create github release tag
+      run: |
+        if git rev-parse -q --verify "refs/tags/${{ github.event.inputs.tag  }}"; then
+           echo "Tag ${{ github.event.inputs.tag  }} already exist. Exiting workflow."
+           exit 1
+        else
+           gh release create ${{ github.event.inputs.tag }} --title "MCAD ${{ github.event.inputs.tag  }} Release" --generate-notes --target ${{ github.ref }}
+        fi
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+

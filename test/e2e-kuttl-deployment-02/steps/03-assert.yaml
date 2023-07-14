@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcad-controller
+  namespace: kube-system
+  annotations:
+    meta.helm.sh/release-name: mcad-controller
+    meta.helm.sh/release-namespace: kube-system
+  labels:
+    app: custom-metrics-apiserver
+    app.kubernetes.io/managed-by: Helm
+    chart: mcad-controller-0.1.0
+status:
+  availableReplicas: 1
+  readyReplicas: 1
+  replicas: 1
+  updatedReplicas: 1
+  

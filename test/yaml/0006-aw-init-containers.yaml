@@ -1,0 +1,86 @@
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: bronnze-init-job-0006
+  namespace: test
+  labels:
+    quota_context: bronze
+    quota_service: gold
+spec:
+  schedulingSpec:
+    minAvailable: 3
+    requeuing:
+      timeInSeconds: 60
+      growthType: exponential
+      maxNumRequeuings: 0
+  resources:
+    GenericItems:
+      - replicas: 1
+        completionstatus: Complete
+        custompodresources:
+          - replicas: 1
+            requests:
+              cpu: 500m
+              nvidia.com/gpu: 0
+              memory: 300Mi
+            limits:
+              cpu: 500m
+              nvidia.com/gpu: 0
+              memory: 300Mi
+        generictemplate:
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: bronnze-init-job-0006
+            namespace: test
+            labels:
+              appwrapper.mcad.ibm.com: bronnze-init-job-0006
+          spec:
+            parallelism: 3
+            terminationGracePeriodSeconds: 1
+            restartPolicy: Never
+            template:
+              metadata:
+                name: bronnze-init-job-0006
+                namespace: test
+                labels:
+                  appwrapper.mcad.ibm.com: bronnze-init-job-0006
+              spec:
+                terminationGracePeriodSeconds: 1
+                restartPolicy: Never
+                initContainers:
+                  - name: job-init-container
+                    image: 'k8s.gcr.io/busybox:latest'
+                    imagePullPolicy: IfNotPresent
+                    command:
+                      - sh
+                      - '-c'
+                      - |
+                        sleep 200
+                    resources:
+                      requests:
+                        cpu: 500m
+                        nvidia.com/gpu: 0
+                        memory: 300Mi
+                      limits:
+                        cpu: 500m
+                        nvidia.com/gpu: 0
+                        memory: 300Mi
+                containers:
+                  - name: job-container
+                    image: 'k8s.gcr.io/busybox:latest'
+                    imagePullPolicy: IfNotPresent
+                    command:
+                      - sh
+                      - '-c'
+                      - |
+                        sleep 10
+                    resources:
+                      requests:
+                        cpu: 500m
+                        nvidia.com/gpu: 0
+                        memory: 300Mi
+                      limits:
+                        cpu: 500m
+                        nvidia.com/gpu: 0
+                        memory: 300Mi

@@ -1,0 +1,36 @@
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: actinides-root
+  namespace: kube-system
+  labels:
+    tree: quota_actinides
+spec:
+  children:
+    - name: actinides-root
+      quotas:
+        requests:
+          cpu: 1075m
+          memory: 1045Mi
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: actinides-children
+  namespace: kube-system
+  labels:
+    tree: quota_actinides
+spec:
+  parent: actinides-root
+  children:
+    - name: plutonium
+      quotas:
+        requests:
+          cpu: 1075m
+          memory: 1045Mi
+    - name: lawrencium
+      quotas:
+        hardLimit: true
+        requests:
+          cpu: 1075m
+          memory: 1045Mi

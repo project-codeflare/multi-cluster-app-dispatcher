@@ -128,7 +128,7 @@ func NewQuotaManager(dispatchedAWDemands map[string]*clusterstateapi.Resource, d
 
 	// Set the name of the forest in the backend
 	qm.quotaManagerBackend.AddForest(QuotaManagerForestName)
-	klog.V(10).Infof("[NewQuotaManager] Before initialization QuotaSubtree informer - %s", qm.quotaManagerBackend.String())
+	klog.V(4).Infof("[NewQuotaManager] Before initialization QuotaSubtree informer - %s", qm.quotaManagerBackend.String())
 
 	// Create a resource plan manager
 	qm.quotaSubtreeManager, err = qstmanager.NewQuotaSubtreeManager(config, qm.quotaManagerBackend)
@@ -171,6 +171,19 @@ func (qm *QuotaManager) loadDispatchedAWs(dispatchedAWDemands map[string]*cluste
 		klog.V(4).Infof("[loadDispatchedAWs] No dispatched AppWrappers found to preload.")
 		return nil
 	}
+	allTrees := qm.GetValidQuotaLabels()
+	klog.V(4).Infof("[loadDispatchedAWs] valid quota labels:%v", allTrees)
+	if len(allTrees) == 0 && len(dispatchedAWs) > 0 {
+		klog.Warning("[loadDispatchedAWs] No quota trees are defined in the cluster.")
+		klog.Warning("[loadDispatchedAWs] The resources for the following app wrappers will not be counted in the quota tree:")
+		for k := range dispatchedAWDemands {
+			aw := getDispatchedAppWrapper(dispatchedAWs, k)
+			if aw != nil {
+				klog.Warningf("[loadDispatchedAWs] app wrapper %s/%s not counted. AW labels: %v", aw.Namespace, aw.Name, aw.GetLabels())
+			}
+		}
+		return nil
+	}
 
 	// Process list of AppWrappers that are already dispatched
 	var result *multierror.Error
@@ -178,12 +191,27 @@ func (qm *QuotaManager) loadDispatchedAWs(dispatchedAWDemands map[string]*cluste
 	for k, v := range dispatchedAWDemands {
 		aw := getDispatchedAppWrapper(dispatchedAWs, k)
 		if aw != nil {
+			klog.V(4).Infof("[loadDispatchedAWs] Dispatched AppWrappers %s/%s found to preload.", aw.Namespace, aw.Name)
+			newLabels := make(map[string]string)
+			for key, value := range aw.Labels {
+				newLabels[key] = value
+			}
+			for _, treeName := range allTrees {
+				if _, quotaSetForAW := newLabels[treeName]; !quotaSetForAW {
+					newLabels[treeName] = "default"
+					klog.V(4).Infof("[loadDispatchedAWs] Dispatched AppWrappers %s/%s adding default quota labels.", aw.Namespace, aw.Name)
+				}
+
+			}
+			aw.SetLabels(newLabels)
+
 			doesFit, preemptionIds, errorMessage := qm.Fits(aw, v, nil)
 			if !doesFit {
 				klog.Errorf("[loadDispatchedAWs] Loading of AppWrapper %s/%s failed.",
 					aw.Namespace, aw.Name)
 				result = multierror.Append(result, fmt.Errorf("loading of AppWrapper %s/%s failed, %s",
 					aw.Namespace, aw.Name, errorMessage))
+				qm.Release(aw)
 			}
 
 			if len(preemptionIds) > 0 {
@@ -192,7 +220,6 @@ func (qm *QuotaManager) loadDispatchedAWs(dispatchedAWDemands map[string]*cluste
 				result = multierror.Append(result, fmt.Errorf("loading of AppWrapper %s/%s caused invalid preemptions: %v.  Quota Manager is in inconsistent state",
 					aw.Namespace, aw.Name, preemptionIds))
 			}
-			klog.V(4).Infof("[loadDispatchedAWs] Dispatched AppWrappers %s/%s found to preload.", aw.Namespace, aw.Name)
 		} else {
 			klog.Warningf("[loadDispatchedAWs] Unable to obtain AppWrapper from key: %s.  Loading of AppWrapper will be skipped.", k)
 		}
