@@ -45,7 +45,9 @@ export IMAGE_MCAD="${IMAGE_REPOSITORY_MCAD}:${IMAGE_TAG_MCAD}"
 CLUSTER_STARTED="false"
 export KUTTL_VERSION=0.15.0
 export KUTTL_OPTIONS=${TEST_KUTTL_OPTIONS}
-export KUTTL_TEST_SUITES=("${ROOT_DIR}/test/kuttl-test.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-03.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-02.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-01.yaml") 
+export KUTTL_TEST_SUITES=("${ROOT_DIR}/test/kuttl-test.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-03.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-02.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-01.yaml")
+DUMP_LOGS="true"
+
 
 function update_test_host {
   
@@ -258,49 +260,54 @@ function cleanup {
       return
     fi  
 
-    echo "Custom Resource Definitions..."
-    echo "kubectl get crds"
-    kubectl get crds
-
-    echo "---"
-    echo "Get All AppWrappers..."
-    kubectl get appwrappers --all-namespaces -o yaml
-
-    echo "---"
-    echo "Describe all AppWrappers..."
-    kubectl describe appwrappers --all-namespaces
-
-    echo "---"
-    echo "'test' Pod list..."
-    kubectl get pods -n test
-
-    echo "---"
-    echo "'test' Pod yaml..."
-    kubectl get pods -n test -o yaml
-
-    echo "---"
-    echo "'test' Pod descriptions..."
-    kubectl describe pods -n test
-
-    echo "---"
-    echo "'all' Namespaces  list..."
-    kubectl get namespaces
-
-    echo "---"
-    echo "'aw-namespace-1' Namespace  list..."
-    kubectl get namespace aw-namespace-1 -o yaml
-
-    echo "===================================================================================="
-    echo "==========================>>>>> MCAD Controller Logs <<<<<=========================="
-    echo "===================================================================================="
-    local mcad_pod=$(kubectl get pods -n kube-system | grep mcad-controller | awk '{print $1}')
-    if [[ "$mcad_pod" != "" ]]
+    if [[ ${DUMP_LOGS} == "true" ]]
     then
-      echo "kubectl logs ${mcad_pod} -n kube-system"
-      kubectl logs ${mcad_pod} -n kube-system
+
+      echo "Custom Resource Definitions..."
+      echo "kubectl get crds"
+      kubectl get crds
+
+      echo "---"
+      echo "Get All AppWrappers..."
+      kubectl get appwrappers --all-namespaces -o yaml
+
+      echo "---"
+      echo "Describe all AppWrappers..."
+      kubectl describe appwrappers --all-namespaces
+
+      echo "---"
+      echo "'test' Pod list..."
+      kubectl get pods -n test
+
+      echo "---"
+      echo "'test' Pod yaml..."
+      kubectl get pods -n test -o yaml
+
+      echo "---"
+      echo "'test' Pod descriptions..."
+      kubectl describe pods -n test
+
+      echo "---"
+      echo "'all' Namespaces  list..."
+      kubectl get namespaces
+
+      echo "---"
+      echo "'aw-namespace-1' Namespace  list..."
+      kubectl get namespace aw-namespace-1 -o yaml
+
+      echo "===================================================================================="
+      echo "==========================>>>>> MCAD Controller Logs <<<<<=========================="
+      echo "===================================================================================="
+      local mcad_pod=$(kubectl get pods -n kube-system | grep mcad-controller | awk '{print $1}')
+      if [[ "$mcad_pod" != "" ]]
+      then
+        echo "kubectl logs ${mcad_pod} -n kube-system"
+        kubectl logs ${mcad_pod} -n kube-system
+      fi
     fi
+    
     rm -f kubeconfig
-  
+    
     if [[ $CLEANUP_CLUSTER == "true" ]]
     then
       kind delete cluster ${CLUSTER_CONTEXT}     
@@ -400,3 +407,7 @@ setup-mcad-env
 kuttl-tests
 mcad-up
 go test ./test/e2e -v -timeout 130m -count=1
+if [ ${?} -eq 0 ]
+then
+  DUMP_LOGS="false"
+fi
