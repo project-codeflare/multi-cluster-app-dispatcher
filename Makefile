@@ -19,16 +19,11 @@ endif
 
 # Check for current branch name and update 'RELEASE_VER' and 'TAG'
 ifneq ($(strip $(GIT_BRANCH)),)
-	ifeq ($(shell echo $(GIT_BRANCH) | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$$'),$(GIT_BRANCH))
-		RELEASE_VER:=${GIT_BRANCH}
-		TAG:=release-${TAG}
-	else
-		RELEASE_VER:= $(shell git describe --tags --abbrev=0)
-		TAG:=${TAG}${GIT_BRANCH}
-		# replace invalid characters that might exist in the branch name
-		TAG:=$(shell echo ${TAG} | sed 's/[^a-zA-Z0-9]/-/g')
-		TAG:=${TAG}-${RELEASE_VER}
-	endif
+	RELEASE_VER:= $(shell git describe --tags --abbrev=0)
+	TAG:=${TAG}${GIT_BRANCH}
+	# replace invalid characters that might exist in the branch name
+	TAG:=$(shell echo ${TAG} | sed 's/[^a-zA-Z0-9]/-/g')
+	TAG:=${TAG}-${RELEASE_VER}
 endif
 
 .PHONY: print-global-variables
