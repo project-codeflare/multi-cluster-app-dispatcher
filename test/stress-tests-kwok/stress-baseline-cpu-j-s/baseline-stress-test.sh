@@ -46,17 +46,17 @@ do
 done
 
 
-# # Check for all jobs to report complete
-# jobstatus=`kubectl get jobs -n default --no-headers --field-selector status.successful=$awjobs |grep baseline | wc -l`
+# Check for all jobs to report complete
+jobstatus=`kubectl get jobs -n default --no-headers --field-selector status.successful=$awjobs |grep baseline | wc -l`
 
-# while [ $jobstatus -lt $jobs ]
-# do
-#    echo "Number of completed jobs is: " $jobstatus " and the goal is: " $jobs
-#    sleep 1
-#    jobstatus=`kubectl get jobs -n default --no-headers --field-selector status.successful=$awjobs |grep baseline | wc -l`
-# done
+while [ $jobstatus -lt $jobs ]
+do
+   echo "Number of completed jobs is: " $jobstatus " and the goal is: " $jobs
+   sleep 1
+   jobstatus=`kubectl get jobs -n default --no-headers --field-selector status.successful=$awjobs |grep baseline | wc -l`
+done
 
-kubectl wait --for=condition=complete --timeout=-30s --all job
+# kubectl wait --for=condition=complete --timeout=-30s --all job
 
 export FINISHTIME=`date +"%T"`
 echo "Total amount of time for $jobs real jobs without MCAD is: $SECONDS seconds" 

@@ -1,6 +1,11 @@
 #!/bin/bash
 
 # clear the cluster for any potential jobs
+echo "Deleting appwrappers if any..." 
+kubectl delete appwrappers --all -n default
+echo " "
+
+# clear the cluster for any potential jobs
 echo "Deleting any jobs if any..." 
 kubectl delete jobs --all -n default
 echo " "
