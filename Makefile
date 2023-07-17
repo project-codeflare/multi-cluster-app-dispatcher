@@ -3,7 +3,6 @@ CAT_CMD=$(if $(filter $(OS),Windows_NT),type,cat)
 RELEASE_VER:=
 CURRENT_DIR=$(shell pwd)
 GIT_BRANCH:=$(shell git symbolic-ref --short HEAD 2>&1 | grep -v fatal)
-
 #define the GO_BUILD_ARGS if you need to pass additional arguments to the go build
 GO_BUILD_ARGS?=
 
@@ -137,16 +136,26 @@ manifests: controller-gen ## Generate CustomResourceDefinition objects.
 generate-code: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate/boilerplate.go.txt" paths="./pkg/apis/..."
 
+# Build the docker image and tag it.  
 images: verify-tag-name generate-code update-deployment-crds
 	$(info List executable directory)
 	$(info repo id: ${git_repository_id})
 	$(info branch: ${GIT_BRANCH})
 	$(info Build the docker image)
-ifeq ($(strip $(GO_BUILD_ARGS)),)
-	docker build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
-else 
-	docker build --no-cache --tag mcad-controller:${TAG} --build-arg GO_BUILD_ARGS=$(GO_BUILD_ARGS) -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}
-endif		
+	@HOST_ARCH=$$(uname -m); \
+	if [ "$$HOST_ARCH" = "aarch64" ]; then \
+		if [ "$(strip $(GO_BUILD_ARGS))" = "" ]; then \
+			docker buildx build --quiet --no-cache --platform=linux/amd64 --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}; \
+		else \
+			docker buildx build --no-cache --platform=linux/amd64 --tag mcad-controller:${TAG} --build-arg GO_BUILD_ARGS=$(GO_BUILD_ARGS) -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}; \
+		fi \
+	else \
+		if [ "$(strip $(GO_BUILD_ARGS))" = "" ]; then \
+			docker build --quiet --no-cache --tag mcad-controller:${TAG} -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}; \
+		else \
+			docker build --no-cache --tag mcad-controller:${TAG} --build-arg GO_BUILD_ARGS=$(GO_BUILD_ARGS) -f ${CURRENT_DIR}/Dockerfile  ${CURRENT_DIR}; \
+		fi \
+	fi
 
 images-podman: verify-tag-name generate-code update-deployment-crds
 	$(info List executable directory)
