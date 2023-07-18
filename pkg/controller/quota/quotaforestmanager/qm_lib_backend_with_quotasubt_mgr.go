@@ -568,7 +568,13 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 		qm.removeConsumer(consumerID)
 		return doesFit, preemptIds, strings.TrimSpace(allocResponse.GetMessage())
 	}
-	preemptIds = qm.getAppWrappers(allocResponse.GetPreemptedIds())
+	if len(allocResponse.GetPreemptedIds()) > 0 {
+		preemptIds = qm.getAppWrappers(allocResponse.GetPreemptedIds())
+	} else {
+		var s []string
+		s = append(s, allocResponse.GetConsumerID())
+		preemptIds = qm.getAppWrappers(s)
+	}
 	return doesFit, preemptIds, strings.TrimSpace(allocResponse.GetMessage())
 }
 
