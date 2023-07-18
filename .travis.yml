@@ -28,7 +28,7 @@ script:
   # Process 'make images' when running as a pull request
   - 'if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then unset quay_repository && make images; fi'
    # Process 'make push-images' when NOT a pull request
-  - 'if [ "$TRAVIS_PULL_REQUEST"  = "false" ]; then make push-images; fi'
+  - 'if [ "$TRAVIS_PULL_REQUEST"  = "false"  && "$TRAVIS_BRANCH" =~  ^v[0-9]\.[0-9]+\.[0-9]+]; then make push-images; fi'
   # Run the e2e and handle Travis condition where Travis fails on no output for 10 minutes.   No output for 10 minutes
   # is fine for our test cases that waits for 10 minutes before requeuing a job.  The other workaround was to
   # use 'travis_wait n' which unfortunately does not stream output until the very end so monitoring the Travis log 
