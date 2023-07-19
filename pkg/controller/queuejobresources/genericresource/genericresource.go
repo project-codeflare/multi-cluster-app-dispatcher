@@ -36,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -120,8 +121,13 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 
 	_, apiresourcelist, err := dd.ServerGroupsAndResources()
 	if err != nil {
-		klog.Errorf("Error getting supported groups and resources, err=%#v", err)
-		return name, gvk, err
+		if derr, ok := err.(*discovery.ErrGroupDiscoveryFailed); ok {
+			klog.Warning("Discovery failed for some groups, %d failing: %v", len(derr.Groups), err)
+		} else {
+			klog.Errorf("Error getting supported groups and resources, err=%#v", err)
+			return name, gvk, err
+		}
+
 	}
 	rsrc := mapping.Resource
 	for _, apiresourcegroup := range apiresourcelist {
@@ -233,8 +239,12 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 
 	_, apiresourcelist, err := dd.ServerGroupsAndResources()
 	if err != nil {
-		klog.Errorf("Error getting supported groups and resources, err=%#v", err)
-		return []*v1.Pod{}, err
+		if derr, ok := err.(*discovery.ErrGroupDiscoveryFailed); ok {
+			klog.Warning("Discovery failed for some groups, %d failing: %v", len(derr.Groups), err)
+		} else {
+			klog.Errorf("Error getting supported groups and resources, err=%#v", err)
+			return []*v1.Pod{}, err
+		}
 	}
 
 	rsrc := mapping.Resource
