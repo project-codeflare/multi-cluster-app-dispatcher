@@ -954,7 +954,9 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 					continue
 				}
 
-				addPreemptableAWs(preemptableAWs, value, queueJobKey, preemptableAWsMap)
+				preemptableAWs[value.Status.SystemPriority] = append(preemptableAWs[value.Status.SystemPriority], queueJobKey)
+				preemptableAWsMap[queueJobKey] = value
+				klog.V(10).Infof("[getAggAvaiResPri] %s: Added %s to candidate preemptable job with priority %f.", time.Now().String(), value.Name, value.Status.SystemPriority)
 			}
 
 			err := qjm.qjobResControls[arbv1.ResourceTypePod].UpdateQueueJobStatus(value)
@@ -966,8 +968,6 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 			klog.V(10).Infof("[getAggAvaiResPri] total resources consumed by Appwrapper %v when lower priority compared to target are %v", value.Name, totalResource)
 			preemptable = preemptable.Add(totalResource)
 			klog.V(6).Infof("[getAggAvaiResPri] %s proirity %v is lower target priority %v reclaiming total preemptable resources %v", value.Name, value.Status.SystemPriority, targetpr, totalResource)
-			queueJobKey, _ := GetQueueJobKey(value)
-			addPreemptableAWs(preemptableAWs, value, queueJobKey, preemptableAWsMap)
 			continue
 		} else if qjm.isDispatcher {
 			// Dispatcher job does not currently track pod states.  This is
@@ -1014,12 +1014,6 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 
 	klog.V(3).Infof("[getAggAvaiResPri] %+v available resources to schedule", r)
 	return r, proposedPremptions
-}
-
-func addPreemptableAWs(preemptableAWs map[float64][]string, value *arbv1.AppWrapper, queueJobKey string, preemptableAWsMap map[string]*arbv1.AppWrapper) {
-	preemptableAWs[value.Status.SystemPriority] = append(preemptableAWs[value.Status.SystemPriority], queueJobKey)
-	preemptableAWsMap[queueJobKey] = value
-	klog.V(10).Infof("[getAggAvaiResPri] %s: Added %s to candidate preemptable job with priority %f.", time.Now().String(), value.Name, value.Status.SystemPriority)
 }
 
 func (qjm *XController) chooseAgent(qj *arbv1.AppWrapper) string {
