@@ -399,10 +399,11 @@ function kuttl-tests {
 }
 
 trap cleanup EXIT
-exit
 update_test_host
 check-prerequisites 
 kind-up-cluster
+kubectl get all nodes
+exit
 setup-mcad-env
 # MCAD with quotamanagement options is started by kuttl-tests
 kuttl-tests
