@@ -127,7 +127,6 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 			klog.Errorf("Error getting supported groups and resources, err=%#v", err)
 			return name, gvk, err
 		}
-
 	}
 	rsrc := mapping.Resource
 	for _, apiresourcegroup := range apiresourcelist {
