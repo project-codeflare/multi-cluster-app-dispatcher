@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/eapache/go-resiliency v1.3.0
 	github.com/emicklei/go-restful v2.16.0+incompatible
-	github.com/gogo/protobuf v1.3.1
+	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.4.3
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kubernetes-sigs/custom-metrics-apiserver v0.0.0-20210311094424-0ca2b1909cdc
