@@ -535,14 +535,14 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		aw := createGenericAWTimeoutWithStatus(context, "aw-test-jobtimeout-with-comp-1")
+		appwrappers = append(appwrappers, aw)
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: aw-test-jobtimeout-with-comp-1")
-		time.Sleep(60 * time.Second)
+		time.Sleep(90 * time.Second)
 		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Expecting no error when getting app wrapper status")
 		fmt.Fprintf(GinkgoWriter, "[e2e] status of app wrapper: %v.\n", aw1.Status)
 		Expect(aw1.Status.State).To(Equal(arbv1.AppWrapperStateFailed), "Expecting a failed state")
-		appwrappers = append(appwrappers, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD app wrapper timeout Test - Completed.\n")
 	})
 

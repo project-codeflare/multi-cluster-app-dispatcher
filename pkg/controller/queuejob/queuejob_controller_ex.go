@@ -31,6 +31,7 @@ limitations under the License.
 package queuejob
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -69,7 +70,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	runtimeJson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"
 	resconfigmap "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/configmap" // ConfigMap
@@ -675,7 +676,7 @@ func GetPodTemplate(qjobRes *arbv1.AppWrapperResource) (*v1.PodTemplateSpec, err
 	rtScheme := runtime.NewScheme()
 	v1.AddToScheme(rtScheme)
 
-	jsonSerializer := json.NewYAMLSerializer(json.DefaultMetaFactory, rtScheme, rtScheme)
+	jsonSerializer := runtimeJson.NewYAMLSerializer(runtimeJson.DefaultMetaFactory, rtScheme, rtScheme)
 
 	podGVK := schema.GroupVersion{Group: v1.GroupName, Version: "v1"}.WithKind("PodTemplate")
 
@@ -1903,7 +1904,6 @@ func (cc *XController) worker() {
 
 		// sync AppWrapper
 		if err := cc.syncQueueJob(queuejob); err != nil {
-			klog.Errorf("[worker] Failed to sync AppWrapper '%s/%s', err %#v", queuejob.Namespace, queuejob.Name, err)
 			// If any error, requeue it.
 			return err
 		}
@@ -1911,12 +1911,12 @@ func (cc *XController) worker() {
 		klog.V(10).Infof("[worker] Ending %s Delay=%.6f seconds &newQJ=%p Version=%s Status=%+v", queuejob.Name, time.Now().Sub(queuejob.Status.ControllerFirstTimestamp.Time).Seconds(), queuejob, queuejob.ResourceVersion, queuejob.Status)
 		return nil
 	})
-	if err != nil {
+	if err != nil && !CanIgnoreAPIError(err) && !IsJsonSyntaxError(err) {
 		klog.Warningf("[worker] Fail to process item from eventQueue, err %v. Attempting to re-enqueque...", err)
 		if err00 := cc.enqueueIfNotPresent(item); err00 != nil {
-			klog.Errorf("[worker] Fatal error railed to re-enqueue item, err %v", err00)
+			klog.Errorf("[worker] Fatal error trying to re-enqueue item, err =%v", err00)
 		} else {
-			klog.Warning("[worker] Item re-enqueued")
+			klog.Warning("[worker] Item re-enqueued.")
 		}
 		return
 	}
@@ -2140,7 +2140,6 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 							klog.Errorf("[manageQueueJob] Error dispatching generic item for app wrapper='%s/%s' type=%v err=%v", qj.Namespace, qj.Name, err00)
 						}
 						dispatchFailureMessage = fmt.Sprintf("%s/%s creation failure: %+v", qj.Namespace, qj.Name, err00)
-						klog.Errorf("[manageQueueJob] Error dispatching job=%s Status=%+v err=%+v", qj.Name, qj.Status, err00)
 						dispatched = false
 					}
 				}
@@ -2337,7 +2336,7 @@ func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 			// we call clean-up for each controller
 			for _, ar := range appwrapper.Spec.AggrResources.Items {
 				err00 := cc.qjobResControls[ar.Type].Cleanup(appwrapper, &ar)
-				if err00 != nil && !apierrors.IsNotFound(err00) {
+				if err00 != nil && !CanIgnoreAPIError(err00) && !IsJsonSyntaxError(err00) {
 					klog.Errorf("[Cleanup] Error deleting item %s from app wrapper='%s/%s' err=%v.",
 						ar.Type, appwrapper.Namespace, appwrapper.Name, err00)
 					err = multierror.Append(err, err00)
@@ -2350,14 +2349,19 @@ func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 		if appwrapper.Spec.AggrResources.GenericItems != nil {
 			for _, ar := range appwrapper.Spec.AggrResources.GenericItems {
 				genericResourceName, gvk, err00 := cc.genericresources.Cleanup(appwrapper, &ar)
-				if err00 != nil && !apierrors.IsNotFound(err00) {
+				if err00 != nil && !CanIgnoreAPIError(err00) && !IsJsonSyntaxError(err00) {
 					klog.Errorf("[Cleanup] Error deleting generic item %s, from app wrapper='%s/%s' err=%v.",
 						genericResourceName, appwrapper.Namespace, appwrapper.Name, err00)
 					err = multierror.Append(err, err00)
 					continue
 				}
-				klog.V(3).Infof("[Cleanup] Deleted generic item %s, GVK=%s.%s.%s from app wrapper='%s/%s'",
-					genericResourceName, gvk.Group, gvk.Version, gvk.Kind, appwrapper.Namespace, appwrapper.Name)
+				if gvk != nil {
+					klog.V(3).Infof("[Cleanup] Deleted generic item '%s', GVK=%s.%s.%s from app wrapper='%s/%s'",
+						genericResourceName, gvk.Group, gvk.Version, gvk.Kind, appwrapper.Namespace, appwrapper.Name)
+				} else {
+					klog.V(3).Infof("[Cleanup] Deleted generic item '%s' from app wrapper='%s/%s'",
+						genericResourceName, appwrapper.Namespace, appwrapper.Name)
+				}
 			}
 		}
 
@@ -2442,4 +2446,22 @@ func (qjm *XController) schedulingAWAtomicSet(qj *arbv1.AppWrapper) {
 	qjm.schedulingMutex.Lock()
 	qjm.schedulingAW = qj
 	qjm.schedulingMutex.Unlock()
+}
+
+func IsJsonSyntaxError(err error) bool {
+	var tt *jsons.SyntaxError
+	if err == nil {
+		return false
+	} else if err.Error() == "Job resource template item not define as a PodTemplate" {
+		return true
+	} else if err.Error() == "name is required" {
+		return true
+	} else if errors.As(err, &tt) {
+		return true
+	} else {
+		return false
+	}
+}
+func CanIgnoreAPIError(err error) bool {
+	return err == nil || apierrors.IsNotFound(err) || apierrors.IsInvalid(err)
 }
