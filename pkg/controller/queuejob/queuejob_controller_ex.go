@@ -1911,7 +1911,7 @@ func (cc *XController) worker() {
 		klog.V(10).Infof("[worker] Ending %s Delay=%.6f seconds &newQJ=%p Version=%s Status=%+v", queuejob.Name, time.Now().Sub(queuejob.Status.ControllerFirstTimestamp.Time).Seconds(), queuejob, queuejob.ResourceVersion, queuejob.Status)
 		return nil
 	})
-	if err != nil && !apierrors.IsNotFound(err) && !apierrors.IsInvalid(err) && !IsJsonSyntaxError(err) {
+	if err != nil && !CanIgnoreAPIError(err) && !IsJsonSyntaxError(err) {
 		klog.Warningf("[worker] Fail to process item from eventQueue, err %v. Attempting to re-enqueque...", err)
 		if err00 := cc.enqueueIfNotPresent(item); err00 != nil {
 			klog.Errorf("[worker] Fatal error trying to re-enqueue item, err =%v", err00)
@@ -2336,7 +2336,7 @@ func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 			// we call clean-up for each controller
 			for _, ar := range appwrapper.Spec.AggrResources.Items {
 				err00 := cc.qjobResControls[ar.Type].Cleanup(appwrapper, &ar)
-				if err00 != nil && !apierrors.IsNotFound(err00) && !apierrors.IsInvalid(err00) {
+				if err00 != nil && !CanIgnoreAPIError(err00) && !IsJsonSyntaxError(err00) {
 					klog.Errorf("[Cleanup] Error deleting item %s from app wrapper='%s/%s' err=%v.",
 						ar.Type, appwrapper.Namespace, appwrapper.Name, err00)
 					err = multierror.Append(err, err00)
@@ -2349,14 +2349,19 @@ func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 		if appwrapper.Spec.AggrResources.GenericItems != nil {
 			for _, ar := range appwrapper.Spec.AggrResources.GenericItems {
 				genericResourceName, gvk, err00 := cc.genericresources.Cleanup(appwrapper, &ar)
-				if err00 != nil && !apierrors.IsNotFound(err00) && !apierrors.IsInvalid(err00) && !IsJsonSyntaxError(err00) {
+				if err00 != nil && !CanIgnoreAPIError(err00) && !IsJsonSyntaxError(err00) {
 					klog.Errorf("[Cleanup] Error deleting generic item %s, from app wrapper='%s/%s' err=%v.",
 						genericResourceName, appwrapper.Namespace, appwrapper.Name, err00)
 					err = multierror.Append(err, err00)
 					continue
 				}
-				klog.V(3).Infof("[Cleanup] Deleted generic item %s, GVK=%s.%s.%s from app wrapper='%s/%s'",
-					genericResourceName, gvk.Group, gvk.Version, gvk.Kind, appwrapper.Namespace, appwrapper.Name)
+				if gvk != nil {
+					klog.V(3).Infof("[Cleanup] Deleted generic item '%s', GVK=%s.%s.%s from app wrapper='%s/%s'",
+						genericResourceName, gvk.Group, gvk.Version, gvk.Kind, appwrapper.Namespace, appwrapper.Name)
+				} else {
+					klog.V(3).Infof("[Cleanup] Deleted generic item '%s' from app wrapper='%s/%s'",
+						genericResourceName, appwrapper.Namespace, appwrapper.Name)
+				}
 			}
 		}
 
@@ -2447,13 +2452,16 @@ func IsJsonSyntaxError(err error) bool {
 	var tt *jsons.SyntaxError
 	if err == nil {
 		return false
-	} else if err.Error() == "unexpected end of JSON input" {
-		return true
 	} else if err.Error() == "Job resource template item not define as a PodTemplate" {
+		return true
+	} else if err.Error() == "name is required" {
 		return true
 	} else if errors.As(err, &tt) {
 		return true
 	} else {
 		return false
 	}
+}
+func CanIgnoreAPIError(err error) bool {
+	return err == nil || apierrors.IsNotFound(err) || apierrors.IsInvalid(err)
 }
