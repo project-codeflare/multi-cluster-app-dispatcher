@@ -376,6 +376,40 @@ function setup-mcad-env {
 
 }
 
+function extend-resources {
+    # Patch nodes to provide GPUs resources without physical GPUs.
+    # This is intended to allow testing of GPU specific features such as histograms.
+
+    # Start communication with cluster
+    echo -n "Starting proxy "
+
+    kubectl proxy > /dev/null 2>&1 &
+    PROXY_PID=$!
+
+    echo "(pid=${PROXY_PID})..."
+
+    # Variables
+    RESOURCE_NAME="nvidia.com~1gpu"
+    RESOURCE_COUNT="8"
+
+    # Patch nodes
+    for NODE_NAME in $(kubectl get nodes --no-headers -o custom-columns=":metadata.name")
+    do
+        echo "- Patching node (add): ${NODE_NAME}"
+
+        curl --header "Content-Type: application/json-patch+json" \
+             --request PATCH \
+             --data '[{"op": "add", "path": "/status/capacity/'${RESOURCE_NAME}'", "value": "'${RESOURCE_COUNT}'"}]' \
+             http://localhost:8001/api/v1/nodes/${NODE_NAME}/status
+
+        echo
+    done
+
+    # Stop communication with cluster
+    echo "Killing proxy (pid=${PROXY_PID})..."
+    kill ${PROXY_PID}
+}
+
 function kuttl-tests {
   for kuttl_test in ${KUTTL_TEST_SUITES[@]}; do
     echo "kubectl kuttl test --config ${kuttl_test}"
@@ -402,7 +436,8 @@ trap cleanup EXIT
 update_test_host
 check-prerequisites 
 kind-up-cluster
-kubectl get all nodes
+extend-resources
+kubectl describe all nodes
 exit
 setup-mcad-env
 # MCAD with quotamanagement options is started by kuttl-tests
