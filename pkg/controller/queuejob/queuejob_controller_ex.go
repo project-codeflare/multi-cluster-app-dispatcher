@@ -954,7 +954,6 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 					continue
 				}
 
-				addPreemptableAWs(preemptableAWs, value, queueJobKey, preemptableAWsMap)
 			}
 
 			err := qjm.qjobResControls[arbv1.ResourceTypePod].UpdateQueueJobStatus(value)
