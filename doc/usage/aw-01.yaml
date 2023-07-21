@@ -1,0 +1,37 @@
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+  name: 0001-aw-generic-deployment-1
+spec:
+  resources:
+    GenericItems:
+    - replicas: 1
+      generictemplate:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: 0001-aw-generic-deployment-1
+          labels:
+            app: 0001-aw-generic-deployment-1
+        spec:
+          selector:
+            matchLabels:
+              app: 0001-aw-generic-deployment-1
+          replicas: 2
+          template:
+            metadata:
+              labels:
+                app: 0001-aw-generic-deployment-1
+            spec:
+              containers:
+               - name: 0001-aw-generic-deployment-1
+                 image: kicbase/echo-server:1.0
+                 ports:
+                 - containerPort: 80
+                 resources:
+                   requests:
+                     cpu: 100m
+                     memory: 256Mi
+                   limits:
+                     cpu: 100m
+                     memory: 256Mi
