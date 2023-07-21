@@ -469,7 +469,7 @@ func (qjm *XController) PreemptQueueJobs() {
 					continue
 				}
 				//cannot use cleanup AW, since it puts AW back in running state
-				go qjm.qjqueue.AddUnschedulableIfNotPresent(updateNewJob)
+				qjm.qjqueue.AddUnschedulableIfNotPresent(updateNewJob)
 
 				//Move to next AW
 				continue
@@ -539,12 +539,12 @@ func (qjm *XController) PreemptQueueJobs() {
 
 		if cleanAppWrapper {
 			klog.V(4).Infof("[PreemptQueueJobs] Deleting AppWrapper %s/%s due to maximum number of re-queueing(s) exceeded.", aw.Name, aw.Namespace)
-			go qjm.Cleanup(updateNewJob)
+			qjm.Cleanup(updateNewJob)
 		} else {
 			//Only back-off AWs that are in state running and not in state Failed
 			if updateNewJob.Status.State != arbv1.AppWrapperStateFailed {
 				klog.Infof("[PreemptQueueJobs] Adding preempted AppWrapper %s/%s to back off queue.", aw.Name, aw.Namespace)
-				go qjm.backoff(updateNewJob, "PreemptionTriggered", string(message))
+				qjm.backoff(updateNewJob, "PreemptionTriggered", string(message))
 			}
 		}
 	}
@@ -1270,7 +1270,7 @@ func (qjm *XController) ScheduleNext() {
 			} else {
 				dispatchFailedMessage = "Cannot find an cluster with enough resources to dispatch AppWrapper."
 				klog.V(2).Infof("[ScheduleNex] [Dispatcher Mode] %s %s\n", dispatchFailedReason, dispatchFailedMessage)
-				go qjm.backoff(qj, dispatchFailedReason, dispatchFailedMessage)
+				qjm.backoff(qj, dispatchFailedReason, dispatchFailedMessage)
 			}
 		} else { // Agent Mode
 			aggqj := qjm.GetAggregatedResources(qj)
@@ -1462,7 +1462,7 @@ func (qjm *XController) ScheduleNext() {
 				if qjm.quotaManager != nil && quotaFits {
 					qjm.quotaManager.Release(qj)
 				}
-				go qjm.backoff(qj, dispatchFailedReason, dispatchFailedMessage)
+				qjm.backoff(qj, dispatchFailedReason, dispatchFailedMessage)
 			}
 		}
 		return nil
