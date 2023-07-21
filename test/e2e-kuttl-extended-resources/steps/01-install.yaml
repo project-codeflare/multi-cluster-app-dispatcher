@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+    name: gpu-job
+    namespace: test
+spec:
+    template:
+        spec:
+            restartPolicy: Never
+            containers:
+                - name: gpu-job
+                  image: ubuntu:latest
+                  command: [ "/bin/bash", "-c", "--" ]
+                  args: [ "sleep 10;" ]
+                  resources:
+                      requests:
+                          nvidia.com/gpu: 8
+                      limits:
+                          nvidia.com/gpu: 8
