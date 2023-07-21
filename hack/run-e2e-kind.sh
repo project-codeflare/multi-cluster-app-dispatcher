@@ -437,7 +437,7 @@ update_test_host
 check-prerequisites 
 kind-up-cluster
 extend-resources
-kubectl describe all nodes
+kubectl describe nodes
 exit
 setup-mcad-env
 # MCAD with quotamanagement options is started by kuttl-tests
