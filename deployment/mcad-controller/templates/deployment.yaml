@@ -111,6 +111,7 @@ metadata:
 rules:
 - apiGroups:
   - mcad.ibm.com
+  - ibm.com
   resources:
   - xqueuejobs
   - queuejobs
@@ -118,6 +119,7 @@ rules:
   - appwrappers
   - appwrappers/finalizers
   - appwrappers/status
+  - quotasubtrees
   verbs:
   - create
   - delete
