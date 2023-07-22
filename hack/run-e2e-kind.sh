@@ -45,7 +45,7 @@ export IMAGE_MCAD="${IMAGE_REPOSITORY_MCAD}:${IMAGE_TAG_MCAD}"
 CLUSTER_STARTED="false"
 export KUTTL_VERSION=0.15.0
 export KUTTL_OPTIONS=${TEST_KUTTL_OPTIONS}
-export KUTTL_TEST_SUITES=("${ROOT_DIR}/test/kuttl-test-extended-resources.yaml" "${ROOT_DIR}/test/kuttl-test.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-03.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-02.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-01.yaml")
+export KUTTL_TEST_SUITES=("${ROOT_DIR}/test/kuttl-test.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-03.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-02.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-01.yaml")
 DUMP_LOGS="true"
 
 
@@ -408,6 +408,16 @@ function extend-resources {
     # Stop communication with cluster
     echo "Killing proxy (pid=${PROXY_PID})..."
     kill ${PROXY_PID}
+
+    # Run kuttl tests to confirm GPUs were added correctly
+    kuttl_test="${ROOT_DIR}/test/kuttl-test-extended-resources.yaml"
+    echo "kubectl kuttl test --config ${kuttl_test}"
+    kubectl kuttl test --config ${kuttl_test}
+    if [ $? -ne 0 ]
+    then
+      echo "kuttl e2e test '${kuttl_test}' failure, exiting."
+      exit 1
+    fi
 }
 
 function kuttl-tests {
