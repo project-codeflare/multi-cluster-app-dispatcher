@@ -5,4 +5,3 @@ testDirs:
 timeout: 60
 artifactsDir: _output/logs
 commands:
- 

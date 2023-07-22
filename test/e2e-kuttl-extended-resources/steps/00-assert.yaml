@@ -3,7 +3,7 @@
 apiVersion: v1
 kind: Node
 metadata:
-    name: minikube # CHANGE NAME
+    name: test-worker
 status:
     allocatable:
         nvidia.com/gpu: "8"

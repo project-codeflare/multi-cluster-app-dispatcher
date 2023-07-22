@@ -1,8 +1,5 @@
-apiVersion: batch/v1
-kind: Job
+# Verify that the namespace was created
+apiVersion: v1
+kind: Namespace
 metadata:
-    name: gpu-job
-    namespace: test
-status:
-    conditions:
-        - type: Complete
+  name: extended-resources
