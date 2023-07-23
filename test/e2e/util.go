@@ -347,15 +347,14 @@ func createJobEx(context *context, job *jobSpec) ([]*batchv1.Job, *arbv1.AppWrap
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", job.name, "resource1"),
 							Namespace: ns,
 						},
-						Replicas: 1,
-						Type:     arbv1.ResourceTypePod,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
@@ -977,15 +976,14 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
 							Namespace: context.namespace,
 						},
-						Replicas: 1,
-						Type:     arbv1.ResourceTypeDeployment,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
@@ -1058,15 +1056,14 @@ func createDeploymentAWwith900CPU(context *context, name string) *arbv1.AppWrapp
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
 							Namespace: context.namespace,
 						},
-						Replicas: 1,
-						Type:     arbv1.ResourceTypeDeployment,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
@@ -1139,15 +1136,14 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
 							Namespace: context.namespace,
 						},
-						Replicas: 1,
-						Type:     arbv1.ResourceTypeDeployment,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
@@ -1220,15 +1216,14 @@ func createDeploymentAWwith125CPU(context *context, name string) *arbv1.AppWrapp
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
 							Namespace: context.namespace,
 						},
-						Replicas: 1,
-						Type:     arbv1.ResourceTypeDeployment,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
@@ -1301,15 +1296,14 @@ func createDeploymentAWwith126CPU(context *context, name string) *arbv1.AppWrapp
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
 							Namespace: context.namespace,
 						},
-						Replicas: 1,
-						Type:     arbv1.ResourceTypeDeployment,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
@@ -1382,15 +1376,14 @@ func createDeploymentAWwith350CPU(context *context, name string) *arbv1.AppWrapp
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
 							Namespace: context.namespace,
 						},
-						Replicas: 1,
-						Type:     arbv1.ResourceTypeDeployment,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
@@ -1463,15 +1456,14 @@ func createDeploymentAWwith351CPU(context *context, name string) *arbv1.AppWrapp
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
 							Namespace: context.namespace,
 						},
-						Replicas: 1,
-						Type:     arbv1.ResourceTypeDeployment,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
@@ -1544,15 +1536,14 @@ func createDeploymentAWwith426CPU(context *context, name string) *arbv1.AppWrapp
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
 							Namespace: context.namespace,
 						},
-						Replicas: 1,
-						Type:     arbv1.ResourceTypeDeployment,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
@@ -1625,15 +1616,14 @@ func createDeploymentAWwith425CPU(context *context, name string) *arbv1.AppWrapp
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
 							Namespace: context.namespace,
 						},
-						Replicas: 1,
-						Type:     arbv1.ResourceTypeDeployment,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
@@ -2690,11 +2680,10 @@ func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
-						Replicas: 1,
-						Type:     arbv1.ResourceTypeNamespace,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
@@ -2801,15 +2790,14 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item1"),
 							Namespace: context.namespace,
 						},
-						Replicas: 1,
-						Type:     arbv1.ResourceTypeStatefulSet,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
@@ -2941,15 +2929,14 @@ func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item"),
 							Namespace: context.namespace,
 						},
-						Replicas: 2,
-						Type:     arbv1.ResourceTypePod,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 2,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
@@ -2965,24 +2952,40 @@ func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 }
 
 func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
-	rb := []byte(`{"metadata": 
-	{
+	rb := []byte(`{"apiVersion": "v1",
+	"kind": "Pod",
+	"metadata": {
+		"name": "aw-podtemplate-1",
+		"namespace": "test",
+		"labels": {
+			"appwrapper.mcad.ibm.com": "aw-podtemplate-2"
+		}
+	},
+	"spec": {
+			"containers": [
+				{
+					"name": "aw-podtemplate-1",
+					"image": "kicbase/echo-server:1.0",
+					"ports": [
+						{
+							"containerPort": 80
+						}
+					]
+				}
+			]
+		}
+	} `)
+
+	rb1 := []byte(`{"apiVersion": "v1",
+	"kind": "Pod",
+	"metadata": {
 		"name": "aw-podtemplate-2",
 		"namespace": "test",
 		"labels": {
-			"app": "aw-podtemplate-2"
+			"appwrapper.mcad.ibm.com": "aw-podtemplate-2"
 		}
 	},
-	"template": {
-		"metadata": {
-			"labels": {
-				"app": "aw-podtemplate-2"
-			},
-			"annotations": {
-				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-podtemplate-2"
-			}
-		},
-		"spec": {
+	"spec": {
 			"containers": [
 				{
 					"name": "aw-podtemplate-2",
@@ -2995,7 +2998,7 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 				}
 			]
 		}
-	}} `)
+	} `)
 	var schedSpecMin int = 2
 
 	aw := &arbv1.AppWrapper{
@@ -3008,16 +3011,25 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item"),
 							Namespace: context.namespace,
 						},
-						Replicas: 2,
-						Type:     arbv1.ResourceTypePod,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fmt.Sprintf("%s-%s", name, "item1"),
+							Namespace: context.namespace,
+						},
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
+							Raw: rb1,
 						},
 					},
 				},
@@ -3032,24 +3044,16 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 }
 
 func createPodCheckFailedStatusAW(context *context, name string) *arbv1.AppWrapper {
-	rb := []byte(`{"metadata": 
-	{
+	rb := []byte(`{"apiVersion": "v1",
+	"kind": "Pod",
+	"metadata": {
 		"name": "aw-checkfailedstatus-1",
 		"namespace": "test",
 		"labels": {
-			"app": "aw-checkfailedstatus-1"
+			"appwrapper.mcad.ibm.com": "aw-checkfailedstatus-1"
 		}
 	},
-	"template": {
-		"metadata": {
-			"labels": {
-				"app": "aw-checkfailedstatus-1"
-			},
-			"annotations": {
-				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-checkfailedstatus-1"
-			}
-		},
-		"spec": {
+	"spec": {
 			"containers": [
 				{
 					"name": "aw-checkfailedstatus-1",
@@ -3065,11 +3069,12 @@ func createPodCheckFailedStatusAW(context *context, name string) *arbv1.AppWrapp
 				{
 					"effect": "NoSchedule",
 					"key": "key1",
-					"operator": "Exists"
+					"value": "value1",
+					"operator": "Equal"
 				}
 			]
 		}
-	}} `)
+	} `)
 	var schedSpecMin int = 1
 
 	aw := &arbv1.AppWrapper{
@@ -3082,15 +3087,14 @@ func createPodCheckFailedStatusAW(context *context, name string) *arbv1.AppWrapp
 				MinAvailable: schedSpecMin,
 			},
 			AggrResources: arbv1.AppWrapperResourceList{
-				Items: []arbv1.AppWrapperResource{
+				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      fmt.Sprintf("%s-%s", name, "item"),
 							Namespace: context.namespace,
 						},
-						Replicas: 1,
-						Type:     arbv1.ResourceTypePod,
-						Template: runtime.RawExtension{
+						DesiredAvailable: 1,
+						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
 					},
