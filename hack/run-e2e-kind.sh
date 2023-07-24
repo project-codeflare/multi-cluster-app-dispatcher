@@ -373,7 +373,6 @@ function setup-mcad-env {
   do
     echo -n "." && sleep 1; 
   done
-
 }
 
 function extend-resources {
@@ -381,33 +380,46 @@ function extend-resources {
     # This is intended to allow testing of GPU specific features such as histograms.
 
     # Start communication with cluster
-    echo -n "Starting proxy "
-
     kubectl proxy > /dev/null 2>&1 &
-    PROXY_PID=$!
+    proxy_pid=$!
 
-    echo "(pid=${PROXY_PID})..."
+    echo "Starting background proxy connection (pid=${proxy_pid})..."
+
+    curl 127.0.0.1:8001 > /dev/null 2>&1
+
+    if [[ ! $? -eq 0 ]]; then
+        echo "Calling 'kubectl proxy' did not create a successful connection to the kubelet needed to patch the nodes. Exiting."
+        exit 1
+    else
+        echo "Connected to the kubelet for patching the nodes"
+    fi
+
 
     # Variables
-    RESOURCE_NAME="nvidia.com~1gpu"
-    RESOURCE_COUNT="8"
+    resource_name="nvidia.com~1gpu"
+    resource_count="8"
 
     # Patch nodes
-    for NODE_NAME in $(kubectl get nodes --no-headers -o custom-columns=":metadata.name")
+    for node_name in $(kubectl get nodes --no-headers -o custom-columns=":metadata.name")
     do
-        echo "- Patching node (add): ${NODE_NAME}"
+        echo "- Patching node (add): ${node_name}"
 
-        curl --header "Content-Type: application/json-patch+json" \
-             --request PATCH \
-             --data '[{"op": "add", "path": "/status/capacity/'${RESOURCE_NAME}'", "value": "'${RESOURCE_COUNT}'"}]' \
-             http://localhost:8001/api/v1/nodes/${NODE_NAME}/status
+        patching_status=$(curl --header "Content-Type: application/json-patch+json" \
+                                --request PATCH \
+                                --data '[{"op": "add", "path": "/status/capacity/'${resource_name}'", "value": "'${resource_count}'"}]' \
+                                http://localhost:8001/api/v1/nodes/${node_name}/status | jq -r '.status')
+
+        if [[ ${patching_status} = "Failure" ]]; then
+            echo "Failed to patch node '${node_name}' with GPU resources"
+            exit 1
+        fi
 
         echo
     done
 
     # Stop communication with cluster
-    echo "Killing proxy (pid=${PROXY_PID})..."
-    kill ${PROXY_PID}
+    echo "Killing proxy (pid=${proxy_pid})..."
+    kill -9 ${proxy_pid}
 
     # Run kuttl tests to confirm GPUs were added correctly
     kuttl_test="${ROOT_DIR}/test/kuttl-test-extended-resources.yaml"
