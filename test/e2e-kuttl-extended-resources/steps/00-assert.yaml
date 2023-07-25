@@ -1,0 +1,10 @@
+---
+# Verify that GPUs are a resource for the node
+apiVersion: v1
+kind: Node
+metadata:
+    name: test-worker
+status:
+    allocatable:
+        nvidia.com/gpu: "8"
+

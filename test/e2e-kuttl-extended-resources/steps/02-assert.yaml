@@ -1,0 +1,8 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+    name: gpu-job
+    namespace: extended-resources
+status:
+    conditions:
+        - type: Complete

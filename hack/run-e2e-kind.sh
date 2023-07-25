@@ -373,7 +373,63 @@ function setup-mcad-env {
   do
     echo -n "." && sleep 1; 
   done
+}
 
+function extend-resources {
+    # Patch nodes to provide GPUs resources without physical GPUs.
+    # This is intended to allow testing of GPU specific features such as histograms.
+
+    # Start communication with cluster
+    kubectl proxy > /dev/null 2>&1 &
+    proxy_pid=$!
+
+    echo "Starting background proxy connection (pid=${proxy_pid})..."
+
+    curl 127.0.0.1:8001 > /dev/null 2>&1
+
+    if [[ ! $? -eq 0 ]]; then
+        echo "Calling 'kubectl proxy' did not create a successful connection to the kubelet needed to patch the nodes. Exiting."
+        exit 1
+    else
+        echo "Connected to the kubelet for patching the nodes"
+    fi
+
+
+    # Variables
+    resource_name="nvidia.com~1gpu"
+    resource_count="8"
+
+    # Patch nodes
+    for node_name in $(kubectl get nodes --no-headers -o custom-columns=":metadata.name")
+    do
+        echo "- Patching node (add): ${node_name}"
+
+        patching_status=$(curl --header "Content-Type: application/json-patch+json" \
+                                --request PATCH \
+                                --data '[{"op": "add", "path": "/status/capacity/'${resource_name}'", "value": "'${resource_count}'"}]' \
+                                http://localhost:8001/api/v1/nodes/${node_name}/status | jq -r '.status')
+
+        if [[ ${patching_status} == "Failure" ]]; then
+            echo "Failed to patch node '${node_name}' with GPU resources"
+            exit 1
+        fi
+
+        echo
+    done
+
+    # Stop communication with cluster
+    echo "Killing proxy (pid=${proxy_pid})..."
+    kill -9 ${proxy_pid}
+
+    # Run kuttl tests to confirm GPUs were added correctly
+    kuttl_test="${ROOT_DIR}/test/kuttl-test-extended-resources.yaml"
+    echo "kubectl kuttl test --config ${kuttl_test}"
+    kubectl kuttl test --config ${kuttl_test}
+    if [ $? -ne 0 ]
+    then
+      echo "kuttl e2e test '${kuttl_test}' failure, exiting."
+      exit 1
+    fi
 }
 
 function kuttl-tests {
@@ -402,6 +458,7 @@ trap cleanup EXIT
 update_test_host
 check-prerequisites 
 kind-up-cluster
+extend-resources
 setup-mcad-env
 # MCAD with quotamanagement options is started by kuttl-tests
 kuttl-tests

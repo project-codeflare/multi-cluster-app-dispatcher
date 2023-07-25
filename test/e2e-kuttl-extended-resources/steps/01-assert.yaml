@@ -1,0 +1,5 @@
+# Verify that the namespace was created
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: extended-resources
