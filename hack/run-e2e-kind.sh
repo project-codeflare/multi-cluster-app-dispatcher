@@ -409,7 +409,7 @@ function extend-resources {
                                 --data '[{"op": "add", "path": "/status/capacity/'${resource_name}'", "value": "'${resource_count}'"}]' \
                                 http://localhost:8001/api/v1/nodes/${node_name}/status | jq -r '.status')
 
-        if [[ ${patching_status} = "Failure" ]]; then
+        if [[ ${patching_status} == "Failure" ]]; then
             echo "Failed to patch node '${node_name}' with GPU resources"
             exit 1
         fi
