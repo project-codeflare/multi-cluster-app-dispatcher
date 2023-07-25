@@ -34,7 +34,7 @@ import (
 	"reflect"
 	"testing"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -70,21 +70,12 @@ func TestNodeInfo_AddPod(t *testing.T) {
 				Releasing:   EmptyResource(),
 				Allocatable: buildResource("8000m", "10G"),
 				Capability:  buildResource("8000m", "10G"),
-				Tasks: map[TaskID]*TaskInfo{
-					"c1/p1": NewTaskInfo(case01_pod1),
-					"c1/p2": NewTaskInfo(case01_pod2),
-				},
 			},
 		},
 	}
 
 	for i, test := range tests {
 		ni := NewNodeInfo(test.node)
-
-		for _, pod := range test.pods {
-			pi := NewTaskInfo(pod)
-			ni.AddTask(pi)
-		}
 
 		if !nodeInfoEqual(ni, test.expected) {
 			t.Errorf("node info %d: \n expected %v, \n got %v \n",
@@ -120,26 +111,12 @@ func TestNodeInfo_RemovePod(t *testing.T) {
 				Releasing:   EmptyResource(),
 				Allocatable: buildResource("8000m", "10G"),
 				Capability:  buildResource("8000m", "10G"),
-				Tasks: map[TaskID]*TaskInfo{
-					"c1/p1": NewTaskInfo(case01_pod1),
-					"c1/p3": NewTaskInfo(case01_pod3),
-				},
 			},
 		},
 	}
 
 	for i, test := range tests {
 		ni := NewNodeInfo(test.node)
-
-		for _, pod := range test.pods {
-			pi := NewTaskInfo(pod)
-			ni.AddTask(pi)
-		}
-
-		for _, pod := range test.rmPods {
-			pi := NewTaskInfo(pod)
-			ni.RemoveTask(pi)
-		}
 
 		if !nodeInfoEqual(ni, test.expected) {
 			t.Errorf("node info %d: \n expected %v, \n got %v \n",

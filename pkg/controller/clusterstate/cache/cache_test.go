@@ -33,9 +33,8 @@ package cache
 import (
 	"fmt"
 	"reflect"
-	"testing"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -55,25 +54,6 @@ func nodesEqual(l, r map[string]*api.NodeInfo) bool {
 	}
 
 	return true
-}
-
-func jobsEqual(l, r map[api.JobID]*api.JobInfo) bool {
-	if len(l) != len(r) {
-		return false
-	}
-
-	for k, p := range l {
-		if !reflect.DeepEqual(p, r[k]) {
-			return false
-		}
-	}
-
-	return true
-}
-
-func cacheEqual(l, r *ClusterStateCache) bool {
-	return nodesEqual(l.Nodes, r.Nodes) &&
-		jobsEqual(l.Jobs, r.Jobs)
 }
 
 func buildNode(name string, alloc v1.ResourceList) *v1.Node {
@@ -138,64 +118,3 @@ func buildOwnerReference(owner string) metav1.OwnerReference {
 		UID:        types.UID(owner),
 	}
 }
-
-func TestAddPod(t *testing.T) {
-
-	owner := buildOwnerReference("j1")
-
-	// case 1:
-	pod1 := buildPod("c1", "p1", "", v1.PodPending, buildResourceList("1000m", "1G"),
-		[]metav1.OwnerReference{owner}, make(map[string]string))
-	pi1 := api.NewTaskInfo(pod1)
-	pod2 := buildPod("c1", "p2", "n1", v1.PodRunning, buildResourceList("1000m", "1G"),
-		[]metav1.OwnerReference{owner}, make(map[string]string))
-	pi2 := api.NewTaskInfo(pod2)
-
-	j1 := api.NewJobInfo(api.JobID("j1"))
-	j1.AddTaskInfo(pi1)
-	j1.AddTaskInfo(pi2)
-
-	node1 := buildNode("n1", buildResourceList("2000m", "10G"))
-	ni1 := api.NewNodeInfo(node1)
-	ni1.AddTask(pi2)
-
-	tests := []struct {
-		pods     []*v1.Pod
-		nodes    []*v1.Node
-		expected *ClusterStateCache
-	}{
-		{
-			pods:  []*v1.Pod{pod1, pod2},
-			nodes: []*v1.Node{node1},
-			expected: &ClusterStateCache{
-				Nodes: map[string]*api.NodeInfo{
-					"n1": ni1,
-				},
-				Jobs: map[api.JobID]*api.JobInfo{
-					"j1": j1,
-				},
-			},
-		},
-	}
-
-	for i, test := range tests {
-		cache := &ClusterStateCache{
-			Jobs:  make(map[api.JobID]*api.JobInfo),
-			Nodes: make(map[string]*api.NodeInfo),
-		}
-
-		for _, n := range test.nodes {
-			cache.AddNode(n)
-		}
-
-		for _, p := range test.pods {
-			cache.AddPod(p)
-		}
-
-		if !cacheEqual(cache, test.expected) {
-			t.Errorf("case %d: \n expected %v, \n got %v \n",
-				i, test.expected, cache)
-		}
-	}
-}
-

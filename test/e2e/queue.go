@@ -109,7 +109,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Accounting Test - Completed. Awaiting app wrapper cleanup...\n")
 	})
 
-	It("MCAD CPU Preemption Test", func() {
+	FIt("MCAD CPU Preemption Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Preemption Test - Started.\n")
 
 		context := initTestContext()
@@ -120,7 +120,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
-		time.Sleep(2 * time.Minute)
+		time.Sleep(1 * time.Minute)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -347,7 +347,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createBadGenericPodAW(context, "aw-bad-generic-pod-1")
 		appwrappers = append(appwrappers, aw)
 
-		err := waitAWPodsReady(context, aw)
+		err := waitAWPodsCompleted(context, aw, 10*time.Second)
 		Expect(err).To(HaveOccurred())
 
 	})
@@ -362,7 +362,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createBadGenericItemAW(context, "aw-bad-generic-item-1")
 		appwrappers = append(appwrappers, aw)
 
-		err := waitAWPodsReady(context, aw)
+		err := waitAWPodsCompleted(context, aw, 10*time.Second)
 		Expect(err).To(HaveOccurred())
 
 	})

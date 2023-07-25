@@ -34,7 +34,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,20 +49,6 @@ func nodesEqual(l, r map[string]*NodeInfo) bool {
 
 	for k, n := range l {
 		if !reflect.DeepEqual(n, r[k]) {
-			return false
-		}
-	}
-
-	return true
-}
-
-func podsEqual(l, r map[string]*TaskInfo) bool {
-	if len(l) != len(r) {
-		return false
-	}
-
-	for k, p := range l {
-		if !reflect.DeepEqual(p, r[k]) {
 			return false
 		}
 	}
