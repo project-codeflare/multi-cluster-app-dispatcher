@@ -214,9 +214,9 @@ func (qjrPod *QueueJobResPod) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) e
 	queuejob.Status.Succeeded = succeeded
 	queuejob.Status.Failed = failed
 	// Total resources by all running pods
-	queuejob.Status.TotalGPU = totalResourcesConsumedForPodPhases.GPU
-	queuejob.Status.TotalCPU = totalResourcesConsumedForPodPhases.MilliCPU
-	queuejob.Status.TotalMemory = totalResourcesConsumedForPodPhases.Memory
+	queuejob.Status.TotalGPU = int32(totalResourcesConsumedForPodPhases.GPU)
+	queuejob.Status.TotalCPU = int32(totalResourcesConsumedForPodPhases.MilliCPU)
+	queuejob.Status.TotalMemory = int32(totalResourcesConsumedForPodPhases.Memory)
 
 	queuejob.Status.PendingPodConditions = nil
 	for podName, cond := range podsConditionMap {
