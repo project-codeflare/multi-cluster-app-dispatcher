@@ -188,6 +188,11 @@ A summary of the API interface to the Quota Manager follows.
 - Forest Updates
   - refresh (effect) updates from caches
     - `UpdateForest(forestName)`
+- Undo consumer allocation: Two calls are provided to try to allocate a consumer, and if unaccepted, to undo the effect of the allocation trial. If the trial is accepted, no further action is needed. Otherwise, the undo has to be called right after the try allocation, without making any calls to change the trees or allocate/deallocate consumers. These operations are intended only during Normal mode.
+  - `TryAllocate(treeName, consumerID)`
+  - `UndoAllocate(treeName, consumerID)`
+  - `TryAllocateForest(forestName, consumerID)`
+  - `UndoAllocateForest(forestName, consumerID)`
 
 Examples of using the Quota Manager in the case of a [single tree](demos/manager/tree/demo.go) and a [forest](demos/manager/forest/demo.go) are provided.
 

@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -218,9 +218,19 @@ func (qn *QuotaNode) GetAllocated() *Allocation {
 	return qn.allocated
 }
 
+// SetAllocated :
+func (qn *QuotaNode) SetAllocated(alloc *Allocation) {
+	qn.allocated = alloc
+}
+
 // GetConsumers :
 func (qn *QuotaNode) GetConsumers() []*Consumer {
 	return qn.consumers
+}
+
+// SetConsumers :
+func (qn *QuotaNode) SetConsumers(consumers []*Consumer) {
+	qn.consumers = consumers
 }
 
 // String : print node with a specified level of indentation

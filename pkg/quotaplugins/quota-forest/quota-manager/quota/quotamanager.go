@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -269,24 +269,13 @@ func (m *Manager) Allocate(treeName string, consumerID string) (response *core.A
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	agent := m.agents[treeName]
-	if agent == nil {
-		return nil, fmt.Errorf("invalid tree name %s", treeName)
+	agent, consumer, err := m.preAllocate(treeName, consumerID)
+	if err == nil && agent.controller.IsConsumerAllocated(consumerID) {
+		err = fmt.Errorf("consumer %s already allocated on tree %s", consumerID, treeName)
 	}
-	consumerInfo := m.consumerInfos[consumerID]
-	if consumerInfo == nil {
-		return nil, fmt.Errorf("consumer %s does not exist, create and add first", consumerID)
-	}
-	if agent.controller.IsConsumerAllocated(consumerID) {
-		return nil, fmt.Errorf("consumer %s already allocated on tree %s", consumerID, treeName)
-	}
-	resourceNames := agent.cache.GetResourceNames()
-	consumer, err := consumerInfo.CreateTreeConsumer(treeName, resourceNames)
 	if err != nil {
-		return nil, fmt.Errorf("failure creating consumer %s on tree %s", consumerID, treeName)
+		return nil, err
 	}
-
-	klog.V(4).Infoln(consumer)
 	if m.mode == Normal {
 		response = agent.controller.Allocate(consumer)
 	} else {
@@ -296,6 +285,63 @@ func (m *Manager) Allocate(treeName string, consumerID string) (response *core.A
 		return nil, fmt.Errorf(response.GetMessage())
 	}
 	return response, err
+}
+
+// TryAllocate : try allocating a consumer on a tree
+func (m *Manager) TryAllocate(treeName string, consumerID string) (response *core.AllocationResponse, err error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	agent, consumer, err := m.preAllocate(treeName, consumerID)
+	if err == nil && agent.controller.IsConsumerAllocated(consumerID) {
+		err = fmt.Errorf("consumer %s already allocated on tree %s", consumerID, treeName)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if m.mode == Normal {
+		response = agent.controller.TryAllocate(consumer)
+	} else {
+		response = agent.controller.ForceAllocate(consumer, consumer.GetGroupID())
+	}
+	if !response.IsAllocated() {
+		return nil, fmt.Errorf(response.GetMessage())
+	}
+	return response, err
+}
+
+// UndoAllocate : undo the most recent allocation trial on a tree
+func (m *Manager) UndoAllocate(treeName string, consumerID string) (err error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	agent, consumer, err := m.preAllocate(treeName, consumerID)
+	if err != nil {
+		return err
+	}
+	if !agent.controller.UndoAllocate(consumer) {
+		return fmt.Errorf("failed undo allocate tree name %s", treeName)
+	}
+	return nil
+}
+
+// preAllocate : prepare for allocate
+func (m *Manager) preAllocate(treeName string, consumerID string) (agent *agent, consumer *core.Consumer, err error) {
+	agent = m.agents[treeName]
+	if agent == nil {
+		return nil, nil, fmt.Errorf("invalid tree name %s", treeName)
+	}
+	consumerInfo := m.consumerInfos[consumerID]
+	if consumerInfo == nil {
+		return nil, nil, fmt.Errorf("consumer %s does not exist, create and add first", consumerID)
+	}
+	resourceNames := agent.cache.GetResourceNames()
+	consumer, err = consumerInfo.CreateTreeConsumer(treeName, resourceNames)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failure creating consumer %s on tree %s", consumerID, treeName)
+	}
+	klog.V(4).Infoln(consumer)
+	return agent, consumer, nil
 }
 
 // IsAllocated : check if a consumer is allocated on a tree
@@ -425,21 +471,12 @@ func (m *Manager) AllocateForest(forestName string, consumerID string) (response
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	forestController := m.forests[forestName]
-	if forestController == nil {
-		return nil, fmt.Errorf("invalid forest name %s", forestName)
+	forestController, forestConsumer, err := m.preAllocateForest(forestName, consumerID)
+	if err == nil && forestController.IsConsumerAllocated(consumerID) {
+		err = fmt.Errorf("consumer %s already allocated on forest %s", consumerID, forestName)
 	}
-	consumerInfo := m.consumerInfos[consumerID]
-	if consumerInfo == nil {
-		return nil, fmt.Errorf("consumer %s does not exist, create and add first", consumerID)
-	}
-	if forestController.IsConsumerAllocated(consumerID) {
-		return nil, fmt.Errorf("consumer %s already allocated on forest %s", consumerID, forestName)
-	}
-	resourceNames := forestController.GetResourceNames()
-	forestConsumer, err := consumerInfo.CreateForestConsumer(forestName, resourceNames)
 	if err != nil {
-		return nil, fmt.Errorf("failure creating forest consumer %s in forest %s", consumerID, forestName)
+		return nil, err
 	}
 
 	if m.mode == Normal {
@@ -455,6 +492,68 @@ func (m *Manager) AllocateForest(forestName string, consumerID string) (response
 		return nil, fmt.Errorf(response.GetMessage())
 	}
 	return response, nil
+}
+
+// TryAllocateForest : allocate a consumer on a forest
+func (m *Manager) TryAllocateForest(forestName string, consumerID string) (response *core.AllocationResponse, err error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	forestController, forestConsumer, err := m.preAllocateForest(forestName, consumerID)
+	if err == nil && forestController.IsConsumerAllocated(consumerID) {
+		err = fmt.Errorf("consumer %s already allocated on forest %s", consumerID, forestName)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if m.mode == Normal {
+		response = forestController.TryAllocate(forestConsumer)
+	} else {
+		groupIDs := make(map[string]string)
+		for treeName, consumer := range forestConsumer.GetConsumers() {
+			groupIDs[treeName] = consumer.GetGroupID()
+		}
+		response = forestController.ForceAllocate(forestConsumer, groupIDs)
+	}
+	if !response.IsAllocated() {
+		return nil, fmt.Errorf(response.GetMessage())
+	}
+	return response, nil
+}
+
+// UndoAllocate : undo the most recent allocation trial on a tree
+func (m *Manager) UndoAllocateForest(forestName string, consumerID string) (err error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	forestController, forestConsumer, err := m.preAllocateForest(forestName, consumerID)
+	if err != nil {
+		return err
+	}
+	if !forestController.UndoAllocate(forestConsumer) {
+		return fmt.Errorf("failed undo allocate forest name %s", forestName)
+	}
+	return nil
+}
+
+// preAllocateForest : prepare for allocate forest
+func (m *Manager) preAllocateForest(forestName string, consumerID string) (forestController *core.ForestController,
+	forestConsumer *core.ForestConsumer, err error) {
+	forestController = m.forests[forestName]
+	if forestController == nil {
+		return nil, nil, fmt.Errorf("invalid forest name %s", forestName)
+	}
+	consumerInfo := m.consumerInfos[consumerID]
+	if consumerInfo == nil {
+		return nil, nil, fmt.Errorf("consumer %s does not exist, create and add first", consumerID)
+	}
+	resourceNames := forestController.GetResourceNames()
+	forestConsumer, err = consumerInfo.CreateForestConsumer(forestName, resourceNames)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failure creating forest consumer %s in forest %s", consumerID, forestName)
+	}
+	return forestController, forestConsumer, nil
 }
 
 // IsAllocatedForest : check if a consumer is allocated on a forest
