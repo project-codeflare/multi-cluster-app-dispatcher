@@ -37,16 +37,13 @@ import (
 // Interface provides access to all the informers in this group version.
 type Interface interface {
 	// SchedulingSpecs returns a SchedulingSpecInformer.
-	SchedulingSpecs()	SchedulingSpecInformer
-	// QueueJobs returns a QueueJobInformer.
-	QueueJobs() 		QueueJobInformer
+	SchedulingSpecs() SchedulingSpecInformer
 	// AppWrappers returns a QueueJobInformer.
-	AppWrappers() 		AppWrapperInformer
+	AppWrappers() AppWrapperInformer
 }
 
-
 type version struct {
-	factory internalinterfaces.SharedInformerFactory
+	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 }
 
@@ -58,11 +55,6 @@ func New(f internalinterfaces.SharedInformerFactory, tweakListOptions internalin
 // SchedulingSpecs returns a SchedulingSpecInformer.
 func (v *version) SchedulingSpecs() SchedulingSpecInformer {
 	return &schedulingSpecInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// QueueJobs returns a QueueJobInformer.
-func (v *version) QueueJobs() QueueJobInformer {
-	return &queueJobInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 func (v *version) AppWrappers() AppWrapperInformer {

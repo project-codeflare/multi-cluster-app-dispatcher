@@ -109,7 +109,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Accounting Test - Completed. Awaiting app wrapper cleanup...\n")
 	})
 
-	FIt("MCAD CPU Preemption Test", func() {
+	It("MCAD CPU Preemption Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Preemption Test - Started.\n")
 
 		context := initTestContext()
@@ -120,16 +120,15 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
-		time.Sleep(1 * time.Minute)
+		//time.Sleep(1 * time.Minute)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
 		// This should not fit on cluster
 		aw2 := createDeploymentAWwith426CPU(context, appendRandomString("aw-deployment-2-426cpu"))
 		appwrappers = append(appwrappers, aw2)
-
 		err = waitAWAnyPodsExists(context, aw2)
-		Expect(err).To(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 
 		// This should fit on cluster, initially queued because of aw2 above but should eventually
 		// run after prevention of aw2 above.
@@ -432,7 +431,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
-		time.Sleep(1 * time.Minute)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred(), "Expecting pods for app wrapper: aw-deployment-2-550cpu")
 
@@ -461,15 +459,31 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred(), "Expecting pods for app wrapper: aw-ff-deployment-2-340-cpu")
 		fmt.Fprintf(GinkgoWriter, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Pods not found for app wrapper aw-ff-deployment-2-340-cpu\n")
 
-		// Make sure aw2 pods do not exist
 		err = waitAWPodsReady(context, aw3)
 		Expect(err).NotTo(HaveOccurred(), "Expecting no pods for app wrapper: aw-ff-deployment-2-340-cpu")
 		fmt.Fprintf(GinkgoWriter, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Ready pods found for app wrapper aw-ff-deployment-2-340-cpu\n")
 
-		// Make sure pods from AW aw-deployment-1-850-cpu above do not exist proving preemption
-		time.Sleep(5 * time.Minute)
-		err = waitAWAnyPodsExists(context, aw2)
-		Expect(err).To(HaveOccurred(), "Expecting no pods for app wrapper : aw-ff-deployment-1-850-cpu")
+		// Make sure pods from AW aw-deployment-1-850-cpu have preempted
+		var pass = false
+		for true {
+			aw2Update, err := context.karclient.ArbV1().AppWrappers(aw2.Namespace).Get(aw2.Name, metav1.GetOptions{})
+			if err != nil {
+				fmt.Fprintf(GinkgoWriter, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Error getting AW update %v", err)
+			}
+			for _, cond := range aw2Update.Status.Conditions {
+				if cond.Reason == "PreemptionTriggered" {
+					pass = true
+					fmt.Fprintf(GinkgoWriter, "[e2e] MCAD Scheduling Fail Fast Preemption Test - the pass value is %v", pass)
+				}
+			}
+			if pass {
+				break
+			} else {
+				time.Sleep(1 * time.Minute)
+			}
+		}
+
+		Expect(pass).To(BeTrue(), "Expecting AW to be preempted : aw-ff-deployment-1-850-cpu")
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Completed. Awaiting app wrapper cleanup\n")
 
 	})
@@ -511,17 +525,17 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
-		time.Sleep(1 * time.Minute)
 
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred(), "Waiting for pods to be ready for app wrapper: aw-deployment-2-550cpu")
 
 		// This should fit on cluster but customPodResources is incorrect so AW pods are not created
+		//NOTE: with deployment controlled removed this test case is invalid.
+		//Users should keep custompodresources equal to container resources.
 		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, appendRandomString("aw-deployment-2-427-vs-425-cpu"), "427m", "425m", 2, 60)
+			context, appendRandomString("aw-deployment-2-427-vs-425-cpu"), "4270m", "425m", 2, 60)
 
 		appwrappers = append(appwrappers, aw2)
-		time.Sleep(1 * time.Minute)
 		err = waitAWAnyPodsExists(context, aw2)
 		Expect(err).To(HaveOccurred(), "Waiting for no pods to exist for app wrapper: aw-deployment-2-427-vs-425-cpu")
 
@@ -662,7 +676,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
-		time.Sleep(1 * time.Minute)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred(), "Waiting for pods to be ready for app wrapper: aw-deployment-2-550cpu")
 

@@ -71,11 +71,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 			resource: resource.GroupResource(),
 			informer: f.SchedulingSpec().SchedulingSpecs().Informer(),
 		}, nil
-	case arbv1.SchemeGroupVersion.WithResource("queuejobs"):
-		return &genericInformer{
-			resource: resource.GroupResource(),
-			informer: f.QueueJob().QueueJobs().Informer(),
-		}, nil
 	case arbv1.SchemeGroupVersion.WithResource("appwrappers"):
 		return &genericInformer{
 			resource: resource.GroupResource(),
