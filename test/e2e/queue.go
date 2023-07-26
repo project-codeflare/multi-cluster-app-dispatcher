@@ -682,13 +682,13 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappers = append(appwrappers, aw)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred(), "Waiting for pods to be ready for app wrapper: aw-deployment-2-550cpu")
-		time.Sleep(1 * time.Minute)
 
 		// This should not fit on cluster
+		// there may be a false positive dispatch which will cause MCAD to requeue AW
 		aw2 := createDeploymentAWwith426CPU(context, appendRandomString("aw-deployment-2-426cpu"))
 		appwrappers = append(appwrappers, aw2)
 
-		err = waitAWAnyPodsExists(context, aw2)
+		err = waitAWPodsReady(context, aw2)
 		Expect(err).To(HaveOccurred(), "No pods for app wrapper `aw-deployment-2-426cpu` are expected.")
 	})
 
