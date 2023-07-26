@@ -120,7 +120,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
-		//time.Sleep(1 * time.Minute)
+		time.Sleep(1 * time.Minute)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -251,7 +251,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createBadPodTemplateAW(context, "aw-bad-podtemplate-2")
 		appwrappers = append(appwrappers, aw)
 
-		err := waitAWPodsReady(context, aw)
+		err := waitAWPodsExists(context, aw, 30*time.Second)
 		Expect(err).To(HaveOccurred())
 	})
 
@@ -295,15 +295,19 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
-		time.Sleep(2 * time.Minute)
-		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
-		if err != nil {
-			fmt.Fprint(GinkgoWriter, "Error getting status")
-		}
 		pass := false
-		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
-		if len(aw1.Status.PendingPodConditions) == 0 {
-			pass = true
+		for true {
+			aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+			if err != nil {
+				fmt.Fprint(GinkgoWriter, "Error getting status")
+			}
+			fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
+			if len(aw1.Status.PendingPodConditions) == 0 {
+				pass = true
+			}
+			if pass {
+				break
+			}
 		}
 		Expect(pass).To(BeTrue())
 	})
