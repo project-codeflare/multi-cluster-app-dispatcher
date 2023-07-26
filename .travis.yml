@@ -1,3 +1,7 @@
+
+# Skip CI check when running as a pull request
+if: "$TRAVIS_PULL_REQUEST != false"
+
 language: go
 
 sudo: required
@@ -25,8 +29,6 @@ script:
   - make run-test
   # Process 'make images' when NOT a pull request
   - 'if [ "$TRAVIS_PULL_REQUEST"  = "false" ]; then make images; fi'
-  # Process 'make images' when running as a pull request
-  - 'if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then unset quay_repository && make images; fi'
    # Process 'make push-images' when NOT a pull request
   - 'if [[ "$TRAVIS_PULL_REQUEST" == "false"  &&  ! "$TRAVIS_BRANCH" =~ "^v[0-9]\.[0-9]+\.[0-9]+" ]]; then make push-images; fi'
   # Run the e2e and handle Travis condition where Travis fails on no output for 10 minutes.   No output for 10 minutes
