@@ -34,18 +34,7 @@ import (
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
-	clientcache "k8s.io/client-go/tools/cache"
-	"k8s.io/klog/v2"
 )
-
-// PodKey returns the string key of a pod.
-func PodKey(pod *v1.Pod) TaskID {
-	if key, err := clientcache.MetaNamespaceKeyFunc(pod); err != nil {
-		return TaskID(fmt.Sprintf("%v/%v", pod.Namespace, pod.Name))
-	} else {
-		return TaskID(key)
-	}
-}
 
 func getTaskStatus(pod *v1.Pod) TaskStatus {
 	switch pod.Status.Phase {
@@ -109,19 +98,6 @@ func MergeErrors(errs ...error) error {
 	}
 
 	return nil
-}
-
-// JobTerminated checkes whether job was terminated.
-func JobTerminated(job *JobInfo) bool {
-	if job.SchedSpec == nil && len(job.Tasks) == 0 {
-		klog.V(9).Infof("Job: %v is terminated.", job.UID)
-		return true
-	} else {
-		klog.V(10).Infof("Job: %v not terminated, scheduleSpec: %v, tasks: %v.",
-			job.UID, job.SchedSpec, job.Tasks)
-		return false
-	}
-
 }
 
 func NewStringsMap(source map[string]string) map[string]string {
