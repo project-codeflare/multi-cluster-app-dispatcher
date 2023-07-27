@@ -47,6 +47,7 @@ export KUTTL_VERSION=0.15.0
 export KUTTL_OPTIONS=${TEST_KUTTL_OPTIONS}
 export KUTTL_TEST_SUITES=("${ROOT_DIR}/test/kuttl-test.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-03.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-02.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-01.yaml")
 DUMP_LOGS="true"
+export KUBE_PROXY_PORT=${KUBE_PROXY_PORT:-8888}
 
 
 function update_test_host {
@@ -380,15 +381,17 @@ function extend-resources {
     # This is intended to allow testing of GPU specific features such as histograms.
 
     # Start communication with cluster
-    kubectl proxy > /dev/null 2>&1 &
+    kubectl proxy -p ${KUBE_PROXY_PORT} 2>&1 &
     proxy_pid=$!
-
     echo "Starting background proxy connection (pid=${proxy_pid})..."
+    echo "Waiting for proxy process to start."
+    sleep 30
 
-    curl 127.0.0.1:8001 > /dev/null 2>&1
+    curl -s 127.0.0.1:${KUBE_PROXY_PORT} > /dev/null 2>&1
 
     if [[ ! $? -eq 0 ]]; then
         echo "Calling 'kubectl proxy' did not create a successful connection to the kubelet needed to patch the nodes. Exiting."
+        kill -9 ${proxy_pid}
         exit 1
     else
         echo "Connected to the kubelet for patching the nodes"
@@ -404,23 +407,22 @@ function extend-resources {
     do
         echo "- Patching node (add): ${node_name}"
 
-        patching_status=$(curl --header "Content-Type: application/json-patch+json" \
+        patching_status=$(curl -s --header "Content-Type: application/json-patch+json" \
                                 --request PATCH \
                                 --data '[{"op": "add", "path": "/status/capacity/'${resource_name}'", "value": "'${resource_count}'"}]' \
-                                http://localhost:8001/api/v1/nodes/${node_name}/status | jq -r '.status')
+                                http://localhost:${KUBE_PROXY_PORT}/api/v1/nodes/${node_name}/status | jq -r '.status')
 
         if [[ ${patching_status} == "Failure" ]]; then
             echo "Failed to patch node '${node_name}' with GPU resources"
             exit 1
         fi
 
-        echo
+        echo "Patching done!"
     done
 
     # Stop communication with cluster
     echo "Killing proxy (pid=${proxy_pid})..."
     kill -9 ${proxy_pid}
-
     # Run kuttl tests to confirm GPUs were added correctly
     kuttl_test="${ROOT_DIR}/test/kuttl-test-extended-resources.yaml"
     echo "kubectl kuttl test --config ${kuttl_test}"
