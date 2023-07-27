@@ -4,7 +4,7 @@
 deploymentName: mcad-controller
 namespace: kube-system
 replicaCount: 1
-loglevel: 4
+loglevel: 3
 
 image:
   repository: mcad-controller

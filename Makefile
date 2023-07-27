@@ -6,6 +6,17 @@ GIT_BRANCH:=$(shell git symbolic-ref --short HEAD 2>&1 | grep -v fatal)
 #define the GO_BUILD_ARGS if you need to pass additional arguments to the go build
 GO_BUILD_ARGS?=
 
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+## Tool Versions
+CONTROLLER_TOOLS_VERSION ?= v0.9.2
+
+## Tool Binaries
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+
 # Reset branch name if this a Travis CI environment
 ifneq ($(strip $(TRAVIS_BRANCH)),)
 	GIT_BRANCH:=${TRAVIS_BRANCH}
@@ -28,7 +39,7 @@ endif
 
 .PHONY: print-global-variables
 
-# Build the controler executable for use in docker image build
+# Build the controller executable for use in docker image build
 mcad-controller: init generate-code
 ifeq ($(strip $(GO_BUILD_ARGS)),)
 	$(info Compiling controller)
@@ -59,6 +70,15 @@ init:
 verify-tag-name: print-global-variables
 	# Check for invalid tag name
 	t=${TAG} && [ $${#t} -le 128 ] || { echo "Target name $$t has 128 or more chars"; false; }
+
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
+$(CONTROLLER_GEN): $(LOCALBIN)
+	test -s $(LOCALBIN)/controller-gen || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+
+.PHONY: manifests
+manifests: controller-gen ## Generate CustomResourceDefinition objects.
+	$(CONTROLLER_GEN) crd:allowDangerousTypes=true paths="./pkg/apis/..." output:crd:artifacts:config=config/crd/bases
 
 generate-code: pkg/apis/controller/v1beta1/zz_generated.deepcopy.go
 
@@ -139,18 +159,17 @@ clean:
 #CRD file maintenance rules
 DEPLOYMENT_CRD_DIR=deployment/mcad-controller/crds
 CRD_BASE_DIR=config/crd/bases
-MCAD_CRDS= ${DEPLOYMENT_CRD_DIR}/ibm.com_quotasubtree-v1.yaml  \
+MCAD_CRDS= ${DEPLOYMENT_CRD_DIR}/ibm.com_quotasubtrees.yaml  \
 		   ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_appwrappers.yaml \
 		   ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_queuejobs.yaml \
 		   ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_schedulingspecs.yaml
 
 update-deployment-crds: ${MCAD_CRDS}
 
-${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_schedulingspecs.yaml : ${CRD_BASE_DIR}/mcad.ibm.com_schedulingspecs.yaml
+${DEPLOYMENT_CRD_DIR}/ibm.com_quotasubtrees.yaml : ${CRD_BASE_DIR}/ibm.com_quotasubtrees.yaml
 ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_appwrappers.yaml : ${CRD_BASE_DIR}/mcad.ibm.com_appwrappers.yaml
 ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_queuejobs.yaml : ${CRD_BASE_DIR}/mcad.ibm.com_queuejobs.yaml
 ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_schedulingspecs.yaml : ${CRD_BASE_DIR}/mcad.ibm.com_schedulingspecs.yaml
-
 
 $(DEPLOYMENT_CRD_DIR)/%: ${CRD_BASE_DIR}/%
 	cp $< $@
