@@ -39,7 +39,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	dto "github.com/prometheus/client_model/go"
 
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	clientv1 "k8s.io/client-go/informers/core/v1"
@@ -48,9 +47,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 
-	client "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
-	informerfactory "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion"
-	arbclient "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/v1"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 )
 
@@ -64,18 +60,13 @@ type ClusterStateCache struct {
 
 	kubeclient *kubernetes.Clientset
 
-	podInformer            clientv1.PodInformer
-	nodeInformer           clientv1.NodeInformer
-	schedulingSpecInformer arbclient.SchedulingSpecInformer
+	nodeInformer clientv1.NodeInformer
 
 	Nodes map[string]*api.NodeInfo
 
 	availableResources *api.Resource
 	availableHistogram *api.ResourceHistogram
 	resourceCapacities *api.Resource
-	deletedJobs        *cache.FIFO
-
-	errTasks *cache.FIFO
 }
 
 func newClusterStateCache(config *rest.Config) *ClusterStateCache {
@@ -98,38 +89,6 @@ func newClusterStateCache(config *rest.Config) *ClusterStateCache {
 		0,
 	)
 
-	// create informer for pod information
-	sc.podInformer = informerFactory.Core().V1().Pods()
-	sc.podInformer.Informer().AddEventHandler(
-		cache.FilteringResourceEventHandler{
-			FilterFunc: func(obj interface{}) bool {
-				switch obj.(type) {
-				case *v1.Pod:
-					pod := obj.(*v1.Pod)
-					return pod.Status.Phase == v1.PodRunning
-					//if pod.Status.Phase != v1.PodSucceeded && pod.Status.Phase != v1.PodFailed {
-					//	return true
-					//} else {
-					//	return false
-					//}
-				default:
-					return false
-				}
-			},
-			Handler: cache.ResourceEventHandlerFuncs{},
-		})
-
-	// create queue informer
-	queueClient, _, err := client.NewClient(config)
-	if err != nil {
-		panic(err)
-	}
-
-	schedulingSpecInformerFactory := informerfactory.NewSharedInformerFactory(queueClient, 0)
-	// create informer for Queue information
-	sc.schedulingSpecInformer = schedulingSpecInformerFactory.SchedulingSpec().SchedulingSpecs()
-	sc.schedulingSpecInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{})
-
 	sc.availableResources = api.EmptyResource()
 	sc.availableHistogram = api.NewResourceHistogram(api.EmptyResource(), api.EmptyResource())
 	sc.resourceCapacities = api.EmptyResource()
@@ -139,10 +98,7 @@ func newClusterStateCache(config *rest.Config) *ClusterStateCache {
 
 func (sc *ClusterStateCache) Run(stopCh <-chan struct{}) {
 	klog.V(8).Infof("Cluster State Cache started.")
-
-	go sc.podInformer.Informer().Run(stopCh)
 	go sc.nodeInformer.Informer().Run(stopCh)
-	go sc.schedulingSpecInformer.Informer().Run(stopCh)
 
 	// Update cache
 	go sc.updateCache()
@@ -151,8 +107,6 @@ func (sc *ClusterStateCache) Run(stopCh <-chan struct{}) {
 
 func (sc *ClusterStateCache) WaitForCacheSync(stopCh <-chan struct{}) bool {
 	return cache.WaitForCacheSync(stopCh,
-		sc.podInformer.Informer().HasSynced,
-		sc.schedulingSpecInformer.Informer().HasSynced,
 		sc.nodeInformer.Informer().HasSynced)
 }
 
