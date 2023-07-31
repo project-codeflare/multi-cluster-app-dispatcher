@@ -48,9 +48,10 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-// New returns a Cache implementation.
+//New returns a Cache implementation.
 func New(config *rest.Config) Cache {
 	return newClusterStateCache(config)
 }
@@ -101,7 +102,7 @@ func (sc *ClusterStateCache) Run(stopCh <-chan struct{}) {
 	go sc.nodeInformer.Informer().Run(stopCh)
 
 	// Update cache
-	go sc.updateCache()
+	go wait.Until(sc.updateCache, 1*time.Second, stopCh)
 
 }
 
@@ -243,15 +244,11 @@ func (sc *ClusterStateCache) updateState() error {
 
 func (sc *ClusterStateCache) updateCache() {
 	klog.V(9).Infof("Starting to update Cluster State Cache")
-
-	for {
-		err := sc.updateState()
-		if err != nil {
-			klog.Errorf("Failed update state: %v", err)
-		}
-
-		time.Sleep(1 * time.Second)
+	err := sc.updateState()
+	if err != nil {
+		klog.Errorf("Failed update state: %v", err)
 	}
+	return
 }
 
 func (sc *ClusterStateCache) Snapshot() *api.ClusterInfo {
