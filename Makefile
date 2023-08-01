@@ -13,9 +13,14 @@ $(LOCALBIN):
 
 ## Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.9.2
+CODEGEN_VERSION ?= v0.20.15
 
 ## Tool Binaries
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+APPLYCONFIGURATION_GEN ?= $(LOCALBIN)/applyconfiguration-gen
+CLIENT_GEN ?= $(LOCALBIN)/client-gen
+LISTER_GEN ?= $(LOCALBIN)/lister-gen
+INFORMER_GEN ?= $(LOCALBIN)/informer-gen
 
 # Reset branch name if this a Travis CI environment
 ifneq ($(strip $(TRAVIS_BRANCH)),)
@@ -70,11 +75,76 @@ init:
 verify-tag-name: print-global-variables
 	# Check for invalid tag name
 	t=${TAG} && [ $${#t} -le 128 ] || { echo "Target name $$t has 128 or more chars"; false; }
+.PHONY: generate-client ## Generate client packages
+generate-client: code-generator
+	rm -rf pkg/client/clientset/versioned pkg/client/informers/externalversions pkg/client/listers/controller/v1beta1
+# TODO: add this back when the version of the tool has been updated and supports this executable
+#	$(APPLYCONFIGURATION_GEN) \
+#		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1" \
+#		--go-header-file="hack/boilerplate/boilerplate.go.txt" \
+#		--output-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/applyconfiguration" \
+#		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
+	$(CLIENT_GEN) \
+ 		--input="pkg/apis/controller/v1beta1" \
+ 		--input-base="github.com/project-codeflare/multi-cluster-app-dispatcher" \
+ 		--go-header-file="hack/boilerplate/boilerplate.go.txt" \
+ 		--clientset-name "versioned"  \
+ 		--output-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset" \
+ 		--output-base="." 
+# TODO: add the following line back once the tool has been upgraded		
+# 		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
+	$(LISTER_GEN) \
+ 		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1" \
+ 		--go-header-file="hack/boilerplate/boilerplate.go.txt" \
+ 		--output-base="." \
+ 		--output-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers" 
+# TODO: add the following line back once the tool has been upgraded		
+# 		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
+	$(INFORMER_GEN) \
+ 		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1" \
+ 		--versioned-clientset-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned" \
+ 		--listers-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers" \
+ 		--go-header-file="hack/boilerplate/boilerplate.go.txt" \
+ 		--output-base="." \
+ 		--output-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers" 
+# TODO: add the following line back once the tool has been upgraded		
+# 		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
+# TODO: remove the following lines once the tool has been upgraded and they are no longer needed.
+# The `mv` and `rm` are necessary as the generators write to the gihub.com/... path.	
+	mv -f github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned pkg/client/clientset/versioned
+	mv -f github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions pkg/client/informers/externalversions
+	mv -f github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1beta1 pkg/client/listers/controller/v1beta1
+	rm -rf github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
 $(CONTROLLER_GEN): $(LOCALBIN)
 	test -s $(LOCALBIN)/controller-gen || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+
+.PHONY: code-generator
+#TODO: add $(APPLYCONFIGURATION_GEN) as a dependency when the tool is supported
+code-generator: $(CLIENT_GEN) $(LISTER_GEN) $(INFORMER_GEN) $(CONTROLLER_GEN)
+
+# TODO: enable this target once the tools is supported
+#.PHONY: applyconfiguration-gen
+#applyconfiguration-gen: $(APPLYCONFIGURATION_GEN) 
+#$(APPLYCONFIGURATION_GEN): $(LOCALBIN)
+#	test -s $(LOCALBIN)/applyconfiguration-gen || GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/applyconfiguration-gen@$(CODEGEN_VERSION)
+
+.PHONY: client-gen
+client-gen: $(CLIENT_GEN)
+$(CLIENT_GEN): $(LOCALBIN)
+	test -s $(LOCALBIN)/client-gen || GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/client-gen@$(CODEGEN_VERSION)
+
+.PHONY: lister-gen
+lister-gen: $(LISTER_GEN)
+$(LISTER_GEN): $(LOCALBIN)
+	test -s $(LOCALBIN)/lister-gen || GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/lister-gen@$(CODEGEN_VERSION)
+
+.PHONY: informer-gen
+informer-gen: $(INFORMER_GEN)
+$(INFORMER_GEN): $(LOCALBIN)
+	test -s $(LOCALBIN)/informer-gen || GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/informer-gen@$(CODEGEN_VERSION)	
 
 .PHONY: manifests
 manifests: controller-gen ## Generate CustomResourceDefinition objects.

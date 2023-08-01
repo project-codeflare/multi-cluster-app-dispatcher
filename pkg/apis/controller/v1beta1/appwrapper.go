@@ -28,6 +28,7 @@ const AppWrapperPlural string = "appwrappers"
 // which AppWrapper it belongs to.
 const AppWrapperAnnotationKey = "appwrapper.mcad.ibm.com/appwrapper-name"
 
+// +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
