@@ -26,6 +26,7 @@ import (
 	versioned "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned"
 	controller "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions/controller"
 	internalinterfaces "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions/internalinterfaces"
+	quotasubtree "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions/quotasubtree"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -173,8 +174,13 @@ type SharedInformerFactory interface {
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
 	Mcad() controller.Interface
+	Ibm() quotasubtree.Interface
 }
 
 func (f *sharedInformerFactory) Mcad() controller.Interface {
 	return controller.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Ibm() quotasubtree.Interface {
+	return quotasubtree.New(f, f.namespace, f.tweakListOptions)
 }

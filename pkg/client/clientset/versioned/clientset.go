@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	mcadv1beta1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/controller/v1beta1"
+	ibmv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/quotasubtree/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -30,6 +31,7 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	McadV1beta1() mcadv1beta1.McadV1beta1Interface
+	IbmV1() ibmv1.IbmV1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -37,11 +39,17 @@ type Interface interface {
 type Clientset struct {
 	*discovery.DiscoveryClient
 	mcadV1beta1 *mcadv1beta1.McadV1beta1Client
+	ibmV1       *ibmv1.IbmV1Client
 }
 
 // McadV1beta1 retrieves the McadV1beta1Client
 func (c *Clientset) McadV1beta1() mcadv1beta1.McadV1beta1Interface {
 	return c.mcadV1beta1
+}
+
+// IbmV1 retrieves the IbmV1Client
+func (c *Clientset) IbmV1() ibmv1.IbmV1Interface {
+	return c.ibmV1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -69,6 +77,10 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
+	cs.ibmV1, err = ibmv1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfig(&configShallowCopy)
 	if err != nil {
@@ -82,6 +94,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.mcadV1beta1 = mcadv1beta1.NewForConfigOrDie(c)
+	cs.ibmV1 = ibmv1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -91,6 +104,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.mcadV1beta1 = mcadv1beta1.New(c)
+	cs.ibmV1 = ibmv1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

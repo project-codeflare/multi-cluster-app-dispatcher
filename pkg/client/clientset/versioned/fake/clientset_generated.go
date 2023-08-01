@@ -22,6 +22,8 @@ import (
 	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned"
 	mcadv1beta1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/controller/v1beta1"
 	fakemcadv1beta1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/controller/v1beta1/fake"
+	ibmv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/quotasubtree/v1"
+	fakeibmv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/quotasubtree/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -79,4 +81,9 @@ var _ clientset.Interface = &Clientset{}
 // McadV1beta1 retrieves the McadV1beta1Client
 func (c *Clientset) McadV1beta1() mcadv1beta1.McadV1beta1Interface {
 	return &fakemcadv1beta1.FakeMcadV1beta1{Fake: &c.Fake}
+}
+
+// IbmV1 retrieves the IbmV1Client
+func (c *Clientset) IbmV1() ibmv1.IbmV1Interface {
+	return &fakeibmv1.FakeIbmV1{Fake: &c.Fake}
 }

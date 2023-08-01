@@ -33,11 +33,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 
-	qst "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/quotasubtree/clientset/versioned"
+	qst "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned"
 	"k8s.io/client-go/rest"
 
-	qstinformer "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/quotasubtree/informers/externalversions"
-	qstinformers "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/quotasubtree/informers/externalversions/quotasubtree/v1"
+	qstinformers "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions"
+	qstinformer "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions/quotasubtree/v1"
 )
 
 // New returns a new implementation.
@@ -49,7 +49,7 @@ type QuotaSubtreeManager struct {
 	quotaManagerBackend *qmlib.Manager
 
 	/* Information about Quota Subtrees */
-	quotaSubtreeInformer qstinformers.QuotaSubtreeInformer
+	quotaSubtreeInformer qstinformer.QuotaSubtreeInformer
 	qstMutex             sync.RWMutex
 	qstMap               map[string]*qstv1.QuotaSubtree
 
@@ -64,16 +64,16 @@ func newQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Mana
 		qstChanged:          true,
 	}
 	// QuotaSubtree informer setup
-	qstClient, err := qst.NewForConfigOrDie(config)
+	qstClient, err := qst.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
-	qstInformerFactory := qstinformer.NewSharedInformerFactoryWithOptions(qstClient, 0,
-		qstinformer.WithTweakListOptions(func(opt *metav1.ListOptions) {
+	qstInformerFactory := qstinformers.NewSharedInformerFactoryWithOptions(qstClient, 0,
+		qstinformers.WithTweakListOptions(func(opt *metav1.ListOptions) {
 			opt.LabelSelector = util.URMTreeLabel
 		}))
-	qstm.quotaSubtreeInformer = qstInformerFactory.Quotasubtree().V1().QuotaSubtrees()
+	qstm.quotaSubtreeInformer = qstInformerFactory.Ibm().V1().QuotaSubtrees()
 
 	// Add event handle for resource plans
 	qstm.quotaSubtreeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	v1beta1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
+	v1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -52,7 +53,11 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=mcad.ibm.com, Version=v1beta1
+	// Group=ibm.com, Version=v1
+	case v1.SchemeGroupVersion.WithResource("quotasubtrees"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Ibm().V1().QuotaSubtrees().Informer()}, nil
+
+		// Group=mcad.ibm.com, Version=v1beta1
 	case v1beta1.SchemeGroupVersion.WithResource("appwrappers"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Mcad().V1beta1().AppWrappers().Informer()}, nil
 

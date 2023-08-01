@@ -77,7 +77,7 @@ verify-tag-name: print-global-variables
 	t=${TAG} && [ $${#t} -le 128 ] || { echo "Target name $$t has 128 or more chars"; false; }
 .PHONY: generate-client ## Generate client packages
 generate-client: code-generator
-	rm -rf pkg/client/clientset/versioned pkg/client/informers/externalversions pkg/client/listers/controller/v1beta1
+	rm -rf pkg/client/clientset/versioned pkg/client/informers/externalversions pkg/client/listers/controller/v1beta1 pkg/client/listers/quotasubtree/v1
 # TODO: add this back when the version of the tool has been updated and supports this executable
 #	$(APPLYCONFIGURATION_GEN) \
 #		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1" \
@@ -86,6 +86,7 @@ generate-client: code-generator
 #		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
 	$(CLIENT_GEN) \
  		--input="pkg/apis/controller/v1beta1" \
+ 		--input="pkg/apis/quotaplugins/quotasubtree/v1" \
  		--input-base="github.com/project-codeflare/multi-cluster-app-dispatcher" \
  		--go-header-file="hack/boilerplate/boilerplate.go.txt" \
  		--clientset-name "versioned"  \
@@ -95,6 +96,7 @@ generate-client: code-generator
 # 		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
 	$(LISTER_GEN) \
  		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1" \
+ 		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1" \
  		--go-header-file="hack/boilerplate/boilerplate.go.txt" \
  		--output-base="." \
  		--output-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers" 
@@ -102,6 +104,7 @@ generate-client: code-generator
 # 		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
 	$(INFORMER_GEN) \
  		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1" \
+ 		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1" \
  		--versioned-clientset-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned" \
  		--listers-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers" \
  		--go-header-file="hack/boilerplate/boilerplate.go.txt" \
@@ -114,7 +117,8 @@ generate-client: code-generator
 	mv -f github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned pkg/client/clientset/versioned
 	mv -f github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions pkg/client/informers/externalversions
 	mv -f github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1beta1 pkg/client/listers/controller/v1beta1
-	rm -rf github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client
+	mv -f github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/quotasubtree/v1 pkg/client/listers/quotasubtree/v1 
+	rm -rf github.com
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.

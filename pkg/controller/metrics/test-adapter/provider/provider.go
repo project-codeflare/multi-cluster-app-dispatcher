@@ -252,7 +252,7 @@ func (p *testingProvider) metricFor(value resource.Quantity, name types.Namespac
 		Metric: custom_metrics.MetricIdentifier{
 			Name: info.Metric,
 		},
-		Timestamp: metav1.Time{time.Now()},
+		Timestamp: metav1.Time{Time: time.Now()},
 		Value:     value,
 	}
 
