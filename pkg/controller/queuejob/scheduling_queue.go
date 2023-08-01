@@ -68,12 +68,10 @@ type SchedulingQueue interface {
 	Length() int
 }
 
-
-
 // NewSchedulingQueue initializes a new scheduling queue. If pod priority is
 // enabled a priority queue is returned. If it is disabled, a FIFO is returned.
 func NewSchedulingQueue() SchedulingQueue {
-		return NewPriorityQueue()
+	return NewPriorityQueue()
 }
 
 // UnschedulablePods is an interface for a queue that is used to keep unschedulable
@@ -131,12 +129,13 @@ func (p *PriorityQueue) IfExist(qj *qjobv1.AppWrapper) bool {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	_, exists, _ := p.activeQ.Get(qj)
-	if (p.unschedulableQ.Get(qj)!= nil || exists) {
+	if p.unschedulableQ.Get(qj) != nil || exists {
 		return true
 	}
 	return false
 }
 
+//used by queuejob_controller_ex.go
 func (p *PriorityQueue) IfExistActiveQ(qj *qjobv1.AppWrapper) bool {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -144,6 +143,7 @@ func (p *PriorityQueue) IfExistActiveQ(qj *qjobv1.AppWrapper) bool {
 	return exists
 }
 
+//used by queuejob_controller_ex.go
 func (p *PriorityQueue) IfExistUnschedulableQ(qj *qjobv1.AppWrapper) bool {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -152,6 +152,7 @@ func (p *PriorityQueue) IfExistUnschedulableQ(qj *qjobv1.AppWrapper) bool {
 }
 
 // Move QJ from unschedulableQ to activeQ if exists
+//used by queuejob_controller_ex.go
 func (p *PriorityQueue) MoveToActiveQueueIfExists(aw *qjobv1.AppWrapper) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -166,9 +167,6 @@ func (p *PriorityQueue) MoveToActiveQueueIfExists(aw *qjobv1.AppWrapper) error {
 	}
 	return nil
 }
-
-
-
 
 // Add adds a QJ to the active queue. It should be called only when a new QJ
 // is added so there is no chance the QJ is already in either queue.
@@ -190,6 +188,7 @@ func (p *PriorityQueue) Add(qj *qjobv1.AppWrapper) error {
 
 // AddIfNotPresent adds a pod to the active queue if it is not present in any of
 // the two queues. If it is present in any, it doesn't do any thing.
+//used by queuejob_controller_ex.go
 func (p *PriorityQueue) AddIfNotPresent(qj *qjobv1.AppWrapper) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -208,16 +207,10 @@ func (p *PriorityQueue) AddIfNotPresent(qj *qjobv1.AppWrapper) error {
 	return err
 }
 
-func isPodUnschedulable(qj *qjobv1.AppWrapper) bool {
-	//_, cond := podutil.GetPodCondition(&pod.Status, v1.PodScheduled)
-	//return cond != nil && cond.Status == v1.ConditionFalse && cond.Reason == v1.PodReasonUnschedulable
-	//TODO
-	return false
-}
-
 // AddUnschedulableIfNotPresent does nothing if the pod is present in either
 // queue. Otherwise it adds the pod to the unschedulable queue if
 // p.receivedMoveRequest is false, and to the activeQ if p.receivedMoveRequest is true.
+//used by queuejob_controller_ex.go
 func (p *PriorityQueue) AddUnschedulableIfNotPresent(qj *qjobv1.AppWrapper) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -242,6 +235,7 @@ func (p *PriorityQueue) AddUnschedulableIfNotPresent(qj *qjobv1.AppWrapper) erro
 // Pop removes the head of the active queue and returns it. It blocks if the
 // activeQ is empty and waits until a new item is added to the queue. It also
 // clears receivedMoveRequest to mark the beginning of a new scheduling cycle.
+//used by queuejob_controller_ex.go
 func (p *PriorityQueue) Pop() (*qjobv1.AppWrapper, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -303,6 +297,7 @@ func (p *PriorityQueue) Update(oldQJ, newQJ *qjobv1.AppWrapper) error {
 
 // Delete deletes the item from either of the two queues. It assumes the pod is
 // only in one queue.
+//used by queuejob_controller_ex.go
 func (p *PriorityQueue) Delete(qj *qjobv1.AppWrapper) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -331,17 +326,6 @@ func (p *PriorityQueue) MoveAllToActiveQueue() {
 	}
 	p.activeQ.BulkAdd(unschedulableQJs)
 	p.unschedulableQ.Clear()
-	p.receivedMoveRequest = true
-	p.cond.Broadcast()
-}
-
-func (p *PriorityQueue) movePodsToActiveQueue(pods []*qjobv1.AppWrapper) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	for _, pod := range pods {
-		p.activeQ.Add(pod)
-		p.unschedulableQ.Delete(pod)
-	}
 	p.receivedMoveRequest = true
 	p.cond.Broadcast()
 }
