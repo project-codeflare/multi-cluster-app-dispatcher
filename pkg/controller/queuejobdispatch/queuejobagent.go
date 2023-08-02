@@ -25,22 +25,22 @@ import (
 	"time"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
-	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned"
 	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	arbinformers "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion"
-	informersv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/v1"
-	listersv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
 	"k8s.io/client-go/tools/cache"
 
-	clients "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
+	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned"
+
+	informerFactory "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions"
+	arbinformers "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions/controller/v1beta1"
+	arblisters "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1beta1"
+
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
@@ -51,8 +51,8 @@ type JobClusterAgent struct {
 	k8sClients      *kubernetes.Clientset // for the update of aggr resouces
 	AggrResources   *clusterstateapi.Resource
 
-	jobInformer informersv1.AppWrapperInformer
-	jobLister   listersv1.AppWrapperLister
+	jobInformer arbinformers.AppWrapperInformer
+	jobLister   arblisters.AppWrapperLister
 	jobSynced   func() bool
 
 	agentEventQueue *cache.FIFO
@@ -86,16 +86,16 @@ func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterA
 		klog.V(2).Infof("[Dispatcher: Agent] %s: Create Clients Suceessfully\n", qa.AgentId)
 	}
 
-	queueJobClientForInformer, _, err := clients.NewClient(agent_config)
+	appWrapperClient, err := clientset.NewForConfig(agent_config)
 	if err != nil {
-		panic(err)
+		klog.Fatalf("Could not instantiate k8s client, err=%v", err)
 	}
 
-	qa.jobInformer = arbinformers.NewFilteredSharedInformerFactory(queueJobClientForInformer, 0,
+	qa.jobInformer = informerFactory.NewFilteredSharedInformerFactory(appWrapperClient, 0, v1.NamespaceAll,
 		func(opt *metav1.ListOptions) {
 			opt.LabelSelector = "IsDispatched=true"
 		},
-	).AppWrapper().AppWrappers()
+	).Mcad().V1beta1().AppWrappers()
 	qa.jobInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
 			FilterFunc: func(obj interface{}) bool {
@@ -162,7 +162,6 @@ func (qa *JobClusterAgent) DeleteJob(ctx context.Context, cqj *arbv1.AppWrapper)
 	qj_temp := cqj.DeepCopy()
 	klog.V(2).Infof("[Dispatcher: Agent] Request deletion of XQJ %s to Agent %s\n", qj_temp.Name, qa.AgentId)
 	qa.queuejobclients.McadV1beta1().AppWrappers(qj_temp.Namespace).Delete(ctx, qj_temp.Name, metav1.DeleteOptions{})
-	return
 }
 
 func (qa *JobClusterAgent) CreateJob(ctx context.Context, cqj *arbv1.AppWrapper) {
@@ -305,11 +304,4 @@ func getInt64String(num string) (int64, error) {
 		validatedNum = n
 	}
 	return validatedNum, err
-}
-
-func buildResource(cpu string, memory string) *clusterstateapi.Resource {
-	return clusterstateapi.NewResource(v1.ResourceList{
-		v1.ResourceCPU:    resource.MustParse(cpu),
-		v1.ResourceMemory: resource.MustParse(memory),
-	})
 }

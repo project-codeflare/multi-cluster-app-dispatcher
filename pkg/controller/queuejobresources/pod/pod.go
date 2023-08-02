@@ -32,7 +32,7 @@ import (
 	"k8s.io/klog/v2"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
-	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
+	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned"
 	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/maputils"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources"

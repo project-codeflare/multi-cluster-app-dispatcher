@@ -190,7 +190,7 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 
 	appWrapperClient, err := clientset.NewForConfig(cc.config)
 	if err != nil {
-		klog.Fatalf("Could not instantiate k8s client")
+		klog.Fatalf("Could not instantiate k8s client, err=%v", err)
 	}
 	cc.appwrapperInformer = informerFactory.NewSharedInformerFactory(appWrapperClient, 0).Mcad().V1beta1().AppWrappers()
 	cc.appwrapperInformer.Informer().AddEventHandler(

@@ -42,7 +42,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client"
 )
 
 var queueJobKind = arbv1.SchemeGroupVersion.WithKind("QueueJob")
@@ -157,7 +157,7 @@ func createQueueJobKind(config *rest.Config) error {
 	if err != nil {
 		return err
 	}
-	_, err = clients.CreateQueueJobKind(extensionscs)
+	_, err = client.CreateQueueJobKind(extensionscs)
 	if err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}
@@ -169,7 +169,7 @@ func createAppWrapperKind(config *rest.Config) error {
 	if err != nil {
 		return err
 	}
-	_, err = clients.CreateAppWrapperKind(extensionscs)
+	_, err = client.CreateAppWrapperKind(extensionscs)
 	if err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}
@@ -179,24 +179,24 @@ func createAppWrapperKind(config *rest.Config) error {
 // AppWrapperCondition returns condition of a AppWrapper condition.
 func GenerateAppWrapperCondition(condType arbv1.AppWrapperConditionType, condStatus corev1.ConditionStatus, condReason string, condMsg string) arbv1.AppWrapperCondition {
 	return arbv1.AppWrapperCondition{
-		Type:    condType,
-		Status:  condStatus,
-		LastUpdateMicroTime:  metav1.NowMicro(),
+		Type:                    condType,
+		Status:                  condStatus,
+		LastUpdateMicroTime:     metav1.NowMicro(),
 		LastTransitionMicroTime: metav1.NowMicro(),
-		Reason:  condReason,
-		Message: condMsg,
+		Reason:                  condReason,
+		Message:                 condMsg,
 	}
 }
 
 // AppWrapperCondition returns condition of a AppWrapper condition.
 func isLastConditionDuplicate(aw *arbv1.AppWrapper, condType arbv1.AppWrapperConditionType, condStatus corev1.ConditionStatus, condReason string, condMsg string) bool {
-	if (aw.Status.Conditions == nil) {
+	if aw.Status.Conditions == nil {
 		return false
 	}
 
 	lastIndex := len(aw.Status.Conditions) - 1
 
-	if (lastIndex < 0) {
+	if lastIndex < 0 {
 		return false
 	}
 
