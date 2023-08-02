@@ -1,26 +1,11 @@
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2019, 2021, 2022, 2023 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
-Copyright 2019, 2021 The Multi-Cluster App Dispatcher Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -52,7 +37,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
-	versioned "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
+	versioned "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned"
 )
 
 var ninetySeconds = 90 * time.Second
@@ -78,6 +63,7 @@ type context struct {
 	namespace              string
 	queues                 []string
 	enableNamespaceAsQueue bool
+	ctx                    gcontext.Context
 }
 
 func initTestContext() *context {
@@ -122,7 +108,7 @@ func initTestContext() *context {
 	   		GlobalDefault: false,
 	   	}, metav1.CreateOptions{})
 	   	Expect(err).NotTo(HaveOccurred()) */
-
+	cxt.ctx = gcontext.Background()
 	return cxt
 }
 
@@ -261,7 +247,7 @@ func createGenericAWTimeoutWithStatus(context *context, name string) *arbv1.AppW
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -403,7 +389,7 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 	return func() (bool, error) {
 		defer GinkgoRecover()
 
-		aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		aw, err := ctx.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(ctx.ctx, aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		podList, err := ctx.kubeclient.CoreV1().Pods(aw.Namespace).List(gcontext.Background(), metav1.ListOptions{})
@@ -472,7 +458,7 @@ func waitAWNamespaceActive(ctx *context, aw *arbv1.AppWrapper) error {
 
 func awNamespacePhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.NamespacePhase) wait.ConditionFunc {
 	return func() (bool, error) {
-		aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		aw, err := ctx.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(ctx.ctx, aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		namespaces, err := ctx.kubeclient.CoreV1().Namespaces().List(gcontext.Background(), metav1.ListOptions{})
@@ -652,7 +638,7 @@ func createJobAWWithInitContainer(context *context, name string, requeuingTimeIn
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -723,7 +709,7 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -799,7 +785,7 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -875,7 +861,7 @@ func createDeploymentAWwith350CPU(context *context, name string) *arbv1.AppWrapp
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -951,7 +937,7 @@ func createDeploymentAWwith426CPU(context *context, name string) *arbv1.AppWrapp
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -1027,7 +1013,7 @@ func createDeploymentAWwith425CPU(context *context, name string) *arbv1.AppWrapp
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -1099,7 +1085,7 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -1178,7 +1164,7 @@ func createGenericJobAWWithStatus(context *context, name string) *arbv1.AppWrapp
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -1308,7 +1294,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -1352,7 +1338,7 @@ func createAWGenericItemWithoutStatus(context *context, name string) *arbv1.AppW
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -1430,7 +1416,7 @@ func createGenericJobAWWithScheduleSpec(context *context, name string) *arbv1.Ap
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -1511,7 +1497,7 @@ func createGenericJobAWtWithLargeCompute(context *context, name string) *arbv1.A
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -1582,7 +1568,7 @@ func createGenericServiceAWWithNoStatus(context *context, name string) *arbv1.Ap
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -1714,7 +1700,7 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -1792,7 +1778,7 @@ func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand s
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -1879,7 +1865,7 @@ func createGenericDeploymentCustomPodResourcesWithCPUAW(context *context, name s
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -1917,7 +1903,7 @@ func createNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -1955,7 +1941,7 @@ func createGenericNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -2027,7 +2013,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -2098,7 +2084,7 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 			},
 		},
 	}
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -2158,7 +2144,7 @@ func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -2240,7 +2226,7 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -2304,7 +2290,7 @@ func createPodCheckFailedStatusAW(context *context, name string) *arbv1.AppWrapp
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -2375,7 +2361,7 @@ func createGenericPodAWCustomDemand(context *context, name string, cpuDemand str
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -2445,7 +2431,7 @@ func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -2517,7 +2503,7 @@ func createGenericPodTooBigAW(context *context, name string) *arbv1.AppWrapper {
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -2572,7 +2558,7 @@ func createBadGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -2603,7 +2589,7 @@ func createBadGenericItemAW(context *context, name string) *arbv1.AppWrapper {
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
@@ -2665,20 +2651,20 @@ func createBadGenericPodTemplateAW(context *context, name string) (*arbv1.AppWra
 		},
 	}
 
-	appwrapper, err := context.karclient.ArbV1().AppWrappers(context.namespace).Create(aw)
+	appwrapper, err := context.karclient.McadV1beta1().AppWrappers(context.namespace).Create(context.ctx, aw, metav1.CreateOptions{})
 	Expect(err).To(HaveOccurred())
 	return appwrapper, err
 }
 
 func deleteAppWrapper(ctx *context, name string) error {
 	foreground := metav1.DeletePropagationForeground
-	return ctx.karclient.ArbV1().AppWrappers(ctx.namespace).Delete(name, &metav1.DeleteOptions{
+	return ctx.karclient.McadV1beta1().AppWrappers(ctx.namespace).Delete(ctx.ctx, name, metav1.DeleteOptions{
 		PropagationPolicy: &foreground,
 	})
 }
 
 func getPodsOfAppWrapper(ctx *context, aw *arbv1.AppWrapper) []*v1.Pod {
-	aw, err := ctx.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+	aw, err := ctx.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(ctx.ctx, aw.Name, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	pods, err := ctx.kubeclient.CoreV1().Pods(aw.Namespace).List(gcontext.Background(), metav1.ListOptions{})
