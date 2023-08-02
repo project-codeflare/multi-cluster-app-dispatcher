@@ -6,10 +6,9 @@ spec:
   schedulingSpec:
     minAvailable: 2
   resources:
-    Items:
+    GenericItems:
     - replicas: 1
-      type: Deployment
-      template:
+      generictemplate:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
