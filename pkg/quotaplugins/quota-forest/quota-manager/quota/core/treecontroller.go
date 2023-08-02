@@ -138,6 +138,11 @@ func (controller *Controller) DeAllocate(consumerID string) bool {
 	return false
 }
 
+// GetConsumers : get a map of consumers in controller
+func (controller *Controller) GetConsumers() map[string]*Consumer {
+	return controller.consumers
+}
+
 // GetPreemptedConsumers : get a list of the preempted consumer IDs
 func (controller *Controller) GetPreemptedConsumers() []string {
 	return controller.preemptedConsumers

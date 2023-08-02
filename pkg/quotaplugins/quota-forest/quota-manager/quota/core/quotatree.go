@@ -209,6 +209,15 @@ func (qt *QuotaTree) GetQuotaSize() int {
 	return len(qt.resourceNames)
 }
 
+// GetNodes : get a map of all quota nodes in the tree
+func (qt *QuotaTree) GetNodes() map[string]*QuotaNode {
+	nodeMap := make(map[string]*QuotaNode)
+	for _, n := range qt.Tree.GetNodeListBFS() {
+		nodeMap[n.GetID()] = (*QuotaNode)(unsafe.Pointer(n))
+	}
+	return nodeMap
+}
+
 // StringSimply :
 func (qt *QuotaTree) StringSimply() string {
 	var b bytes.Buffer
