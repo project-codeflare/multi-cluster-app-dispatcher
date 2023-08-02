@@ -292,6 +292,9 @@ func (m *Manager) TryAllocate(treeName string, consumerID string) (response *cor
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
+	if m.mode != Normal {
+		return nil, fmt.Errorf("manager is not in normal mode")
+	}
 	agent, consumer, err := m.preAllocate(treeName, consumerID)
 	if err == nil && agent.controller.IsConsumerAllocated(consumerID) {
 		err = fmt.Errorf("consumer %s already allocated on tree %s", consumerID, treeName)
@@ -299,12 +302,7 @@ func (m *Manager) TryAllocate(treeName string, consumerID string) (response *cor
 	if err != nil {
 		return nil, err
 	}
-	if m.mode == Normal {
-		response = agent.controller.TryAllocate(consumer)
-	} else {
-		response = agent.controller.ForceAllocate(consumer, consumer.GetGroupID())
-	}
-	if !response.IsAllocated() {
+	if response = agent.controller.TryAllocate(consumer); !response.IsAllocated() {
 		return nil, fmt.Errorf(response.GetMessage())
 	}
 	return response, err
@@ -499,6 +497,9 @@ func (m *Manager) TryAllocateForest(forestName string, consumerID string) (respo
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
+	if m.mode != Normal {
+		return nil, fmt.Errorf("manager is not in normal mode")
+	}
 	forestController, forestConsumer, err := m.preAllocateForest(forestName, consumerID)
 	if err == nil && forestController.IsConsumerAllocated(consumerID) {
 		err = fmt.Errorf("consumer %s already allocated on forest %s", consumerID, forestName)
@@ -507,15 +508,7 @@ func (m *Manager) TryAllocateForest(forestName string, consumerID string) (respo
 		return nil, err
 	}
 
-	if m.mode == Normal {
-		response = forestController.TryAllocate(forestConsumer)
-	} else {
-		groupIDs := make(map[string]string)
-		for treeName, consumer := range forestConsumer.GetConsumers() {
-			groupIDs[treeName] = consumer.GetGroupID()
-		}
-		response = forestController.ForceAllocate(forestConsumer, groupIDs)
-	}
+	response = forestController.TryAllocate(forestConsumer)
 	if !response.IsAllocated() {
 		return nil, fmt.Errorf(response.GetMessage())
 	}
