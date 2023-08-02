@@ -58,7 +58,7 @@ spec:
                      memory: 256Mi
 ```
 
-The yaml file above is used to create an `AppWrapper` named `0001-aw-generic-deployment-2` which encompasses a Kubernetes Job resulting in the creation of 2 pods.  The appwrappers's pod will be scheduled by kubernetes scheduler.
+The yaml file above is used to create an `AppWrapper` named `0001-aw-generic-deployment-1` which encompasses a Kubernetes Job resulting in the creation of 2 pods.  The appwrappers's pod will be scheduled by kubernetes scheduler.
 
 Create the `AppWrapper`
 
@@ -66,18 +66,18 @@ Create the `AppWrapper`
 kubectl create -f aw-01.yaml
 ```
 
-Check `AppWrapper` job creation with the command below.  You should see the `0001-aw-generic-deployment-2` app wrapper.
+Check `AppWrapper` job creation with the command below.  You should see the `0001-aw-generic-deployment-1` app wrapper.
 
 ```bash
 $ kubectl get appwrappers
 NAME                           AGE
-0001-aw-generic-deployment-2   59s
+0001-aw-generic-deployment-1   59s
 ```
 
 Check `AppWrapper` job status by describing the `AppWrapper`.  The `Status:` stanza will show the `State` of `Running` if it has successfully deployed.
 
 ```bash
-$ kubectl describe appwrapper 0001-aw-generic-deployment-2
+$ kubectl describe appwrapper 0001-aw-generic-deployment-1
 ...
 Status:
   Canrun:  true
@@ -85,13 +85,13 @@ Status:
   State:      Running
 ```
 
-Check the pods status of the `AppWrapper` job.  There should be 1 `0001-aw-generic-deployment-2` pod running.
+Check the pods status of the `AppWrapper` job.  There should be 2 `0001-aw-generic-deployment-1` pods running.
 
 ```bash
 $ kubectl get pods
 NAME                                            READY   STATUS    RESTARTS   AGE
-0001-aw-generic-deployment-2-79988f7ddd-bmzwb   1/1     Running   0          91s
-0001-aw-generic-deployment-2-79988f7ddd-xkrxs   1/1     Running   0          91s
+0001-aw-generic-deployment-1-79988f7ddd-bmzwb   1/1     Running   0          91s
+0001-aw-generic-deployment-1-79988f7ddd-xkrxs   1/1     Running   0          91s
 ```
 
 This step showed a simple deployment of an `AppWrapper` job.  The next step will show how queuing works in the __Multi-Cluster Application Dispatcher__ Controller.
@@ -210,10 +210,9 @@ spec:
   schedulingSpec:
     minAvailable: 2
   resources:
-    Items:
+    GenericItems:
     - replicas: 1
-      type: Deployment
-      template:
+      generictemplate:
         apiVersion: apps/v1
         kind: Deployment
         metadata:
