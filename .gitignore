@@ -20,6 +20,7 @@
 /output*/
 /_output*/
 /_output
+bin
 
 # Emacs save files
 *~

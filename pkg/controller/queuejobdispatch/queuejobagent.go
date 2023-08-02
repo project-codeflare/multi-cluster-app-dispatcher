@@ -25,22 +25,22 @@ import (
 	"time"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
-	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned"
 	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	arbinformers "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion"
-	informersv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/v1"
-	listersv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
+	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned"
+
+	informerFactory "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions"
+	arbinformers "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions/controller/v1beta1"
+	arblisters "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1beta1"
+
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
@@ -51,8 +51,8 @@ type JobClusterAgent struct {
 	k8sClients      *kubernetes.Clientset // for the update of aggr resouces
 	AggrResources   *clusterstateapi.Resource
 
-	jobInformer informersv1.AppWrapperInformer
-	jobLister   listersv1.AppWrapperLister
+	jobInformer arbinformers.AppWrapperInformer
+	jobLister   arblisters.AppWrapperLister
 	jobSynced   func() bool
 
 	agentEventQueue *cache.FIFO
@@ -67,7 +67,6 @@ func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterA
 	klog.V(2).Infof("[Dispatcher: Agent] Creation: %s\n", "/root/kubernetes/"+configStrings[0])
 
 	agent_config, err := clientcmd.BuildConfigFromFlags("", "/root/kubernetes/"+configStrings[0])
-	// agent_config, err:=clientcmd.BuildConfigFromFlags("", "/root/agent101config")
 	if err != nil {
 		klog.V(2).Infof("[Dispatcher: Agent] Cannot crate client\n")
 		return nil
@@ -87,16 +86,16 @@ func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterA
 		klog.V(2).Infof("[Dispatcher: Agent] %s: Create Clients Suceessfully\n", qa.AgentId)
 	}
 
-	queueJobClientForInformer, _, err := clients.NewClient(agent_config)
+	appWrapperClient, err := clientset.NewForConfig(agent_config)
 	if err != nil {
-		panic(err)
+		klog.Fatalf("Could not instantiate k8s client, err=%v", err)
 	}
 
-	qa.jobInformer = arbinformers.NewFilteredSharedInformerFactory(queueJobClientForInformer, 0,
+	qa.jobInformer = informerFactory.NewFilteredSharedInformerFactory(appWrapperClient, 0, v1.NamespaceAll,
 		func(opt *metav1.ListOptions) {
 			opt.LabelSelector = "IsDispatched=true"
 		},
-	).AppWrapper().AppWrappers()
+	).Mcad().V1beta1().AppWrappers()
 	qa.jobInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
 			FilterFunc: func(obj interface{}) bool {
@@ -119,7 +118,7 @@ func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterA
 
 	qa.jobSynced = qa.jobInformer.Informer().HasSynced
 
-	qa.UpdateAggrResources()
+	qa.UpdateAggrResources(context.Background())
 
 	return qa
 }
@@ -157,17 +156,15 @@ func (cc *JobClusterAgent) deleteQueueJob(obj interface{}) {
 func (qa *JobClusterAgent) Run(stopCh chan struct{}) {
 	go qa.jobInformer.Informer().Run(stopCh)
 	cache.WaitForCacheSync(stopCh, qa.jobSynced)
-	// go wait.Until(qa.UpdateAgent, 2*time.Second, stopCh)
 }
 
-func (qa *JobClusterAgent) DeleteJob(cqj *arbv1.AppWrapper) {
+func (qa *JobClusterAgent) DeleteJob(ctx context.Context, cqj *arbv1.AppWrapper) {
 	qj_temp := cqj.DeepCopy()
 	klog.V(2).Infof("[Dispatcher: Agent] Request deletion of XQJ %s to Agent %s\n", qj_temp.Name, qa.AgentId)
-	qa.queuejobclients.ArbV1().AppWrappers(qj_temp.Namespace).Delete(qj_temp.Name, &metav1.DeleteOptions{})
-	return
+	qa.queuejobclients.McadV1beta1().AppWrappers(qj_temp.Namespace).Delete(ctx, qj_temp.Name, metav1.DeleteOptions{})
 }
 
-func (qa *JobClusterAgent) CreateJob(cqj *arbv1.AppWrapper) {
+func (qa *JobClusterAgent) CreateJob(ctx context.Context, cqj *arbv1.AppWrapper) {
 	qj_temp := cqj.DeepCopy()
 	agent_qj := &arbv1.AppWrapper{
 		TypeMeta:   qj_temp.TypeMeta,
@@ -185,19 +182,8 @@ func (qa *JobClusterAgent) CreateJob(cqj *arbv1.AppWrapper) {
 	}
 	agent_qj.Labels["IsDispatched"] = "true"
 
-	// klog.Infof("[Agent] XQJ resourceVersion cleaned--Name:%s, Kind:%s\n", agent_qj.Name, agent_qj.Kind)
 	klog.V(2).Infof("[Dispatcher: Agent] Create XQJ: %s (Status: %+v) in Agent %s\n", agent_qj.Name, agent_qj.Status, qa.AgentId)
-	qa.queuejobclients.ArbV1().AppWrappers(agent_qj.Namespace).Create(agent_qj)
-	// pods, err := qa.deploymentclients.CoreV1().Pods("").List(metav1.ListOptions{})
-	// if err != nil {
-	// 	klog.Infof("[Agent] Cannot Access Agent================\n")
-	// }
-	// klog.Infof("There are %d pods in the cluster\n", len(pods.Items))
-	// // for _, pod := range pods.Items {
-	// 	klog.Infof("[Agent] Pod Name=%s\n",pod.Name)
-	// }
-
-	return
+	qa.queuejobclients.McadV1beta1().AppWrappers(agent_qj.Namespace).Create(ctx, agent_qj, metav1.CreateOptions{})
 }
 
 type ClusterMetricsList struct {
@@ -214,7 +200,7 @@ type ClusterMetricsList struct {
 	} `json:"items"`
 }
 
-func (qa *JobClusterAgent) UpdateAggrResources() error {
+func (qa *JobClusterAgent) UpdateAggrResources(ctx context.Context) error {
 	klog.V(6).Infof("[Dispatcher: UpdateAggrResources] Getting aggregated resources for Agent ID: %s with Agent Name: %s\n", qa.AgentId, qa.DeploymentName)
 
 	// Read the Agent XQJ Deployment object
@@ -223,7 +209,7 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 
 	}
 
-	data, err := qa.k8sClients.RESTClient().Get().AbsPath("apis/external.metrics.k8s.io/v1beta1/namespaces/default/cluster-external-metric").DoRaw(context.Background())
+	data, err := qa.k8sClients.RESTClient().Get().AbsPath("apis/external.metrics.k8s.io/v1beta1/namespaces/default/cluster-external-metric").DoRaw(ctx)
 
 	if err != nil {
 		klog.V(2).Infof("[Dispatcher: UpdateAggrResources] Failed to get metrics from deployment Agent ID: %s with Agent Name: %s, Error: %v\n", qa.AgentId, qa.DeploymentName, err)
@@ -241,10 +227,10 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 						res.Items[i].MetricName, res.Items[i].MetricLabels, res.Items[i].Value, qa.AgentId, qa.DeploymentName)
 					clusterMetricType := res.Items[i].MetricLabels["cluster"]
 
-					if strings.Compare(clusterMetricType, "cpu") == 0  || strings.Compare(clusterMetricType, "memory") == 0 {
+					if strings.Compare(clusterMetricType, "cpu") == 0 || strings.Compare(clusterMetricType, "memory") == 0 {
 						val, units, _ := getFloatString(res.Items[i].Value)
 						num, err := strconv.ParseFloat(val, 64)
-						if err !=nil {
+						if err != nil {
 							klog.Warningf("[Dispatcher: UpdateAggrResources] Possible issue converting %s string value of %s due to error: %v\n",
 								clusterMetricType, res.Items[i].Value, err)
 						} else {
@@ -269,8 +255,8 @@ func (qa *JobClusterAgent) UpdateAggrResources() error {
 							} // Float value resulted in zero value.
 						} // Converting string to float success
 					} else if strings.Compare(clusterMetricType, "gpu") == 0 {
-						 num, err := getInt64String(res.Items[i].Value)
-						if err !=nil {
+						num, err := getInt64String(res.Items[i].Value)
+						if err != nil {
 							klog.Warningf("[Dispatcher: UpdateAggrResources] Possible issue converting %s string value of %s due to int64 type, error: %v\n",
 								clusterMetricType, res.Items[i].Value, err)
 						} else {
@@ -309,7 +295,7 @@ func getFloatString(num string) (string, string, error) {
 	} else {
 		validatedNum = num
 	}
-	return  validatedNum, numUnits, err
+	return validatedNum, numUnits, err
 }
 func getInt64String(num string) (int64, error) {
 	var validatedNum int64 = 0
@@ -317,12 +303,5 @@ func getInt64String(num string) (int64, error) {
 	if err == nil {
 		validatedNum = n
 	}
-	return  validatedNum, err
-}
-
-func buildResource(cpu string, memory string) *clusterstateapi.Resource {
-	return clusterstateapi.NewResource(v1.ResourceList{
-		v1.ResourceCPU:    resource.MustParse(cpu),
-		v1.ResourceMemory: resource.MustParse(memory),
-	})
+	return validatedNum, err
 }

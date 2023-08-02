@@ -297,7 +297,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 		pass := false
 		for true {
-			aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+			aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
 			if err != nil {
 				fmt.Fprint(GinkgoWriter, "Error getting status")
 			}
@@ -470,7 +470,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// Make sure pods from AW aw-deployment-1-850-cpu have preempted
 		var pass = false
 		for true {
-			aw2Update, err := context.karclient.ArbV1().AppWrappers(aw2.Namespace).Get(aw2.Name, metav1.GetOptions{})
+			aw2Update, err := context.karclient.McadV1beta1().AppWrappers(aw2.Namespace).Get(context.ctx, aw2.Name, metav1.GetOptions{})
 			if err != nil {
 				fmt.Fprintf(GinkgoWriter, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Error getting AW update %v", err)
 			}
@@ -557,7 +557,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: aw-test-jobtimeout-with-comp-1")
 		time.Sleep(90 * time.Second)
-		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Expecting no error when getting app wrapper status")
 		fmt.Fprintf(GinkgoWriter, "[e2e] status of app wrapper: %v.\n", aw1.Status)
 		Expect(aw1.Status.State).To(Equal(arbv1.AppWrapperStateFailed), "Expecting a failed state")
@@ -575,7 +575,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred())
 		time.Sleep(1 * time.Minute)
-		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
 		if err != nil {
 			fmt.Fprintf(GinkgoWriter, "Error getting status, %v\n", err)
 		}
@@ -597,7 +597,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: 'aw-test-job-with-comp-ms-21'")
 		time.Sleep(1 * time.Minute)
-		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "No error is expected when getting status")
 		fmt.Fprintf(GinkgoWriter, "[e2e] MCAD Multi-Item Job Completion Test status of AW %v.\n", aw1.Status)
 		Expect(aw1.Status.State).To(Equal(arbv1.AppWrapperStateCompleted), "Expecting a completed app wrapper status")
@@ -655,7 +655,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred())
 		time.Sleep(1 * time.Minute)
-		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
 		if err != nil {
 			fmt.Fprintf(GinkgoWriter, "Error getting status, %v", err)
 		}
@@ -704,7 +704,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		time.Sleep(30 * time.Second)
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: aw-deployment-rhc")
-		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Expecting to get app wrapper status")
 		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
 		Expect(aw1.Status.State).To(Equal(arbv1.AppWrapperStateRunningHoldCompletion))
@@ -722,7 +722,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		time.Sleep(1 * time.Minute)
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred())
-		aw1, err := context.karclient.ArbV1().AppWrappers(aw.Namespace).Get(aw.Name, metav1.GetOptions{})
+		aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
 		if err != nil {
 			fmt.Fprintf(GinkgoWriter, "Error getting status, %v", err)
 		}
