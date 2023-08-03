@@ -1,0 +1,45 @@
+# This workflow will build mcad and run unit test and E2E tests
+name: MCAD-CI
+on:
+  pull_request:
+    branches:
+      - 'main'
+      - 'release-*'
+
+jobs:
+  MCAD-CI:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: "refs/pull/${{ github.event.number }}/merge"
+          fetch-depth: 0
+
+      - name: Set latest tag and Branch name
+        run: |
+          BRANCH=${{ github.event.pull_request.head.ref }}
+          echo "GIT_BRANCH=$(echo "$BRANCH" | sed 's/[^A-Za-z0-9._-]/-/g' )" >> $GITHUB_ENV
+          echo "TAG=$(git describe --abbrev=0 --tags)" >> $GITHUB_ENV
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18.10
+
+      - name: Build
+        run:
+          make mcad-controller
+
+      - name: Run Unit tests
+        run: make run-test
+
+      - name: Build Image
+        run: |
+          make images -e GIT_BRANCH=${{ env.GIT_BRANCH }} TAG=${{ env.GIT_BRANCH }}-${{ env.TAG }}
+
+      - name: Run E2E tests
+        run: |
+          make run-e2e -e GIT_BRANCH=${{ env.GIT_BRANCH }} TAG=${{ env.GIT_BRANCH }}-${{ env.TAG }}
+          

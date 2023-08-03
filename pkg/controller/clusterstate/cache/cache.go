@@ -39,7 +39,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	dto "github.com/prometheus/client_model/go"
 
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	clientv1 "k8s.io/client-go/informers/core/v1"
@@ -48,13 +47,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 
-	client "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/controller-versioned/clients"
-	informerfactory "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion"
-	arbclient "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/controller-externalversion/v1"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-// New returns a Cache implementation.
+//New returns a Cache implementation.
 func New(config *rest.Config) Cache {
 	return newClusterStateCache(config)
 }
@@ -64,55 +61,18 @@ type ClusterStateCache struct {
 
 	kubeclient *kubernetes.Clientset
 
-	podInformer            clientv1.PodInformer
-	nodeInformer           clientv1.NodeInformer
-	schedulingSpecInformer arbclient.SchedulingSpecInformer
+	nodeInformer clientv1.NodeInformer
 
-	Jobs  map[api.JobID]*api.JobInfo
 	Nodes map[string]*api.NodeInfo
 
 	availableResources *api.Resource
 	availableHistogram *api.ResourceHistogram
 	resourceCapacities *api.Resource
-	deletedJobs        *cache.FIFO
-
-	errTasks *cache.FIFO
-}
-
-func taskKey(obj interface{}) (string, error) {
-	if obj == nil {
-		return "", fmt.Errorf("the object is nil")
-	}
-
-	task, ok := obj.(*api.TaskInfo)
-
-	if !ok {
-		return "", fmt.Errorf("failed to convert %v to TaskInfo", obj)
-	}
-
-	return string(task.UID), nil
-}
-
-func jobKey(obj interface{}) (string, error) {
-	if obj == nil {
-		return "", fmt.Errorf("the object is nil")
-	}
-
-	job, ok := obj.(*api.JobInfo)
-
-	if !ok {
-		return "", fmt.Errorf("failed to convert %v to TaskInfo", obj)
-	}
-
-	return string(job.UID), nil
 }
 
 func newClusterStateCache(config *rest.Config) *ClusterStateCache {
 	sc := &ClusterStateCache{
-		Jobs:        make(map[api.JobID]*api.JobInfo),
-		Nodes:       make(map[string]*api.NodeInfo),
-		errTasks:    cache.NewFIFO(taskKey),
-		deletedJobs: cache.NewFIFO(jobKey),
+		Nodes: make(map[string]*api.NodeInfo),
 	}
 
 	sc.kubeclient = kubernetes.NewForConfigOrDie(config)
@@ -130,46 +90,6 @@ func newClusterStateCache(config *rest.Config) *ClusterStateCache {
 		0,
 	)
 
-	// create informer for pod information
-	sc.podInformer = informerFactory.Core().V1().Pods()
-	sc.podInformer.Informer().AddEventHandler(
-		cache.FilteringResourceEventHandler{
-			FilterFunc: func(obj interface{}) bool {
-				switch obj.(type) {
-				case *v1.Pod:
-					pod := obj.(*v1.Pod)
-					return pod.Status.Phase == v1.PodRunning
-					//if pod.Status.Phase != v1.PodSucceeded && pod.Status.Phase != v1.PodFailed {
-					//	return true
-					//} else {
-					//	return false
-					//}
-				default:
-					return false
-				}
-			},
-			Handler: cache.ResourceEventHandlerFuncs{
-				AddFunc:    sc.AddPod,
-				UpdateFunc: sc.UpdatePod,
-				DeleteFunc: sc.DeletePod,
-			},
-		})
-
-	// create queue informer
-	queueClient, _, err := client.NewClient(config)
-	if err != nil {
-		panic(err)
-	}
-
-	schedulingSpecInformerFactory := informerfactory.NewSharedInformerFactory(queueClient, 0)
-	// create informer for Queue information
-	sc.schedulingSpecInformer = schedulingSpecInformerFactory.SchedulingSpec().SchedulingSpecs()
-	sc.schedulingSpecInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sc.AddSchedulingSpec,
-		UpdateFunc: sc.UpdateSchedulingSpec,
-		DeleteFunc: sc.DeleteSchedulingSpec,
-	})
-
 	sc.availableResources = api.EmptyResource()
 	sc.availableHistogram = api.NewResourceHistogram(api.EmptyResource(), api.EmptyResource())
 	sc.resourceCapacities = api.EmptyResource()
@@ -179,26 +99,15 @@ func newClusterStateCache(config *rest.Config) *ClusterStateCache {
 
 func (sc *ClusterStateCache) Run(stopCh <-chan struct{}) {
 	klog.V(8).Infof("Cluster State Cache started.")
-
-	go sc.podInformer.Informer().Run(stopCh)
 	go sc.nodeInformer.Informer().Run(stopCh)
-	go sc.schedulingSpecInformer.Informer().Run(stopCh)
 
 	// Update cache
-	go sc.updateCache()
-
-	// Re-sync error tasks.
-	go sc.resync()
-
-	// Cleanup jobs.
-	go sc.cleanupJobs()
+	go wait.Until(sc.updateCache, 1*time.Second, stopCh)
 
 }
 
 func (sc *ClusterStateCache) WaitForCacheSync(stopCh <-chan struct{}) bool {
 	return cache.WaitForCacheSync(stopCh,
-		sc.podInformer.Informer().HasSynced,
-		sc.schedulingSpecInformer.Informer().HasSynced,
 		sc.nodeInformer.Informer().HasSynced)
 }
 
@@ -333,86 +242,13 @@ func (sc *ClusterStateCache) updateState() error {
 	return err
 }
 
-func (sc *ClusterStateCache) deleteJob(job *api.JobInfo) {
-	klog.V(10).Infof("[deleteJob] Attempting to delete Job <%v:%v/%v>", job.UID, job.Namespace, job.Name)
-
-	time.AfterFunc(5*time.Second, func() {
-		sc.deletedJobs.AddIfNotPresent(job)
-	})
-}
-
-func (sc *ClusterStateCache) processCleanupJob() error {
-	_, err := sc.deletedJobs.Pop(func(obj interface{}) error {
-		job, ok := obj.(*api.JobInfo)
-		if !ok {
-			return fmt.Errorf("failed to convert %v to *v1.Pod", obj)
-		}
-
-		func() {
-			sc.Mutex.Lock()
-			defer sc.Mutex.Unlock()
-
-			if api.JobTerminated(job) {
-				delete(sc.Jobs, job.UID)
-				klog.V(10).Infof("[processCleanupJob] Job <%v:%v/%v> was deleted.", job.UID, job.Namespace, job.Name)
-			} else {
-				// Retry
-				sc.deleteJob(job)
-			}
-		}()
-
-		return nil
-	})
-
-	return err
-}
-
-func (sc *ClusterStateCache) cleanupJobs() {
-	for {
-		err := sc.processCleanupJob()
-		if err != nil {
-			klog.Errorf("Failed to process job clean up: %v", err)
-		}
-	}
-}
-
 func (sc *ClusterStateCache) updateCache() {
 	klog.V(9).Infof("Starting to update Cluster State Cache")
-
-	for {
-		err := sc.updateState()
-		if err != nil {
-			klog.Errorf("Failed update state: %v", err)
-		}
-
-		time.Sleep(1 * time.Second)
+	err := sc.updateState()
+	if err != nil {
+		klog.Errorf("Failed update state: %v", err)
 	}
-}
-
-func (sc *ClusterStateCache) resync() {
-	for {
-		err := sc.processResyncTask()
-		if err != nil {
-			klog.Errorf("Failed to process resync: %v", err)
-		}
-	}
-}
-
-func (sc *ClusterStateCache) processResyncTask() error {
-	_, err := sc.errTasks.Pop(func(obj interface{}) error {
-		task, ok := obj.(*api.TaskInfo)
-		if !ok {
-			return fmt.Errorf("failed to convert %v to *v1.Pod", obj)
-		}
-
-		if err := sc.syncTask(task); err != nil {
-			klog.Errorf("Failed to sync pod <%v/%v>", task.Namespace, task.Name)
-			return err
-		}
-		return nil
-	})
-
-	return err
+	return
 }
 
 func (sc *ClusterStateCache) Snapshot() *api.ClusterInfo {
@@ -421,22 +257,10 @@ func (sc *ClusterStateCache) Snapshot() *api.ClusterInfo {
 
 	snapshot := &api.ClusterInfo{
 		Nodes: make([]*api.NodeInfo, 0, len(sc.Nodes)),
-		Jobs:  make([]*api.JobInfo, 0, len(sc.Jobs)),
 	}
 
 	for _, value := range sc.Nodes {
 		snapshot.Nodes = append(snapshot.Nodes, value.Clone())
-	}
-
-	for _, value := range sc.Jobs {
-		// If no scheduling spec, does not handle it.
-		if value.SchedSpec == nil {
-			// Jobs.Tasks are more recognizable than Jobs.UID
-			klog.V(10).Infof("The scheduling spec of Job <%v> with tasks <%+v> is nil, ignore it.", value.UID, value.Tasks)
-			continue
-		}
-
-		snapshot.Jobs = append(snapshot.Jobs, value.Clone())
 	}
 
 	return snapshot
@@ -465,28 +289,9 @@ func (sc *ClusterStateCache) String() string {
 	if len(sc.Nodes) != 0 {
 		str = str + "Nodes:\n"
 		for _, n := range sc.Nodes {
-			str = str + fmt.Sprintf("\t %s: idle(%v) used(%v) allocatable(%v) pods(%d)\n",
-				n.Name, n.Idle, n.Used, n.Allocatable, len(n.Tasks))
+			str = str + fmt.Sprintf("\t %s: idle(%v) used(%v) allocatable(%v)\n",
+				n.Name, n.Idle, n.Used, n.Allocatable)
 
-			i := 0
-			for _, p := range n.Tasks {
-				str = str + fmt.Sprintf("\t\t %d: %v\n", i, p)
-				i++
-			}
-		}
-	}
-
-	if len(sc.Jobs) != 0 {
-		str = str + "Jobs:\n"
-		for _, job := range sc.Jobs {
-			str = str + fmt.Sprintf("\t Job(%s) name(%s) minAvailable(%v)\n",
-				job.UID, job.Name, job.MinAvailable)
-
-			i := 0
-			for _, task := range job.Tasks {
-				str = str + fmt.Sprintf("\t\t %d: %v\n", i, task)
-				i++
-			}
 		}
 	}
 

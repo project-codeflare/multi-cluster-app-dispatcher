@@ -25,7 +25,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
-	listersv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
+	listersv1beta1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1beta1"
 	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota"
 	qstmanager "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotaforestmanager/qm_lib_backend_with_quotasubt_mgr/quotasubtmgr"
@@ -56,7 +56,7 @@ const (
 // QuotaManager implements a QuotaManagerInterface.
 type QuotaManager struct {
 	url                 string
-	appwrapperLister    listersv1.AppWrapperLister
+	appwrapperLister    listersv1beta1.AppWrapperLister
 	preemptionEnabled   bool
 	quotaManagerBackend *qmbackend.Manager
 	quotaSubtreeManager *qstmanager.QuotaSubtreeManager
@@ -108,7 +108,7 @@ func getDispatchedAppWrapper(dispatchedAWs map[string]*arbv1.AppWrapper, awId st
 }
 
 func NewQuotaManager(dispatchedAWDemands map[string]*clusterstateapi.Resource, dispatchedAWs map[string]*arbv1.AppWrapper,
-	awJobLister listersv1.AppWrapperLister, config *rest.Config, serverOptions *options.ServerOption) (*QuotaManager, error) {
+	awJobLister listersv1beta1.AppWrapperLister, config *rest.Config, serverOptions *options.ServerOption) (*QuotaManager, error) {
 
 	var err error
 

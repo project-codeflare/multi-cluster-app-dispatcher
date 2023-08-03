@@ -48,7 +48,6 @@ export KUTTL_OPTIONS=${TEST_KUTTL_OPTIONS}
 export KUTTL_TEST_SUITES=("${ROOT_DIR}/test/kuttl-test.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-03.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-02.yaml" "${ROOT_DIR}/test/kuttl-test-deployment-01.yaml")
 DUMP_LOGS="true"
 
-
 function update_test_host {
   
   local arch="$(go env GOARCH)"
@@ -373,7 +372,68 @@ function setup-mcad-env {
   do
     echo -n "." && sleep 1; 
   done
+}
 
+function extend-resources {
+    # Patch nodes to provide GPUs resources without physical GPUs.
+    # This is intended to allow testing of GPU specific features such as histograms.
+
+    # Start communication with cluster
+    kubectl proxy --port=0 > .port.dat 2>&1 &
+    proxy_pid=$!
+
+    echo "Starting background proxy connection (pid=${proxy_pid})..."
+    echo "Waiting for proxy process to start."
+    sleep 30
+
+    kube_proxy_port=$(cat .port.dat | awk '{split($5, substrings, ":"); print substrings[2]}')
+    curl -s 127.0.0.1:${kube_proxy_port} > /dev/null 2>&1
+
+    if [[ ! $? -eq 0 ]]; then
+        echo "Calling 'kubectl proxy' did not create a successful connection to the kubelet needed to patch the nodes. Exiting."
+        kill -9 ${proxy_pid}
+        exit 1
+    else
+        echo "Connected to the kubelet for patching the nodes. Using port ${kube_proxy_port}."
+    fi
+
+    rm .port.dat
+
+    # Variables
+    resource_name="nvidia.com~1gpu"
+    resource_count="8"
+
+    # Patch nodes
+    for node_name in $(kubectl get nodes --no-headers -o custom-columns=":metadata.name")
+    do
+        echo "- Patching node (add): ${node_name}"
+
+        patching_status=$(curl -s --header "Content-Type: application/json-patch+json" \
+                                --request PATCH \
+                                --data '[{"op": "add", "path": "/status/capacity/'${resource_name}'", "value": "'${resource_count}'"}]' \
+                                http://localhost:${kube_proxy_port}/api/v1/nodes/${node_name}/status | jq -r '.status')
+
+        if [[ ${patching_status} == "Failure" ]]; then
+            echo "Failed to patch node '${node_name}' with GPU resources"
+            exit 1
+        fi
+
+        echo "Patching done!"
+    done
+
+    # Stop communication with cluster
+    echo "Killing proxy (pid=${proxy_pid})..."
+    kill -9 ${proxy_pid}
+
+    # Run kuttl tests to confirm GPUs were added correctly
+    kuttl_test="${ROOT_DIR}/test/kuttl-test-extended-resources.yaml"
+    echo "kubectl kuttl test --config ${kuttl_test}"
+    kubectl kuttl test --config ${kuttl_test}
+    if [ $? -ne 0 ]
+    then
+      echo "kuttl e2e test '${kuttl_test}' failure, exiting."
+      exit 1
+    fi
 }
 
 function kuttl-tests {
@@ -402,6 +462,7 @@ trap cleanup EXIT
 update_test_host
 check-prerequisites 
 kind-up-cluster
+extend-resources
 setup-mcad-env
 # MCAD with quotamanagement options is started by kuttl-tests
 kuttl-tests

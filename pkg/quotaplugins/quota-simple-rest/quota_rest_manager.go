@@ -26,7 +26,7 @@ import (
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
-	listersv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1"
+	listersv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1beta1"
 	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
@@ -119,7 +119,7 @@ func createId(ns string, n string) string {
 func NewQuotaManager(dispatchedAWDemands map[string]*clusterstateapi.Resource, dispatchedAWs map[string]*arbv1.AppWrapper,
 	awJobLister listersv1.AppWrapperLister, config *rest.Config,
 	serverOptions *options.ServerOption) (*QuotaManager, error) {
-	if serverOptions.QuotaEnabled == false {
+	if !serverOptions.QuotaEnabled {
 		klog.Infof("[NewQuotaManager] Quota management is not enabled.")
 		return nil, nil
 	}
@@ -304,6 +304,11 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 	var preemptIds []*arbv1.AppWrapper
 	klog.V(4).Infof("[Fits] Sending request: %v in buffer: %v, buffer size: %v, to uri: %s", req, buf, buf.Len(), uri)
 	response, err := http.Post(uri, "application/json; charset=utf-8", buf)
+	if err != nil {
+		klog.Errorf("[Fits] Fail to add access quotaforestmanager: %s, err=%#v.", uri, err)
+		preemptIds = nil
+		return false, preemptIds, err.Error()
+	}
 	defer response.Body.Close()
 	dump, err := httputil.DumpResponse(response, true)
 	klog.V(10).Infof("[getQuotaTreeIDs] POST Response dump: %q", dump)
