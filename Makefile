@@ -235,14 +235,12 @@ DEPLOYMENT_CRD_DIR=deployment/mcad-controller/crds
 CRD_BASE_DIR=config/crd/bases
 MCAD_CRDS= ${DEPLOYMENT_CRD_DIR}/ibm.com_quotasubtrees.yaml  \
 		   ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_appwrappers.yaml \
-		   ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_queuejobs.yaml \
 		   ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_schedulingspecs.yaml
 
 update-deployment-crds: ${MCAD_CRDS}
 
 ${DEPLOYMENT_CRD_DIR}/ibm.com_quotasubtrees.yaml : ${CRD_BASE_DIR}/ibm.com_quotasubtrees.yaml
 ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_appwrappers.yaml : ${CRD_BASE_DIR}/mcad.ibm.com_appwrappers.yaml
-${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_queuejobs.yaml : ${CRD_BASE_DIR}/mcad.ibm.com_queuejobs.yaml
 ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_schedulingspecs.yaml : ${CRD_BASE_DIR}/mcad.ibm.com_schedulingspecs.yaml
 
 $(DEPLOYMENT_CRD_DIR)/%: ${CRD_BASE_DIR}/%
