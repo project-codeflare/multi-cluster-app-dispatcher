@@ -1,19 +1,4 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
 Copyright 2019, 2021 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,9 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package provider
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"sync"
@@ -50,9 +37,9 @@ import (
 	"k8s.io/metrics/pkg/apis/custom_metrics"
 	"k8s.io/metrics/pkg/apis/external_metrics"
 
-	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/provider"
-	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/provider/helpers"
 	clusterstatecache "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
+	"sigs.k8s.io/custom-metrics-apiserver/pkg/provider"
+	"sigs.k8s.io/custom-metrics-apiserver/pkg/provider/helpers"
 )
 
 // CustomMetricResource wraps provider.CustomMetricInfo in a struct which stores the Name and Namespace of the resource
@@ -140,6 +127,8 @@ type clusterMetricsProvider struct {
 	externalMetrics []ExternalMetric
 	cache2          clusterstatecache.Cache
 }
+
+var _ provider.MetricsProvider = (*clusterMetricsProvider)(nil)
 
 // NewFakeProvider returns an instance of clusterMetricsProvider, along with its restful.WebService that opens endpoints to post new fake metrics
 func NewFakeProvider(client dynamic.Interface, mapper apimeta.RESTMapper, clusterStateCache clusterstatecache.Cache) (provider.MetricsProvider, *restful.WebService) {
@@ -316,7 +305,7 @@ func (p *clusterMetricsProvider) metricsFor(namespace string, selector labels.Se
 	}, nil
 }
 
-func (p *clusterMetricsProvider) GetMetricByName(name types.NamespacedName, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValue, error) {
+func (p *clusterMetricsProvider) GetMetricByName(_ context.Context, name types.NamespacedName, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValue, error) {
 	p.valuesLock.RLock()
 	defer p.valuesLock.RUnlock()
 
@@ -327,7 +316,7 @@ func (p *clusterMetricsProvider) GetMetricByName(name types.NamespacedName, info
 	return p.metricFor(value, name, labels.Everything(), info, metricSelector)
 }
 
-func (p *clusterMetricsProvider) GetMetricBySelector(namespace string, selector labels.Selector, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValueList, error) {
+func (p *clusterMetricsProvider) GetMetricBySelector(_ context.Context, namespace string, selector labels.Selector, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValueList, error) {
 	p.valuesLock.RLock()
 	defer p.valuesLock.RUnlock()
 
@@ -353,14 +342,14 @@ func (p *clusterMetricsProvider) ListAllMetrics() []provider.CustomMetricInfo {
 	return metrics
 }
 
-func (p *clusterMetricsProvider) GetExternalMetric(namespace string, metricSelector labels.Selector,
+func (p *clusterMetricsProvider) GetExternalMetric(_ context.Context, namespace string, metricSelector labels.Selector,
 	info provider.ExternalMetricInfo) (*external_metrics.ExternalMetricValueList, error) {
 	klog.V(10).Infof("[GetExternalMetric] Entered GetExternalMetric()")
 	klog.V(9).Infof("[GetExternalMetric] metricsSelector: %s, metricsInfo: %s", metricSelector.String(), info.Metric)
 	p.valuesLock.RLock()
 	defer p.valuesLock.RUnlock()
 
-	matchingMetrics := []external_metrics.ExternalMetricValue{}
+	var matchingMetrics []external_metrics.ExternalMetricValue
 	for _, metric := range p.externalMetrics {
 		klog.V(9).Infof("[GetExternalMetric] externalMetricsInfo: %s, externalMetricValue: %v, externalMetricLabels: %v ",
 			metric.info.Metric, metric.Value, metric.labels)
@@ -375,7 +364,7 @@ func (p *clusterMetricsProvider) GetExternalMetric(namespace string, metricSelec
 
 				klog.V(10).Infof("[GetExternalMetric] Setting memory metric Value: %f.", resources.Memory)
 				metricValue.Value = *resource.NewQuantity(int64(resources.Memory), resource.DecimalSI)
-				//metricValue.Value = *resource.NewQuantity(4500000000, resource.DecimalSI)
+				// metricValue.Value = *resource.NewQuantity(4500000000, resource.DecimalSI)
 			} else if strings.Compare(labelVal, "cpu") == 0 {
 				// Set cpu Value
 				resources := p.cache2.GetUnallocatedResources()
@@ -408,7 +397,7 @@ func (p *clusterMetricsProvider) ListAllExternalMetrics() []provider.ExternalMet
 	p.valuesLock.RLock()
 	defer p.valuesLock.RUnlock()
 
-	externalMetricsInfo := []provider.ExternalMetricInfo{}
+	var externalMetricsInfo []provider.ExternalMetricInfo
 	for _, metric := range p.externalMetrics {
 		externalMetricsInfo = append(externalMetricsInfo, metric.info)
 		klog.V(9).Infof("Add metric=%v to externalMetricsInfo", metric)
