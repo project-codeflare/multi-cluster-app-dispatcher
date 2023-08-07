@@ -154,16 +154,9 @@ $(INFORMER_GEN): $(LOCALBIN)
 manifests: controller-gen ## Generate CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) crd:allowDangerousTypes=true paths="./pkg/apis/..." output:crd:artifacts:config=config/crd/bases
 
-generate-code: pkg/apis/controller/v1beta1/zz_generated.deepcopy.go
-
-pkg/apis/controller/v1beta1/zz_generated.deepcopy.go: ${BIN_DIR}/deepcopy-gen
-	$(info Generating deepcopy...)
-	${BIN_DIR}/deepcopy-gen -i ./pkg/apis/controller/v1beta1/ -O zz_generated.deepcopy 
-	${BIN_DIR}/deepcopy-gen -i ./pkg/apis/quotaplugins/quotasubtree/v1 -O zz_generated.deepcopy
-
-${BIN_DIR}/deepcopy-gen:	
-	$(info Compiling deepcopy-gen...)
-	go build -o ${BIN_DIR}/deepcopy-gen ./cmd/deepcopy-gen/
+.PHONY: generate-code
+generate-code: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate/boilerplate.go.txt" paths="./pkg/apis/..."
 
 images: verify-tag-name generate-code update-deployment-crds
 	$(info List executable directory)
