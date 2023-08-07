@@ -1407,7 +1407,7 @@ func (qjm *XController) backoff(ctx context.Context, q *arbv1.AppWrapper, reason
 }
 
 // Run starts AppWrapper Controller
-func (cc *XController) Run(stopCh chan struct{}) {
+func (cc *XController) Run(stopCh <-chan struct{}) {
 	go cc.appwrapperInformer.Informer().Run(stopCh)
 
 	go cc.qjobResControls[arbv1.ResourceTypePod].Run(stopCh)
