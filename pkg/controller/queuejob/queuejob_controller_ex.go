@@ -1406,11 +1406,8 @@ func (qjm *XController) backoff(ctx context.Context, q *arbv1.AppWrapper, reason
 		qjm.serverOption.BackoffTime, qjm.qjqueue.IfExistActiveQ(q), qjm.qjqueue.IfExistUnschedulableQ(q), q, q.ResourceVersion, q.Status)
 }
 
-// Run start AppWrapper Controller
+// Run starts AppWrapper Controller
 func (cc *XController) Run(stopCh chan struct{}) {
-	// initialized
-	createAppWrapperKind(cc.config)
-
 	go cc.appwrapperInformer.Informer().Run(stopCh)
 
 	go cc.qjobResControls[arbv1.ResourceTypePod].Run(stopCh)
