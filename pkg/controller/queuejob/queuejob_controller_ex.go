@@ -2160,10 +2160,10 @@ func (cc *XController) getAppWrapper(namespace string, name string, caller strin
 			}
 			return nil, err
 		}
+		klog.V(5).Infof("[getAppWrapper] get a copy of '%s/%s' suceeded when called by '%s'", namespace, name, caller)
+		return apiCacheAWJob.DeepCopy(), nil
 	}
-
-	klog.V(5).Infof("[getAppWrapper] get a copy of '%s/%s' suceeded when called by '%s'", namespace, name, caller)
-	return apiCacheAWJob.DeepCopy(), nil
+	return nil, errors.New("appwrapper informer has not synced")
 }
 
 type EtcdErrorClassifier struct {
