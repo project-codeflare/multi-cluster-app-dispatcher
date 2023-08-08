@@ -18,13 +18,9 @@ package queuejob
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client"
 )
 
 func GetXQJFullName(qj *arbv1.AppWrapper) string {
@@ -35,18 +31,6 @@ func GetXQJFullName(qj *arbv1.AppWrapper) string {
 
 func HigherSystemPriorityQJ(qj1, qj2 interface{}) bool {
 	return qj1.(*arbv1.AppWrapper).Status.SystemPriority > qj2.(*arbv1.AppWrapper).Status.SystemPriority
-}
-
-func createAppWrapperKind(config *rest.Config) error {
-	extensionscs, err := apiextensionsclient.NewForConfig(config)
-	if err != nil {
-		return err
-	}
-	_, err = client.CreateAppWrapperKind(extensionscs)
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		return err
-	}
-	return nil
 }
 
 // GenerateAppWrapperCondition returns condition of a AppWrapper condition.

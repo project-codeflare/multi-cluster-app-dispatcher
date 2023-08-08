@@ -718,6 +718,7 @@ func (qjm *XController) addTotalSnapshotResourcesConsumedByAw(totalgpu int32, to
 
 func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClusterResources *clusterstateapi.
 	Resource, targetpr float64, requestingJob *arbv1.AppWrapper, agentId string) (*clusterstateapi.Resource, []*arbv1.AppWrapper) {
+	//get available free resources in the cluster.
 	r := unallocatedClusterResources.Clone()
 	// Track preemption resources
 	preemptable := clusterstateapi.EmptyResource()
@@ -732,7 +733,10 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 		klog.Errorf("[getAggAvaiResPri] Unable to obtain the list of queueJobs %+v", err)
 		return r, nil
 	}
-
+	//for all AWs that have canRun status are true
+	//in non-preemption mode, we reserve resources for AWs
+	//reserving is done by subtracting total AW resources from pods owned by AW that are running or completed.
+	// AW can be running but items owned by it can be completed or there might be new set of pods yet to be spawned
 	for _, value := range queueJobs {
 		klog.V(10).Infof("[getAggAvaiResPri] %s: Evaluating job: %s to calculate aggregated resources.", time.Now().String(), value.Name)
 		if value.Name == requestingJob.Name {
@@ -797,10 +801,11 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 
 			totalResource := qjm.addTotalSnapshotResourcesConsumedByAw(value.Status.TotalGPU, value.Status.TotalCPU, value.Status.TotalMemory)
 			klog.V(6).Infof("[getAggAvaiResPri] total resources consumed by Appwrapper %v when CanRun are %v", value.Name, totalResource)
-			pending, err = qjv.NonNegSub(totalResource)
+			delta, err := qjv.NonNegSub(totalResource)
+			pending = pending.Add(delta)
 			if err != nil {
 				klog.Warningf("[getAggAvaiResPri] Subtraction of resources failed, adding entire appwrapper resoources %v, %v", qjv, err)
-				pending = qjv
+				pending = pending.Add(qjv)
 			}
 			klog.V(6).Infof("[getAggAvaiResPri] The value of pending is %v", pending)
 			continue
@@ -1406,11 +1411,8 @@ func (qjm *XController) backoff(ctx context.Context, q *arbv1.AppWrapper, reason
 		qjm.serverOption.BackoffTime, qjm.qjqueue.IfExistActiveQ(q), qjm.qjqueue.IfExistUnschedulableQ(q), q, q.ResourceVersion, q.Status)
 }
 
-// Run start AppWrapper Controller
-func (cc *XController) Run(stopCh chan struct{}) {
-	// initialized
-	createAppWrapperKind(cc.config)
-
+// Run starts AppWrapper Controller
+func (cc *XController) Run(stopCh <-chan struct{}) {
 	go cc.appwrapperInformer.Informer().Run(stopCh)
 
 	go cc.qjobResControls[arbv1.ResourceTypePod].Run(stopCh)

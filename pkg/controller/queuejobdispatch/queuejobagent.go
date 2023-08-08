@@ -153,7 +153,7 @@ func (cc *JobClusterAgent) deleteQueueJob(obj interface{}) {
 	cc.agentEventQueue.Add(qj)
 }
 
-func (qa *JobClusterAgent) Run(stopCh chan struct{}) {
+func (qa *JobClusterAgent) Run(stopCh <-chan struct{}) {
 	go qa.jobInformer.Informer().Run(stopCh)
 	cache.WaitForCacheSync(stopCh, qa.jobSynced)
 }
