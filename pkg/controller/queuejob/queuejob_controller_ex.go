@@ -976,7 +976,7 @@ func (qjm *XController) ScheduleNext() {
 				pq := qjm.qjqueue.(*PriorityQueue)
 				if qjm.qjqueue.Length() > 0 {
 					for key, element := range pq.activeQ.data.items {
-						qjtemp := element.obj.(*arbv1.AppWrapper)
+						qjtemp := element.obj
 						klog.V(4).Infof("[ScheduleNext] AfterCalc: qjqLength=%d Key=%s index=%d Priority=%.1f SystemPriority=%.1f QueueJobState=%s",
 							qjm.qjqueue.Length(), key, element.index, float64(qjtemp.Spec.Priority), qjtemp.Status.SystemPriority, qjtemp.Status.QueueJobState)
 					}
