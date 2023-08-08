@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/go-toolset:1.18.10-1 AS BUILDER
+FROM registry.access.redhat.com/ubi8/go-toolset:1.19.10-10 AS BUILDER
 ARG GO_BUILD_ARGS
 WORKDIR /workdir
 USER root
