@@ -1587,7 +1587,11 @@ func (cc *XController) deleteQueueJob(obj interface{}) {
 		accessor.SetDeletionTimestamp(&current_ts)
 	}
 	klog.V(3).Infof("[Informer-deleteQJ] %s enqueue deletion, deletion ts = %v", qj.Name, qj.GetDeletionTimestamp())
-	cc.enqueue(qj)
+	//Remove stale copy
+	cc.eventQueue.Delete(qj)
+	cc.qjqueue.Delete(qj)
+	//Add fresh copy
+	cc.eventQueue.Add(qj)
 }
 
 func (cc *XController) enqueue(obj interface{}) error {
@@ -2146,13 +2150,18 @@ func (cc *XController) Cleanup(ctx context.Context, appwrapper *arbv1.AppWrapper
 }
 func (cc *XController) getAppWrapper(namespace string, name string, caller string) (*arbv1.AppWrapper, error) {
 	klog.V(5).Infof("[getAppWrapper] getting a copy of '%s/%s' when called by '%s'.", namespace, name, caller)
-	apiCacheAWJob, err := cc.appWrapperLister.AppWrappers(namespace).Get(name)
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			klog.Errorf("[getAppWrapper] getting a copy of '%s/%s' failed, when called  by '%s', err=%v", namespace, name, caller, err)
+	var apiCacheAWJob *arbv1.AppWrapper
+	var err error
+	if cc.appwrapperInformer.Informer().HasSynced() {
+		apiCacheAWJob, err = cc.appWrapperLister.AppWrappers(namespace).Get(name)
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				klog.Errorf("[getAppWrapper] getting a copy of '%s/%s' failed, when called  by '%s', err=%v", namespace, name, caller, err)
+			}
+			return nil, err
 		}
-		return nil, err
 	}
+
 	klog.V(5).Infof("[getAppWrapper] get a copy of '%s/%s' suceeded when called by '%s'", namespace, name, caller)
 	return apiCacheAWJob.DeepCopy(), nil
 }
