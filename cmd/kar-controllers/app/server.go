@@ -31,13 +31,20 @@ limitations under the License.
 package app
 
 import (
+	"context"
+	"fmt"
+	"net/http"
+	"time"
+
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"net/http"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejob"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/health"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
@@ -49,41 +56,113 @@ func buildConfig(master, kubeconfig string) (*rest.Config, error) {
 	return rest.InClusterConfig()
 }
 
-func Run(opt *options.ServerOption) error {
+func Run(ctx context.Context, opt *options.ServerOption) error {
 	config, err := buildConfig(opt.Master, opt.Kubeconfig)
 	if err != nil {
 		return err
 	}
-
-	neverStop := make(chan struct{})
 
 	config.QPS = 100.0
 	config.Burst = 200.0
 
 	jobctrl := queuejob.NewJobController(config, opt)
 	if jobctrl == nil {
-		return nil
+		return fmt.Errorf("failed to create a job controller")
 	}
-	jobctrl.Run(neverStop)
 
-	// This call is blocking (unless an error occurs) which equates to <-neverStop
-	err = listenHealthProbe(opt)
+	stopCh := make(chan struct{})
+
+	go func() {
+        defer close(stopCh)
+		<-ctx.Done()
+	}()
+
+	go jobctrl.Run(stopCh)
+
+	err = startHealthAndMetricsServers(ctx, opt)
 	if err != nil {
 		return err
 	}
 
+	<-ctx.Done()
 	return nil
 }
 
 // Starts the health probe listener
-func listenHealthProbe(opt *options.ServerOption) error {
-	handler := http.NewServeMux()
-	handler.Handle("/healthz", &health.Handler{})
-	err := http.ListenAndServe(opt.HealthProbeListenAddr, handler)
-	if err != nil {
-		return err
+func startHealthAndMetricsServers(ctx context.Context, opt *options.ServerOption) error {
+    
+    // Create a new registry.
+	reg := prometheus.NewRegistry()
+
+	// Add Go module build info.
+	reg.MustRegister(collectors.NewBuildInfoCollector())
+	reg.MustRegister(collectors.NewGoCollector())
+    reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+
+    metricsHandler := http.NewServeMux()
+
+    // Use the HTTPErrorOnError option for the Prometheus handler
+	handlerOpts := promhttp.HandlerOpts{
+		ErrorHandling: promhttp.HTTPErrorOnError,
 	}
 
-	return nil
+	metricsHandler.Handle("/metrics", promhttp.HandlerFor(prometheus.DefaultGatherer, handlerOpts))
+
+    healthHandler := http.NewServeMux()
+    healthHandler.Handle("/healthz", &health.Handler{})
+
+    metricsServer := &http.Server{
+        Addr:    opt.MetricsListenAddr,
+        Handler: metricsHandler,
+    }
+
+    healthServer := &http.Server{
+        Addr:    opt.HealthProbeListenAddr,
+        Handler: healthHandler,
+    }
+
+    // make a channel for errors for each server
+    metricsServerErrChan := make(chan error)
+    healthServerErrChan := make(chan error)
+
+    // start servers in their own goroutines
+    go func() {
+        defer close(metricsServerErrChan)
+        err := metricsServer.ListenAndServe()
+        if err != nil && err != http.ErrServerClosed {
+            metricsServerErrChan <- err
+        }
+    }()
+
+    go func() {
+        defer close(healthServerErrChan)
+        err := healthServer.ListenAndServe()
+        if err != nil && err != http.ErrServerClosed {
+            healthServerErrChan <- err
+        }
+    }()
+
+    // use select to wait for either a shutdown signal or an error
+    select {
+    case <-ctx.Done():
+        // received an OS shutdown signal, shut down servers gracefully
+        ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+        defer cancel()
+
+  		errM := metricsServer.Shutdown(ctx)
+		if errM != nil {
+			return fmt.Errorf("metrics server shutdown error: %v", errM)
+		}
+   		errH := healthServer.Shutdown(ctx)
+			if errH != nil {
+			return fmt.Errorf("health server shutdown error: %v", errH)
+		}
+    case err := <-metricsServerErrChan:
+        return fmt.Errorf("metrics server error: %v", err)
+    case err := <-healthServerErrChan:
+        return fmt.Errorf("health server error: %v", err)
+    }
+
+    return nil
 }
 
