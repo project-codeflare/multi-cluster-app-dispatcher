@@ -74,13 +74,22 @@ func Run(ctx context.Context, opt *options.ServerOption) error {
 	}
 
 	stopCh := make(chan struct{})
+    // this channel is used to signal that the job controller is done
+    jobctrlDoneCh := make(chan struct{})
 
 	go func() {
         defer close(stopCh)
 		<-ctx.Done()
 	}()
 
-	go jobctrl.Run(stopCh)
+	go func() {
+     jobctrl.Run(stopCh)
+    // close the jobctrlDoneCh channel when the job controller is done
+     close(jobctrlDoneCh)
+    }()
+
+    // wait for the job controller to be done before shutting down the server
+    <-jobctrlDoneCh
 
 	err = startHealthAndMetricsServers(ctx, opt)
 	if err != nil {
