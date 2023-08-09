@@ -16,6 +16,47 @@ def check_job_status(num_pod_per_job):
     completed_jobs = len(output.splitlines())
     return completed_jobs
 
+# Function to write output to file
+def generate_output(output_file, data, mode="nomcad"):
+    if mode == "mcad":
+        column_names = ["NAME", "MCAD_CONTROLLER_FIRST_TIMESTAMP", "JOB_CREATION_TIME", "JOB_COMPLETION_TIME", "GPU_NEEDED", "SLEEP_TIME"]
+    elif mode == "nomcad":
+        column_names = ["NAME", "CREATION_TIME", "COMPLETION_TIME", "GPU_NEEDED", "SLEEP_TIME"]
+    else:
+        raise ValueError("Invalid mode. Use 'mcad' or 'nomcad'.")
+
+    # Extract and format desired columns
+    job_results = []
+    job_results.append("\t".join(column_names))  # Add column names as the first row
+    for item in data.get("items", []):
+        name = item["metadata"]["name"]
+        creation_timestamp = item["metadata"]["creationTimestamp"]
+        completion_time = item["status"].get("completionTime", "")
+        gpu_needed = item["spec"]["template"]["spec"]["containers"][0]["resources"]["limits"].get("nvidia.com/gpu", "")
+        sleep_time = item["spec"]["template"]["spec"]["containers"][0]["args"][1]
+
+        if mode == "mcad":
+            # Extract controller first timestamp from AppWrapper output
+            appwrapper_output_command = subprocess.run(["kubectl", "get", "appwrapper", name, "-o", "yaml"], capture_output=True, text=True)
+            appwrapper_output = appwrapper_output_command.stdout.strip()
+            appwrapper_data = yaml.safe_load(appwrapper_output)
+            controller_first_timestamp = appwrapper_data.get("status", {}).get("controllerfirsttimestamp", "")
+
+            # Format controller first timestamp as YYYY-MM-DDTHH:MM:SS
+            formatted_controller_first_timestamp = datetime.strptime(controller_first_timestamp, "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%dT%H:%M:%SZ")
+
+            # Append formatted row to results list
+            job_results.append(f"{name}\t{formatted_controller_first_timestamp}\t{creation_timestamp}\t{completion_time}\t{gpu_needed}\t{sleep_time}")
+        elif mode == "nomcad":
+            # Append formatted row to results list
+            job_results.append(f"{name}\t{creation_timestamp}\t{completion_time}\t{gpu_needed}\t{sleep_time}")
+
+    # Join results with newlines
+    formatted_output = "\n".join(job_results)
+
+    # Write output to file
+    with open(output_file, "w") as file:
+        file.write(formatted_output)
 
 
 # Function to write pending pod count and submission time to a file
@@ -377,5 +418,6 @@ while job_status < total_jobs:
 
 # Run kubectl commands and save outputs to files
 print("Sending output...")
+generate_output(output_file, json.loads(subprocess.run(["kubectl", "get", "jobs", "-o", "json"], capture_output=True, text=True).stdout), mode)
 write_pending_pods_to_file(output_file2, submission_times, pending_pods_counts)
 print("All job requests processed.")
