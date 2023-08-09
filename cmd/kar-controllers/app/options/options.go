@@ -56,6 +56,7 @@ type ServerOption struct {
 	QuotaRestURL          string
 	HealthProbeListenAddr string
 	DispatchResourceReservationTimeout int64
+	MetricsListenAddr    string
 }
 
 // NewServerOption creates a new CMServer with a default config.
@@ -82,6 +83,8 @@ func (s *ServerOption) AddFlags(fs *flag.FlagSet) {
 	fs.StringVar(&s.QuotaRestURL, "quotaURL", s.QuotaRestURL, "URL for ReST quota management.  Default is none.")
 	fs.IntVar(&s.SecurePort, "secure-port", 6443, "The port on which to serve secured, authenticated access for metrics.")
 	fs.StringVar(&s.HealthProbeListenAddr, "healthProbeListenAddr", ":8081", "Listen address for health probes. Defaults to ':8081'")
+	// using port 8083 for metrics as 8082 is used by `custom-metrics-apiserver`
+	fs.StringVar(&s.MetricsListenAddr, "metricsListenAddr", ":8083", "Listen address for metrics. Defaults to ':8083'")
 	fs.Int64Var(&s.DispatchResourceReservationTimeout, "dispatchResourceReservationTimeout", s.DispatchResourceReservationTimeout, "Resource reservation timeout for pods to be created once AppWrapper is dispatched, in millisecond.  Defaults to '300000', 5 minutes")
 	flag.Parse()
 	klog.V(4).Infof("[AddFlags] Controller configuration: %#v", s)
