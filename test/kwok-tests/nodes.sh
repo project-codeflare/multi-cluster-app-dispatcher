@@ -64,11 +64,6 @@ shift $((OPTIND-1))
 echo "Checking whether we have a valid cluster login or not..."
 check_kubectl_login_status
 
-# Track whether you have the KWOK controller installed
-echo "Checking MCAD Controller installation status"
-echo
-check_kwok_installed_status
-
 echo
 read -p "How many simulated KWOK nodes do you want?" nodes
 
