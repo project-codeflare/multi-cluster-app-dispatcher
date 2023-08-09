@@ -2151,20 +2151,16 @@ func (cc *XController) Cleanup(ctx context.Context, appwrapper *arbv1.AppWrapper
 }
 func (cc *XController) getAppWrapper(namespace string, name string, caller string) (*arbv1.AppWrapper, error) {
 	klog.V(5).Infof("[getAppWrapper] getting a copy of '%s/%s' when called by '%s'.", namespace, name, caller)
-	var apiCacheAWJob *arbv1.AppWrapper
-	var err error
-	if cc.appwrapperInformer.Informer().HasSynced() {
-		apiCacheAWJob, err = cc.appWrapperLister.AppWrappers(namespace).Get(name)
-		if err != nil {
-			if !apierrors.IsNotFound(err) {
-				klog.Errorf("[getAppWrapper] getting a copy of '%s/%s' failed, when called  by '%s', err=%v", namespace, name, caller, err)
-			}
-			return nil, err
+
+	apiCacheAWJob, err := cc.appWrapperLister.AppWrappers(namespace).Get(name)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			klog.Errorf("[getAppWrapper] getting a copy of '%s/%s' failed, when called  by '%s', err=%v", namespace, name, caller, err)
 		}
-		klog.V(5).Infof("[getAppWrapper] get a copy of '%s/%s' suceeded when called by '%s'", namespace, name, caller)
-		return apiCacheAWJob.DeepCopy(), nil
+		return nil, err
 	}
-	return nil, errors.New("appwrapper informer has not synced")
+	klog.V(5).Infof("[getAppWrapper] get a copy of '%s/%s' suceeded when called by '%s'", namespace, name, caller)
+	return apiCacheAWJob.DeepCopy(), nil
 }
 
 type EtcdErrorClassifier struct {
