@@ -182,17 +182,17 @@ python3 run_sim.py [arguments]
 
 ### Command Line Arguments:
 
---mean-arrival: Mean arrival time for job requests in seconds (default: 50).
---total-jobs: Total number of job requests to generate (default: 100).
---job-size: Mean sleep time of the container in seconds (default: 60).
---output-file: Output file to store job results (default: job_results.txt).
---pending-pod: Output file to store the number of pending pods (default: pending_pods.txt).
---num-pod: Number of pods per job (default: 1).
---gpu-options: GPU options for job requests (default: [2, 4, 6, 8]).
---probabilities: Probabilities for GPU requirements (default: [0.25, 0.25, 0.25, 0.25]).
---mode: Mode for job requests ('mcad' or 'nomcad', default: 'mcad').
---israndom: Use random.expovariate for job request arrival and job size (default: True).
---usecosched: Use coscheduler with the number of pods specified by --num-pod argument (default: False).
+- --mean-arrival: Mean arrival time for job requests in seconds (default: 50).
+- --total-jobs: Total number of job requests to generate (default: 100).
+- --job-size: Mean sleep time of the container in seconds (default: 60).
+- --output-file: Output file to store job results (default: job_results.txt).
+- --pending-pod: Output file to store the number of pending pods (default: pending_pods.txt).
+- --num-pod: Number of pods per job (default: 1).
+- --gpu-options: GPU options for job requests (default: [2, 4, 6, 8]).
+- --probabilities: Probabilities for GPU requirements (default: [0.25, 0.25, 0.25, 0.25]).
+- --mode: Mode for job requests ('mcad' or 'nomcad', default: 'mcad').
+- --israndom: Use random.expovariate for job request arrival and job size (default: True).
+- --usecosched: Use coscheduler with the number of pods specified by --num-pod argument (default: False).
 
 
 ### Functionality:
