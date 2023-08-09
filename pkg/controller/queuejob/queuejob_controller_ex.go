@@ -932,7 +932,7 @@ func (qjm *XController) ScheduleNext() {
 	// the appwrapper from being added in syncjob
 	defer qjm.schedulingAWAtomicSet(nil)
 
-	scheduleNextRetrier := retrier.New(retrier.ExponentialBackoff(10, 100*time.Millisecond), &EtcdErrorClassifier{})
+	scheduleNextRetrier := retrier.New(retrier.ExponentialBackoff(1, 100*time.Millisecond), &EtcdErrorClassifier{})
 	scheduleNextRetrier.SetJitter(0.05)
 	// Retry the execution
 	err = scheduleNextRetrier.Run(func() error {
@@ -1018,7 +1018,8 @@ func (qjm *XController) ScheduleNext() {
 		retryErr = qjm.updateStatusInEtcd(ctx, qj, "ScheduleNext - setHOL")
 		if retryErr != nil {
 			if apierrors.IsConflict(retryErr) {
-				klog.Warningf("[ScheduleNext] Conflict error detected when updating status in etcd for app wrapper '%s/%s, status = %+v. Retrying update.", qj.Namespace, qj.Name, qj.Status)
+				klog.Warningf("[ScheduleNext] Conflict error detected when updating status in etcd for app wrapper '%s/%s, status = %+v this may be due to appwrapper deletion.", qj.Namespace, qj.Name, qj.Status)
+				return nil
 			} else {
 				klog.Errorf("[ScheduleNext] Failed to updated status in etcd for app wrapper '%s/%s', status = %+v, err=%v", qj.Namespace, qj.Name, qj.Status, retryErr)
 			}
