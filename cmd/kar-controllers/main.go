@@ -36,6 +36,7 @@ import (
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
+	"k8s.io/apiserver/pkg/server"
 
 	"os"
 )
@@ -49,8 +50,15 @@ func main() {
 	//	flag.InitFlags()
 	s.CheckOptionOrDie()
 
-	if err := app.Run(s); err != nil {
+	ctx := server.SetupSignalContext()
+
+	// Run the server
+	if err := app.Run(ctx, s); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
+
+	<-ctx.Done()
+	fmt.Println("Shutting down gracefully")
+	
 }
