@@ -45,6 +45,7 @@ import (
 	"reflect"
 	"sync"
 
+	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	qjobv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
@@ -320,7 +321,7 @@ func (p *PriorityQueue) Delete(qj *qjobv1.AppWrapper) error {
 func (p *PriorityQueue) MoveAllToActiveQueue() {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	var unschedulableQJs []interface{}
+	var unschedulableQJs []*arbv1.AppWrapper
 	for _, qj := range p.unschedulableQ.pods {
 		unschedulableQJs = append(unschedulableQJs, qj)
 	}
