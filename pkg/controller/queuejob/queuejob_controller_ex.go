@@ -1069,6 +1069,8 @@ func (qjm *XController) ScheduleNext() {
 					}
 					return retryErr
 				}
+				//Remove stale copy
+				qjm.eventQueue.Delete(qj)
 				if err00 := qjm.eventQueue.Add(qj); err00 != nil { // unsuccessful add to eventQueue, add back to activeQ
 					klog.Errorf("[ScheduleNext] [Dispatcher Mode] Fail to add %s to eventQueue, activeQ.Add_toSchedulingQueue &qj=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, err)
 					qjm.qjqueue.MoveToActiveQueueIfExists(qj)
@@ -1225,6 +1227,8 @@ func (qjm *XController) ScheduleNext() {
 						}
 						tempAW.DeepCopyInto(qj)
 						// add to eventQueue for dispatching to Etcd
+						// Remove stale copy
+						qjm.eventQueue.Delete(qj)
 						if err00 := qjm.eventQueue.Add(qj); err00 != nil { // unsuccessful add to eventQueue, add back to activeQ
 							klog.Errorf("[ScheduleNext] [Agent Mode]  Failed to add '%s/%s' to eventQueue, activeQ.Add_toSchedulingQueue &qj=%p Version=%s Status=%+v err=%#v", qj.Namespace,
 								qj.Name, qj, qj.ResourceVersion, qj.Status, err)
