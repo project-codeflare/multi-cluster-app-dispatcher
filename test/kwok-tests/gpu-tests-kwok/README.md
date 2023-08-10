@@ -174,6 +174,9 @@ The `run_sim.py` script is designed to simulate job requests in a Kubernetes sys
 ### Prerequisites
 - Python 3.x
 - `kubectl` command-line tool configured to interact with the target Kubernetes cluster.
+- MCAD controller installed. Follow [MCAD Deployment](https://github.com/project-codeflare/multi-cluster-app-dispatcher/blob/main/test/perf-test/simulatingnodesandappwrappers.md#step-1-deploy-mcad-on-your-cluster) to deploy and run MCAD controller on your cluster.
+- Python packages used given in [requirements.txt](https://github.com/vishakha-ramani/multi-cluster-app-dispatcher/tree/main/test/kwok-tests/gpu-tests-kwok/requirements.txt)
+- Optional: Co-scheduler [installation](https://github.com/vishakha-ramani/multi-cluster-app-dispatcher/tree/main/test/kwok-tests#appendix-installing-coscheduler)
 
 ### Usage
 ```
@@ -206,10 +209,17 @@ The script supports two modes: 'mcad' (with AppWrapper) and 'nomcad' (without Ap
 The option to use coscheduler for job requests is available with the --usecosched flag.
 
 ### Example Usage:
+1. To run an experiment with fixed job arrival duration and job size (set `--israndom False`), without co-scheduler (set `--usecosched False`), and MCAD mode (set `--mode mcad`):
 ```
 python3 run_sim.py --mean-arrival 36 --total-jobs 50 --job-size 132 --gpu-options 8 --probabilities 1 --mode mcad --output-file mcadcosched_job_results.txt --pending-pod mcadcosched_pending_pod.txt --israndom False --usecosched False
 ```
 In this scenario, 50 job requests will be generated with fixed interval of 36 seconds, each requiring 8 GPUs and having a fixed job size of 132 seconds. The script will output the results of the simulation to nomcadcosched_job_results.txt and the number of pending pods to nomcadcosched_pending_pod.txt. `MCAD` mode is on, and coscheduling is disabled.
+
+2. To run an experiment with Poisson job arrivals and job size as exponential random variable (set `--israndom True`), with co-scheduler (set `--usecosched True`), and no MCAD mode (set `--mode nomcad`):
+```
+python3 run_sim.py --mean-arrival 36 --total-jobs 50 --job-size 132 --ßgpu-options 8 --probabilities 1 --mode nomcad --output-file nomcadcosched_job_results.txt --pending-pod nomcadcosched_pending_pod.txt --israndom True --usecosched True
+```
+
 
 ### Note:
 To analyze the aforementioned metrics for an experiment run, refer to `analysis-scripts` subdirectory. 
