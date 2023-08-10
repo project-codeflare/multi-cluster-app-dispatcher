@@ -58,14 +58,13 @@ function update_test_host {
   fi
   echo "CPU architecture for downloads is: ${arch}"
 
-  #Only run this function if we are running on the travis build machinbe,
-  if [ "$(lsb_release -c -s 2>&1 | grep xenial)" == "xenial" ]; then 
-    sudo apt-get update && sudo apt-get install -y apt-transport-https curl 
-    curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-    echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
-    sudo apt-get update
+  which curl >/dev/null 2>&1
+  if [ $? -ne 0 ]
+  then
+    echo "curl not installed, exiting."
+    exit 1
   fi
-  
+
   which kubectl >/dev/null 2>&1
   if [ $? -ne 0 ]
   then 
