@@ -1461,7 +1461,7 @@ func (qjm *XController) UpdateQueueJobs() {
 		return
 	}
 	for _, newjob := range queueJobs {
-		if newjob.Status.State == arbv1.AppWrapperStateActive && newjob.GetDeletionTimestamp() != nil {
+		if newjob.Status.State == arbv1.AppWrapperStateActive {
 			klog.V(6).Infof("[UpdateQueueJobs] %s: qjqueue=%t &qj=%p Version=%s Status=%+v", newjob.Name, qjm.qjqueue.IfExist(newjob), newjob, newjob.ResourceVersion, newjob.Status)
 			// check eventQueue, qjqueue in program sequence to make sure job is not in qjqueue
 			if _, exists, _ := qjm.eventQueue.Get(newjob); exists {
