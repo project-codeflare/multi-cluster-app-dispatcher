@@ -5,6 +5,9 @@
 
 The `scheduling_latency.py` is a Python script that retrieves scheduling latency data from Kubernetes pods and analyzes it to provide insights into the scheduling performance of the cluster. The script collects information about pod creation, scheduling, start, and finish times, calculates scheduling latency, and generates visualizations for better understanding.
 
+#### Configuration supported
+nomcad, nomcad+cosched, mcad, mcad+cosched
+
 #### Program Workflow
 
 1. The script uses the `kubectl get pods` command to retrieve pod information in JSON format.
@@ -30,6 +33,9 @@ The `scheduling_latency.py` is a Python script that retrieves scheduling latency
 ## 2. Job Completion Time
 
 The `job_completion_time.py` script retrieves job information from Kubernetes using the `kubectl` command, calculates the duration of each job, and generates a bar plot to visualize job durations. The script also calculates the average job completion time and saves the job details and the bar plot to files.
+
+#### Configuration supported
+nomcad, nomcad+cosched, mcad, mcad+cosched
 
 #### Script Workflow
 
@@ -58,6 +64,9 @@ python job_completion_time.py
 The `plot_pending_pods.py` script aids in comparing the impact of MCAD and Non-MCAD approaches on the number of pending pods.
 The script reads data from two files containing submission times and the pending pod counts at the job submission time for two different scenarios: MCAD  and NO-MCAD. The files are obtained from `run_sim.py` experiment run, hence set the appropriate name for files using `--pending-pod` argument for `run_sim.py`. The script then creates a plot to visualize the variation of pending pods over submission time for both scenarios. The plot provides insights into the efficiency of job scheduling and resource allocation in the two scenarios.
 
+#### Configuration supported
+nomcad, nomcad+cosched, mcad, mcad+cosched
+
 An example run of this script is as follows:
 ```
 python plot_pending_pods.py --mcad-file mcad_data.txt --nomcad-file nomcad_data.txt
@@ -68,6 +77,9 @@ python plot_pending_pods.py --mcad-file mcad_data.txt --nomcad-file nomcad_data.
 
 The `dispatch_time.py` script interacts with Kubernetes to retrieve information about AppWrappers and their dispatch times. It calculates the average dispatch time across all AppWrappers and generates a bar chart to visualize the distribution of dispatch times.
 The script provides insights into the efficiency of dispatch times for AppWrappers in a Kubernetes environment. Dispatch times can affect the responsiveness of scheduling and resource allocation.
+
+#### Configuration supported
+mcad, mcad+cosched
 
 ### Script Workflow
 
@@ -95,6 +107,9 @@ python dispatch_time.py
 
 The `mcad_response_time.py` script utilizes Kubernetes data to calculate and visualize response times and job completion times in an MCAD (Multi-Cluster Application Deployment) system. The script extracts completion times and creation times for job and AppWrapper. The script computes job completion time as the difference between job creation time and job completion time. The script also computes AW response time as the difference between AW creation time and AW completion time, and generates a scatter plot to visualize the relationship between response times and job completion times.
 
+#### Configuration supported
+mcad, mcad+cosched
+
 
 ### Script Workflow
 
@@ -120,6 +135,9 @@ The script calculates and displays the average response time and average job com
 ## 6. GPU Utilization
 
 The `gpu_usage.py` script monitors and visualizes the total GPU resource requests and limits over time for nodes labeled with "type=kwok" in a Kubernetes cluster. This script utilizes the `kubectl` command-line tool to gather GPU resource information from the specified nodes, providing real-time insights into GPU utilization.
+
+#### Configuration supported
+nomcad, nomcad+cosched, mcad, mcad+cosched
 
 ### Script Workflow
 

@@ -101,7 +101,7 @@ done
     esac
 
 # Check for all nodes to report complete
-echo "Waiting until all the simualted pods become ready:"
+echo "Waiting until all the simulated pods become ready:"
 kubectl wait --for=condition=Ready nodes --selector type=kwok --timeout=600s
 echo " "
 echo "Total amount of simulated nodes requested is: $nodes"

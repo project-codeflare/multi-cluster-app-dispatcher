@@ -345,6 +345,9 @@ gpu_options = args.gpu_options
 probabilities = args.probabilities
 mode = args.mode
 
+if sum(probabilities) != 1:
+    raise ValueError("Probabilities for GPU requirements should add up to 1")
+
 # Lists to store job submission times and pending pod counts
 submission_times = []
 pending_pods_counts = []
