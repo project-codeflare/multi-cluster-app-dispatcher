@@ -16,7 +16,7 @@ brew install kwok
 To start simulating fake nodes within your Kubernetes cluster, follow these steps:
 
 1. Ensure you have a valid cluster login.
-2. Run the `nodes.sh` script, specifying the number of fake nodes you want to create:
+2. Run the [nodes.sh](https://github.com/vishakha-ramani/multi-cluster-app-dispatcher/blob/main/test/kwok-tests/nodes.sh) script, specifying the number of fake nodes you want to create:
 ```
 % ./nodes.sh 
 Checking whether we have a valid cluster login or not...
@@ -116,7 +116,7 @@ MODIFIED   baseline-cpu-job-short-0-75crs   0/1     Completed           0       
 
 Now, we would like to simulate similar timed events for a fake job as well. KWOK's `Stage` configuration ([link](https://kwok.sigs.k8s.io/docs/user/stages-configuration/)) allows users to define and simulate different stages in the lifecycle of pods. By configuring the `delay`, `selector`, and `next` fields in a `Stage`, you can control when and how the stage is applied, providing a flexible and scalable way to simulate real-world scenarios in your Kubernetes cluster. 
 
-The YAML file `kwok.yaml` in this repo provides a custom pod lifecycle `Stage` API that simulates the events with the desired timings as described above. To run KWOK following the custom pod lifecycle, mount the configuration to `~/.kwok/kwok.yaml`, and then run KWOK controller out of your Kubernetes cluster (in my case it is a kind cluster) as follows:
+The YAML file [kwok.yaml](https://github.com/vishakha-ramani/multi-cluster-app-dispatcher/blob/main/test/kwok-tests/kwok.yaml) in this repo provides a custom pod lifecycle `Stage` API that simulates the events with the desired timings as described above. To run KWOK following the custom pod lifecycle, mount the configuration to `~/.kwok/kwok.yaml`, and then run KWOK controller out of your Kubernetes cluster (in my case it is a kind cluster) as follows:
 ```
 kwok \
   --kubeconfig=~/.kube/config \
@@ -198,3 +198,10 @@ MODIFIED   nomcadkwok-cpu-job-short-0-pkkqt   0/1     Completed           0     
 
 We can see that the lifecycle of the simulated job and an actual job matches. As a sanity check, one can also look at the fake `Pod` and fake `Job` description matches with actual `Pod` and `Job` description, except for tolerations and node affinity fields. 
 
+# KWOK Tests
+Based on templates for fake nodes, fake pods, and pod lifecycle, the repo provides primarily two tests for resource manager Multi-Cluster App Dispatcher [MCAD](https://github.com/project-codeflare/multi-cluster-app-dispatcher/tree/main):
+1. Stress Tests with small jobs [stress-tests-kwok](https://github.com/vishakha-ramani/multi-cluster-app-dispatcher/tree/main/test/kwok-tests/stress-tests-kwok)
+- We first demonstrate a major difference between actual Kubernetes Cluster and simulated Kubernetes cluster with KWOK.
+- We then generalize the findings to understand the dispatch rate of MCAD in presence of large number of small jobs.
+2. MCAD performance test [gpu-tests-kwok](https://github.com/vishakha-ramani/multi-cluster-app-dispatcher/tree/main/test/kwok-tests/gpu-tests-kwok)
+- Includes profiling MCAD with metrics such as scheduling latency, number of pending pods, job completion time, dispatch time of requests.
