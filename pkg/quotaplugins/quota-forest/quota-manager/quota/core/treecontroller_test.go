@@ -17,7 +17,6 @@ limitations under the License.
 package core
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 	"unsafe"
@@ -166,38 +165,4 @@ func createTestContoller(t *testing.T, treeName string) *Controller {
 	assert.Equal(t, 0, len(strings.TrimSpace(response2.GetMessage())), "A empty response 2 is expected")
 
 	return controller
-}
-
-// EqualStateQuotaNodes : check if two quota nodes have similar allocation data
-func EqualStateQuotaNodes(qn1 *QuotaNode, qn2 *QuotaNode) bool {
-	return reflect.DeepEqual(qn1.GetQuota(), qn2.GetQuota()) &&
-		reflect.DeepEqual(qn1.GetAllocated(), qn2.GetAllocated()) &&
-		reflect.DeepEqual(qn1.GetConsumers(), qn2.GetConsumers())
-}
-
-// EqualStateQuotaTrees : check if two quota trees have similar allocation data
-func EqualStateQuotaTrees(qt1 *QuotaTree, qt2 *QuotaTree) bool {
-	nodeMap1 := qt1.GetNodes()
-	nodeMap2 := qt2.GetNodes()
-	if len(nodeMap1) != len(nodeMap2) {
-		return false
-	}
-	for k, qn1 := range nodeMap1 {
-		if qn2, exists := nodeMap2[k]; exists {
-			if !EqualStateQuotaNodes(qn1, qn2) {
-				return false
-			}
-		} else {
-			return false
-		}
-	}
-	return true
-}
-
-// EqualStateControllers : check if two controllers have similar allocation state
-func EqualStateControllers(c1 *Controller, c2 *Controller) bool {
-	return EqualStateQuotaTrees(c1.tree, c2.tree) &&
-		reflect.DeepEqual(c1.consumers, c1.consumers) &&
-		reflect.DeepEqual(c1.preemptedConsumers, c2.preemptedConsumers) &&
-		reflect.DeepEqual(c1.preemptedConsumersArray, c2.preemptedConsumersArray)
 }

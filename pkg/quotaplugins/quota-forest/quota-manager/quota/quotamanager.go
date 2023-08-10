@@ -1,5 +1,5 @@
 /*
-Copyright 2022, 2203 The Multi-Cluster App Dispatcher Authors.
+Copyright 2022, 2023 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -612,6 +612,25 @@ func (m *Manager) UpdateAll() (treeUnallocatedConsumerIDs map[string][]string,
 		err = fmt.Errorf(strings.Join(erStr, "\n"))
 	}
 	return treeUnallocatedConsumerIDs, treeResponse, forestUnallocatedConsumerIDs, forestResponse, err
+}
+
+// GetTreeController : get the tree controller for a given tree
+func (m *Manager) GetTreeController(treeName string) *core.Controller {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if agent, exists := m.agents[treeName]; exists {
+		return agent.controller
+	}
+	return nil
+}
+
+// GetForestController : get the forest controller for a given forest
+func (m *Manager) GetForestController(forestName string) *core.ForestController {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	return m.forests[forestName]
 }
 
 // String : printout
