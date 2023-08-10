@@ -1,11 +1,11 @@
 /*
-Copyright 2022 The Multi-Cluster App Dispatcher Authors.
+Copyright 2022, 2023 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"sort"
 	"strconv"
@@ -243,7 +243,7 @@ func (tc *TreeCache) FromFile(treeFileName string) error {
 	/*
 	 * parse JSON file
 	 */
-	byteValue, err := ioutil.ReadFile(treeFileName)
+	byteValue, err := os.ReadFile(treeFileName)
 	if err != nil {
 		return fmt.Errorf("error reading file: %s", err.Error())
 	}
