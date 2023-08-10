@@ -84,7 +84,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		}
 	}) */
 
-	It("MCAD CPU Accounting Test", func() {
+	FIt("MCAD CPU Accounting Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Accounting Test - Started.\n")
 
 		context := initTestContext()

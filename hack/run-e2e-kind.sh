@@ -468,7 +468,10 @@ setup-mcad-env
 kuttl-tests
 mcad-up
 go test ./test/e2e -v -timeout 130m -count=1
-if [ ${?} -eq 0 ]
+RC=$?
+if [ ${RC} -eq 0 ]
 then
   DUMP_LOGS="false"
 fi
+echo "End to end test script return code set to ${RC}"
+exit ${RC}
