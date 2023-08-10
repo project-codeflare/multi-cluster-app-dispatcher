@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The Multi-Cluster App Dispatcher Authors.
+Copyright 2022, 2023 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -135,6 +135,15 @@ func (fc *ForestController) Allocate(forestConsumer *ForestConsumer) *Allocation
 	for treeName, consumer := range consumers {
 
 		controller := fc.controllers[treeName]
+		if controller == nil {
+			// skip, unknown tree
+			treeAllocResponse := NewAllocationResponse(consumerID)
+			var msg bytes.Buffer
+			fmt.Fprintf(&msg, "Failed to allocate consumer %s on unknown tree %s'", consumerID, treeName)
+			treeAllocResponse.Append(false, msg.String(), nil)
+			allocResponse.Merge(treeAllocResponse)
+			continue
+		}
 		groupID := consumer.GetGroupID()
 		allocRequested := consumer.GetRequest()
 		if controller == nil || len(groupID) == 0 || allocRequested.GetSize() != controller.GetQuotaSize() {
@@ -256,6 +265,10 @@ func (fc *ForestController) TryAllocate(forestConsumer *ForestConsumer) *Allocat
 	for treeName, consumer := range consumers {
 		var msg bytes.Buffer
 		controller := fc.controllers[treeName]
+		if controller == nil {
+			// skip, unknown tree
+			continue
+		}
 		controller.treeSnapshot = NewTreeSnapshot(controller.tree, consumer)
 		// TODO: limit the number of potentially affected consumers by the allocation
 		if !controller.treeSnapshot.Take(controller, controller.consumers) {
@@ -280,6 +293,10 @@ func (fc *ForestController) UndoAllocate(forestConsumer *ForestConsumer) bool {
 	success := true
 	for treeName, consumer := range consumers {
 		controller := fc.controllers[treeName]
+		if controller == nil {
+			// skip, unknown tree
+			continue
+		}
 		treeSuccess := controller.UndoAllocate(consumer)
 		success = success && treeSuccess
 	}
