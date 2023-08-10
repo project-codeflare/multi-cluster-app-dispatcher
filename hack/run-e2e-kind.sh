@@ -351,7 +351,7 @@ function setup-mcad-env {
   kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/scheduler-plugins/277b6bdec18f8a9e9ccd1bfeaf4b66495bfc6f92/config/crd/bases/scheduling.sigs.k8s.io_podgroups.yaml
  
   # Turn off master taints
-  kubectl taint nodes --all node-role.kubernetes.io/master-
+  kubectl taint nodes --all node-role.kubernetes.io/control-plane:NoSchedule-
  
   # This is meant to orchestrate initial cluster configuration such that accounting tests can be consistent
   echo "Orchestrate cluster..."
