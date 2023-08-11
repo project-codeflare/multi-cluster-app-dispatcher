@@ -303,7 +303,7 @@ func (qjm *XController) PreemptQueueJobs() {
 					continue
 				}
 				// cannot use cleanup AW, since it puts AW back in running state
-				go qjm.qjqueue.AddUnschedulableIfNotPresent(updateNewJob)
+				qjm.qjqueue.AddUnschedulableIfNotPresent(updateNewJob)
 
 				// Move to next AW
 				continue
