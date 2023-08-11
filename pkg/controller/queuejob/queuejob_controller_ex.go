@@ -1436,7 +1436,7 @@ func (cc *XController) Run(stopCh <-chan struct{}) {
 	go wait.Until(cc.PreemptQueueJobs, 60*time.Second, stopCh)
 
 	// This thread is used to update AW that has completionstatus set to Complete or RunningHoldCompletion
-	go wait.Until(cc.UpdateQueueJobs, 10*time.Second, stopCh)
+	go wait.Until(cc.UpdateQueueJobs, 5*time.Second, stopCh)
 
 	if cc.isDispatcher {
 		go wait.Until(cc.UpdateAgent, 2*time.Second, stopCh) // In the Agent?
