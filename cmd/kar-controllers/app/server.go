@@ -21,8 +21,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
+	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -39,6 +39,9 @@ import (
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/config"
 )
+
+// Global Prometheus Registry
+var globalPromRegistry = prometheus.NewRegistry()
 
 func buildConfig(master, kubeconfig string) (*rest.Config, error) {
 	if master != "" || kubeconfig != "" {
@@ -73,23 +76,7 @@ func Run(ctx context.Context, opt *options.ServerOption) error {
 		return fmt.Errorf("failed to create a job controller")
 	}
 
-	stopCh := make(chan struct{})
-    // this channel is used to signal that the job controller is done
-    jobctrlDoneCh := make(chan struct{})
-
-	go func() {
-        defer close(stopCh)
-		<-ctx.Done()
-	}()
-
-	go func() {
-     jobctrl.Run(stopCh)
-    // close the jobctrlDoneCh channel when the job controller is done
-     close(jobctrlDoneCh)
-    }()
-
-    // wait for the job controller to be done before shutting down the server
-    <-jobctrlDoneCh
+	go jobctrl.Run(ctx.Done())
 
 	err = startHealthAndMetricsServers(ctx, opt)
 	if err != nil {
@@ -100,80 +87,49 @@ func Run(ctx context.Context, opt *options.ServerOption) error {
 	return nil
 }
 
-// Starts the health probe listener
-func startHealthAndMetricsServers(ctx context.Context, opt *options.ServerOption) error {
-    
-    // Create a new registry.
-	reg := prometheus.NewRegistry()
-
+// metricsHandler returns a http.Handler that serves the prometheus metrics
+func prometheusHandler() http.Handler {
 	// Add Go module build info.
-	reg.MustRegister(collectors.NewBuildInfoCollector())
-	reg.MustRegister(collectors.NewGoCollector())
-    reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	globalPromRegistry.MustRegister(collectors.NewBuildInfoCollector())
+	globalPromRegistry.MustRegister(collectors.NewGoCollector())
+	globalPromRegistry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
-    metricsHandler := http.NewServeMux()
-
-    // Use the HTTPErrorOnError option for the Prometheus handler
 	handlerOpts := promhttp.HandlerOpts{
 		ErrorHandling: promhttp.HTTPErrorOnError,
 	}
 
-	metricsHandler.Handle("/metrics", promhttp.HandlerFor(prometheus.DefaultGatherer, handlerOpts))
+	return promhttp.HandlerFor(globalPromRegistry, handlerOpts)
+}
 
-    healthHandler := http.NewServeMux()
-    healthHandler.Handle("/healthz", &health.Handler{})
+func healthHandler() http.Handler {
+	healthHandler := http.NewServeMux()
+	healthHandler.Handle("/healthz", &health.Handler{})
+	return healthHandler
+}
 
-    metricsServer := &http.Server{
-        Addr:    opt.MetricsListenAddr,
-        Handler: metricsHandler,
-    }
+// Starts the health probe listener
+func startHealthAndMetricsServers(ctx context.Context, opt *options.ServerOption) error {
+	g, ctx := errgroup.WithContext(ctx)
 
-    healthServer := &http.Server{
-        Addr:    opt.HealthProbeListenAddr,
-        Handler: healthHandler,
-    }
+	// metrics server
+	metricsServer, err := NewServer(opt.MetricsListenPort, "/metrics", prometheusHandler())
+	if err != nil {
+		return err
+	}
 
-    // make a channel for errors for each server
-    metricsServerErrChan := make(chan error)
-    healthServerErrChan := make(chan error)
+	healthServer, err := NewServer(opt.HealthProbeListenPort, "/healthz", healthHandler())
+	if err != nil {
+		return err
+	}
 
-    // start servers in their own goroutines
-    go func() {
-        defer close(metricsServerErrChan)
-        err := metricsServer.ListenAndServe()
-        if err != nil && err != http.ErrServerClosed {
-            metricsServerErrChan <- err
-        }
-    }()
+	g.Go(metricsServer.Start)
+	g.Go(healthServer.Start)
 
-    go func() {
-        defer close(healthServerErrChan)
-        err := healthServer.ListenAndServe()
-        if err != nil && err != http.ErrServerClosed {
-            healthServerErrChan <- err
-        }
-    }()
+	go func() {
+		<-ctx.Done()
+		metricsServer.Shutdown()
+		healthServer.Shutdown()
+	}()
 
-    // use select to wait for either a shutdown signal or an error
-    select {
-    case <-ctx.Done():
-        // received an OS shutdown signal, shut down servers gracefully
-        ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-        defer cancel()
-
-  		errM := metricsServer.Shutdown(ctx)
-		if errM != nil {
-			return fmt.Errorf("metrics server shutdown error: %v", errM)
-		}
-   		errH := healthServer.Shutdown(ctx)
-			if errH != nil {
-			return fmt.Errorf("health server shutdown error: %v", errH)
-		}
-    case err := <-metricsServerErrChan:
-        return fmt.Errorf("metrics server error: %v", err)
-    case err := <-healthServerErrChan:
-        return fmt.Errorf("health server error: %v", err)
-    }
-
-    return nil
+	return nil
 }
