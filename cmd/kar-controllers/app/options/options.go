@@ -32,10 +32,11 @@ package options
 
 import (
 	"flag"
-	klog "k8s.io/klog/v2"
 	"os"
 	"strconv"
 	"strings"
+
+	klog "k8s.io/klog/v2"
 )
 
 // ServerOption is the main context object for the controller manager.
@@ -51,12 +52,12 @@ type ServerOption struct {
 	BackoffTime     int  // Number of seconds a job will go away for, if it can not be scheduled.  Default is 20.
 	// Head of line job will not be bumped away for at least HeadOfLineHoldingTime seconds by higher priority jobs.
 	// Default setting to 0 disables this mechanism.
-	HeadOfLineHoldingTime int
-	QuotaEnabled          bool	// Controller is to evaluate quota per request
-	QuotaRestURL          string
-	HealthProbeListenAddr string
+	HeadOfLineHoldingTime              int
+	QuotaEnabled                       bool // Controller is to evaluate quota per request
+	QuotaRestURL                       string
+	HealthProbeListenPort				int  
 	DispatchResourceReservationTimeout int64
-	MetricsListenAddr    string
+	MetricsListenPort                  int 
 }
 
 // NewServerOption creates a new CMServer with a default config.
@@ -79,12 +80,12 @@ func (s *ServerOption) AddFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&s.Preemption, "preemption", s.Preemption, "Set controller to allow preemption if set to true. Note: when set to true, the Kubernetes Scheduler must be configured to enable preemption.  Default is false.")
 	fs.IntVar(&s.BackoffTime, "backofftime", s.BackoffTime, "Number of seconds a job will go away for, if it can not be scheduled.  Default is 20.")
 	fs.IntVar(&s.HeadOfLineHoldingTime, "headoflineholdingtime", s.HeadOfLineHoldingTime, "Number of seconds a job can stay at the Head Of Line without being bumped.  Default is 0.")
-	fs.BoolVar(&s.QuotaEnabled,"quotaEnabled", s.QuotaEnabled,"Enable quota policy evaluation.  Default is false.")
+	fs.BoolVar(&s.QuotaEnabled, "quotaEnabled", s.QuotaEnabled, "Enable quota policy evaluation.  Default is false.")
 	fs.StringVar(&s.QuotaRestURL, "quotaURL", s.QuotaRestURL, "URL for ReST quota management.  Default is none.")
 	fs.IntVar(&s.SecurePort, "secure-port", 6443, "The port on which to serve secured, authenticated access for metrics.")
-	fs.StringVar(&s.HealthProbeListenAddr, "healthProbeListenAddr", ":8081", "Listen address for health probes. Defaults to ':8081'")
+	fs.IntVar(&s.HealthProbeListenPort, "healthProbeListenPort", 8081, "Listen port for health probes. Defaults to ':8081'")
 	// using port 8083 for metrics as 8082 is used by `custom-metrics-apiserver`
-	fs.StringVar(&s.MetricsListenAddr, "metricsListenAddr", ":8083", "Listen address for metrics. Defaults to ':8083'")
+	fs.IntVar(&s.MetricsListenPort, "metricsListenPort", 8083, "Listen port for metrics. Defaults to ':8083'")
 	fs.Int64Var(&s.DispatchResourceReservationTimeout, "dispatchResourceReservationTimeout", s.DispatchResourceReservationTimeout, "Resource reservation timeout for pods to be created once AppWrapper is dispatched, in millisecond.  Defaults to '300000', 5 minutes")
 	flag.Parse()
 	klog.V(4).Infof("[AddFlags] Controller configuration: %#v", s)
