@@ -932,7 +932,7 @@ func (qjm *XController) ScheduleNext() {
 	// the appwrapper from being added in syncjob
 	defer qjm.schedulingAWAtomicSet(nil)
 
-	scheduleNextRetrier := retrier.New(retrier.ExponentialBackoff(10, 100*time.Millisecond), &EtcdErrorClassifier{})
+	scheduleNextRetrier := retrier.New(retrier.ExponentialBackoff(1, 100*time.Millisecond), &EtcdErrorClassifier{})
 	scheduleNextRetrier.SetJitter(0.05)
 	// Retry the execution
 	err = scheduleNextRetrier.Run(func() error {
@@ -1018,7 +1018,8 @@ func (qjm *XController) ScheduleNext() {
 		retryErr = qjm.updateStatusInEtcd(ctx, qj, "ScheduleNext - setHOL")
 		if retryErr != nil {
 			if apierrors.IsConflict(retryErr) {
-				klog.Warningf("[ScheduleNext] Conflict error detected when updating status in etcd for app wrapper '%s/%s, status = %+v. Retrying update.", qj.Namespace, qj.Name, qj.Status)
+				klog.Warningf("[ScheduleNext] Conflict error detected when updating status in etcd for app wrapper '%s/%s, status = %+v this may be due to appwrapper deletion.", qj.Namespace, qj.Name, qj.Status)
+				return nil
 			} else {
 				klog.Errorf("[ScheduleNext] Failed to updated status in etcd for app wrapper '%s/%s', status = %+v, err=%v", qj.Namespace, qj.Name, qj.Status, retryErr)
 			}
@@ -1068,6 +1069,8 @@ func (qjm *XController) ScheduleNext() {
 					}
 					return retryErr
 				}
+				//Remove stale copy
+				qjm.eventQueue.Delete(qj)
 				if err00 := qjm.eventQueue.Add(qj); err00 != nil { // unsuccessful add to eventQueue, add back to activeQ
 					klog.Errorf("[ScheduleNext] [Dispatcher Mode] Fail to add %s to eventQueue, activeQ.Add_toSchedulingQueue &qj=%p Version=%s Status=%+v err=%#v", qj.Name, qj, qj.ResourceVersion, qj.Status, err)
 					qjm.qjqueue.MoveToActiveQueueIfExists(qj)
@@ -1224,6 +1227,8 @@ func (qjm *XController) ScheduleNext() {
 						}
 						tempAW.DeepCopyInto(qj)
 						// add to eventQueue for dispatching to Etcd
+						// Remove stale copy
+						qjm.eventQueue.Delete(qj)
 						if err00 := qjm.eventQueue.Add(qj); err00 != nil { // unsuccessful add to eventQueue, add back to activeQ
 							klog.Errorf("[ScheduleNext] [Agent Mode]  Failed to add '%s/%s' to eventQueue, activeQ.Add_toSchedulingQueue &qj=%p Version=%s Status=%+v err=%#v", qj.Namespace,
 								qj.Name, qj, qj.ResourceVersion, qj.Status, err)
@@ -1587,7 +1592,11 @@ func (cc *XController) deleteQueueJob(obj interface{}) {
 		accessor.SetDeletionTimestamp(&current_ts)
 	}
 	klog.V(3).Infof("[Informer-deleteQJ] %s enqueue deletion, deletion ts = %v", qj.Name, qj.GetDeletionTimestamp())
-	cc.enqueue(qj)
+	//Remove stale copy
+	cc.eventQueue.Delete(qj)
+	cc.qjqueue.Delete(qj)
+	//Add fresh copy
+	cc.eventQueue.Add(qj)
 }
 
 func (cc *XController) enqueue(obj interface{}) error {
@@ -2146,6 +2155,7 @@ func (cc *XController) Cleanup(ctx context.Context, appwrapper *arbv1.AppWrapper
 }
 func (cc *XController) getAppWrapper(namespace string, name string, caller string) (*arbv1.AppWrapper, error) {
 	klog.V(5).Infof("[getAppWrapper] getting a copy of '%s/%s' when called by '%s'.", namespace, name, caller)
+
 	apiCacheAWJob, err := cc.appWrapperLister.AppWrappers(namespace).Get(name)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
