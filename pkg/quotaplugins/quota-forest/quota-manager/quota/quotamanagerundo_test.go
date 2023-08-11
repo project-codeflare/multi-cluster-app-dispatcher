@@ -328,7 +328,7 @@ func TestTreeAllocateTryAndUndo(t *testing.T) {
 func TestForestAllocateTryAndUndo(t *testing.T) {
 	forestName := "testForest"
 	forestTreesSpecs := []string{testTreeSpec, serviceTreeSpec}
-	var err error
+
 	// define tests
 	var tests = []struct {
 		name         string
@@ -410,6 +410,7 @@ func TestForestAllocateTryAndUndo(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+			var err error
 			// After keeps the state of the quota manager after applying a test case
 			qmAfter := quota.NewManager()
 			initializeForestQuotaManager(t, qmAfter, forestName, forestTreesSpecs, testForestConsumersSpecMap,
