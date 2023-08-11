@@ -1614,11 +1614,11 @@ func larger(a, b string) bool {
 }
 
 //When an AW is deleted, do not add such AWs to the event queue.
-//AW can never be brought back when it is deleted by external client, so do not bother adding it to event queue.
-//There will be a scenario, where an AW is in middle to dispatch and it is deleted. at that point when such an
-//AW is added to etcd a conflict error will be raised. This is cause the current AW to be skipped.
-//If there are large number of delete's will informer miss few delete events is under question for this simplification.
-//For 1K AW all of them are delete from the system, and the next resubmitted AW begins processing after in less than 2 mins
+//AW can never be brought back when it is deleted by an external client, so do not bother adding it to event queue.
+//There will be a scenario, where an AW is in middle of dispatch cycle and it may be deleted. At that point when such an
+//AW is added to etcd a conflict error will be raised. This will cause the current AW to be skipped.
+//If there are large number of delete's may be informer misses few delete events for this simplification.
+//For 1K AW all of them are deleted from the system, and the next batch of re-submitted AW begins processing in less than 2 mins
 func (cc *XController) deleteQueueJob(obj interface{}) {
 	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
