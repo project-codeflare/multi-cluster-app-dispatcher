@@ -36,7 +36,7 @@ $
 
 To build the controller and to run the end to end tests locally you will need to have the following software installed:
 
-* `Go` (version 1.18)
+* `Go` (version 1.19)
 * `kind` (version 0.18)
 * `kubectl`
 * `helm` - version 3.0 or later

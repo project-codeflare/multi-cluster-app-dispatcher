@@ -19,23 +19,24 @@ import (
 	"container/heap"
 	"fmt"
 	"k8s.io/client-go/tools/cache"
+	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 )
 
 // Below is the implementation of the a heap. The logic is pretty much the same
 // as cache.heap, however, this heap does not perform synchronization. It leaves
 // synchronization to the SchedulingQueue.
 
-type LessFunc func(interface{}, interface{}) bool
+type LessFunc func(qj1, qj2 *arbv1.AppWrapper) bool
 type KeyFunc func(obj interface{}) (string, error)
 
 type heapItem struct {
-	obj   interface{} // The object which is stored in the heap.
+	obj   *arbv1.AppWrapper // The object which is stored in the heap.
 	index int         // The index of the object's key in the Heap.queue.
 }
 
 type itemKeyValue struct {
 	key string
-	obj interface{}
+	obj *arbv1.AppWrapper
 }
 
 // heapData is an internal struct that implements the standard heap interface
@@ -121,7 +122,7 @@ type Heap struct {
 
 // Add inserts an item, and puts it in the queue. The item is updated if it
 // already exists.
-func (h *Heap) Add(obj interface{}) error {
+func (h *Heap) Add(obj *arbv1.AppWrapper) error {
 	key, err := h.data.keyFunc(obj)
 	if err != nil {
 		return cache.KeyError{Obj: obj, Err: err}
@@ -136,7 +137,7 @@ func (h *Heap) Add(obj interface{}) error {
 }
 
 // BulkAdd adds all the items in the list to the queue.
-func (h *Heap) BulkAdd(list []interface{}) error {
+func (h *Heap) BulkAdd(list []*arbv1.AppWrapper) error {
 	for _, obj := range list {
 		key, err := h.data.keyFunc(obj)
 		if err != nil {
@@ -154,7 +155,7 @@ func (h *Heap) BulkAdd(list []interface{}) error {
 
 // AddIfNotPresent inserts an item, and puts it in the queue. If an item with
 // the key is present in the map, no changes is made to the item.
-func (h *Heap) AddIfNotPresent(obj interface{}) error {
+func (h *Heap) AddIfNotPresent(obj *arbv1.AppWrapper) error {
 	key, err := h.data.keyFunc(obj)
 	if err != nil {
 		return cache.KeyError{Obj: obj, Err: err}
@@ -167,7 +168,7 @@ func (h *Heap) AddIfNotPresent(obj interface{}) error {
 
 // Update is the same as Add in this implementation. When the item does not
 // exist, it is added.
-func (h *Heap) Update(obj interface{}) error {
+func (h *Heap) Update(obj *arbv1.AppWrapper) error {
 	return h.Add(obj)
 }
 

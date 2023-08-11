@@ -33,22 +33,23 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+
+	"k8s.io/klog/v2"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
-	"k8s.io/apiserver/pkg/server"
 
-	"os"
+	"k8s.io/apiserver/pkg/server"
 )
 
 func main() {
-	//flag.Parse()
-
 	s := options.NewServerOption()
-	s.AddFlags(flag.CommandLine)
 
-	//	flag.InitFlags()
-	s.CheckOptionOrDie()
+	flagSet := flag.CommandLine
+	klog.InitFlags(flagSet)
+	s.AddFlags(flagSet)
+	flag.Parse()
 
 	ctx := server.SetupSignalContext()
 

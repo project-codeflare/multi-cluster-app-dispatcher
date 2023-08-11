@@ -87,8 +87,6 @@ func (s *ServerOption) AddFlags(fs *flag.FlagSet) {
 	// using port 8083 for metrics as 8082 is used by `custom-metrics-apiserver`
 	fs.IntVar(&s.MetricsListenPort, "metricsListenPort", 8083, "Listen port for metrics. Defaults to ':8083'")
 	fs.Int64Var(&s.DispatchResourceReservationTimeout, "dispatchResourceReservationTimeout", s.DispatchResourceReservationTimeout, "Resource reservation timeout for pods to be created once AppWrapper is dispatched, in millisecond.  Defaults to '300000', 5 minutes")
-	flag.Parse()
-	klog.V(4).Infof("[AddFlags] Controller configuration: %#v", s)
 }
 
 func (s *ServerOption) loadDefaultsFromEnvVars() {
@@ -151,8 +149,4 @@ func (s *ServerOption) loadDefaultsFromEnvVars() {
 			s.DispatchResourceReservationTimeout = to
 		}
 	}
-}
-
-func (s *ServerOption) CheckOptionOrDie() {
-
 }

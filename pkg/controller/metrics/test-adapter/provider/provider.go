@@ -1,19 +1,4 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
 Copyright 2019, 2021 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,9 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package provider
 
 import (
+	"context"
 	"net/http"
 	"sync"
 	"time"
@@ -49,8 +36,8 @@ import (
 	"k8s.io/metrics/pkg/apis/custom_metrics"
 	"k8s.io/metrics/pkg/apis/external_metrics"
 
-	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/provider"
-	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/provider/helpers"
+	"sigs.k8s.io/custom-metrics-apiserver/pkg/provider"
+	"sigs.k8s.io/custom-metrics-apiserver/pkg/provider/helpers"
 )
 
 // CustomMetricResource wraps provider.CustomMetricInfo in a struct which stores the Name and Namespace of the resource
@@ -124,6 +111,8 @@ type testingProvider struct {
 	values          map[CustomMetricResource]metricValue
 	externalMetrics []externalMetric
 }
+
+var _ provider.MetricsProvider = (*testingProvider)(nil)
 
 // NewFakeProvider returns an instance of testingProvider, along with its restful.WebService that opens endpoints to post new fake metrics
 func NewFakeProvider(client dynamic.Interface, mapper apimeta.RESTMapper) (provider.MetricsProvider, *restful.WebService) {
@@ -297,7 +286,7 @@ func (p *testingProvider) metricsFor(namespace string, selector labels.Selector,
 	}, nil
 }
 
-func (p *testingProvider) GetMetricByName(name types.NamespacedName, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValue, error) {
+func (p *testingProvider) GetMetricByName(_ context.Context, name types.NamespacedName, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValue, error) {
 	p.valuesLock.RLock()
 	defer p.valuesLock.RUnlock()
 
@@ -308,7 +297,7 @@ func (p *testingProvider) GetMetricByName(name types.NamespacedName, info provid
 	return p.metricFor(value, name, labels.Everything(), info, metricSelector)
 }
 
-func (p *testingProvider) GetMetricBySelector(namespace string, selector labels.Selector, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValueList, error) {
+func (p *testingProvider) GetMetricBySelector(_ context.Context, namespace string, selector labels.Selector, info provider.CustomMetricInfo, metricSelector labels.Selector) (*custom_metrics.MetricValueList, error) {
 	p.valuesLock.RLock()
 	defer p.valuesLock.RUnlock()
 
@@ -334,11 +323,11 @@ func (p *testingProvider) ListAllMetrics() []provider.CustomMetricInfo {
 	return metrics
 }
 
-func (p *testingProvider) GetExternalMetric(namespace string, metricSelector labels.Selector, info provider.ExternalMetricInfo) (*external_metrics.ExternalMetricValueList, error) {
+func (p *testingProvider) GetExternalMetric(_ context.Context, namespace string, metricSelector labels.Selector, info provider.ExternalMetricInfo) (*external_metrics.ExternalMetricValueList, error) {
 	p.valuesLock.RLock()
 	defer p.valuesLock.RUnlock()
 
-	matchingMetrics := []external_metrics.ExternalMetricValue{}
+	var matchingMetrics []external_metrics.ExternalMetricValue
 	for _, metric := range p.externalMetrics {
 		if metric.info.Metric == info.Metric &&
 			metricSelector.Matches(labels.Set(metric.labels)) {
@@ -356,7 +345,7 @@ func (p *testingProvider) ListAllExternalMetrics() []provider.ExternalMetricInfo
 	p.valuesLock.RLock()
 	defer p.valuesLock.RUnlock()
 
-	externalMetricsInfo := []provider.ExternalMetricInfo{}
+	var externalMetricsInfo []provider.ExternalMetricInfo
 	for _, metric := range p.externalMetrics {
 		externalMetricsInfo = append(externalMetricsInfo, metric.info)
 	}
