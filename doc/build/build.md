@@ -34,7 +34,7 @@ $
 
 ### Additional software needed
 
-To build the controller and to run the end to end tests locally you will need to have the following software installed:
+To build the controller and run the end-to-end tests locally, you will need to have the following software installed:
 
 * `Go` (version 1.19)
 * `kind` (version 0.18)
@@ -48,7 +48,7 @@ On MacOS you will need to have `readlink` executable installed (`brew install co
 
 ### Build the Executable
 
-From the root directory of the repository, you may build only the executable, or you can build the image directly.
+From the repository's root directory, you may build only the executable, or you can build the image directly.
 
 To to build the executable, execute:
 
@@ -61,7 +61,7 @@ Compiling controller
 CGO_ENABLED=0 go build -o _output/bin/mcad-controller ./cmd/kar-controllers/
 ```
 
-Ensure the executable `mcad-controllers` are created in the target output directory:
+Ensure the executable `mcad-controller` is created in the target output directory:
 
 ```bash
 multi-cluster-app-dispatcher $ ls _output/bin 
