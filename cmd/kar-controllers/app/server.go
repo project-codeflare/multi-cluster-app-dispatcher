@@ -42,15 +42,10 @@ import (
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejob"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/health"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/metrics"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
-
-// Global Prometheus Registry
-var globalPromRegistry = prometheus.NewRegistry()
 
 func buildConfig(master, kubeconfig string) (*rest.Config, error) {
 	if master != "" || kubeconfig != "" {
@@ -84,20 +79,6 @@ func Run(ctx context.Context, opt *options.ServerOption) error {
 	return nil
 }
 
-// metricsHandler returns a http.Handler that serves the prometheus metrics
-func prometheusHandler() http.Handler {
-	// Add Go module build info.
-	globalPromRegistry.MustRegister(collectors.NewBuildInfoCollector())
-	globalPromRegistry.MustRegister(collectors.NewGoCollector())
-	globalPromRegistry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
-
-	handlerOpts := promhttp.HandlerOpts{
-		ErrorHandling: promhttp.HTTPErrorOnError,
-	}
-
-	return promhttp.HandlerFor(globalPromRegistry, handlerOpts)
-}
-
 func healthHandler() http.Handler {
 	healthHandler := http.NewServeMux()
 	healthHandler.Handle("/healthz", &health.Handler{})
@@ -109,7 +90,7 @@ func startHealthAndMetricsServers(ctx context.Context, opt *options.ServerOption
 	g, ctx := errgroup.WithContext(ctx)
 
 	// metrics server
-	metricsServer, err := NewServer(opt.MetricsListenPort, "/metrics", prometheusHandler())
+	metricsServer, err := NewServer(opt.MetricsListenPort, "/metrics", metrics.Handler())
 	if err != nil {
 		return err
 	}

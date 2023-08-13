@@ -35,8 +35,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
-	klog "k8s.io/klog/v2"
 )
 
 // ServerOption is the main context object for the controller manager.
@@ -55,9 +53,9 @@ type ServerOption struct {
 	HeadOfLineHoldingTime              int
 	QuotaEnabled                       bool // Controller is to evaluate quota per request
 	QuotaRestURL                       string
-	HealthProbeListenPort				int  
+	HealthProbeListenPort              int
 	DispatchResourceReservationTimeout int64
-	MetricsListenPort                  int 
+	MetricsListenPort                  int
 }
 
 // NewServerOption creates a new CMServer with a default config.
