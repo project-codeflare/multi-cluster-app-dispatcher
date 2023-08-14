@@ -21,8 +21,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
-	klog "k8s.io/klog/v2"
 )
 
 // ServerOption is the main context object for the controller manager.
@@ -40,9 +38,9 @@ type ServerOption struct {
 	HeadOfLineHoldingTime              int
 	QuotaEnabled                       bool // Controller is to evaluate quota per request
 	QuotaRestURL                       string
-	HealthProbeListenPort				int  
+	HealthProbeListenPort              int
 	DispatchResourceReservationTimeout int64
-	MetricsListenPort                  int 
+	MetricsListenPort                  int
 }
 
 // NewServerOption creates a new CMServer with a default config.
@@ -68,8 +66,8 @@ func (s *ServerOption) AddFlags(fs *flag.FlagSet) {
 	fs.StringVar(&s.QuotaRestURL, "quotaURL", s.QuotaRestURL, "URL for ReST quota management.  Default is none.")
 	fs.IntVar(&s.SecurePort, "secure-port", 6443, "The port on which to serve secured, authenticated access for metrics.")
 	fs.IntVar(&s.HealthProbeListenPort, "healthProbeListenPort", 8081, "Listen port for health probes. Defaults to ':8081'")
-	// using port 8083 for metrics as 8082 is used by `custom-metrics-apiserver`
-	fs.IntVar(&s.MetricsListenPort, "metricsListenPort", 8083, "Listen port for metrics. Defaults to ':8083'")
+	// using port 9090 for metrics as 8082 is used by `custom-metrics-apiserver`
+	fs.IntVar(&s.MetricsListenPort, "metricsListenPort", 9090, "Listen port for metrics. Defaults to ':9090'")
 	fs.Int64Var(&s.DispatchResourceReservationTimeout, "dispatchResourceReservationTimeout", s.DispatchResourceReservationTimeout, "Resource reservation timeout for pods to be created once AppWrapper is dispatched, in millisecond.  Defaults to '300000', 5 minutes")
 }
 
