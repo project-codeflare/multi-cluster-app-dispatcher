@@ -1,0 +1,60 @@
+name: Update CodeFlare operator with latest changes from MCAD
+
+on:
+  workflow_run:
+    workflows: [Build and Push dev MCAD image into Quay]
+    types:
+      - completed
+
+jobs:
+  update-codeflare-operator:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.repository == 'project-codeflare/multi-cluster-app-dispatcher'
+
+    steps:
+      - name: checkout MCAD code
+        uses: actions/checkout@v3
+        with:
+          path: 'mcad'
+
+      - name: Store latest MCAD Git SHA
+        run: |
+          echo "GIT_COMMIT_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
+        working-directory: mcad
+
+      - name: checkout CodeFlare operator code
+        uses: actions/checkout@v3
+        with:
+          repository: 'project-codeflare/codeflare-operator'
+          token: ${{ env.GITHUB_TOKEN }}
+          path: operator
+        env:
+          GITHUB_TOKEN: ${{ secrets.CODEFLARE_MACHINE_ACCOUNT_TOKEN }}
+
+      - name: Update CodeFlare operator code to use latest MCAD version
+        run: |
+          sed -i -E "s/(.*MCAD_VERSION \?= ).*/\1${{ env.GIT_COMMIT_SHA }}/" Makefile
+          sed -i -E "s/(.*MCAD_REF \?= ).*/\1dev/" Makefile
+          make modules
+          go mod tidy
+        working-directory: operator
+
+      - name: Commit CodeFlare operator changes in the code back to repository
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Update MCAD to latest dev
+          create_branch: true
+          repository: operator
+          branch: dev
+          push_options: '--force'
+
+      - name: Create a PR in CodeFlare operator repo with code changes if not opened yet
+        run: |
+          if [[ $(gh pr view dev) && $(gh pr view dev --json state --jq .state) == "OPEN" ]]; then
+            echo "PR already opened"
+          else
+            gh pr create --base "main" --fill --head dev
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.CODEFLARE_MACHINE_ACCOUNT_TOKEN }}
+        working-directory: operator
