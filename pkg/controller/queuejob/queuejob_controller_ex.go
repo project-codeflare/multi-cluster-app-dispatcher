@@ -550,7 +550,7 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arb
 			if !status {
 				klog.V(4).Infof("[getAppWrapperCompletionStatus] Item %d named %s not completed for appwrapper: '%s/%s'", i+1, name, caw.Namespace, caw.Name)
 				// early termination because a required item is not completed
-				return caw.Status.State
+				continue
 			}
 
 			// only consider count completion required for valid items
@@ -566,7 +566,7 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arb
 			return arbv1.AppWrapperStateCompleted
 		}
 
-		if caw.Status.Pending > 0 || caw.Status.Running > 0 {
+		if caw.Status.Running > 0 || caw.Status.Pending > 0 {
 			return arbv1.AppWrapperStateRunningHoldCompletion
 		}
 	}
