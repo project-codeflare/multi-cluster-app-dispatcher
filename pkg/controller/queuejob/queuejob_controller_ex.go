@@ -1838,7 +1838,7 @@ func (cc *XController) worker() {
 			return nil
 		}
 
-		if !queuejob.Status.CanRun && (queuejob.Status.State != arbv1.AppWrapperStateActive || queuejob.Status.State != arbv1.AppWrapperStateCompleted || queuejob.Status.State != arbv1.AppWrapperStateFailed) {
+		if !queuejob.Status.CanRun && (queuejob.Status.State != arbv1.AppWrapperStateActive) {
 			cc.ScheduleNext(queuejob)
 			// sync AppWrapper
 			return nil
@@ -2018,6 +2018,7 @@ func (cc *XController) manageQueueJob(ctx context.Context, qj *arbv1.AppWrapper,
 
 				qj.Status.State = arbv1.AppWrapperStateFailed
 				qj.Status.QueueJobState = arbv1.AppWrapperCondFailed
+				qj.Status.CanRun = false
 				if !isLastConditionDuplicate(qj, arbv1.AppWrapperCondFailed, v1.ConditionTrue, dispatchFailureReason, dispatchFailureMessage) {
 					cond := GenerateAppWrapperCondition(arbv1.AppWrapperCondFailed, v1.ConditionTrue, dispatchFailureReason, dispatchFailureMessage)
 					qj.Status.Conditions = append(qj.Status.Conditions, cond)
