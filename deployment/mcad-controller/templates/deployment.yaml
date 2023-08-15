@@ -33,7 +33,7 @@ spec:
 #{{ end }}
 ---
 #{{ if (eq .Values.configMap.multiCluster true) }}
-apiVersion: apiregistration.k8s.io/v1beta1
+apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
   name: v1beta1.external.metrics.k8s.io
@@ -47,7 +47,7 @@ spec:
   groupPriorityMinimum: 100 
   versionPriority: 100 
 ---
-apiVersion: apiregistration.k8s.io/v1beta1
+apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
   name: v1beta1.custom.metrics.k8s.io
