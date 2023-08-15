@@ -1259,6 +1259,8 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 						qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 					//TODO: Remove forwarded logic as a big AW will never be forwarded
 					forwarded = true
+					// should we call backoff or update etcd?
+					go qjm.backoff(ctx, qj, dispatchFailedReason, dispatchFailedMessage)
 				}
 				// if the HeadOfLineHoldingTime option is not set it will break the loop
 				//schedulingTimeExpired := time.Now().After(HOLStartTime.Add(time.Duration(qjm.serverOption.HeadOfLineHoldingTime) * time.Second))
