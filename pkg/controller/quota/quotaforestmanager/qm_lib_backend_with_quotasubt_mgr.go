@@ -550,7 +550,7 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 
 	_, err = qm.quotaManagerBackend.AddConsumer(consumerInfo)
 	if err != nil {
-		klog.Errorf("[Fits] Consumer '%s' already exists.", consumerInfo.GetID())
+		return false, nil, err.Error()
 	}
 
 	consumerID := consumerInfo.GetID()

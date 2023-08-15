@@ -248,34 +248,6 @@ func (qstm *QuotaSubtreeManager) LoadQuotaSubtreesIntoBackend() {
 		treeNameToTreeCache[treeName] = qstm.quotaManagerBackend.GetTreeCache(treeName)
 	}
 
-	// Aggregate resource names for all quotasubtrees in ETCD belonging to the same `treeName`
-	qstTreeResources := make(map[string]map[string]bool)
-
-	for _, qst := range qstm.qstMap {
-		klog.V(4).Infof("[LoadQuotaSubtreesIntoBackend] Aggregating resources for QuotaSubtrees  %s.", qst.Name)
-
-		qstTreeName := qst.Labels[util.URMTreeLabel]
-
-		if len(qstTreeName) <= 0 {
-			klog.Errorf("[LoadQuotaSubtreesIntoBackend] QuotaSubtree %s does not contain the proper 'tree' label will be ignored.", qst.Name)
-			continue
-		}
-
-		treeResources := qstTreeResources[qstTreeName]
-
-		if treeResources == nil {
-			treeResources = make(map[string]bool)
-		}
-
-		for _, child := range qst.Spec.Children {
-			for resourceName := range child.Quotas.Requests {
-				treeResources[string(resourceName)] = true
-			}
-		}
-
-		qstTreeResources[qstTreeName] = treeResources
-	}
-
 	// Process all quotasubtrees to the tree caches
 	for _, qst := range qstm.qstMap {
 		klog.V(4).Infof("[LoadQuotaSubtreesIntoBackend] Processing QuotaSubtree  %s.",
