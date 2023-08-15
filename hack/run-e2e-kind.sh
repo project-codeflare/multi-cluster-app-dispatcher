@@ -58,14 +58,13 @@ function update_test_host {
   fi
   echo "CPU architecture for downloads is: ${arch}"
 
-  #Only run this function if we are running on the travis build machinbe,
-  if [ "$(lsb_release -c -s 2>&1 | grep xenial)" == "xenial" ]; then 
-    sudo apt-get update && sudo apt-get install -y apt-transport-https curl 
-    curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-    echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
-    sudo apt-get update
+  which curl >/dev/null 2>&1
+  if [ $? -ne 0 ]
+  then
+    echo "curl not installed, exiting."
+    exit 1
   fi
-  
+
   which kubectl >/dev/null 2>&1
   if [ $? -ne 0 ]
   then 
@@ -77,9 +76,9 @@ function update_test_host {
   which kind >/dev/null 2>&1
   if [ $? -ne 0 ] 
   then
-    # Download kind binary (0.18.0)
+    # Download kind binary (0.20.0)
     echo "Downloading and installing kind...."
-    sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.18.0/kind-linux-${arch} && \
+    sudo curl -o /usr/local/bin/kind -L https://github.com/kubernetes-sigs/kind/releases/download/v0.20.0/kind-linux-${arch} && \
     sudo chmod +x /usr/local/bin/kind  
     [ $? -ne 0 ] && echo "Failed to download kind" && exit 1  
     echo "Kind was sucessfully installed."    
@@ -351,7 +350,7 @@ function setup-mcad-env {
   kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/scheduler-plugins/277b6bdec18f8a9e9ccd1bfeaf4b66495bfc6f92/config/crd/bases/scheduling.sigs.k8s.io_podgroups.yaml
  
   # Turn off master taints
-  kubectl taint nodes --all node-role.kubernetes.io/master-
+  kubectl taint nodes --all node-role.kubernetes.io/control-plane:NoSchedule-
  
   # This is meant to orchestrate initial cluster configuration such that accounting tests can be consistent
   echo "Orchestrate cluster..."
@@ -468,7 +467,10 @@ setup-mcad-env
 kuttl-tests
 mcad-up
 go test ./test/e2e -v -timeout 130m -count=1
-if [ ${?} -eq 0 ]
+RC=$?
+if [ ${RC} -eq 0 ]
 then
   DUMP_LOGS="false"
 fi
+echo "End to end test script return code set to ${RC}"
+exit ${RC}

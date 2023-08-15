@@ -1,0 +1,53 @@
+name: Build and Push dev MCAD image into Quay
+
+on:
+  push:
+    branches:
+      - '*'
+  
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Set latest tag and Branch name
+        run: |
+          BRANCH=$(echo ${GITHUB_REF#refs/heads/})
+          echo "GIT_BRANCH=$(echo "$BRANCH" | sed 's/[^A-Za-z0-9._-]/-/g' )" >> $GITHUB_ENV
+          if [[ "$BRANCH" == "main" ]]; then
+            echo "TAG=dev" >> $GITHUB_ENV
+          elif [[ "$BRANCH" == release-* ]]; then
+            echo "TAG=dev-$BRANCH" >> $GITHUB_ENV
+          else
+            LATEST_TAG=$(git describe --abbrev=0 --tags)
+            echo "TAG=$BRANCH-$LATEST_TAG" >> $GITHUB_ENV
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19.10
+
+      - name: Build
+        run:
+          make mcad-controller
+
+      - name: Run Unit tests
+        run: make run-test
+
+      - name: Build Image
+        run: |
+          make images -e GIT_BRANCH=${{ env.GIT_BRANCH }} TAG=${{ env.TAG }}
+
+      - name: Push Image
+        run: |
+          make push-images -e GIT_BRANCH=${{ env.GIT_BRANCH }} TAG=${{ env.TAG }} quay_repository=quay.io/project-codeflare quay_id=${{ secrets.QUAY_ID }} quay_token=${{ secrets.QUAY_TOKEN }}
+
+      - name: Run E2E tests
+        run: |
+          make run-e2e -e GIT_BRANCH=${{ env.GIT_BRANCH }} TAG=${{ env.TAG }}

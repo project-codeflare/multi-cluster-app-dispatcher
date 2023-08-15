@@ -1,5 +1,5 @@
 /*
-Copyright 2022 The Multi-Cluster App Dispatcher Authors.
+Copyright 2022, 2023 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package quota
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/core"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/utils"
@@ -49,7 +49,7 @@ func NewConsumerInfo(consumerStruct utils.JConsumer) (*ConsumerInfo, error) {
 
 // NewConsumerInfoFromFile : create a new ConsumerInfo from Json file
 func NewConsumerInfoFromFile(consumerFileName string) (*ConsumerInfo, error) {
-	byteValue, err := ioutil.ReadFile(consumerFileName)
+	byteValue, err := os.ReadFile(consumerFileName)
 	if err != nil {
 		return nil, err
 	}

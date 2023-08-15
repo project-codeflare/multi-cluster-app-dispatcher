@@ -1,11 +1,11 @@
 /*
-Copyright 2022 The Multi-Cluster App Dispatcher Authors.
+Copyright 2022, 2023 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,6 +35,9 @@ type Controller struct {
 	preemptedConsumers []string
 	// list of preempted consumer objects due to previous allocation request
 	preemptedConsumersArray []*Consumer
+
+	// snapshot of tree state to undo most recent allocation
+	treeSnapshot *TreeSnapshot
 }
 
 // NewController : create a quota controller
@@ -44,6 +47,7 @@ func NewController(tree *QuotaTree) *Controller {
 		consumers:               make(map[string]*Consumer),
 		preemptedConsumers:      make([]string, 0),
 		preemptedConsumersArray: make([]*Consumer, 0),
+		treeSnapshot:            nil,
 	}
 }
 
@@ -66,7 +70,6 @@ func (controller *Controller) Allocate(consumer *Consumer) *AllocationResponse {
 		}
 	} else {
 		fmt.Fprintf(&allocationMessage, "Failed to allocate quota on quota designation '%s'", controller.GetTreeName())
-
 	}
 	controller.PrintState(consumer, allocated)
 	preemptedIds := make([]string, len(controller.preemptedConsumers))
@@ -74,6 +77,32 @@ func (controller *Controller) Allocate(consumer *Consumer) *AllocationResponse {
 	allocResponse := NewAllocationResponse(consumer.GetID())
 	allocResponse.Append(allocated, allocationMessage.String(), &preemptedIds)
 	return allocResponse
+}
+
+// TryAllocate : try allocating a consumer by taking a snapshot before attempting allocation
+func (controller *Controller) TryAllocate(consumer *Consumer) *AllocationResponse {
+	controller.treeSnapshot = NewTreeSnapshot(controller.tree, consumer)
+	if !controller.treeSnapshot.Take(controller, nil) {
+		var allocationMessage bytes.Buffer
+		fmt.Fprintf(&allocationMessage, "Failed to take a state snapshot of tree '%s'", controller.GetTreeName())
+		allocResponse := NewAllocationResponse(consumer.GetID())
+		preemptedIds := make([]string, 0)
+		allocResponse.Append(false, allocationMessage.String(), &preemptedIds)
+		return allocResponse
+	}
+	return controller.Allocate(consumer)
+}
+
+// UndoAllocate : undo the most recent allocation trial
+func (controller *Controller) UndoAllocate(consumer *Consumer) bool {
+	success := true
+	defer controller.PrintState(consumer, success)
+	if ts := controller.treeSnapshot; ts != nil && ts.targetConsumer.GetID() == consumer.GetID() {
+		ts.Reinstate(controller)
+	} else {
+		success = false
+	}
+	return success
 }
 
 // ForceAllocate : force allocate a consumer on a given node
@@ -107,6 +136,11 @@ func (controller *Controller) DeAllocate(consumerID string) bool {
 	}
 	klog.V(4).Infoln("Consumer " + consumerID + " is not allocated")
 	return false
+}
+
+// GetConsumers : get a map of consumers in controller
+func (controller *Controller) GetConsumers() map[string]*Consumer {
+	return controller.consumers
 }
 
 // GetPreemptedConsumers : get a list of the preempted consumer IDs

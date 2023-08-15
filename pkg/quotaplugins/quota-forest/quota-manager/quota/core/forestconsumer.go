@@ -1,11 +1,11 @@
 /*
-Copyright 2022 The Multi-Cluster App Dispatcher Authors.
+Copyright 2022, 2023 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,7 +19,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	utils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/utils"
 )
@@ -42,7 +42,7 @@ func NewForestConsumer(id string, consumers map[string]*Consumer) *ForestConsume
 
 // NewForestConsumerFromFile : create a forest consumer from JSON file
 func NewForestConsumerFromFile(consumerFileName string, resourceNames map[string][]string) (*ForestConsumer, error) {
-	byteValue, err := ioutil.ReadFile(consumerFileName)
+	byteValue, err := os.ReadFile(consumerFileName)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (fc *ForestConsumer) GetTreeConsumer(treeName string) *Consumer {
 	return fc.consumers[treeName]
 }
 
-//IsAllocated : is consumer allocated on all trees in the forest
+// IsAllocated : is consumer allocated on all trees in the forest
 func (fc *ForestConsumer) IsAllocated() bool {
 	for _, consumer := range fc.consumers {
 		if !consumer.IsAllocated() {

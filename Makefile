@@ -3,6 +3,7 @@ CAT_CMD=$(if $(filter $(OS),Windows_NT),type,cat)
 RELEASE_VER:=
 CURRENT_DIR=$(shell pwd)
 GIT_BRANCH:=$(shell git symbolic-ref --short HEAD 2>&1 | grep -v fatal)
+
 #define the GO_BUILD_ARGS if you need to pass additional arguments to the go build
 GO_BUILD_ARGS?=
 
@@ -22,16 +23,7 @@ CLIENT_GEN ?= $(LOCALBIN)/client-gen
 LISTER_GEN ?= $(LOCALBIN)/lister-gen
 INFORMER_GEN ?= $(LOCALBIN)/informer-gen
 
-# Reset branch name if this a Travis CI environment
-ifneq ($(strip $(TRAVIS_BRANCH)),)
-	GIT_BRANCH:=${TRAVIS_BRANCH}
-endif
-
 TAG:=$(shell echo "")
-# Check for git repository id sent by Travis-CI
-ifneq ($(strip $(git_repository_id)),)
-	TAG:=${TAG}${git_repository_id}-
-endif
 
 # Check for current branch name and update 'RELEASE_VER' and 'TAG'
 ifneq ($(strip $(GIT_BRANCH)),)
@@ -184,7 +176,6 @@ push-images: verify-tag-name
 ifeq ($(strip $(quay_repository)),)
 	$(info No registry information provided.  To push images to a docker registry please set)
 	$(info environment variables: quay_repository, quay_token, and quay_id.  Environment)
-	$(info variables do not need to be set for github Travis CICD.)
 else
 	$(info Log into quay)
 	docker login quay.io -u ${quay_id} --password ${quay_token}
@@ -193,7 +184,7 @@ else
 	$(info Push the docker image to registry)
 	docker push ${quay_repository}/mcad-controller:${TAG}
 ifeq ($(strip $(git_repository_id)),main)
-	$(info Update the `latest` tag when built from `main`)
+	$(info Update the `dev` tag when built from `main`)
 	docker tag mcad-controller:${TAG}  ${quay_repository}/mcad-controller:latest
 	docker push ${quay_repository}/mcad-controller:latest
 endif

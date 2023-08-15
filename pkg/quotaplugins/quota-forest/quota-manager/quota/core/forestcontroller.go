@@ -1,11 +1,11 @@
 /*
-Copyright 2022 The Multi-Cluster App Dispatcher Authors.
+Copyright 2022, 2023 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -135,6 +135,15 @@ func (fc *ForestController) Allocate(forestConsumer *ForestConsumer) *Allocation
 	for treeName, consumer := range consumers {
 
 		controller := fc.controllers[treeName]
+		if controller == nil {
+			// skip, unknown tree
+			treeAllocResponse := NewAllocationResponse(consumerID)
+			var msg bytes.Buffer
+			fmt.Fprintf(&msg, "Failed to allocate consumer %s on unknown tree %s'", consumerID, treeName)
+			treeAllocResponse.Append(false, msg.String(), nil)
+			allocResponse.Merge(treeAllocResponse)
+			continue
+		}
 		groupID := consumer.GetGroupID()
 		allocRequested := consumer.GetRequest()
 		if controller == nil || len(groupID) == 0 || allocRequested.GetSize() != controller.GetQuotaSize() {
@@ -144,7 +153,7 @@ func (fc *ForestController) Allocate(forestConsumer *ForestConsumer) *Allocation
 			} else if len(groupID) == 0 {
 				fmt.Fprintf(&msg, "No quota designations provided for '%s'", treeName)
 			} else {
-				fmt.Fprintf(&msg, "Explected %d resources for quota designations '%s', received %d",
+				fmt.Fprintf(&msg, "Expected %d resources for quota designations '%s', received %d",
 					controller.GetQuotaSize(), treeName, allocRequested.GetSize())
 			}
 			return fc.failureRecover(consumerID, processedTrees, deletedConsumers, msg.String())
@@ -187,6 +196,7 @@ func (fc *ForestController) Allocate(forestConsumer *ForestConsumer) *Allocation
 			/*
 			 * allocation failed - undo deletions of prior preempted consumers and recover
 			 */
+			// TODO: make use of forest snapshot to recover
 			for _, c := range treeDeletedConsumers {
 				controller.Allocate(c)
 			}
@@ -243,6 +253,54 @@ func (fc *ForestController) failureRecover(consumerID string, processedTrees []s
 	klog.V(4).Infoln(failedResponse)
 
 	return failedResponse
+}
+
+// TryAllocate : try allocating a consumer by taking a snapshot before attempting allocation
+func (fc *ForestController) TryAllocate(forestConsumer *ForestConsumer) *AllocationResponse {
+	consumerID := forestConsumer.GetID()
+	consumers := forestConsumer.GetConsumers()
+	allocResponse := NewAllocationResponse(consumerID)
+
+	// take a snapshot of the forest
+	for treeName, consumer := range consumers {
+		var msg bytes.Buffer
+		controller := fc.controllers[treeName]
+		if controller == nil {
+			// skip, unknown tree
+			continue
+		}
+		controller.treeSnapshot = NewTreeSnapshot(controller.tree, consumer)
+		// TODO: limit the number of potentially affected consumers by the allocation
+		if !controller.treeSnapshot.Take(controller, controller.consumers) {
+			fmt.Fprintf(&msg, "Failed to take a state snapshot of tree '%s'", controller.GetTreeName())
+			treeAllocResponse := NewAllocationResponse(consumer.GetID())
+			preemptedIds := make([]string, 0)
+			treeAllocResponse.Append(false, msg.String(), &preemptedIds)
+			allocResponse.Merge(treeAllocResponse)
+			return allocResponse
+		}
+	}
+
+	ar := fc.Allocate(forestConsumer)
+	allocResponse.Merge(ar)
+	return allocResponse
+}
+
+// UndoAllocate : undo the most recent allocation trial
+func (fc *ForestController) UndoAllocate(forestConsumer *ForestConsumer) bool {
+	klog.V(4).Infof("Multi-quota undo allocation of consumer: %s\n", forestConsumer.GetID())
+	consumers := forestConsumer.GetConsumers()
+	success := true
+	for treeName, consumer := range consumers {
+		controller := fc.controllers[treeName]
+		if controller == nil {
+			// skip, unknown tree
+			continue
+		}
+		treeSuccess := controller.UndoAllocate(consumer)
+		success = success && treeSuccess
+	}
+	return success
 }
 
 // ForceAllocate : force allocate a consumer on a given set of nodes on trees;

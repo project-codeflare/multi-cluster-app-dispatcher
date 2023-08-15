@@ -1,19 +1,4 @@
 /*
-Copyright 2018 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
 Copyright 2019, 2021 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package adapter
 
 import (
@@ -44,18 +30,19 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
-	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/apiserver"
-	basecmd "github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/cmd"
-	"github.com/kubernetes-sigs/custom-metrics-apiserver/pkg/provider"
-	generatedopenapi "github.com/kubernetes-sigs/custom-metrics-apiserver/test-adapter/generated/openapi"
+	generatedcustommetrics "sigs.k8s.io/custom-metrics-apiserver/pkg/generated/openapi/custommetrics"
+
 	adapterprov "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter/provider"
+	"sigs.k8s.io/custom-metrics-apiserver/pkg/apiserver"
+	basecmd "sigs.k8s.io/custom-metrics-apiserver/pkg/cmd"
+	"sigs.k8s.io/custom-metrics-apiserver/pkg/provider"
 
 	clusterstatecache "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
 )
 
 // New returns a Cache implementation.
 func New(serverOptions *options.ServerOption, config *rest.Config, clusterStateCache clusterstatecache.Cache) *MetricsAdapter {
-	return newMetricsAdpater(serverOptions, config, clusterStateCache)
+	return newMetricsAdapter(serverOptions, config, clusterStateCache)
 }
 
 type MetricsAdapter struct {
@@ -92,19 +79,20 @@ func covertServerOptionsToMetricsServerOptions(serverOptions *options.ServerOpti
 	}
 	return portedArgs
 }
-func newMetricsAdpater(serverOptions *options.ServerOption, config *rest.Config, clusterStateCache clusterstatecache.Cache) *MetricsAdapter {
-	klog.V(10).Infof("[newMetricsAdpater] Entered newMetricsAdpater()")
+
+func newMetricsAdapter(serverOptions *options.ServerOption, config *rest.Config, clusterStateCache clusterstatecache.Cache) *MetricsAdapter {
+	klog.V(10).Infof("[newMetricsAdapter] Entered newMetricsAdapter()")
 
 	cmd := &MetricsAdapter{}
 
-	cmd.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(generatedopenapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(apiserver.Scheme))
+	cmd.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(generatedcustommetrics.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(apiserver.Scheme))
 	cmd.OpenAPIConfig.Info.Title = "MetricsAdpater"
 	cmd.OpenAPIConfig.Info.Version = "1.0.0"
 
 	cmd.Flags().StringVar(&cmd.Message, "msg", "starting metrics adapter...", "startup message")
 	cmd.Flags().AddGoFlagSet(flag.CommandLine) // make sure we get the klog flags
-	klog.V(10).Infof("[newMetricsAdpater] Go flag set from commandline: %+v", flag.CommandLine)
-	klog.V(10).Infof("[newMetricsAdpater] Flag arguments: %+v", cmd.Flags().Args())
+	klog.V(10).Infof("[newMetricsAdapter] Go flag set from commandline: %+v", flag.CommandLine)
+	klog.V(10).Infof("[newMetricsAdapter] Flag arguments: %+v", cmd.Flags().Args())
 	cmd.Flags().Parse(os.Args)
 
 	// The metrics server thread requires a different flag name than the primary server, e.g. primary
