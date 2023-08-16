@@ -34,7 +34,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/golang/protobuf/proto"
 	dto "github.com/prometheus/client_model/go"
@@ -102,7 +101,7 @@ func (sc *ClusterStateCache) Run(stopCh <-chan struct{}) {
 	go sc.nodeInformer.Informer().Run(stopCh)
 
 	// Update cache
-	go wait.Until(sc.updateCache, 1*time.Second, stopCh)
+	go wait.Until(sc.updateCache, 0, stopCh)
 
 }
 

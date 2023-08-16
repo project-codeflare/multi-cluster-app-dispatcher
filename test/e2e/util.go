@@ -1918,16 +1918,12 @@ func createGenericNamespaceAW(context *context, name string) *arbv1.AppWrapper {
 			"app": "aw-generic-namespace-0"
 		}
 	}} `)
-	var schedSpecMin int = 0
 
 	aw := &arbv1.AppWrapper{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
 		Spec: arbv1.AppWrapperSpec{
-			SchedSpec: arbv1.SchedulingSpecTemplate{
-				MinAvailable: schedSpecMin,
-			},
 			AggrResources: arbv1.AppWrapperResourceList{
 				GenericItems: []arbv1.AppWrapperGenericResource{
 					{
