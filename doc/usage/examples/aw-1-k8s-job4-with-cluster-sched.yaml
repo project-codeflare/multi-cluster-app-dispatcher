@@ -1,37 +1,40 @@
 apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-  name: aw-generic-statefulset-2
+  name: aw-generic-ss-cluster-sched-2
   namespace: test1
 spec:
   schedulingSpec:
     minAvailable: 2
+    clusterScheduling:
+      clusters:
+      - name: helloworld
   resources:
     GenericItems:
     - replicas: 1
       metadata:
-        name: aw-generic-statefulset-2
+        name: aw-generic-ss-cluster-sched-2
         namespace: test1
       generictemplate:
         apiVersion: apps/v1
         kind: StatefulSet
         metadata:
-          name: aw-generic-statefulset-2
+          name: aw-generic-ss-cluster-sched-2
           namespace: test1
           labels:
-            app: aw-generic-statefulset-2
+            app: aw-generic-ss-cluster-sched-2
         spec:
           replicas: 2
           selector:
             matchLabels:
-              app: aw-generic-statefulset-2
+              app: aw-generic-ss-cluster-sched-2
           template:
             metadata:
               labels:
-                app: aw-generic-statefulset-2
+                app: aw-generic-ss-cluster-sched-2
             spec:
               containers:
-              - name: aw-generic-statefulset-2
+              - name: aw-generic-ss-cluster-sched-2
                 image: k8s.gcr.io/echoserver:1.4
                 imagePullPolicy: Never
                 ports:
