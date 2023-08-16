@@ -62,10 +62,10 @@ spec:
                         completionstatus:
                           description: Optional field that drives completion status of appwrapper.
                             This field within an item of an appwrapper determines the full state of appwrapper.
-                            The completionstatus field contains a list of conditions that make the associate item considered 
+                            The completionstatus field contains a list of conditions that make the associate item considered
                             completed, for instance :- completion conditions could be "Complete" or "Failed".
-                            The associated item's level .status.conditions[].type field is monitored for any one of these conditions.  Once all items with this 
-                            option is set and the conditionstatus is met the entire appwrapper state will be changed to one of the valid appwrapper completion state. Note :- this is an AND 
+                            The associated item's level .status.conditions[].type field is monitored for any one of these conditions.  Once all items with this
+                            option is set and the conditionstatus is met the entire appwrapper state will be changed to one of the valid appwrapper completion state. Note :- this is an AND
                             operation for all items where this option is set.  See the list of appwrapper states for a list of valid complete states.
                           type: string
 
@@ -298,6 +298,71 @@ spec:
                           items are stopped and removed from the cluster (AppWrapper remains deployed).
                         type: integer
                         default: 0
+                    type: object
+                  clusterScheduling:
+                    description: Stanza to define cluster allocation restrictions.
+                      Used only in multiCluster mode.
+                    properties:
+                      clusters:
+                        description: Specifies cluster IDs for allocation
+                          restrictions.  Used only in
+                          multiCluster mode.
+                        items:
+                          properties:
+                            name:
+                              description: Cluster ID name.  Used only in
+                                multiCluster mode.
+                              type: string
+                          type: object
+                        type: array
+                      clusterSelector:
+                        description: (UNSUPPORTED FIELD) A label selector is a label
+                          query over a set of cluster objects.  The result of
+                          matchLabels and matchExpressions are ANDed. An empty
+                          label selector matches all objects. A null label selector
+                          matches no objects.
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector requirements.
+                              The requirements are ANDed.
+                            items:
+                              description: A label selector requirement is a selector that
+                                contains values, a key, and an operator that relates the key
+                                and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector applies
+                                    to.
+                                  type: string
+                                operator:
+                                  description: operator represents a key's relationship to
+                                    a set of values. Valid operators are In, NotIn, Exists
+                                    and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: values is an array of string values. If the
+                                    operator is In or NotIn, the values array must be non-empty.
+                                    If the operator is Exists or DoesNotExist, the values
+                                    array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: matchLabels is a map of {key,value} pairs. A single
+                              {key,value} in the matchLabels map is equivalent to an element
+                              of matchExpressions, whose key field is "key", the operator
+                              is "In", and the values array contains only "value". The requirements
+                              are ANDed.
+                            type: object
+                        type: object
                     type: object
                   dispatchDuration:
                     description: Wall clock duration time of appwrapper in seconds
