@@ -1111,8 +1111,21 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 				if qjm.serverOption.DynamicPriority {
 					priorityindex = -math.MaxFloat64
 				}
+				//cache.go updatestate method fails resulting in empty resource object
+				//cache upate failure costly, as it will put current AW in backoff queue plus take another dispatch cycle
+				//In worst case the cache update could fail for subsequent dispatche cycles causing test cases to fail or AW never getting dispatched
+				//To avoid non-determinism below code is workaround. this should be issue should be fixed: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/550
+				var unallocatedResources = clusterstateapi.EmptyResource()
+				unallocatedResources = qjm.cache.GetUnallocatedResources()
+				for unallocatedResources.IsEmpty() {
+					unallocatedResources.Add(qjm.cache.GetUnallocatedResources())
+					if !unallocatedResources.IsEmpty() {
+						break
+					}
+				}
+
 				resources, proposedPreemptions := qjm.getAggregatedAvailableResourcesPriority(
-					qjm.cache.GetUnallocatedResources(), priorityindex, qj, "")
+					unallocatedResources, priorityindex, qj, "")
 				klog.Infof("[ScheduleNext] [Agent Mode] Appwrapper '%s/%s' with resources %v to be scheduled on aggregated idle resources %v", qj.Namespace, qj.Name, aggqj, resources)
 
 				// Assume preemption will remove low priroity AWs in the system, optimistically dispatch such AWs
