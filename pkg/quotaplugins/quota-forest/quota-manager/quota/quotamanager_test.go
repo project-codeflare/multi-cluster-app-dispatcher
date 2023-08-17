@@ -17,6 +17,8 @@ limitations under the License.
 package quota_test
 
 import (
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -379,6 +381,211 @@ func TestQuotaManagerQuotaUsedLongRunningConsumers(t *testing.T) {
 		})
 	}
 
+}
+
+var (
+	tree1String string = `{
+	"kind": "QuotaTree",
+	"metadata": {
+	  "name": "tree-1"
+	},
+	"spec": {
+	  "resourceNames": [
+		"cpu",
+		"memory"
+	  ],
+	  "nodes": {
+		"A": {
+		  "parent": "nil",
+		  "hard": "true",
+		  "quota": {
+			"cpu": "10",
+			"memory": "256"
+		  }
+		},
+		"B": {
+		  "parent": "A",
+		  "hard": "true",
+		  "quota": {
+			"cpu": "2",
+			"memory": "64"
+		  }
+		},
+		"C": {
+		  "parent": "A",
+		  "quota": {
+			"cpu": "6",
+			"memory": "64"
+		  }
+		}
+	  }
+	}
+}`
+
+	tree2String string = `{
+	"kind": "QuotaTree",
+	"metadata": {
+	  "name": "tree-2"
+	},
+	"spec": {
+	  "resourceNames": [
+		"gpu"
+	  ],
+	  "nodes": {
+		"X": {
+		  "parent": "nil",
+		  "hard": "true",
+		  "quota": {
+			"gpu": "32"
+		  }
+		},
+		"Y": {
+		  "parent": "X",
+		  "hard": "true",
+		  "quota": {
+			"gpu": "16"
+		  }
+		},
+		"Z": {
+		  "parent": "X",
+		  "quota": {
+			"gpu": "8"
+		  }
+		}
+	  }
+	}
+}`
+
+	tree3String string = `{
+	"kind": "QuotaTree",
+	"metadata": {
+	  "name": "tree-3"
+	},
+	"spec": {
+	  "resourceNames": [
+		"count"
+	  ],
+	  "nodes": {
+		"zone": {
+		  "parent": "nil",
+		  "hard": "true",
+		  "quota": {
+			"count": "100"
+		  }
+		},
+		"rack": {
+		  "parent": "zone",
+		  "hard": "true",
+		  "quota": {
+			"count": "100"
+		  }
+		},
+		"server": {
+		  "parent": "rack",
+		  "quota": {
+			"count": "100"
+		  }
+		}
+	  }
+	}
+}`
+)
+
+// TestAddDeleteTrees : test adding, retrieving, deleting trees
+func TestAddDeleteTrees(t *testing.T) {
+	qmTest := quota.NewManager()
+	assert.NotNil(t, qmTest, "Expecting no error creating a quota manager")
+	modeSet := qmTest.SetMode(quota.Normal)
+	assert.True(t, modeSet, "Expecting no error setting mode to normal")
+	mode := qmTest.GetMode()
+	assert.True(t, mode == quota.Normal, "Expecting mode set to normal")
+	modeString := qmTest.GetModeString()
+	match := strings.Contains(modeString, "Normal")
+	assert.True(t, match, "Expecting mode set to normal")
+	// add a few trees by name
+	treeNames := []string{"tree-1", "tree-2", "tree-3"}
+	treeStrings := []string{tree1String, tree2String, tree3String}
+	for i, treeString := range treeStrings {
+		name, err := qmTest.AddTreeFromString(treeString)
+		assert.NoError(t, err, "No error expected when adding a tree")
+		assert.Equal(t, treeNames[i], name, "Returned name should match")
+	}
+	// get list of names
+	names := qmTest.GetTreeNames()
+	assert.ElementsMatch(t, treeNames, names, "Expecting retrieved tree names same as added names")
+	// delete a name
+	deletedTreeName := treeNames[0]
+	remainingTreeNames := treeNames[1:]
+	err := qmTest.DeleteTree(deletedTreeName)
+	assert.NoError(t, err, "No error expected when deleting an existing tree")
+	// get list of names after deletion
+	names = qmTest.GetTreeNames()
+	assert.ElementsMatch(t, remainingTreeNames, names, "Expecting retrieved tree names to reflect additions/deletions")
+	// delete a non-existing name
+	err = qmTest.DeleteTree(deletedTreeName)
+	assert.Error(t, err, "Error expected when deleting a non-existing tree")
+}
+
+// TestAddDeleteForests : test adding, retrieving, deleting forests
+func TestAddDeleteForests(t *testing.T) {
+	var err error
+	qmTest := quota.NewManager()
+	assert.NotNil(t, qmTest, "Expecting no error creating a quota manager")
+	modeSet := qmTest.SetMode(quota.Normal)
+	assert.True(t, modeSet, "Expecting no error setting mode to normal")
+
+	// add a few trees by name
+	treeNames := []string{"tree-1", "tree-2", "tree-3"}
+	treeStrings := []string{tree1String, tree2String, tree3String}
+	for i, treeString := range treeStrings {
+		name, err := qmTest.AddTreeFromString(treeString)
+		assert.NoError(t, err, "No error expected when adding a tree")
+		assert.Equal(t, treeNames[i], name, "Returned name should match")
+	}
+	// create two forests
+	forestNames := []string{"forest-1", "forest-2"}
+	for _, forestName := range forestNames {
+		err = qmTest.AddForest(forestName)
+		assert.NoError(t, err, "No error expected when adding a forest")
+	}
+	// assign trees to forests
+	err = qmTest.AddTreeToForest("forest-1", "tree-1")
+	assert.NoError(t, err, "No error expected when adding a tree to a forest")
+	err = qmTest.AddTreeToForest("forest-2", "tree-2")
+	assert.NoError(t, err, "No error expected when adding a tree to a forest")
+	err = qmTest.AddTreeToForest("forest-2", "tree-3")
+	assert.NoError(t, err, "No error expected when adding a tree to a forest")
+	// get list of forest names
+	fNames := qmTest.GetForestNames()
+	assert.ElementsMatch(t, forestNames, fNames, "Expecting retrieved forest names same as added names")
+	// get forests map
+	forestTreeMap := qmTest.GetForestTreeNames()
+	for _, v := range forestTreeMap {
+		sort.Strings(v)
+	}
+	inputForestTreeMap := map[string][]string{"forest-1": {"tree-1"}, "forest-2": {"tree-2", "tree-3"}}
+	assert.True(t, reflect.DeepEqual(forestTreeMap, inputForestTreeMap),
+		"Expecting retrieved forest tree map same as input, got %v, want %v", forestTreeMap, inputForestTreeMap)
+	// delete a forest
+	deletedForestName := forestNames[0]
+	remainingForestNames := forestNames[1:]
+	err = qmTest.DeleteForest(deletedForestName)
+	assert.NoError(t, err, "No error expected when deleting an existing forest")
+	// get list of forest names after deletion
+	fNames = qmTest.GetForestNames()
+	assert.ElementsMatch(t, remainingForestNames, fNames, "Expecting retrieved forest names to reflect additions/deletions")
+	// delete a non-existing forest name
+	err = qmTest.DeleteForest(deletedForestName)
+	assert.Error(t, err, "Error expected when deleting a non-existing forest")
+	// delete a tree from a forest
+	err = qmTest.DeleteTreeFromForest("forest-2", "tree-2")
+	assert.NoError(t, err, "No error expected when deleting an existing tree from an existing forest")
+	err = qmTest.DeleteTreeFromForest("forest-2", "tree-2")
+	assert.Error(t, err, "Error expected when deleting an non-existing tree from an existing forest")
+	// check remaining trees after deletions
+	names := qmTest.GetTreeNames()
+	assert.True(t, reflect.DeepEqual(treeNames, names),
+		"Expecting all trees after forest deletions as trees are not deleted, got %v, want %v", names, treeNames)
 }
 
 type AllocationClassifier struct {
