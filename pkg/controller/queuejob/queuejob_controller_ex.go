@@ -172,7 +172,7 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	//TODO: work on enabling metrics adapter for correct MCAD mode
 	//metrics adapter is implemented through dynamic client which looks at all the
 	//resources installed in the cluster to construct cache. May be this is need in
-	//multi-cluster mode, so for now it is turned-off
+	//multi-cluster mode, so for now it is turned-off: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/585
 	//cc.metricsAdapter = adapter.New(serverOption, config, cc.cache)
 
 	cc.genericresources = genericresource.NewAppWrapperGenericResource(config)
@@ -1246,7 +1246,7 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 					go qjm.backoff(ctx, qj, dispatchFailedReason, dispatchFailedMessage)
 				}
 				// if the HeadOfLineHoldingTime option is not set it will break the loop
-				//TODO: Remove schedulingTimeExpired flag
+				//TODO: Remove schedulingTimeExpired flag: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/586
 				schedulingTimeExpired := false
 				if forwarded {
 					break
@@ -2046,14 +2046,6 @@ func (cc *XController) manageQueueJob(ctx context.Context, qj *arbv1.AppWrapper,
 					klog.Errorf("[manageQueueJob] Error updating status 'setQueueing' for AppWrapper: '%s/%s',Status=%+v, err=%+v.", qj.Namespace, qj.Name, qj.Status, err)
 					return err
 				}
-				// if err00 = cc.qjqueue.AddIfNotPresent(qj); err00 != nil {
-				// 	klog.Errorf("[manageQueueJob] [Dispatcher] Fail to add '%s/%s' to activeQueue. Back to eventQueue activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v err=%#v",
-				// 		qj.Namespace, qj.Name, cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, err00)
-				// 	cc.enqueue(qj)
-				// } else {
-				// 	klog.V(4).Infof("[manageQueueJob] [Dispatcher] '%s/%s' 1Delay=%.6f seconds activeQ.Add_success activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
-				// 		qj.Namespace, qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
-				// }
 			}
 			return nil
 		}
