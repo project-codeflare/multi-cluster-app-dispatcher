@@ -169,6 +169,7 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		cache:           clusterstatecache.New(config),
 		schedulingAW:    nil,
 	}
+	//TODO: work on enabling metrics adapter for correct MCAD mode
 	//metrics adapter is implemented through dynamic client which looks at all the
 	//resources installed in the cluster to construct cache. May be this is need in
 	//multi-cluster mode, so for now it is turned-off
@@ -1245,7 +1246,7 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 					go qjm.backoff(ctx, qj, dispatchFailedReason, dispatchFailedMessage)
 				}
 				// if the HeadOfLineHoldingTime option is not set it will break the loop
-				//schedulingTimeExpired := time.Now().After(HOLStartTime.Add(time.Duration(qjm.serverOption.HeadOfLineHoldingTime) * time.Second))
+				//TODO: Remove schedulingTimeExpired flag
 				schedulingTimeExpired := false
 				if forwarded {
 					break
