@@ -120,7 +120,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
-		time.Sleep(1 * time.Minute)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -128,7 +127,8 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw2 := createDeploymentAWwith426CPU(context, appendRandomString("aw-deployment-2-426cpu"))
 		appwrappers = append(appwrappers, aw2)
 		err = waitAWAnyPodsExists(context, aw2)
-		Expect(err).NotTo(HaveOccurred())
+		//With improved accounting, no pods will be spawned
+		Expect(err).To(HaveOccurred())
 
 		// This should fit on cluster, initially queued because of aw2 above but should eventually
 		// run after prevention of aw2 above.
