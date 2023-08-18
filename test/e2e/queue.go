@@ -153,7 +153,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// The job should be requeued 3 times before it finishes since the wait time is doubled each time the job is requeued (i.e., initially it waits
 		// for 1 minutes before requeuing, then 2 minutes, and then 4 minutes). Since the init containers take 3 minutes
 		// and 20 seconds to finish, a 4 minute wait should be long enough to finish the job successfully
-		aw := createJobAWWithInitContainer(context, "aw-job-3-init-container", 60, "exponential", 0)
+		aw := createJobAWWithInitContainer(context, "aw-job-3-init-container-1", 60, "exponential", 0)
 		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsCompleted(context, aw, 12*time.Minute) // This test waits for 12 minutes to make sure all PODs complete
@@ -556,10 +556,17 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		appwrappers = append(appwrappers, aw)
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: aw-test-jobtimeout-with-comp-1")
-		time.Sleep(90 * time.Second)
-		aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
+		var aw1 *arbv1.AppWrapper
+		var err error
+		aw1, err = context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Expecting no error when getting app wrapper status")
 		fmt.Fprintf(GinkgoWriter, "[e2e] status of app wrapper: %v.\n", aw1.Status)
+		for aw1.Status.State != arbv1.AppWrapperStateFailed {
+			aw1, err = context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
+			if aw.Status.State == arbv1.AppWrapperStateFailed {
+				break
+			}
+		}
 		Expect(aw1.Status.State).To(Equal(arbv1.AppWrapperStateFailed), "Expecting a failed state")
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD app wrapper timeout Test - Completed.\n")
 	})
