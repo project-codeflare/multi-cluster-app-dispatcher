@@ -249,7 +249,7 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		if jobClusterAgent != nil {
 			cc.agentMap["/root/kubernetes/"+agentData[0]] = jobClusterAgent
 			cc.agentList = append(cc.agentList, "/root/kubernetes/"+agentData[0])
-		}		
+		}
 	}
 
 	if cc.isDispatcher && len(cc.agentMap) == 0 {
