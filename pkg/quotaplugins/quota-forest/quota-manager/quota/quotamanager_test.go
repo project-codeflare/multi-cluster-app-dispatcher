@@ -27,6 +27,7 @@ import (
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/utils"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/utils/strings/slices"
 )
 
 // TestNewQuotaManagerConsumerAllocationRelease function emulates multiple threads adding quota consumers and removing them
@@ -493,6 +494,7 @@ var (
 
 // TestAddDeleteTrees : test adding, retrieving, deleting trees
 func TestAddDeleteTrees(t *testing.T) {
+	// create a test quota manager
 	qmTest := quota.NewManager()
 	assert.NotNil(t, qmTest, "Expecting no error creating a quota manager")
 	modeSet := qmTest.SetMode(quota.Normal)
@@ -502,6 +504,7 @@ func TestAddDeleteTrees(t *testing.T) {
 	modeString := qmTest.GetModeString()
 	match := strings.Contains(modeString, "Normal")
 	assert.True(t, match, "Expecting mode set to normal")
+
 	// add a few trees by name
 	treeNames := []string{"tree-1", "tree-2", "tree-3"}
 	treeStrings := []string{tree1String, tree2String, tree3String}
@@ -510,17 +513,21 @@ func TestAddDeleteTrees(t *testing.T) {
 		assert.NoError(t, err, "No error expected when adding a tree")
 		assert.Equal(t, treeNames[i], name, "Returned name should match")
 	}
+
 	// get list of names
 	names := qmTest.GetTreeNames()
 	assert.ElementsMatch(t, treeNames, names, "Expecting retrieved tree names same as added names")
+
 	// delete a name
 	deletedTreeName := treeNames[0]
 	remainingTreeNames := treeNames[1:]
 	err := qmTest.DeleteTree(deletedTreeName)
 	assert.NoError(t, err, "No error expected when deleting an existing tree")
+
 	// get list of names after deletion
 	names = qmTest.GetTreeNames()
 	assert.ElementsMatch(t, remainingTreeNames, names, "Expecting retrieved tree names to reflect additions/deletions")
+
 	// delete a non-existing name
 	err = qmTest.DeleteTree(deletedTreeName)
 	assert.Error(t, err, "Error expected when deleting a non-existing tree")
@@ -529,6 +536,8 @@ func TestAddDeleteTrees(t *testing.T) {
 // TestAddDeleteForests : test adding, retrieving, deleting forests
 func TestAddDeleteForests(t *testing.T) {
 	var err error
+
+	// create a test quota manager
 	qmTest := quota.NewManager()
 	assert.NotNil(t, qmTest, "Expecting no error creating a quota manager")
 	modeSet := qmTest.SetMode(quota.Normal)
@@ -542,6 +551,7 @@ func TestAddDeleteForests(t *testing.T) {
 		assert.NoError(t, err, "No error expected when adding a tree")
 		assert.Equal(t, treeNames[i], name, "Returned name should match")
 	}
+
 	// create two forests
 	forestNames := []string{"forest-1", "forest-2"}
 	for _, forestName := range forestNames {
@@ -555,9 +565,11 @@ func TestAddDeleteForests(t *testing.T) {
 	assert.NoError(t, err, "No error expected when adding a tree to a forest")
 	err = qmTest.AddTreeToForest("forest-2", "tree-3")
 	assert.NoError(t, err, "No error expected when adding a tree to a forest")
+
 	// get list of forest names
 	fNames := qmTest.GetForestNames()
 	assert.ElementsMatch(t, forestNames, fNames, "Expecting retrieved forest names same as added names")
+
 	// get forests map
 	forestTreeMap := qmTest.GetForestTreeNames()
 	for _, v := range forestTreeMap {
@@ -566,26 +578,88 @@ func TestAddDeleteForests(t *testing.T) {
 	inputForestTreeMap := map[string][]string{"forest-1": {"tree-1"}, "forest-2": {"tree-2", "tree-3"}}
 	assert.True(t, reflect.DeepEqual(forestTreeMap, inputForestTreeMap),
 		"Expecting retrieved forest tree map same as input, got %v, want %v", forestTreeMap, inputForestTreeMap)
+
 	// delete a forest
 	deletedForestName := forestNames[0]
 	remainingForestNames := forestNames[1:]
 	err = qmTest.DeleteForest(deletedForestName)
 	assert.NoError(t, err, "No error expected when deleting an existing forest")
+
 	// get list of forest names after deletion
 	fNames = qmTest.GetForestNames()
 	assert.ElementsMatch(t, remainingForestNames, fNames, "Expecting retrieved forest names to reflect additions/deletions")
+
 	// delete a non-existing forest name
 	err = qmTest.DeleteForest(deletedForestName)
 	assert.Error(t, err, "Error expected when deleting a non-existing forest")
+
 	// delete a tree from a forest
 	err = qmTest.DeleteTreeFromForest("forest-2", "tree-2")
 	assert.NoError(t, err, "No error expected when deleting an existing tree from an existing forest")
 	err = qmTest.DeleteTreeFromForest("forest-2", "tree-2")
 	assert.Error(t, err, "Error expected when deleting an non-existing tree from an existing forest")
+
 	// check remaining trees after deletions
 	names := qmTest.GetTreeNames()
 	assert.True(t, reflect.DeepEqual(treeNames, names),
 		"Expecting all trees after forest deletions as trees are not deleted, got %v, want %v", names, treeNames)
+}
+
+var (
+	consumerInfoString1 string = `{
+		"kind": "Consumer",
+		"metadata": {
+		  "name": "consumer-info"
+		},
+		"spec": {
+		  "id": "consumer-1",
+		  "trees": [
+			 {
+			   "treeName": "test-tree",
+			  "groupID": "D",
+			  "request": {
+				"cpu": 4,
+				"memory": 16
+			  }
+			}
+		  ]
+		}
+	  }`
+)
+
+// TestAddRemoveConsumers : test adding and removing consumers
+func TestAddRemoveConsumers(t *testing.T) {
+	// create a test quota manager
+	qmTest := quota.NewManager()
+	assert.NotNil(t, qmTest, "Expecting no error creating a quota manager")
+	modeSet := qmTest.SetMode(quota.Normal)
+	assert.True(t, modeSet, "Expecting no error setting mode to normal")
+
+	// create consumer info
+	consumerInfo1, err := quota.NewConsumerInfoFromString(consumerInfoString1)
+	assert.NotNil(t, consumerInfo1, "Expecting a valid consumer info object")
+	assert.NoError(t, err, "No error expected when creating a consumer info")
+	consumerID := consumerInfo1.GetID()
+	assert.Equal(t, "consumer-1", consumerID, "Expecting consumer ID in consumer info to match ID in spec string")
+
+	// add consumer
+	added, err := qmTest.AddConsumer(consumerInfo1)
+	assert.True(t, added && err == nil, "Expecting consumer to be added to quota manager")
+	addedAgain, _ := qmTest.AddConsumer(consumerInfo1)
+	assert.False(t, addedAgain, "Expecting an existing consumer not to be added to quota manager")
+	consumerIDs := qmTest.GetAllConsumerIDs()
+	consumerExists := slices.Contains(consumerIDs, consumerID)
+	assert.True(t, consumerExists, "Expecting added consumer to be in list")
+
+	// remove consumer
+	consumerRemoved, err := qmTest.RemoveConsumer(consumerID)
+	assert.True(t, consumerRemoved && err == nil, "Expecting existing consumer to be removed")
+	consumerIDsAfterRemoval := qmTest.GetAllConsumerIDs()
+	consumerExistsAfterRemoval := slices.Contains(consumerIDsAfterRemoval, consumerID)
+	assert.False(t, consumerExistsAfterRemoval, "Expecting removed consumer not to be in list")
+	consumerRemovedAgain, err := qmTest.RemoveConsumer(consumerID)
+	assert.False(t, consumerRemovedAgain, "Expecting non-existing consumer not to be removed")
+	assert.Error(t, err, "Expecting error when removing a non-existing consumer")
 }
 
 type AllocationClassifier struct {
