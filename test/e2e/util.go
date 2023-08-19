@@ -1687,7 +1687,6 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 						GenericTemplate: runtime.RawExtension{
 							Raw: rb,
 						},
-						CompletionStatus: "Progressing",
 					},
 					{
 						DesiredAvailable: 1,
