@@ -174,7 +174,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createJobAWWithInitContainer(context, "aw-job-3-init-container", 1, "none", 3)
 		appwrappers = append(appwrappers, aw)
 
-		err := waitAWPodsCompleted(context, aw, 300*time.Second)
+		err := waitAWPodsCompleted(context, aw, 200*time.Second)
 		Expect(err).To(HaveOccurred())
 	})
 
