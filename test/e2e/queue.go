@@ -722,8 +722,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
 			if aw1.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
 				pass = true
-			}
-			if pass {
 				break
 			}
 		}
