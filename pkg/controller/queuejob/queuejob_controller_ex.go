@@ -35,12 +35,13 @@ import (
 	"github.com/hashicorp/go-multierror"
 	qmutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
 
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotaforestmanager"
 	dto "github.com/prometheus/client_model/go"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter"
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/metrics"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -124,6 +125,9 @@ type XController struct {
 	// Metrics API Server
 	metricsAdapter *adapter.MetricsAdapter
 
+	// Cluster Metrics Manager
+	clusterMetricsManager *metrics.ClusterMetricsManager
+
 	// EventQueueforAgent
 	agentEventQueue *cache.FIFO
 
@@ -170,6 +174,8 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		schedulingAW:    nil,
 	}
 	cc.metricsAdapter = adapter.New(serverOption, config, cc.cache)
+
+	cc.clusterMetricsManager = metrics.NewClusterMetricsManager(cc.cache)
 
 	cc.genericresources = genericresource.NewAppWrapperGenericResource(config)
 
