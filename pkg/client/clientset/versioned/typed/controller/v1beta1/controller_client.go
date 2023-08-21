@@ -24,22 +24,22 @@ import (
 	rest "k8s.io/client-go/rest"
 )
 
-type McadV1beta1Interface interface {
+type WorkloadV1beta1Interface interface {
 	RESTClient() rest.Interface
 	AppWrappersGetter
 }
 
-// McadV1beta1Client is used to interact with features provided by the mcad.ibm.com group.
-type McadV1beta1Client struct {
+// WorkloadV1beta1Client is used to interact with features provided by the workload.codeflare.dev group.
+type WorkloadV1beta1Client struct {
 	restClient rest.Interface
 }
 
-func (c *McadV1beta1Client) AppWrappers(namespace string) AppWrapperInterface {
+func (c *WorkloadV1beta1Client) AppWrappers(namespace string) AppWrapperInterface {
 	return newAppWrappers(c, namespace)
 }
 
-// NewForConfig creates a new McadV1beta1Client for the given config.
-func NewForConfig(c *rest.Config) (*McadV1beta1Client, error) {
+// NewForConfig creates a new WorkloadV1beta1Client for the given config.
+func NewForConfig(c *rest.Config) (*WorkloadV1beta1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -48,12 +48,12 @@ func NewForConfig(c *rest.Config) (*McadV1beta1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &McadV1beta1Client{client}, nil
+	return &WorkloadV1beta1Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new McadV1beta1Client for the given config and
+// NewForConfigOrDie creates a new WorkloadV1beta1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *McadV1beta1Client {
+func NewForConfigOrDie(c *rest.Config) *WorkloadV1beta1Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -61,9 +61,9 @@ func NewForConfigOrDie(c *rest.Config) *McadV1beta1Client {
 	return client
 }
 
-// New creates a new McadV1beta1Client for the given RESTClient.
-func New(c rest.Interface) *McadV1beta1Client {
-	return &McadV1beta1Client{c}
+// New creates a new WorkloadV1beta1Client for the given RESTClient.
+func New(c rest.Interface) *WorkloadV1beta1Client {
+	return &WorkloadV1beta1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -81,7 +81,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *McadV1beta1Client) RESTClient() rest.Interface {
+func (c *WorkloadV1beta1Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

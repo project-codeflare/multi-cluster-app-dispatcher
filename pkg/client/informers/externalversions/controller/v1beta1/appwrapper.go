@@ -62,13 +62,13 @@ func NewFilteredAppWrapperInformer(client versioned.Interface, namespace string,
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.McadV1beta1().AppWrappers(namespace).List(context.TODO(), options)
+				return client.WorkloadV1beta1().AppWrappers(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.McadV1beta1().AppWrappers(namespace).Watch(context.TODO(), options)
+				return client.WorkloadV1beta1().AppWrappers(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&controllerv1beta1.AppWrapper{},

@@ -110,8 +110,8 @@ metadata:
     kubernetes.io/bootstrapping: rbac-defaults
 rules:
 - apiGroups:
-  - mcad.ibm.com
-  - ibm.com
+  - quota.codeflare.dev
+  - workload.codeflare.dev
   resources:
   - xqueuejobs
   - queuejobs

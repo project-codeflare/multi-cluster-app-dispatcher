@@ -173,14 +173,14 @@ type SharedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
-	Mcad() controller.Interface
-	Ibm() quotasubtree.Interface
+	Workload() controller.Interface
+	Quota() quotasubtree.Interface
 }
 
-func (f *sharedInformerFactory) Mcad() controller.Interface {
+func (f *sharedInformerFactory) Workload() controller.Interface {
 	return controller.New(f, f.namespace, f.tweakListOptions)
 }
 
-func (f *sharedInformerFactory) Ibm() quotasubtree.Interface {
+func (f *sharedInformerFactory) Quota() quotasubtree.Interface {
 	return quotasubtree.New(f, f.namespace, f.tweakListOptions)
 }

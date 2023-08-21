@@ -5,9 +5,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
-  name: schedulingspecs.mcad.ibm.com
+  name: schedulingspecs.workload.codeflare.dev
 spec:
-  group: mcad.ibm.com
+  group: workload.codeflare.dev
   names:
     kind: SchedulingSpec
     listKind: SchedulingSpecList

@@ -24,17 +24,17 @@ import (
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeIbmV1 struct {
+type FakeQuotaV1 struct {
 	*testing.Fake
 }
 
-func (c *FakeIbmV1) QuotaSubtrees(namespace string) v1.QuotaSubtreeInterface {
+func (c *FakeQuotaV1) QuotaSubtrees(namespace string) v1.QuotaSubtreeInterface {
 	return &FakeQuotaSubtrees{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeIbmV1) RESTClient() rest.Interface {
+func (c *FakeQuotaV1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

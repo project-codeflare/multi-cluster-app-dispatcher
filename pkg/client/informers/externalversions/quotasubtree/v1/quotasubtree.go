@@ -62,13 +62,13 @@ func NewFilteredQuotaSubtreeInformer(client versioned.Interface, namespace strin
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.IbmV1().QuotaSubtrees(namespace).List(context.TODO(), options)
+				return client.QuotaV1().QuotaSubtrees(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.IbmV1().QuotaSubtrees(namespace).Watch(context.TODO(), options)
+				return client.QuotaV1().QuotaSubtrees(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&quotasubtreev1.QuotaSubtree{},

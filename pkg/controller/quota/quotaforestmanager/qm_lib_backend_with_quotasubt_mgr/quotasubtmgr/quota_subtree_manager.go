@@ -73,7 +73,7 @@ func newQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Mana
 		qstinformers.WithTweakListOptions(func(opt *metav1.ListOptions) {
 			opt.LabelSelector = util.URMTreeLabel
 		}))
-	qstm.quotaSubtreeInformer = qstInformerFactory.Ibm().V1().QuotaSubtrees()
+	qstm.quotaSubtreeInformer = qstInformerFactory.Quota().V1().QuotaSubtrees()
 
 	// Add event handle for resource plans
 	qstm.quotaSubtreeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -182,7 +182,7 @@ func (qstm *QuotaSubtreeManager) createTreeNodesFromQST(qst *qstv1.QuotaSubtree)
 		klog.V(4).Infof("[createTreeNodesFromQST] Created node: %s=%#v for QuotaSubtree  %s completed.",
 			child_key, *node, qst.Name)
 
-		//Add to the list of nodes from this quotasubtree
+		// Add to the list of nodes from this quotasubtree
 		nodeSpecs[child_key] = node
 	}
 

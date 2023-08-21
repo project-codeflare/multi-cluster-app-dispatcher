@@ -1,4 +1,4 @@
-apiVersion: ibm.com/v1
+apiVersion: quota.codeflare.dev/v1
 kind: QuotaSubtree
 metadata:
   name: actinides-root
@@ -9,7 +9,7 @@ spec:
   children:
     - name: actinides-root
 ---
-apiVersion: ibm.com/v1
+apiVersion: quota.codeflare.dev/v1
 kind: QuotaSubtree
 metadata:
   name: actinides-children
@@ -22,7 +22,7 @@ spec:
     - name: plutonium
     - name: lawrencium
 ---
-apiVersion: ibm.com/v1
+apiVersion: quota.codeflare.dev/v1
 kind: QuotaSubtree
 metadata:
   name: context-root
@@ -30,7 +30,7 @@ metadata:
   labels:
     tree: quota_context
 ---
-apiVersion: ibm.com/v1
+apiVersion: quota.codeflare.dev/v1
 kind: QuotaSubtree
 metadata:
   name: service-root
@@ -38,7 +38,7 @@ metadata:
   labels:
     tree: quota_service
 ---
-apiVersion: ibm.com/v1
+apiVersion: quota.codeflare.dev/v1
 kind: QuotaSubtree
 metadata:
   name: context-root-children

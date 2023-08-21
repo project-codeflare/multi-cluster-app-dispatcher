@@ -1,21 +1,5 @@
 //go:build !private
-// +build !private
 
-/*
-Copyright 2018 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 /*
 Copyright 2019, 2021 The Multi-Cluster App Dispatcher Authors.
 
@@ -31,6 +15,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package e2e
 
 import (
@@ -127,7 +112,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw2 := createDeploymentAWwith426CPU(context, appendRandomString("aw-deployment-2-426cpu"))
 		appwrappers = append(appwrappers, aw2)
 		err = waitAWAnyPodsExists(context, aw2)
-		//With improved accounting, no pods will be spawned
+		// With improved accounting, no pods will be spawned
 		Expect(err).To(HaveOccurred())
 
 		// This should fit on cluster, initially queued because of aw2 above but should eventually
@@ -237,7 +222,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	//NOTE: Recommend this test not to be the last test in the test suite it may pass
+	// NOTE: Recommend this test not to be the last test in the test suite it may pass
 	//      the local test but may cause controller to fail which is not
 	//      part of this test's validation.
 
@@ -297,7 +282,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred())
 		pass := false
 		for true {
-			aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
+			aw1, err := context.karclient.WorkloadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
 			if err != nil {
 				fmt.Fprint(GinkgoWriter, "Error getting status")
 			}
@@ -373,7 +358,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	// This test is flawed, the namespace created by this appwrapper is not cleaned up.
 	// FIXME https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/471
 	// Leaving it here so that the builds no longer fail
-	//TODO: Below two tests are turned off, please refer to github issue here: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/598
+	// TODO: Below two tests are turned off, please refer to github issue here: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/598
 	// It("Create AppWrapper - Namespace Only - 0 Pods", func() {
 	// 	fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - Started.\n")
 	// 	context := initTestContext()
@@ -471,7 +456,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// Make sure pods from AW aw-deployment-1-850-cpu have preempted
 		var pass = false
 		for true {
-			aw2Update, err := context.karclient.McadV1beta1().AppWrappers(aw2.Namespace).Get(context.ctx, aw2.Name, metav1.GetOptions{})
+			aw2Update, err := context.karclient.WorkloadV1beta1().AppWrappers(aw2.Namespace).Get(context.ctx, aw2.Name, metav1.GetOptions{})
 			if err != nil {
 				fmt.Fprintf(GinkgoWriter, "[e2e] MCAD Scheduling Fail Fast Preemption Test - Error getting AW update %v", err)
 			}
@@ -535,8 +520,8 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err).NotTo(HaveOccurred(), "Waiting for pods to be ready for app wrapper: aw-deployment-2-550cpu")
 
 		// This should fit on cluster but customPodResources is incorrect so AW pods are not created
-		//NOTE: with deployment controlled removed this test case is invalid.
-		//Users should keep custompodresources equal to container resources.
+		// NOTE: with deployment controlled removed this test case is invalid.
+		// Users should keep custompodresources equal to container resources.
 		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
 			context, appendRandomString("aw-deployment-2-427-vs-425-cpu"), "4270m", "425m", 2, 60)
 
@@ -559,11 +544,11 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err1).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: aw-test-jobtimeout-with-comp-1")
 		var aw1 *arbv1.AppWrapper
 		var err error
-		aw1, err = context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
+		aw1, err = context.karclient.WorkloadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Expecting no error when getting app wrapper status")
 		fmt.Fprintf(GinkgoWriter, "[e2e] status of app wrapper: %v.\n", aw1.Status)
 		for aw1.Status.State != arbv1.AppWrapperStateFailed {
-			aw1, err = context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
+			aw1, err = context.karclient.WorkloadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
 			if aw.Status.State == arbv1.AppWrapperStateFailed {
 				break
 			}
@@ -654,7 +639,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Eventually(AppWrapper(context, aw.Namespace, aw.Name), 2*time.Minute).Should(WithTransform(AppWrapperState, Equal(arbv1.AppWrapperStateEnqueued)))
 		appwrappers = append(appwrappers, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Job Large Compute Requirement Test - Completed.\n")
-
 	})
 
 	It("MCAD CPU Accounting Queuing Test", func() {
@@ -707,7 +691,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Eventually(AppWrapper(context, aw.Namespace, aw.Name), 2*time.Minute).Should(WithTransform(AppWrapperState, Equal(arbv1.AppWrapperStateActive)))
 		appwrappers = append(appwrappers, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Service no RuningHoldCompletion or Complete Test - Completed.\n")
-
 	})
 
 	It("Create AppWrapper - Generic 50 Deployment Only - 2 pods each", func() {

@@ -1,6 +1,6 @@
 # Verify AppWrappers finished successfully
 ---
-apiVersion: mcad.ibm.com/v1beta1
+apiVersion: workload.codeflare.dev/v1beta1
 kind: AppWrapper
 metadata:
     name: my-job-1
@@ -8,7 +8,7 @@ metadata:
 status:
     state: Completed
 ---
-apiVersion: mcad.ibm.com/v1beta1
+apiVersion: workload.codeflare.dev/v1beta1
 kind: AppWrapper
 metadata:
     name: my-job-2

@@ -2,7 +2,7 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: appwrappers.mcad.ibm.com
+  name: appwrappers.workload.codeflare.dev
 status:
   acceptedNames:
     kind: AppWrapper
@@ -19,7 +19,7 @@ metadata:
   name: start-up-03
 ---
 # Verify subtree creations
-apiVersion: ibm.com/v1
+apiVersion: quota.codeflare.dev/v1
 kind: QuotaSubtree
 metadata:
   name: context-root
@@ -27,7 +27,7 @@ metadata:
   labels:
     tree: quota_context
 ---
-apiVersion: ibm.com/v1
+apiVersion: quota.codeflare.dev/v1
 kind: QuotaSubtree
 metadata:
   name: service-root
@@ -35,7 +35,7 @@ metadata:
   labels:
     tree: quota_service
 ---
-apiVersion: ibm.com/v1
+apiVersion: quota.codeflare.dev/v1
 kind: QuotaSubtree
 metadata:
   name: context-root-children

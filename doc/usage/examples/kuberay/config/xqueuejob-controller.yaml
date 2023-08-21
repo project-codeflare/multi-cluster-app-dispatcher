@@ -11,7 +11,7 @@ metadata:
   name: system:controller:xqueuejob-controller
 rules:
 - apiGroups:
-  - mcad.ibm.com
+  - workload.codeflare.dev
   resources:
   - xqueuejobs
   - queuejobs

@@ -57,7 +57,7 @@ type appWrappers struct {
 }
 
 // newAppWrappers returns a AppWrappers
-func newAppWrappers(c *McadV1beta1Client, namespace string) *appWrappers {
+func newAppWrappers(c *WorkloadV1beta1Client, namespace string) *appWrappers {
 	return &appWrappers{
 		client: c.RESTClient(),
 		ns:     namespace,

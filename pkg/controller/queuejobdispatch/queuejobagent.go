@@ -95,7 +95,7 @@ func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterA
 		func(opt *metav1.ListOptions) {
 			opt.LabelSelector = "IsDispatched=true"
 		},
-	).Mcad().V1beta1().AppWrappers()
+	).Workload().V1beta1().AppWrappers()
 	qa.jobInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
 			FilterFunc: func(obj interface{}) bool {
@@ -161,7 +161,7 @@ func (qa *JobClusterAgent) Run(stopCh <-chan struct{}) {
 func (qa *JobClusterAgent) DeleteJob(ctx context.Context, cqj *arbv1.AppWrapper) {
 	qj_temp := cqj.DeepCopy()
 	klog.V(2).Infof("[Dispatcher: Agent] Request deletion of XQJ %s to Agent %s\n", qj_temp.Name, qa.AgentId)
-	qa.queuejobclients.McadV1beta1().AppWrappers(qj_temp.Namespace).Delete(ctx, qj_temp.Name, metav1.DeleteOptions{})
+	qa.queuejobclients.WorkloadV1beta1().AppWrappers(qj_temp.Namespace).Delete(ctx, qj_temp.Name, metav1.DeleteOptions{})
 }
 
 func (qa *JobClusterAgent) CreateJob(ctx context.Context, cqj *arbv1.AppWrapper) {
@@ -183,7 +183,7 @@ func (qa *JobClusterAgent) CreateJob(ctx context.Context, cqj *arbv1.AppWrapper)
 	agent_qj.Labels["IsDispatched"] = "true"
 
 	klog.V(2).Infof("[Dispatcher: Agent] Create XQJ: %s (Status: %+v) in Agent %s\n", agent_qj.Name, agent_qj.Status, qa.AgentId)
-	qa.queuejobclients.McadV1beta1().AppWrappers(agent_qj.Namespace).Create(ctx, agent_qj, metav1.CreateOptions{})
+	qa.queuejobclients.WorkloadV1beta1().AppWrappers(agent_qj.Namespace).Create(ctx, agent_qj, metav1.CreateOptions{})
 }
 
 type ClusterMetricsList struct {

@@ -77,9 +77,9 @@ type XController struct {
 
 	appwrapperInformer arbinformers.AppWrapperInformer
 	// resources registered for the AppWrapper
-	//qjobRegisteredResources queuejobresources.RegisteredResources
+	// qjobRegisteredResources queuejobresources.RegisteredResources
 	// controllers for these resources
-	//qjobResControls map[arbv1.ResourceType]queuejobresources.Interface
+	// qjobResControls map[arbv1.ResourceType]queuejobresources.Interface
 
 	// Captures all available resources in the cluster
 	genericresources *genericresource.GenericResources
@@ -93,10 +93,10 @@ type XController struct {
 
 	// QueueJobs that need to be initialized
 	// Add labels and selectors to AppWrapper
-	//initQueue *cache.FIFO
+	// initQueue *cache.FIFO
 
 	// QueueJobs that need to sync up after initialization
-	//updateQueue *cache.FIFO
+	// updateQueue *cache.FIFO
 
 	// eventQueue that need to sync up
 	eventQueue *cache.FIFO
@@ -104,9 +104,9 @@ type XController struct {
 	// QJ queue that needs to be allocated
 	qjqueue SchedulingQueue
 
-	//TODO: Do we need this local cache?
+	// TODO: Do we need this local cache?
 	// our own local cache, used for computing total amount of resources
-	//cache clusterstatecache.Cache
+	// cache clusterstatecache.Cache
 
 	// is dispatcher or deployer?
 	isDispatcher bool
@@ -214,8 +214,8 @@ func (qjm *XController) allocatableCapacity() *clusterstateapi.Resource {
 		var specNodeName = "spec.nodeName"
 		labelSelector := fmt.Sprintf("%s=%s", specNodeName, node.Name)
 		podList, err := qjm.clients.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{FieldSelector: labelSelector})
-		//TODO: when no pods are listed, do we send entire node capacity as available
-		//this will cause false positive dispatch.
+		// TODO: when no pods are listed, do we send entire node capacity as available
+		// this will cause false positive dispatch.
 		if err != nil {
 			klog.Errorf("[allocatableCapacity] Error listing pods %v", err)
 		}
@@ -241,23 +241,23 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		arbclients:      clientset.NewForConfigOrDie(config),
 		eventQueue:      cache.NewFIFO(GetQueueJobKey),
 		agentEventQueue: cache.NewFIFO(GetQueueJobKey),
-		//initQueue:       cache.NewFIFO(GetQueueJobKey),
-		//updateQueue: cache.NewFIFO(GetQueueJobKey),
+		// initQueue:       cache.NewFIFO(GetQueueJobKey),
+		// updateQueue: cache.NewFIFO(GetQueueJobKey),
 		qjqueue: NewSchedulingQueue(),
-		//cache is turned-off, issue: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/588
-		//cache:        clusterstatecache.New(config),
+		// cache is turned-off, issue: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/588
+		// cache:        clusterstatecache.New(config),
 		schedulingAW: nil,
 	}
-	//TODO: work on enabling metrics adapter for correct MCAD mode
-	//metrics adapter is implemented through dynamic client which looks at all the
-	//resources installed in the cluster to construct cache. May be this is need in
-	//multi-cluster mode, so for now it is turned-off: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/585
-	//cc.metricsAdapter = adapter.New(serverOption, config, cc.cache)
+	// TODO: work on enabling metrics adapter for correct MCAD mode
+	// metrics adapter is implemented through dynamic client which looks at all the
+	// resources installed in the cluster to construct cache. May be this is need in
+	// multi-cluster mode, so for now it is turned-off: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/585
+	// cc.metricsAdapter = adapter.New(serverOption, config, cc.cache)
 
 	cc.genericresources = genericresource.NewAppWrapperGenericResource(config)
 
-	//cc.qjobResControls = map[arbv1.ResourceType]queuejobresources.Interface{}
-	//RegisterAllQueueJobResourceTypes(&cc.qjobRegisteredResources)
+	// cc.qjobResControls = map[arbv1.ResourceType]queuejobresources.Interface{}
+	// RegisterAllQueueJobResourceTypes(&cc.qjobRegisteredResources)
 
 	// initialize pod sub-resource control
 	// resControlPod, found, err := cc.qjobRegisteredResources.InitQueueJobResource(arbv1.ResourceTypePod, config)
@@ -275,7 +275,7 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	if err != nil {
 		klog.Fatalf("Could not instantiate k8s client, err=%v", err)
 	}
-	cc.appwrapperInformer = informerFactory.NewSharedInformerFactory(appWrapperClient, 0).Mcad().V1beta1().AppWrappers()
+	cc.appwrapperInformer = informerFactory.NewSharedInformerFactory(appWrapperClient, 0).Workload().V1beta1().AppWrappers()
 	cc.appwrapperInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
 			FilterFunc: func(obj interface{}) bool {
@@ -745,7 +745,7 @@ func (qjm *XController) getDispatchedAppWrappers() (map[string]*clusterstateapi.
 		klog.Errorf("[getDispatchedAppWrappers] Failure creating client for initialization informer err=%#v", err)
 		return awrRetVal, awsRetVal
 	}
-	queueJobInformer := informerFactory.NewSharedInformerFactory(appWrapperClient, 0).Mcad().V1beta1().AppWrappers()
+	queueJobInformer := informerFactory.NewSharedInformerFactory(appWrapperClient, 0).Workload().V1beta1().AppWrappers()
 	queueJobInformer.Informer().AddEventHandler(
 		cache.FilteringResourceEventHandler{
 			FilterFunc: func(obj interface{}) bool {
@@ -806,7 +806,7 @@ func (qjm *XController) addTotalSnapshotResourcesConsumedByAw(totalgpu int32, to
 
 func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClusterResources *clusterstateapi.
 	Resource, targetpr float64, requestingJob *arbv1.AppWrapper, agentId string) (*clusterstateapi.Resource, []*arbv1.AppWrapper) {
-	//get available free resources in the cluster.
+	// get available free resources in the cluster.
 	r := unallocatedClusterResources.Clone()
 	// Track preemption resources
 	preemptable := clusterstateapi.EmptyResource()
@@ -821,9 +821,9 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 		klog.Errorf("[getAggAvaiResPri] Unable to obtain the list of queueJobs %+v", err)
 		return r, nil
 	}
-	//for all AWs that have canRun status are true
-	//in non-preemption mode, we reserve resources for AWs
-	//reserving is done by subtracting total AW resources from pods owned by AW that are running or completed.
+	// for all AWs that have canRun status are true
+	// in non-preemption mode, we reserve resources for AWs
+	// reserving is done by subtracting total AW resources from pods owned by AW that are running or completed.
 	// AW can be running but items owned by it can be completed or there might be new set of pods yet to be spawned
 	for _, value := range queueJobs {
 		klog.V(10).Infof("[getAggAvaiResPri] %s: Evaluating job: %s to calculate aggregated resources.", time.Now().String(), value.Name)
@@ -1005,14 +1005,14 @@ func (qjm *XController) nodeChecks(histograms map[string]*dto.Metric, aw *arbv1.
 func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 	ctx := context.Background()
 	var err error = nil
-	//TODO: do we really need locking now since we have a single thread processing an AW ?
+	// TODO: do we really need locking now since we have a single thread processing an AW ?
 	qjm.schedulingMutex.Lock()
 	qjm.schedulingAW = qj
 	qjm.schedulingMutex.Unlock()
 	// ensure that current active appwrapper is reset at the end of this function, to prevent
 	// the appwrapper from being added in syncjob
 	defer qjm.schedulingAWAtomicSet(nil)
-	//TODO: Retry value is set to 1, do we really need retries?
+	// TODO: Retry value is set to 1, do we really need retries?
 	scheduleNextRetrier := retrier.New(retrier.ExponentialBackoff(1, 100*time.Millisecond), &EtcdErrorClassifier{})
 	scheduleNextRetrier.SetJitter(0.05)
 	// Retry the execution
@@ -1177,8 +1177,8 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 				if qjm.serverOption.DynamicPriority {
 					priorityindex = -math.MaxFloat64
 				}
-				//cache now is a method inside the controller.
-				//The reimplementation should fix issue : https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/550
+				// cache now is a method inside the controller.
+				// The reimplementation should fix issue : https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/550
 				var unallocatedResources = clusterstateapi.EmptyResource()
 				unallocatedResources = qjm.allocatableCapacity()
 				for unallocatedResources.IsEmpty() {
@@ -1320,7 +1320,7 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 					forwarded = true
 				}
 
-				//TODO: Remove schedulingTimeExpired flag: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/586
+				// TODO: Remove schedulingTimeExpired flag: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/586
 				schedulingTimeExpired := false
 				if forwarded {
 					break
@@ -1369,7 +1369,7 @@ func (cc *XController) updateEtcd(ctx context.Context, currentAppwrapper *arbv1.
 	klog.V(4).Infof("[updateEtcd] trying to update '%s/%s' called by '%s'", currentAppwrapper.Namespace, currentAppwrapper.Name, caller)
 	currentAppwrapper.Status.Sender = "before " + caller // set Sender string to indicate code location
 	currentAppwrapper.Status.Local = false               // for Informer FilterFunc to pickup
-	updatedAppwrapper, err := cc.arbclients.McadV1beta1().AppWrappers(currentAppwrapper.Namespace).Update(ctx, currentAppwrapper, metav1.UpdateOptions{})
+	updatedAppwrapper, err := cc.arbclients.WorkloadV1beta1().AppWrappers(currentAppwrapper.Namespace).Update(ctx, currentAppwrapper, metav1.UpdateOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -1385,7 +1385,7 @@ func (cc *XController) updateEtcd(ctx context.Context, currentAppwrapper *arbv1.
 func (cc *XController) updateStatusInEtcd(ctx context.Context, currentAppwrapper *arbv1.AppWrapper, caller string) error {
 	klog.V(4).Infof("[updateStatusInEtcd] trying to update '%s/%s' called by '%s'", currentAppwrapper.Namespace, currentAppwrapper.Name, caller)
 	currentAppwrapper.Status.Sender = "before " + caller // set Sender string to indicate code location
-	updatedAppwrapper, err := cc.arbclients.McadV1beta1().AppWrappers(currentAppwrapper.Namespace).UpdateStatus(ctx, currentAppwrapper, metav1.UpdateOptions{})
+	updatedAppwrapper, err := cc.arbclients.WorkloadV1beta1().AppWrappers(currentAppwrapper.Namespace).UpdateStatus(ctx, currentAppwrapper, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -1406,7 +1406,7 @@ func (cc *XController) updateStatusInEtcdWithRetry(ctx context.Context, source *
 	updatedAW := source.DeepCopy()
 	err := updateStatusRetrierRetrier.RunCtx(ctx, func(localContext context.Context) error {
 		var retryErr error
-		updatedAW, retryErr = cc.arbclients.McadV1beta1().AppWrappers(updatedAW.Namespace).UpdateStatus(localContext, updatedAW, metav1.UpdateOptions{})
+		updatedAW, retryErr = cc.arbclients.WorkloadV1beta1().AppWrappers(updatedAW.Namespace).UpdateStatus(localContext, updatedAW, metav1.UpdateOptions{})
 		if retryErr != nil && apierrors.IsConflict(retryErr) {
 			dest, retryErr := cc.getAppWrapper(source.Namespace, source.Name, caller)
 			if retryErr != nil && !apierrors.IsNotFound(retryErr) {
@@ -1494,13 +1494,13 @@ func (qjm *XController) backoff(ctx context.Context, q *arbv1.AppWrapper, reason
 func (cc *XController) Run(stopCh <-chan struct{}) {
 	go cc.appwrapperInformer.Informer().Run(stopCh)
 
-	//go cc.qjobResControls[arbv1.ResourceTypePod].Run(stopCh)
+	// go cc.qjobResControls[arbv1.ResourceTypePod].Run(stopCh)
 
 	cache.WaitForCacheSync(stopCh, cc.appWrapperSynced)
 
-	//cache is turned off, issue: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/588
+	// cache is turned off, issue: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/588
 	// update snapshot of ClientStateCache every second
-	//cc.cache.Run(stopCh)
+	// cc.cache.Run(stopCh)
 
 	// start preempt thread is used to preempt AWs that have partial pods or have reached dispatch duration
 	go wait.Until(cc.PreemptQueueJobs, 60*time.Second, stopCh)
@@ -1575,7 +1575,7 @@ func (qjm *XController) UpdateQueueJobs() {
 				}
 				err := qjm.updateStatusInEtcdWithRetry(context.Background(), updateQj, "[UpdateQueueJobs]  setRunningHoldCompletion")
 				if err != nil {
-					//TODO: implement retry
+					// TODO: implement retry
 					klog.Errorf("[UpdateQueueJobs]  Error updating status 'setRunningHoldCompletion' for AppWrapper: '%s/%s',Status=%+v, err=%+v.", newjob.Namespace, newjob.Name, newjob.Status, err)
 				}
 			}
@@ -1601,13 +1601,13 @@ func (qjm *XController) UpdateQueueJobs() {
 					if qjm.quotaManager != nil {
 						qjm.quotaManager.Release(updateQj)
 					}
-					//TODO: Implement retry
+					// TODO: Implement retry
 					klog.Errorf("[UpdateQueueJobs]  Error updating status 'setCompleted' AppWrapper: '%s/%s',Status=%+v, err=%+v.", newjob.Namespace, newjob.Name, newjob.Status, err)
 				}
 				if qjm.quotaManager != nil {
 					qjm.quotaManager.Release(updateQj)
 				}
-				//Delete AW from both queue's
+				// Delete AW from both queue's
 				qjm.eventQueue.Delete(updateQj)
 				qjm.qjqueue.Delete(updateQj)
 			}
@@ -1672,7 +1672,7 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 	}
 
 	klog.V(6).Infof("[Informer-updateQJ] '%s/%s' *Delay=%.6f seconds normal enqueue Version=%s Status=%v", newQJ.Namespace, newQJ.Name, time.Now().Sub(newQJ.Status.ControllerFirstTimestamp.Time).Seconds(), newQJ.ResourceVersion, newQJ.Status)
-	//cc.eventQueue.Delete(oldObj)
+	// cc.eventQueue.Delete(oldObj)
 	cc.enqueue(newQJ)
 }
 
@@ -1784,7 +1784,7 @@ func (cc *XController) updateQueueJobStatus(ctx context.Context, queueJobFromAge
 	}
 	new_flag := queueJobFromAgent.Status.State
 	queueJobInEtcd.Status.State = new_flag
-	_, err = cc.arbclients.McadV1beta1().AppWrappers(queueJobInEtcd.Namespace).Update(ctx, queueJobInEtcd, metav1.UpdateOptions{})
+	_, err = cc.arbclients.WorkloadV1beta1().AppWrappers(queueJobInEtcd.Namespace).Update(ctx, queueJobInEtcd, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -1817,8 +1817,8 @@ func (cc *XController) worker() {
 			return nil
 		}
 
-		//asmalvan - starts
-		//TODO: Should this be part of ScheduleNext() method?
+		// asmalvan - starts
+		// TODO: Should this be part of ScheduleNext() method?
 		if queuejob.Status.State == arbv1.AppWrapperStateCompleted {
 			return nil
 		}
@@ -1861,13 +1861,13 @@ func (cc *XController) worker() {
 
 			return nil
 		}
-		//scheduleNext method takes a dispatched AW which has not been evaluated, extract resources requested by AW
-		//compares it with available unallocated cluster resources, performs quota check
-		//if everything passes then CanRun is set to true and AW is ready for dispatch
+		// scheduleNext method takes a dispatched AW which has not been evaluated, extract resources requested by AW
+		// compares it with available unallocated cluster resources, performs quota check
+		// if everything passes then CanRun is set to true and AW is ready for dispatch
 		if !queuejob.Status.CanRun && (queuejob.Status.State != arbv1.AppWrapperStateActive) {
 			cc.ScheduleNext(queuejob)
-			//When an AW passes ScheduleNext gate then we want to progress AW to Running to begin with
-			//Sync queuejob will not unwrap an AW to spawn genericItems
+			// When an AW passes ScheduleNext gate then we want to progress AW to Running to begin with
+			// Sync queuejob will not unwrap an AW to spawn genericItems
 			if queuejob.Status.CanRun {
 
 				// errs := make(chan error, 1)
@@ -1883,11 +1883,9 @@ func (cc *XController) worker() {
 					// If any error, requeue it.
 					return err
 				}
-
 			}
-
 		}
-		//asmalvan- ends
+		// asmalvan- ends
 
 		klog.V(10).Infof("[worker] Ending %s Delay=%.6f seconds &newQJ=%p Version=%s Status=%+v", queuejob.Name, time.Now().Sub(queuejob.Status.ControllerFirstTimestamp.Time).Seconds(), queuejob, queuejob.ResourceVersion, queuejob.Status)
 

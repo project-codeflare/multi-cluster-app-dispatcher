@@ -5,9 +5,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
-  name: quotasubtrees.ibm.com
+  name: quotasubtrees.quota.codeflare.dev
 spec:
-  group: ibm.com
+  group: quota.codeflare.dev
   names:
     kind: QuotaSubtree
     listKind: QuotaSubtreeList

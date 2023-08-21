@@ -2,6 +2,6 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - bases/ibm.com_quotasubtrees.yaml
-  - bases/mcad.ibm.com_appwrappers.yaml
-  - bases/mcad.ibm.com_schedulingspecs.yaml
+  - bases/quota.codeflare.dev_quotasubtrees.yaml
+  - bases/workload.codeflare.dev_appwrappers.yaml
+  - bases/workload.codeflare.dev_schedulingspecs.yaml

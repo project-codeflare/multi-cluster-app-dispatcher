@@ -21,8 +21,8 @@ package versioned
 import (
 	"fmt"
 
-	mcadv1beta1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/controller/v1beta1"
-	ibmv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/quotasubtree/v1"
+	workloadv1beta1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/controller/v1beta1"
+	quotav1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/quotasubtree/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -30,26 +30,26 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	McadV1beta1() mcadv1beta1.McadV1beta1Interface
-	IbmV1() ibmv1.IbmV1Interface
+	WorkloadV1beta1() workloadv1beta1.WorkloadV1beta1Interface
+	QuotaV1() quotav1.QuotaV1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	mcadV1beta1 *mcadv1beta1.McadV1beta1Client
-	ibmV1       *ibmv1.IbmV1Client
+	workloadV1beta1 *workloadv1beta1.WorkloadV1beta1Client
+	quotaV1         *quotav1.QuotaV1Client
 }
 
-// McadV1beta1 retrieves the McadV1beta1Client
-func (c *Clientset) McadV1beta1() mcadv1beta1.McadV1beta1Interface {
-	return c.mcadV1beta1
+// WorkloadV1beta1 retrieves the WorkloadV1beta1Client
+func (c *Clientset) WorkloadV1beta1() workloadv1beta1.WorkloadV1beta1Interface {
+	return c.workloadV1beta1
 }
 
-// IbmV1 retrieves the IbmV1Client
-func (c *Clientset) IbmV1() ibmv1.IbmV1Interface {
-	return c.ibmV1
+// QuotaV1 retrieves the QuotaV1Client
+func (c *Clientset) QuotaV1() quotav1.QuotaV1Interface {
+	return c.quotaV1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -73,11 +73,11 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.mcadV1beta1, err = mcadv1beta1.NewForConfig(&configShallowCopy)
+	cs.workloadV1beta1, err = workloadv1beta1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
-	cs.ibmV1, err = ibmv1.NewForConfig(&configShallowCopy)
+	cs.quotaV1, err = quotav1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -93,8 +93,8 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.mcadV1beta1 = mcadv1beta1.NewForConfigOrDie(c)
-	cs.ibmV1 = ibmv1.NewForConfigOrDie(c)
+	cs.workloadV1beta1 = workloadv1beta1.NewForConfigOrDie(c)
+	cs.quotaV1 = quotav1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -103,8 +103,8 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.mcadV1beta1 = mcadv1beta1.New(c)
-	cs.ibmV1 = ibmv1.New(c)
+	cs.workloadV1beta1 = workloadv1beta1.New(c)
+	cs.quotaV1 = quotav1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

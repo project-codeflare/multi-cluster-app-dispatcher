@@ -1,5 +1,5 @@
 # Verify that quota management is enabled using different quota ids
-apiVersion: mcad.ibm.com/v1beta1
+apiVersion: workload.codeflare.dev/v1beta1
 kind: AppWrapper
 metadata:
   name: job-1-bronze-1replica
@@ -16,7 +16,7 @@ metadata:
   name: job-1-bronze-1replica-0
   namespace: test
 ---
-apiVersion: mcad.ibm.com/v1beta1
+apiVersion: workload.codeflare.dev/v1beta1
 kind: AppWrapper
 metadata:
   name: job-gold-high-pri-1replica
@@ -33,7 +33,7 @@ metadata:
   name: job-gold-high-pri-1replica-0
   namespace: test
 ---
-apiVersion: mcad.ibm.com/v1beta1
+apiVersion: workload.codeflare.dev/v1beta1
 kind: AppWrapper
 metadata:
   name: job-bad-quota-id-10replica
@@ -44,7 +44,7 @@ metadata:
 status:
   state: Pending
 ---
-apiVersion: mcad.ibm.com/v1beta1
+apiVersion: workload.codeflare.dev/v1beta1
 kind: AppWrapper
 metadata:
   name: job-gold-lo-pri-1replica

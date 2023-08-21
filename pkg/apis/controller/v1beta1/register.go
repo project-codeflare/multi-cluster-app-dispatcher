@@ -28,7 +28,7 @@ var (
 )
 
 // GroupName is the group name used in this package.
-const GroupName = "mcad.ibm.com"
+const GroupName = "workload.codeflare.dev"
 
 // SchemeGroupVersion is the group version used to register these objects.
 var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1beta1"}
