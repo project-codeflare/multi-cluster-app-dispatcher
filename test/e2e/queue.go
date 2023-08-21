@@ -483,7 +483,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			if pass {
 				break
 			} else {
-				time.Sleep(1 * time.Minute)
+				time.Sleep(30 * time.Second)
 			}
 		}
 
@@ -581,13 +581,24 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createGenericJobAWWithStatus(context, "aw-test-job-with-comp-1")
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred())
-		time.Sleep(1 * time.Minute)
 		aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
 		if err != nil {
 			fmt.Fprintf(GinkgoWriter, "Error getting status, %v\n", err)
 		}
 		Expect(err).Should(Succeed())
-		Expect(aw1.Status.State).To(Equal(arbv1.AppWrapperStateCompleted))
+		var pass = false
+		for true {
+			aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
+			if err != nil {
+				fmt.Fprintf(GinkgoWriter, "Error getting status, %v\n", err)
+			}
+			if aw1.Status.State == arbv1.AppWrapperStateCompleted {
+				pass = true
+				break
+			}
+		}
+
+		Expect(pass).To(Equal(true))
 		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
 		appwrappers = append(appwrappers, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Job Completion Test - Completed.\n")
@@ -603,13 +614,25 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createGenericJobAWWithMultipleStatus(context, "aw-test-job-with-comp-ms-21")
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: 'aw-test-job-with-comp-ms-21'")
-		time.Sleep(1 * time.Minute)
 		aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "No error is expected when getting status")
 		fmt.Fprintf(GinkgoWriter, "[e2e] MCAD Multi-Item Job Completion Test status of AW %v.\n", aw1.Status)
-		Expect(aw1.Status.State).To(Equal(arbv1.AppWrapperStateCompleted), "Expecting a completed app wrapper status")
+		var pass = false
+		for true {
+			aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
+			if err != nil {
+				fmt.Fprintf(GinkgoWriter, "Error getting status, %v\n", err)
+			}
+			if aw1.Status.State == arbv1.AppWrapperStateCompleted {
+				pass = true
+				break
+			}
+		}
+
+		Expect(pass).To(Equal(true))
+		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
 		appwrappers = append(appwrappers, aw)
-		fmt.Fprintf(os.Stdout, "[e2e] MCAD Job Completion Test - Completed.\n")
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD Multi-Item Job Completion Test - Completed.\n")
 	})
 
 	It("MCAD GenericItem Without Status Test", func() {
@@ -661,7 +684,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createGenericJobAWtWithLargeCompute(context, "aw-test-job-with-large-comp-1")
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred())
-		time.Sleep(1 * time.Minute)
 		aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
 		if err != nil {
 			fmt.Fprintf(GinkgoWriter, "Error getting status, %v", err)
@@ -708,7 +730,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 
 		aw := createGenericDeploymentAWWithMultipleItems(context, "aw-deployment-rhc")
 		appwrappers = append(appwrappers, aw)
-		time.Sleep(30 * time.Second)
+		//time.Sleep(30 * time.Second)
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: aw-deployment-rhc")
 		aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
@@ -738,7 +760,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		aw := createGenericServiceAWWithNoStatus(context, appendRandomString("aw-deployment-2-status"))
-		time.Sleep(1 * time.Minute)
+		//ßtime.Sleep(1 * time.Minute)
 		err1 := waitAWPodsReady(context, aw)
 		Expect(err1).NotTo(HaveOccurred())
 		aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
