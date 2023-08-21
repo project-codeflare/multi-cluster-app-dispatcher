@@ -108,6 +108,7 @@ type XController struct {
 	// QJ queue that needs to be allocated
 	qjqueue SchedulingQueue
 
+	//TODO: Do we need this local cache?
 	// our own local cache, used for computing total amount of resources
 	cache clusterstatecache.Cache
 
@@ -154,6 +155,46 @@ func GetQueueJobKey(obj interface{}) (string, error) {
 	return fmt.Sprintf("%s/%s", qj.Namespace, qj.Name), nil
 }
 
+//allocatableCapacity calculates the capacity available on each node by substracting resources
+//consumed by existing pods.
+//For a large cluster with thousands of nodes and hundreds of thousands of pods this
+//method could be a performance bottleneck
+//We can then move this method to a seperate thread that basically runs every X interval and
+//provides resources available to the next AW that needs to be dispatched.
+//Obviously the thread would need locking and timer to expire cache.
+//May be move to controller runtime can help.
+func (qjm *XController) allocatableCapacity() *clusterstateapi.Resource {
+	capacity := clusterstateapi.EmptyResource()
+	nodes, _ := qjm.clients.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+	startTime := time.Now()
+	for _, node := range nodes.Items {
+		// skip unschedulable nodes
+		if node.Spec.Unschedulable {
+			continue
+		}
+		nodeResource := clusterstateapi.NewResource(node.Status.Allocatable)
+		capacity.Add(nodeResource)
+		var specNodeName = "spec.nodeName"
+		labelSelector := fmt.Sprintf("%s=%s", specNodeName, node.Name)
+		podList, err := qjm.clients.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{FieldSelector: labelSelector})
+		//TODO: when no pods are listed, do we send entire node capacity as available
+		//this will cause false positive dispatch.
+		if err != nil {
+			klog.Errorf("[allocatableCapacity] Error listing pods %v", err)
+		}
+		for _, pod := range podList.Items {
+			if _, ok := pod.GetLabels()["appwrappers.mcad.ibm.com"]; !ok && pod.Status.Phase != v1.PodFailed && pod.Status.Phase != v1.PodSucceeded {
+				for _, container := range pod.Spec.Containers {
+					usedResource := clusterstateapi.NewResource(container.Resources.Requests)
+					capacity.Sub(usedResource)
+				}
+			}
+		}
+	}
+	klog.Info("[allocatableCapacity] The avaible capacity to dispatch appwrapper is %v and time took to calculate is %v", capacity, time.Now().Sub(startTime))
+	return capacity
+}
+
 // NewJobController create new AppWrapper Controller
 func NewJobController(config *rest.Config, serverOption *options.ServerOption) *XController {
 	cc := &XController{
@@ -166,8 +207,9 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		initQueue:       cache.NewFIFO(GetQueueJobKey),
 		updateQueue:     cache.NewFIFO(GetQueueJobKey),
 		qjqueue:         NewSchedulingQueue(),
-		cache:           clusterstatecache.New(config),
-		schedulingAW:    nil,
+		//TODO: do we still need cache to be initialized?
+		cache:        clusterstatecache.New(config),
+		schedulingAW: nil,
 	}
 	//TODO: work on enabling metrics adapter for correct MCAD mode
 	//metrics adapter is implemented through dynamic client which looks at all the
@@ -1098,19 +1140,16 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 				if qjm.serverOption.DynamicPriority {
 					priorityindex = -math.MaxFloat64
 				}
-				//cache.go updatestate method fails resulting in empty resource object
-				//cache upate failure costly, as it will put current AW in backoff queue plus take another dispatch cycle
-				//In worst case the cache update could fail for subsequent dispatche cycles causing test cases to fail or AW never getting dispatched
-				//To avoid non-determinism below code is workaround. this should be issue should be fixed: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/550
+				//cache now is a method inside the controller.
+				//The reimplementation should fix issue : https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/550
 				var unallocatedResources = clusterstateapi.EmptyResource()
-				unallocatedResources = qjm.cache.GetUnallocatedResources()
+				unallocatedResources = qjm.allocatableCapacity()
 				for unallocatedResources.IsEmpty() {
-					unallocatedResources.Add(qjm.cache.GetUnallocatedResources())
+					unallocatedResources.Add(qjm.allocatableCapacity())
 					if !unallocatedResources.IsEmpty() {
 						break
 					}
 				}
-
 				resources, proposedPreemptions := qjm.getAggregatedAvailableResourcesPriority(
 					unallocatedResources, priorityindex, qj, "")
 				klog.Infof("[ScheduleNext] [Agent Mode] Appwrapper '%s/%s' with resources %v to be scheduled on aggregated idle resources %v", qj.Namespace, qj.Name, aggqj, resources)
@@ -1118,6 +1157,7 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 				// Assume preemption will remove low priroity AWs in the system, optimistically dispatch such AWs
 
 				if aggqj.LessEqual(resources) {
+					//TODO: should we turn-off histograms?
 					unallocatedHistogramMap := qjm.cache.GetUnallocatedHistograms()
 					if !qjm.nodeChecks(unallocatedHistogramMap, qj) {
 						klog.Infof("[ScheduleNext] [Agent Mode] Optimistic dispatch for AW '%s/%s' requesting aggregated resources %v histogram for point in-time fragmented resources are available in the cluster %s",
@@ -1424,8 +1464,9 @@ func (cc *XController) Run(stopCh <-chan struct{}) {
 
 	cache.WaitForCacheSync(stopCh, cc.appWrapperSynced)
 
+	//TODO: do we still need to run cache every second?
 	// update snapshot of ClientStateCache every second
-	cc.cache.Run(stopCh)
+	//cc.cache.Run(stopCh)
 
 	// start preempt thread is used to preempt AWs that have partial pods or have reached dispatch duration
 	go wait.Until(cc.PreemptQueueJobs, 60*time.Second, stopCh)

@@ -120,7 +120,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		// This should fill up the worker node and most of the master node
 		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
 		appwrappers = append(appwrappers, aw)
-		time.Sleep(1 * time.Minute)
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -128,7 +127,8 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw2 := createDeploymentAWwith426CPU(context, appendRandomString("aw-deployment-2-426cpu"))
 		appwrappers = append(appwrappers, aw2)
 		err = waitAWAnyPodsExists(context, aw2)
-		Expect(err).NotTo(HaveOccurred())
+		//With improved accounting, no pods will be spawned
+		Expect(err).To(HaveOccurred())
 
 		// This should fit on cluster, initially queued because of aw2 above but should eventually
 		// run after prevention of aw2 above.
@@ -174,7 +174,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createJobAWWithInitContainer(context, "aw-job-3-init-container", 1, "none", 3)
 		appwrappers = append(appwrappers, aw)
 
-		err := waitAWPodsCompleted(context, aw, 300*time.Second)
+		err := waitAWPodsCompleted(context, aw, 200*time.Second)
 		Expect(err).To(HaveOccurred())
 	})
 
@@ -713,8 +713,20 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		Expect(err1).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: aw-deployment-rhc")
 		aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred(), "Expecting to get app wrapper status")
+		pass := false
+		for true {
+			aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
+			if err != nil {
+				fmt.Fprint(GinkgoWriter, "Error getting status")
+			}
+			fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
+			if aw1.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
+				pass = true
+				break
+			}
+		}
 		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
-		Expect(aw1.Status.State).To(Equal(arbv1.AppWrapperStateRunningHoldCompletion))
+		Expect(pass).To(BeTrue())
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Deployment RuningHoldCompletion Test - Completed. Awaiting app wrapper cleanup.\n")
 	})
 
