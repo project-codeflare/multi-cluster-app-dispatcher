@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"reflect"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -190,6 +189,8 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 	return name, gvk, err
 }
 
+//SyncQueueJob uses dynamic clients to wrap Items inside genericItems, it is used to create resources inside etcd and return errors when
+//unwrapping fails.
 func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperGenericResource) (podList []*v1.Pod, err error) {
 	startTime := time.Now()
 	defer func() {
@@ -319,29 +320,30 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	}
 
 	// Get the related resources of created object
-	var thisObj *unstructured.Unstructured
+	// var thisObj *unstructured.Unstructured
 	var err1 error
-	if namespaced {
-		thisObj, err1 = dclient.Resource(rsrc).Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
-	} else {
-		thisObj, err1 = dclient.Resource(rsrc).Get(context.Background(), name, metav1.GetOptions{})
-	}
+	// if namespaced {
+	// 	thisObj, err1 = dclient.Resource(rsrc).Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	// } else {
+	// 	thisObj, err1 = dclient.Resource(rsrc).Get(context.Background(), name, metav1.GetOptions{})
+	// }
 	if err1 != nil {
 		klog.Errorf("Could not get created resource with error %v", err1)
 		return []*v1.Pod{}, err1
 	}
-	thisOwnerRef := metav1.NewControllerRef(thisObj, thisObj.GroupVersionKind())
+	// thisOwnerRef := metav1.NewControllerRef(thisObj, thisObj.GroupVersionKind())
 
-	podL, _ := gr.clients.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
-	pods := []*v1.Pod{}
-	for _, pod := range (*podL).Items {
-		parent := metav1.GetControllerOf(&pod)
-		if reflect.DeepEqual(thisOwnerRef, parent) {
-			pods = append(pods, &pod)
-		}
-		klog.V(10).Infof("[SyncQueueJob] pod %s created from a Generic Item\n", pod.Name)
-	}
-	return pods, nil
+	// podL, _ := gr.clients.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
+	// pods := []*v1.Pod{}
+	// for _, pod := range (*podL).Items {
+	// 	parent := metav1.GetControllerOf(&pod)
+	// 	if reflect.DeepEqual(thisOwnerRef, parent) {
+	// 		pods = append(pods, &pod)
+	// 	}
+	// 	klog.V(10).Infof("[SyncQueueJob] pod %s created from a Generic Item\n", pod.Name)
+	// }
+	// return pods, nil
+	return []*v1.Pod{}, err1
 }
 
 // checks if object has pod template spec and add new labels
