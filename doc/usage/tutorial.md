@@ -19,7 +19,7 @@ Refer to [deployment instructions](../deploy/deployment.md) on how to deploy the
 After successfully deploying the __Multi-Cluster Application Dispatcher__ Controller, create an AppWrapper custom resource in a file named `aw-01.yaml` with the following content:
 
 ```yaml
-apiVersion: mcad.ibm.com/v1beta1
+apiVersion: workload.codeflare.dev/v1beta1
 kind: AppWrapper
 metadata:
   name: 0001-aw-generic-deployment-1
@@ -202,7 +202,7 @@ The next step is to create a second `AppWrapper` job that has resource demands t
 Create an `AppWrapper` job in a file named `aw-02.yaml` with the following content:
 
 ```yaml
-apiVersion: mcad.ibm.com/v1beta1
+apiVersion: workload.codeflare.dev/v1beta1
 kind: AppWrapper
 metadata:
   name: 0002-aw-generic-deployment-2
@@ -312,7 +312,7 @@ Delete the first `AppWrapper` job.
 
 ```bash
 $ kubectl delete -f aw-01.yaml
-appwrapper.mcad.ibm.com "0001-aw-generic-deployment-1" deleted
+appwrapper.workload.codeflare.dev "0001-aw-generic-deployment-1" deleted
 ```
 
 Check the pods status of the `AppWrapper` jobs.  The new pods from the second `AppWrapper` job: `0002-aw-generic-deployment-2` job should now be deployed and running.  

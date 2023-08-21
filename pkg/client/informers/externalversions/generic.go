@@ -53,13 +53,13 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=ibm.com, Version=v1
+	// Group=quota.codeflare.dev, Version=v1
 	case v1.SchemeGroupVersion.WithResource("quotasubtrees"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Ibm().V1().QuotaSubtrees().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Quota().V1().QuotaSubtrees().Informer()}, nil
 
-		// Group=mcad.ibm.com, Version=v1beta1
+		// Group=workload.codeflare.dev, Version=v1beta1
 	case v1beta1.SchemeGroupVersion.WithResource("appwrappers"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Mcad().V1beta1().AppWrappers().Informer()}, nil
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Workload().V1beta1().AppWrappers().Informer()}, nil
 
 	}
 

@@ -32,13 +32,13 @@ import (
 
 // FakeAppWrappers implements AppWrapperInterface
 type FakeAppWrappers struct {
-	Fake *FakeMcadV1beta1
+	Fake *FakeWorkloadV1beta1
 	ns   string
 }
 
-var appwrappersResource = schema.GroupVersionResource{Group: "mcad.ibm.com", Version: "v1beta1", Resource: "appwrappers"}
+var appwrappersResource = schema.GroupVersionResource{Group: "workload.codeflare.dev", Version: "v1beta1", Resource: "appwrappers"}
 
-var appwrappersKind = schema.GroupVersionKind{Group: "mcad.ibm.com", Version: "v1beta1", Kind: "AppWrapper"}
+var appwrappersKind = schema.GroupVersionKind{Group: "workload.codeflare.dev", Version: "v1beta1", Kind: "AppWrapper"}
 
 // Get takes name of the appWrapper, and returns the corresponding appWrapper object, and an error if there is any.
 func (c *FakeAppWrappers) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.AppWrapper, err error) {

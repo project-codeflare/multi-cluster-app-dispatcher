@@ -21,7 +21,7 @@ optimize resource utilization, avoid resource starvation, and ensure quality of 
 ## Example QuotaSubtree
 
 ```yaml
-apiVersion: ibm.com/v1
+apiVersion: quota.codeflare.dev/v1
 kind: QuotaSubtree
 metadata:
   name: context-root
@@ -37,7 +37,7 @@ spec:
           cpu: 2000m
           memory: 8000Mi
 ---
-apiVersion: ibm.com/v1
+apiVersion: quota.codeflare.dev/v1
 kind: QuotaSubtree
 metadata:
   name: context-root-children
@@ -64,7 +64,7 @@ spec:
 ## Using quota trees in your AppWrappers
 
 ```yaml
-apiVersion: mcad.ibm.com/v1beta1
+apiVersion: workload.codeflare.dev/v1beta1
 kind: AppWrapper
 metadata:
   name: myGangScheduledApp

@@ -13,7 +13,7 @@ var (
 
 const (
 	// GroupName is the group name used in this package.
-	GroupName = "ibm.com"
+	GroupName = "quota.codeflare.dev"
 
 	// GroupVersion is the version of scheduling group
 	GroupVersion = "v1"

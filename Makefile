@@ -217,15 +217,15 @@ clean:
 #CRD file maintenance rules
 DEPLOYMENT_CRD_DIR=deployment/mcad-controller/crds
 CRD_BASE_DIR=config/crd/bases
-MCAD_CRDS= ${DEPLOYMENT_CRD_DIR}/ibm.com_quotasubtrees.yaml  \
-		   ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_appwrappers.yaml \
-		   ${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_schedulingspecs.yaml
+MCAD_CRDS= ${DEPLOYMENT_CRD_DIR}/quota.codeflare.dev_quotasubtrees.yaml  \
+		   ${DEPLOYMENT_CRD_DIR}/workload.codeflare.dev_appwrappers.yaml \
+		   ${DEPLOYMENT_CRD_DIR}/workload.codeflare.dev_schedulingspecs.yaml
 
 update-deployment-crds: ${MCAD_CRDS}
 
-${DEPLOYMENT_CRD_DIR}/ibm.com_quotasubtrees.yaml : ${CRD_BASE_DIR}/ibm.com_quotasubtrees.yaml
-${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_appwrappers.yaml : ${CRD_BASE_DIR}/mcad.ibm.com_appwrappers.yaml
-${DEPLOYMENT_CRD_DIR}/mcad.ibm.com_schedulingspecs.yaml : ${CRD_BASE_DIR}/mcad.ibm.com_schedulingspecs.yaml
+${DEPLOYMENT_CRD_DIR}/quota.codeflare.dev_quotasubtrees.yaml : ${CRD_BASE_DIR}/quota.codeflare.dev_quotasubtrees.yaml
+${DEPLOYMENT_CRD_DIR}/workload.codeflare.dev_appwrappers.yaml : ${CRD_BASE_DIR}/workload.codeflare.dev_appwrappers.yaml
+${DEPLOYMENT_CRD_DIR}/workload.codeflare.dev_schedulingspecs.yaml : ${CRD_BASE_DIR}/workload.codeflare.dev_schedulingspecs.yaml
 
 $(DEPLOYMENT_CRD_DIR)/%: ${CRD_BASE_DIR}/%
 	cp $< $@

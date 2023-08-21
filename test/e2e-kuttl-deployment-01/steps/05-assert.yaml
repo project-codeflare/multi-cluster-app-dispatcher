@@ -1,5 +1,5 @@
 ---
-apiVersion: ibm.com/v1
+apiVersion: quota.codeflare.dev/v1
 kind: QuotaSubtree
 metadata:
   name: context-root
@@ -10,7 +10,7 @@ spec:
   children:
     - name: context-root
 ---
-apiVersion: ibm.com/v1
+apiVersion: quota.codeflare.dev/v1
 kind: QuotaSubtree
 metadata:
   name: context-root-children

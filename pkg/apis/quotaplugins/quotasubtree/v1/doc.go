@@ -16,6 +16,6 @@ limitations under the License.
 
 // +k8s:deepcopy-gen=package
 // +kubebuilder:object:generate=true
-// +groupName=ibm.com
+// +groupName=quota.codeflare.dev
 
 package v1

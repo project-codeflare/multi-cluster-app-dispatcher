@@ -57,7 +57,7 @@ type quotaSubtrees struct {
 }
 
 // newQuotaSubtrees returns a QuotaSubtrees
-func newQuotaSubtrees(c *IbmV1Client, namespace string) *quotaSubtrees {
+func newQuotaSubtrees(c *QuotaV1Client, namespace string) *quotaSubtrees {
 	return &quotaSubtrees{
 		client: c.RESTClient(),
 		ns:     namespace,

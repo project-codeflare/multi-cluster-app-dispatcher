@@ -1,4 +1,4 @@
-apiVersion: ibm.com/v1
+apiVersion: quota.codeflare.dev/v1
 kind: QuotaSubtree
 metadata:
   name: actinides-root
@@ -13,7 +13,7 @@ spec:
           cpu: 1075m
           memory: 1045Mi
 ---
-apiVersion: ibm.com/v1
+apiVersion: quota.codeflare.dev/v1
 kind: QuotaSubtree
 metadata:
   name: actinides-children

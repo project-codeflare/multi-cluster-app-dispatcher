@@ -24,22 +24,22 @@ import (
 	rest "k8s.io/client-go/rest"
 )
 
-type IbmV1Interface interface {
+type QuotaV1Interface interface {
 	RESTClient() rest.Interface
 	QuotaSubtreesGetter
 }
 
-// IbmV1Client is used to interact with features provided by the ibm.com group.
-type IbmV1Client struct {
+// QuotaV1Client is used to interact with features provided by the quota.codeflare.dev group.
+type QuotaV1Client struct {
 	restClient rest.Interface
 }
 
-func (c *IbmV1Client) QuotaSubtrees(namespace string) QuotaSubtreeInterface {
+func (c *QuotaV1Client) QuotaSubtrees(namespace string) QuotaSubtreeInterface {
 	return newQuotaSubtrees(c, namespace)
 }
 
-// NewForConfig creates a new IbmV1Client for the given config.
-func NewForConfig(c *rest.Config) (*IbmV1Client, error) {
+// NewForConfig creates a new QuotaV1Client for the given config.
+func NewForConfig(c *rest.Config) (*QuotaV1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -48,12 +48,12 @@ func NewForConfig(c *rest.Config) (*IbmV1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &IbmV1Client{client}, nil
+	return &QuotaV1Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new IbmV1Client for the given config and
+// NewForConfigOrDie creates a new QuotaV1Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *IbmV1Client {
+func NewForConfigOrDie(c *rest.Config) *QuotaV1Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -61,9 +61,9 @@ func NewForConfigOrDie(c *rest.Config) *IbmV1Client {
 	return client
 }
 
-// New creates a new IbmV1Client for the given RESTClient.
-func New(c rest.Interface) *IbmV1Client {
-	return &IbmV1Client{c}
+// New creates a new QuotaV1Client for the given RESTClient.
+func New(c rest.Interface) *QuotaV1Client {
+	return &QuotaV1Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -81,7 +81,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *IbmV1Client) RESTClient() rest.Interface {
+func (c *QuotaV1Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

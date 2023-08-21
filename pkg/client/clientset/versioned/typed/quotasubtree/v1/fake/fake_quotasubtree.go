@@ -32,13 +32,13 @@ import (
 
 // FakeQuotaSubtrees implements QuotaSubtreeInterface
 type FakeQuotaSubtrees struct {
-	Fake *FakeIbmV1
+	Fake *FakeQuotaV1
 	ns   string
 }
 
-var quotasubtreesResource = schema.GroupVersionResource{Group: "ibm.com", Version: "v1", Resource: "quotasubtrees"}
+var quotasubtreesResource = schema.GroupVersionResource{Group: "quota.codeflare.dev", Version: "v1", Resource: "quotasubtrees"}
 
-var quotasubtreesKind = schema.GroupVersionKind{Group: "ibm.com", Version: "v1", Kind: "QuotaSubtree"}
+var quotasubtreesKind = schema.GroupVersionKind{Group: "quota.codeflare.dev", Version: "v1", Kind: "QuotaSubtree"}
 
 // Get takes name of the quotaSubtree, and returns the corresponding quotaSubtree object, and an error if there is any.
 func (c *FakeQuotaSubtrees) Get(ctx context.Context, name string, options v1.GetOptions) (result *quotasubtreev1.QuotaSubtree, err error) {
