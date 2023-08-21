@@ -689,10 +689,18 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			fmt.Fprintf(GinkgoWriter, "Error getting status, %v", err)
 		}
 		pass := false
-		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
-		if aw1.Status.State == arbv1.AppWrapperStateEnqueued {
-			pass = true
+		for true {
+			aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
+			if err != nil {
+				fmt.Fprint(GinkgoWriter, "Error getting status")
+			}
+			if aw1.Status.State == arbv1.AppWrapperStateEnqueued {
+				pass = true
+				break
+			}
 		}
+
+		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
 		Expect(pass).To(BeTrue())
 		appwrappers = append(appwrappers, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Job Large Compute Requirement Test - Completed.\n")
@@ -768,10 +776,17 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			fmt.Fprintf(GinkgoWriter, "Error getting status, %v", err)
 		}
 		pass := false
-		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
-		if aw1.Status.State == arbv1.AppWrapperStateActive {
-			pass = true
+		for true {
+			aw1, err := context.karclient.McadV1beta1().AppWrappers(aw.Namespace).Get(context.ctx, aw.Name, metav1.GetOptions{})
+			if err != nil {
+				fmt.Fprintf(GinkgoWriter, "Error getting status, %v", err)
+			}
+			if aw1.Status.State == arbv1.AppWrapperStateActive {
+				pass = true
+				break
+			}
 		}
+		fmt.Fprintf(GinkgoWriter, "[e2e] status of AW %v.\n", aw1.Status.State)
 		Expect(pass).To(BeTrue())
 		appwrappers = append(appwrappers, aw)
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Service no RuningHoldCompletion or Complete Test - Completed.\n")
