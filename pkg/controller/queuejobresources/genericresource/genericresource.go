@@ -235,27 +235,32 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 		return []*v1.Pod{}, err
 	}
 
-	_, apiresourcelist, err := dd.ServerGroupsAndResources()
-	if err != nil {
-		if derr, ok := err.(*discovery.ErrGroupDiscoveryFailed); ok {
-			klog.Warning("Discovery failed for some groups, %d failing: %v", len(derr.Groups), err)
-		} else {
-			klog.Errorf("Error getting supported groups and resources, err=%#v", err)
-			return []*v1.Pod{}, err
-		}
-	}
+	//TODO: Simplified apiresourcelist discovery, the assumption is we will always deploy namespaced objects
+	//We dont intend to install CRDs like KubeRay, Spark-Operator etc through MCAD, I think such objects are typically
+	//cluster scoped. May be for Multi-Cluster or inference use case we need such deep discovery, so for now commenting code.
+
+	// _, apiresourcelist, err := dd.ServerGroupsAndResources()
+	// if err != nil {
+	// 	if derr, ok := err.(*discovery.ErrGroupDiscoveryFailed); ok {
+	// 		klog.Warning("Discovery failed for some groups, %d failing: %v", len(derr.Groups), err)
+	// 	} else {
+	// 		klog.Errorf("Error getting supported groups and resources, err=%#v", err)
+	// 		return []*v1.Pod{}, err
+	// 	}
+	// }
 
 	rsrc := mapping.Resource
-	for _, apiresourcegroup := range apiresourcelist {
-		if apiresourcegroup.GroupVersion == join(mapping.GroupVersionKind.Group, "/", mapping.GroupVersionKind.Version) {
-			for _, apiresource := range apiresourcegroup.APIResources {
-				if apiresource.Name == mapping.Resource.Resource && apiresource.Kind == mapping.GroupVersionKind.Kind {
-					rsrc = mapping.Resource
-					namespaced = apiresource.Namespaced
-				}
-			}
-		}
-	}
+
+	// for _, apiresourcegroup := range apiresourcelist {
+	// 	if apiresourcegroup.GroupVersion == join(mapping.GroupVersionKind.Group, "/", mapping.GroupVersionKind.Version) {
+	// 		for _, apiresource := range apiresourcegroup.APIResources {
+	// 			if apiresource.Name == mapping.Resource.Resource && apiresource.Kind == mapping.GroupVersionKind.Kind {
+	// 				rsrc = mapping.Resource
+	// 				namespaced = apiresource.Namespaced
+	// 			}
+	// 		}
+	// 	}
+	// }
 	var unstruct unstructured.Unstructured
 	unstruct.Object = make(map[string]interface{})
 	var blob interface{}
@@ -308,6 +313,9 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 			newName = newName[:63]
 		}
 		unstruct.SetName(newName)
+		//Asumption object is always namespaced
+		//Refer to comment on line 238
+		namespaced = true
 		err = createObject(namespaced, namespace, newName, rsrc, unstruct, dclient)
 		if err != nil {
 			if errors.IsAlreadyExists(err) {
