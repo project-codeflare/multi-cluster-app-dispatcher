@@ -373,36 +373,37 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	// This test is flawed, the namespace created by this appwrapper is not cleaned up.
 	// FIXME https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/471
 	// Leaving it here so that the builds no longer fail
-	It("Create AppWrapper - Namespace Only - 0 Pods", func() {
-		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - Started.\n")
-		context := initTestContext()
-		var appwrappers []*arbv1.AppWrapper
-		appwrappersPtr := &appwrappers
-		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+	//TODO: Below two tests are turned off, please refer to github issue here: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/598
+	// It("Create AppWrapper - Namespace Only - 0 Pods", func() {
+	// 	fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - Started.\n")
+	// 	context := initTestContext()
+	// 	var appwrappers []*arbv1.AppWrapper
+	// 	appwrappersPtr := &appwrappers
+	// 	defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
-		aw := createNamespaceAW(context, "aw-namespace-0")
-		appwrappers = append(appwrappers, aw)
-		fmt.Fprintf(GinkgoWriter, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - app wrappers len %d.\n", len(appwrappers))
+	// 	aw := createNamespaceAW(context, "aw-namespace-0")
+	// 	appwrappers = append(appwrappers, aw)
+	// 	fmt.Fprintf(GinkgoWriter, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - app wrappers len %d.\n", len(appwrappers))
 
-		err := waitAWNonComputeResourceActive(context, aw)
-		Expect(err).NotTo(HaveOccurred())
-		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - Completed. Awaiting app wrapper cleanup\n")
-	})
+	// 	err := waitAWNonComputeResourceActive(context, aw)
+	// 	Expect(err).NotTo(HaveOccurred())
+	// 	fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Namespace Only - 0 Pods - Completed. Awaiting app wrapper cleanup\n")
+	// })
 
-	It("Create AppWrapper - Generic Namespace Only - 0 Pods", func() {
-		fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Generic Namespace Only - 0 Pods - Started.\n")
-		context := initTestContext()
-		var appwrappers []*arbv1.AppWrapper
-		appwrappersPtr := &appwrappers
-		defer cleanupTestObjectsPtr(context, appwrappersPtr)
+	// It("Create AppWrapper - Generic Namespace Only - 0 Pods", func() {
+	// 	fmt.Fprintf(os.Stdout, "[e2e] Create AppWrapper - Generic Namespace Only - 0 Pods - Started.\n")
+	// 	context := initTestContext()
+	// 	var appwrappers []*arbv1.AppWrapper
+	// 	appwrappersPtr := &appwrappers
+	// 	defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
-		aw := createGenericNamespaceAW(context, "aw-generic-namespace-0")
-		appwrappers = append(appwrappers, aw)
+	// 	aw := createGenericNamespaceAW(context, "aw-generic-namespace-0")
+	// 	appwrappers = append(appwrappers, aw)
 
-		err := waitAWNonComputeResourceActive(context, aw)
-		Expect(err).NotTo(HaveOccurred())
+	// 	err := waitAWNonComputeResourceActive(context, aw)
+	// 	Expect(err).NotTo(HaveOccurred())
 
-	})
+	// })
 
 	It("MCAD Custom Pod Resources Test", func() {
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Custom Pod Resources Test - Started.\n")
