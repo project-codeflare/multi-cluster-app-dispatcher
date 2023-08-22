@@ -26,6 +26,7 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 	. "github.com/onsi/gomega"
 
 	v1 "k8s.io/api/core/v1"
@@ -2690,4 +2691,16 @@ func appendRandomString(value string) string {
 		b[i] = charset[seededRand.Intn(len(charset))]
 	}
 	return fmt.Sprintf("%s-%s", value, string(b))
+}
+
+func AppWrapper(context *context, namespace string, name string) func(g gomega.Gomega) *arbv1.AppWrapper {
+	return func(g gomega.Gomega) *arbv1.AppWrapper {
+		aw, err := context.karclient.McadV1beta1().AppWrappers(namespace).Get(context.ctx, name, metav1.GetOptions{})
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+		return aw
+	}
+}
+
+func AppWrapperState(aw *arbv1.AppWrapper) arbv1.AppWrapperState {
+	return aw.Status.State
 }
