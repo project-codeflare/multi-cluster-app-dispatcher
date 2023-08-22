@@ -72,14 +72,16 @@ func Run(ctx context.Context, opt *options.ServerOption) error {
 		return fmt.Errorf("failed to create a job controller")
 	}
 
-	go jobctrl.Run(ctx.Done())
 
+	// Start the health and metrics servers
 	err = startHealthAndMetricsServers(ctx, opt)
 	if err != nil {
 		return err
 	}
 
-	<-ctx.Done()
+	// Start the job controller
+	go jobctrl.Run(ctx.Done())
+
 	return nil
 }
 
@@ -107,11 +109,16 @@ func startHealthAndMetricsServers(ctx context.Context, opt *options.ServerOption
 	g.Go(metricsServer.Start)
 	g.Go(healthServer.Start)
 
-	go func() {
+	g.Go(func() error {
 		<-ctx.Done()
-		metricsServer.Shutdown()
-		healthServer.Shutdown()
-	}()
+		return metricsServer.Shutdown()
+	})
 
-	return nil
+	g.Go(func() error {
+		<-ctx.Done()
+		return healthServer.Shutdown()
+	})
+
+	return g.Wait()
 }
+
