@@ -58,7 +58,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	<-ctx.Done()
 	fmt.Println("Shutting down gracefully")
 	
 }
