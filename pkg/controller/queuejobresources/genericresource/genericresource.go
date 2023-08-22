@@ -189,8 +189,9 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 	return name, gvk, err
 }
 
-//SyncQueueJob uses dynamic clients to wrap Items inside genericItems, it is used to create resources inside etcd and return errors when
+//SyncQueueJob uses dynamic clients to unwrap (spawn) items inside genericItems block, it is used to create resources inside etcd and return errors when
 //unwrapping fails.
+//More context here: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/598
 func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperGenericResource) (podList []*v1.Pod, err error) {
 	startTime := time.Now()
 	defer func() {
@@ -329,16 +330,16 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 
 	// Get the related resources of created object
 	// var thisObj *unstructured.Unstructured
-	var err1 error
+	//var err1 error
 	// if namespaced {
 	// 	thisObj, err1 = dclient.Resource(rsrc).Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	// } else {
 	// 	thisObj, err1 = dclient.Resource(rsrc).Get(context.Background(), name, metav1.GetOptions{})
 	// }
-	if err1 != nil {
-		klog.Errorf("Could not get created resource with error %v", err1)
-		return []*v1.Pod{}, err1
-	}
+	// if err1 != nil {
+	// 	klog.Errorf("Could not get created resource with error %v", err1)
+	// 	return []*v1.Pod{}, err1
+	// }
 	// thisOwnerRef := metav1.NewControllerRef(thisObj, thisObj.GroupVersionKind())
 
 	// podL, _ := gr.clients.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
@@ -351,7 +352,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	// 	klog.V(10).Infof("[SyncQueueJob] pod %s created from a Generic Item\n", pod.Name)
 	// }
 	// return pods, nil
-	return []*v1.Pod{}, err1
+	return []*v1.Pod{}, nil
 }
 
 // checks if object has pod template spec and add new labels
