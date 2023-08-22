@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"github.com/eapache/go-resiliency/retrier"
-	"github.com/gogo/protobuf/proto"
 	"github.com/hashicorp/go-multierror"
 	qmutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
 
@@ -71,7 +70,6 @@ import (
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobdispatch"
 
 	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
-	clusterstatecache "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/cache"
 )
 
 // XController the AppWrapper Controller type
@@ -110,7 +108,7 @@ type XController struct {
 
 	//TODO: Do we need this local cache?
 	// our own local cache, used for computing total amount of resources
-	cache clusterstatecache.Cache
+	//cache clusterstatecache.Cache
 
 	// is dispatcher or deployer?
 	isDispatcher bool
@@ -207,8 +205,8 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		initQueue:       cache.NewFIFO(GetQueueJobKey),
 		updateQueue:     cache.NewFIFO(GetQueueJobKey),
 		qjqueue:         NewSchedulingQueue(),
-		//TODO: do we still need cache to be initialized?
-		cache:        clusterstatecache.New(config),
+		//cache is turned-off, issue: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/588
+		//cache:        clusterstatecache.New(config),
 		schedulingAW: nil,
 	}
 	//TODO: work on enabling metrics adapter for correct MCAD mode
@@ -1157,12 +1155,12 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 				// Assume preemption will remove low priroity AWs in the system, optimistically dispatch such AWs
 
 				if aggqj.LessEqual(resources) {
-					//TODO: should we turn-off histograms?
-					unallocatedHistogramMap := qjm.cache.GetUnallocatedHistograms()
-					if !qjm.nodeChecks(unallocatedHistogramMap, qj) {
-						klog.Infof("[ScheduleNext] [Agent Mode] Optimistic dispatch for AW '%s/%s' requesting aggregated resources %v histogram for point in-time fragmented resources are available in the cluster %s",
-							qj.Name, qj.Namespace, qjm.GetAggregatedResources(qj), proto.MarshalTextString(unallocatedHistogramMap["gpu"]))
-					}
+					//cache is turned-off, refer issue: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/588
+					// unallocatedHistogramMap := qjm.cache.GetUnallocatedHistograms()
+					// if !qjm.nodeChecks(unallocatedHistogramMap, qj) {
+					// 	klog.Infof("[ScheduleNext] [Agent Mode] Optimistic dispatch for AW '%s/%s' requesting aggregated resources %v histogram for point in-time fragmented resources are available in the cluster %s",
+					// 		qj.Name, qj.Namespace, qjm.GetAggregatedResources(qj), proto.MarshalTextString(unallocatedHistogramMap["gpu"]))
+					// }
 					// Now evaluate quota
 					fits := true
 					klog.Infof("[ScheduleNext] [Agent Mode] available resourse successful check for '%s/%s' at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v.",
@@ -1464,7 +1462,7 @@ func (cc *XController) Run(stopCh <-chan struct{}) {
 
 	cache.WaitForCacheSync(stopCh, cc.appWrapperSynced)
 
-	//TODO: do we still need to run cache every second?
+	//cache is turned off, issue: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/588
 	// update snapshot of ClientStateCache every second
 	//cc.cache.Run(stopCh)
 
