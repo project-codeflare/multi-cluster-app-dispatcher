@@ -263,6 +263,9 @@ type AppWrapperStatus struct {
 
 	// Represents the latest available observations of pods under appwrapper
 	PendingPodConditions []PendingPodSpec `json:"pendingpodconditions"`
+
+	// Represents multi-cluster observatioins
+	TargetClusterName string `json:"targetClusterName"`
 }
 
 type AppWrapperState string
