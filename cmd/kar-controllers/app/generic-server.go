@@ -103,7 +103,7 @@ func (s *Server) Shutdown() error {
 	if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("failed to shutdown server gracefully: %v", err)
 	}
-	return s.httpServer.Shutdown(shutdownCtx)
+	return nil
 }
 
 // newListener creates a new TCP listener bound to the given address.
