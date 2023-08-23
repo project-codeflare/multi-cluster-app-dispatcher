@@ -73,42 +73,7 @@ func Run(ctx context.Context, opt *options.ServerOption) error {
 		return fmt.Errorf("failed to create a job controller")
 	}
 
-
-	// Start the health and metrics servers
-	err = startHealthAndMetricsServers(ctx, opt)
-	if err != nil {
-		return err
-	}
-
-	// Create the job controller
-	jobctrl := queuejob.NewJobController(config, opt)
-	if jobctrl == nil {
-		return fmt.Errorf("failed to create a job controller")
-	}
-
-	// Run the job controller in a goroutine and wait for it to exit
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		jobctrl.Run(ctx.Done())
-	}()
-
-	wg.Wait()
-
-
-	return nil
-}
-
-func healthHandler() http.Handler {
-	healthHandler := http.NewServeMux()
-	healthHandler.Handle("/healthz", &health.Handler{})
-	return healthHandler
-}
-
-// Starts the health probe listener
-func startHealthAndMetricsServers(ctx context.Context, opt *options.ServerOption) error {
-	g, ctx := errgroup.WithContext(ctx)
+	g, gCtx := errgroup.WithContext(ctx)
 
 	// metrics server
 	metricsServer, err := NewServer(opt.MetricsListenPort, "/metrics", metrics.PrometheusHandler())
@@ -121,19 +86,38 @@ func startHealthAndMetricsServers(ctx context.Context, opt *options.ServerOption
 		return err
 	}
 
+	// Create the job controller
+	jobctrl := queuejob.NewJobController(config, opt)
+	if jobctrl == nil {
+		return fmt.Errorf("failed to create a job controller")
+	}
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	g.Go(func() error {
+		defer wg.Done()
+		jobctrl.Run(gCtx.Done())
+		return nil
+	})
+
 	g.Go(metricsServer.Start)
 	g.Go(healthServer.Start)
 
 	g.Go(func() error {
-		<-ctx.Done()
+		wg.Wait()
 		return metricsServer.Shutdown()
 	})
 
 	g.Go(func() error {
-		<-ctx.Done()
+		wg.Wait()
 		return healthServer.Shutdown()
 	})
 
-	return g.Wait()
+	return g.Wait()	
 }
 
+func healthHandler() http.Handler {
+	healthHandler := http.NewServeMux()
+	healthHandler.Handle("/healthz", &health.Handler{})
+	return healthHandler
+}
