@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"reflect"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -190,6 +189,9 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 	return name, gvk, err
 }
 
+//SyncQueueJob uses dynamic clients to unwrap (spawn) items inside genericItems block, it is used to create resources inside etcd and return errors when
+//unwrapping fails.
+//More context here: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/598
 func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperGenericResource) (podList []*v1.Pod, err error) {
 	startTime := time.Now()
 	defer func() {
@@ -234,27 +236,32 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 		return []*v1.Pod{}, err
 	}
 
-	_, apiresourcelist, err := dd.ServerGroupsAndResources()
-	if err != nil {
-		if derr, ok := err.(*discovery.ErrGroupDiscoveryFailed); ok {
-			klog.Warning("Discovery failed for some groups, %d failing: %v", len(derr.Groups), err)
-		} else {
-			klog.Errorf("Error getting supported groups and resources, err=%#v", err)
-			return []*v1.Pod{}, err
-		}
-	}
+	//TODO: Simplified apiresourcelist discovery, the assumption is we will always deploy namespaced objects
+	//We dont intend to install CRDs like KubeRay, Spark-Operator etc through MCAD, I think such objects are typically
+	//cluster scoped. May be for Multi-Cluster or inference use case we need such deep discovery, so for now commenting code.
+
+	// _, apiresourcelist, err := dd.ServerGroupsAndResources()
+	// if err != nil {
+	// 	if derr, ok := err.(*discovery.ErrGroupDiscoveryFailed); ok {
+	// 		klog.Warning("Discovery failed for some groups, %d failing: %v", len(derr.Groups), err)
+	// 	} else {
+	// 		klog.Errorf("Error getting supported groups and resources, err=%#v", err)
+	// 		return []*v1.Pod{}, err
+	// 	}
+	// }
 
 	rsrc := mapping.Resource
-	for _, apiresourcegroup := range apiresourcelist {
-		if apiresourcegroup.GroupVersion == join(mapping.GroupVersionKind.Group, "/", mapping.GroupVersionKind.Version) {
-			for _, apiresource := range apiresourcegroup.APIResources {
-				if apiresource.Name == mapping.Resource.Resource && apiresource.Kind == mapping.GroupVersionKind.Kind {
-					rsrc = mapping.Resource
-					namespaced = apiresource.Namespaced
-				}
-			}
-		}
-	}
+
+	// for _, apiresourcegroup := range apiresourcelist {
+	// 	if apiresourcegroup.GroupVersion == join(mapping.GroupVersionKind.Group, "/", mapping.GroupVersionKind.Version) {
+	// 		for _, apiresource := range apiresourcegroup.APIResources {
+	// 			if apiresource.Name == mapping.Resource.Resource && apiresource.Kind == mapping.GroupVersionKind.Kind {
+	// 				rsrc = mapping.Resource
+	// 				namespaced = apiresource.Namespaced
+	// 			}
+	// 		}
+	// 	}
+	// }
 	var unstruct unstructured.Unstructured
 	unstruct.Object = make(map[string]interface{})
 	var blob interface{}
@@ -307,6 +314,9 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 			newName = newName[:63]
 		}
 		unstruct.SetName(newName)
+		//Asumption object is always namespaced
+		//Refer to comment on line 238
+		namespaced = true
 		err = createObject(namespaced, namespace, newName, rsrc, unstruct, dclient)
 		if err != nil {
 			if errors.IsAlreadyExists(err) {
@@ -319,29 +329,30 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	}
 
 	// Get the related resources of created object
-	var thisObj *unstructured.Unstructured
-	var err1 error
-	if namespaced {
-		thisObj, err1 = dclient.Resource(rsrc).Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
-	} else {
-		thisObj, err1 = dclient.Resource(rsrc).Get(context.Background(), name, metav1.GetOptions{})
-	}
-	if err1 != nil {
-		klog.Errorf("Could not get created resource with error %v", err1)
-		return []*v1.Pod{}, err1
-	}
-	thisOwnerRef := metav1.NewControllerRef(thisObj, thisObj.GroupVersionKind())
+	// var thisObj *unstructured.Unstructured
+	//var err1 error
+	// if namespaced {
+	// 	thisObj, err1 = dclient.Resource(rsrc).Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	// } else {
+	// 	thisObj, err1 = dclient.Resource(rsrc).Get(context.Background(), name, metav1.GetOptions{})
+	// }
+	// if err1 != nil {
+	// 	klog.Errorf("Could not get created resource with error %v", err1)
+	// 	return []*v1.Pod{}, err1
+	// }
+	// thisOwnerRef := metav1.NewControllerRef(thisObj, thisObj.GroupVersionKind())
 
-	podL, _ := gr.clients.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
-	pods := []*v1.Pod{}
-	for _, pod := range (*podL).Items {
-		parent := metav1.GetControllerOf(&pod)
-		if reflect.DeepEqual(thisOwnerRef, parent) {
-			pods = append(pods, &pod)
-		}
-		klog.V(10).Infof("[SyncQueueJob] pod %s created from a Generic Item\n", pod.Name)
-	}
-	return pods, nil
+	// podL, _ := gr.clients.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
+	// pods := []*v1.Pod{}
+	// for _, pod := range (*podL).Items {
+	// 	parent := metav1.GetControllerOf(&pod)
+	// 	if reflect.DeepEqual(thisOwnerRef, parent) {
+	// 		pods = append(pods, &pod)
+	// 	}
+	// 	klog.V(10).Infof("[SyncQueueJob] pod %s created from a Generic Item\n", pod.Name)
+	// }
+	// return pods, nil
+	return []*v1.Pod{}, nil
 }
 
 // checks if object has pod template spec and add new labels
