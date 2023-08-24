@@ -93,10 +93,10 @@ type XController struct {
 
 	// QueueJobs that need to be initialized
 	// Add labels and selectors to AppWrapper
-	initQueue *cache.FIFO
+	//initQueue *cache.FIFO
 
 	// QueueJobs that need to sync up after initialization
-	updateQueue *cache.FIFO
+	//updateQueue *cache.FIFO
 
 	// eventQueue that need to sync up
 	eventQueue *cache.FIFO
@@ -241,9 +241,9 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 		arbclients:      clientset.NewForConfigOrDie(config),
 		eventQueue:      cache.NewFIFO(GetQueueJobKey),
 		agentEventQueue: cache.NewFIFO(GetQueueJobKey),
-		initQueue:       cache.NewFIFO(GetQueueJobKey),
-		updateQueue:     cache.NewFIFO(GetQueueJobKey),
-		qjqueue:         NewSchedulingQueue(),
+		//initQueue:       cache.NewFIFO(GetQueueJobKey),
+		//updateQueue: cache.NewFIFO(GetQueueJobKey),
+		qjqueue: NewSchedulingQueue(),
 		//cache is turned-off, issue: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/588
 		//cache:        clusterstatecache.New(config),
 		schedulingAW: nil,
