@@ -1702,6 +1702,9 @@ func (cc *XController) deleteQueueJob(obj interface{}) {
 		klog.Errorf("[Informer-deleteQJ] obj is not AppWrapper. obj=%+v", obj)
 		return
 	}
+	// we delete the job from the queue if it is there, ignoring errors
+	cc.qjqueue.Delete(qj)
+	cc.eventQueue.Delete(qj)
 	current_ts := metav1.NewTime(time.Now())
 	klog.V(10).Infof("[Informer-deleteQJ] %s *Delay=%.6f seconds before enqueue &qj=%p Version=%s Status=%+v Deletion Timestame=%+v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qj, qj.ResourceVersion, qj.Status, qj.GetDeletionTimestamp())
 	accessor, err := meta.Accessor(qj)
@@ -1722,9 +1725,6 @@ func (cc *XController) deleteQueueJob(obj interface{}) {
 		if accessor, err00 := meta.Accessor(qj); err00 == nil {
 			accessor.SetFinalizers(nil)
 		}
-		// we delete the job from the queue if it is there, ignoring errors
-		cc.qjqueue.Delete(qj)
-		cc.eventQueue.Delete(qj)
 		klog.V(3).Infof("[Informer-deleteQJ] AW job=%s/%s deleted.", qj.Namespace, qj.Name)
 	}
 }
@@ -1888,19 +1888,27 @@ func (cc *XController) worker() {
 		//if everything passes then CanRun is set to true and AW is ready for dispatch
 		if !queuejob.Status.CanRun && (queuejob.Status.State != arbv1.AppWrapperStateActive) {
 			cc.ScheduleNext(queuejob)
-			return nil
+			//When an AW passes ScheduleNext gate then we want to progress AW to Running to begin with
+			//Sync queuejob will not unwrap an AW to spawn genericItems
+			if queuejob.Status.CanRun {
 
-		}
-		//When an AW passes ScheduleNext gate then we want to progress AW to Running to begin with
-		//Sync queuejob will not unwrap an AW to spawn genericItems
-		if queuejob.Status.CanRun {
-			if err := cc.syncQueueJob(ctx, queuejob); err != nil {
-				// If any error, requeue it.
-				return err
+				// errs := make(chan error, 1)
+				// go func() {
+				// 	errs <- cc.syncQueueJob(ctx, queuejob)
+				// }()
+
+				// // later:
+				// if err := <-errs; err != nil {
+				// 	return err
+				// }
+				if err := cc.syncQueueJob(ctx, queuejob); err != nil {
+					// If any error, requeue it.
+					return err
+				}
+
 			}
 
 		}
-
 		//asmalvan- ends
 
 		klog.V(10).Infof("[worker] Ending %s Delay=%.6f seconds &newQJ=%p Version=%s Status=%+v", queuejob.Name, time.Now().Sub(queuejob.Status.ControllerFirstTimestamp.Time).Seconds(), queuejob, queuejob.ResourceVersion, queuejob.Status)
