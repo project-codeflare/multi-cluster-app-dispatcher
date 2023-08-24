@@ -6,5 +6,6 @@ metadata:
   namespace: kube-system
 data:
   DISPATCHER_MODE: {{ .Values.configMap.dispatcherMode }}
+  EXTERNAL_DISPATCH: {{.Values.configMap.externalDispatch }}
   DISPATCHER_AGENT_CONFIGS: {{ .Values.configMap.agentConfigs }}
 #{{ end }}
