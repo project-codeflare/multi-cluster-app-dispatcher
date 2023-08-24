@@ -1922,7 +1922,6 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 	defer func() {
 		klog.V(10).Infof("[worker-manageQJ] Ending %s manageQJ time=%s &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(startTime), qj, qj.ResourceVersion, qj.Status)
 	}()
-
 	if !cc.isDispatcher { // Agent Mode
 
 		if qj.DeletionTimestamp != nil {
@@ -2222,7 +2221,20 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 			// if agentId!=nil {
 			if agentId, ok := cc.dispatchMap[queuejobKey]; ok {
 				klog.V(10).Infof("[Dispatcher Controller] Dispatched AppWrapper %s to Agent ID: %s.", qj.Name, agentId)
-				cc.agentMap[agentId].CreateJob(qj)
+				if cc.serverOption.ExternalDispatch {
+				   clusterList := qj.Spec.SchedSpec.ClusterScheduling.Clusters
+                   if len(clusterList) == 0 {
+					  klog.Errorf("[Dispatcher Controller] AppWrapper %s does not include a list of clusterIds in Spec.SchedSpec.ClusterScheduling.Clusters.", qj.Name)
+				      return nil
+				   } else {
+					  // choose target clusterId at random
+					  clusterId := clusterList[rand.Int()%len(clusterList)]
+					  klog.V(1).Infof("ClusterId %s is chosen randomly\n", clusterId)
+					  qj.Status.TargetClusterName = clusterId.Name
+				   }
+				} else {
+				   cc.agentMap[agentId].CreateJob(qj)
+				}
 				qj.Status.IsDispatched = true
 			} else {
 				klog.Errorf("[Dispatcher Controller] AppWrapper %s not found in dispatcher mapping.", qj.Name)
