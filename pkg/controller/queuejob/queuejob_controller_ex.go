@@ -1705,28 +1705,6 @@ func (cc *XController) deleteQueueJob(obj interface{}) {
 	// we delete the job from the queue if it is there, ignoring errors
 	cc.qjqueue.Delete(qj)
 	cc.eventQueue.Delete(qj)
-	current_ts := metav1.NewTime(time.Now())
-	klog.V(10).Infof("[Informer-deleteQJ] %s *Delay=%.6f seconds before enqueue &qj=%p Version=%s Status=%+v Deletion Timestame=%+v", qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qj, qj.ResourceVersion, qj.Status, qj.GetDeletionTimestamp())
-	accessor, err := meta.Accessor(qj)
-	if err != nil {
-		klog.V(10).Infof("[Informer-deleteQJ] Error obtaining the accessor for AW job: %s", qj.Name)
-		qj.SetDeletionTimestamp(&current_ts)
-	} else {
-		accessor.SetDeletionTimestamp(&current_ts)
-	}
-	// validate that app wraper has not been marked for deletion by the infomer's delete handler
-	if qj.DeletionTimestamp != nil {
-		klog.V(3).Infof("[Informer-deleteQJ] AW job=%s/%s set for deletion.", qj.Namespace, qj.Name)
-		// cleanup resources for running job, ignoring errors
-		if err00 := cc.Cleanup(context.Background(), qj); err00 != nil {
-			klog.Warningf("Failed to cleanup resources for app wrapper '%s/%s', err = %v", qj.Namespace, qj.Name, err00)
-		}
-		// empty finalizers and delete the queuejob again
-		if accessor, err00 := meta.Accessor(qj); err00 == nil {
-			accessor.SetFinalizers(nil)
-		}
-		klog.V(3).Infof("[Informer-deleteQJ] AW job=%s/%s deleted.", qj.Namespace, qj.Name)
-	}
 }
 
 func (cc *XController) enqueue(obj interface{}) error {
