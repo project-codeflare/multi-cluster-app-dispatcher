@@ -1011,6 +1011,24 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 }
 
 func (qjm *XController) chooseAgent(qj *arbv1.AppWrapper) string {
+	
+	if qjm.serverOption.ExternalDispatch {
+		clusterList := qj.Spec.SchedSpec.ClusterScheduling.Clusters
+		var clusterId = ""
+		// target clusters no defined by the submitter of workload. Just pick a target
+		// from a known list of clusters provided in serverOption.AgentConfigs
+		if len(clusterList) == 0 {
+			clusterId = qjm.agentList[rand.Int()%len(qjm.agentList)]
+			klog.V(1).Infof("ClusterId %s is chosen randomly from a list provided by mcad\n", clusterId)
+		} else {
+		    // choose target clusterId at random
+		    clusterId = clusterList[rand.Int()%len(clusterList)].Name
+		    klog.V(1).Infof("ClusterId %s is chosen randomly from a list provided in Spec.SchedSpec.ClusterScheduling.Clusters: %s\n", clusterId, clusterList)
+		    //qj.Status.TargetClusterName = 
+			//qj.Status.TargetClusterName = clusterList[rand.Int()%len(clusterList)].Name 
+		}
+		return clusterId;
+	} 
 
 	qjAggrResources := qjm.GetAggregatedResources(qj)
 	klog.V(2).Infof("[chooseAgent] Aggregated Resources of XQJ %s: %v\n", qj.Name, qjAggrResources)
@@ -2215,30 +2233,21 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 				klog.V(10).Infof("[worker-manageQJ] XQJ %s has Overhead Before Dispatching: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
 				klog.V(10).Infof("[TTime] %s, %s: WorkerBeforeDispatch", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 			}
-
-			queuejobKey, _ := GetQueueJobKey(qj)
-			// agentId:=cc.dispatchMap[queuejobKey]
-			// if agentId!=nil {
-			if agentId, ok := cc.dispatchMap[queuejobKey]; ok {
-				klog.V(10).Infof("[Dispatcher Controller] Dispatched AppWrapper %s to Agent ID: %s.", qj.Name, agentId)
-				if cc.serverOption.ExternalDispatch {
-				   clusterList := qj.Spec.SchedSpec.ClusterScheduling.Clusters
-                   if len(clusterList) == 0 {
-					  klog.Errorf("[Dispatcher Controller] AppWrapper %s does not include a list of clusterIds in Spec.SchedSpec.ClusterScheduling.Clusters.", qj.Name)
-				      return nil
-				   } else {
-					  // choose target clusterId at random
-					  clusterId := clusterList[rand.Int()%len(clusterList)]
-					  klog.V(1).Infof("ClusterId %s is chosen randomly\n", clusterId)
-					  qj.Status.TargetClusterName = clusterId.Name
-				   }
-				} else {
-				   cc.agentMap[agentId].CreateJob(qj)
-				}
+            
+			if cc.serverOption.ExternalDispatch {
+				qj.Status.TargetClusterName = cc.chooseAgent(qj)
 				qj.Status.IsDispatched = true
 			} else {
-				klog.Errorf("[Dispatcher Controller] AppWrapper %s not found in dispatcher mapping.", qj.Name)
+				queuejobKey, _ := GetQueueJobKey(qj)
+				if agentId, ok := cc.dispatchMap[queuejobKey]; ok {
+					klog.V(10).Infof("[Dispatcher Controller] Dispatched AppWrapper %s to Agent ID: %s.", qj.Name, agentId)
+					cc.agentMap[agentId].CreateJob(qj)
+					qj.Status.IsDispatched = true
+				} else {
+					klog.Errorf("[Dispatcher Controller] AppWrapper %s not found in dispatcher mapping.", qj.Name)
+				}
 			}
+
 			if klog.V(10).Enabled() {
 				current_time := time.Now()
 				klog.V(10).Infof("[Dispatcher Controller] XQJ %s has Overhead After Dispatching: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
@@ -2287,9 +2296,18 @@ func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 		// klog.Infof("[Dispatcher] Cleanup: State=%s\n", appwrapper.Status.State)
 		//if ! appwrapper.Status.CanRun && appwrapper.Status.IsDispatched {
 		if appwrapper.Status.IsDispatched {
-			queuejobKey, _ := GetQueueJobKey(appwrapper)
-			if obj, ok := cc.dispatchMap[queuejobKey]; ok {
-				cc.agentMap[obj].DeleteJob(appwrapper)
+
+			if cc.serverOption.ExternalDispatch {
+				if err := cc.arbclients.ArbV1().AppWrappers(appwrapper.Namespace).Delete(appwrapper.Name, &metav1.DeleteOptions{}); err != nil {
+					klog.Errorf("Failed to delete AppWrapper %v/%v: %v",
+					appwrapper.Namespace, appwrapper.Name, err)
+					return err
+				}
+			} else {
+				queuejobKey, _ := GetQueueJobKey(appwrapper)
+				if obj, ok := cc.dispatchMap[queuejobKey]; ok {
+					cc.agentMap[obj].DeleteJob(appwrapper)
+				}
 			}
 			appwrapper.Status.IsDispatched = false
 		}
