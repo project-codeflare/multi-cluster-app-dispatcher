@@ -466,7 +466,7 @@ setup-mcad-env
 # MCAD with quotamanagement options is started by kuttl-tests
 kuttl-tests
 mcad-up
-go test ./test/e2e -v -timeout 130m -count=1
+go test ./test/e2e -v -timeout 130m -count=1 -ginkgo.failFast
 RC=$?
 if [ ${RC} -eq 0 ]
 then
