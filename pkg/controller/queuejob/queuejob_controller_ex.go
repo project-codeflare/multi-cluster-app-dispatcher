@@ -1262,7 +1262,7 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 								klog.Infof("[ScheduleNext] [Agent Mode] Blocking dispatch for app wrapper '%s/%s' due to quota limits, activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v msg=%s",
 									qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, msg)
 								//call update etcd here to retrigger AW execution for failed quota
-
+								//TODO: quota management tests fail if this is converted into go-routine, need to inspect why?
 								qjm.backoff(context.Background(), qj, dispatchFailedReason, dispatchFailedMessage)
 
 							}
@@ -1703,6 +1703,7 @@ func (cc *XController) deleteQueueJob(obj interface{}) {
 		return
 	}
 	// we delete the job from the queue if it is there, ignoring errors
+	cc.quotaManager.Release(qj)
 	cc.qjqueue.Delete(qj)
 	cc.eventQueue.Delete(qj)
 }
