@@ -2237,7 +2237,9 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 			if agentId, ok := cc.dispatchMap[queuejobKey]; ok {
 				klog.V(10).Infof("[Dispatcher Controller] Dispatched AppWrapper %s to Agent ID: %s.", qj.Name, agentId)
 				if cc.serverOption.ExternalDispatch {
-					qj.Status.TargetClusterName = agentId
+					values := strings.Split(agentId,"/")
+					klog.V(10).Infof("[Dispatcher Controller] Dispatching AppWrapper %s to Agent ID: %s Through External Dispatcher.", qj.Name, values[len(values)-1])
+					qj.Status.TargetClusterName = values[len(values)-1]  //agentId
 				} else {
 					cc.agentMap[agentId].CreateJob(qj)
 				}
