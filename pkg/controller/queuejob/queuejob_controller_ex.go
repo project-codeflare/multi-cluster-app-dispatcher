@@ -1703,7 +1703,9 @@ func (cc *XController) deleteQueueJob(obj interface{}) {
 		return
 	}
 	// we delete the job from the queue if it is there, ignoring errors
-	cc.quotaManager.Release(qj)
+	if cc.serverOption.QuotaEnabled && cc.quotaManager != nil {
+		cc.quotaManager.Release(qj)
+	}
 	cc.qjqueue.Delete(qj)
 	cc.eventQueue.Delete(qj)
 }
