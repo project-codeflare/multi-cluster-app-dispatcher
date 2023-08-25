@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"path"
 	"reflect"
 	"runtime/debug"
 	"sort"
@@ -1013,21 +1014,28 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 func (qjm *XController) chooseAgent(qj *arbv1.AppWrapper) string {
 	
 	if qjm.serverOption.ExternalDispatch {
-		clusterList := qj.Spec.SchedSpec.ClusterScheduling.Clusters
-		var clusterId = ""
+		clusters := qj.Spec.SchedSpec.ClusterScheduling.Clusters
+		var agentId = ""
+        apath := path.Dir(qjm.agentList[0]) 
+		var agentIdList = make([]string, len(clusters))
+		clustersProvided := false  // assume clusters not provided
+		for _, clusterRef := range clusters {
+			if clusterRef.Name != "" {
+				clustersProvided = true
+				agentIdList = append(agentIdList, apath+"/"+clusterRef.Name )
+			}
+		}
 		// target clusters no defined by the submitter of workload. Just pick a target
 		// from a known list of clusters provided in serverOption.AgentConfigs
-		if len(clusterList) == 0 {
-			clusterId = qjm.agentList[rand.Int()%len(qjm.agentList)]
-			klog.V(1).Infof("ClusterId %s is chosen randomly from a list provided by mcad\n", clusterId)
+		if !clustersProvided {
+			agentId = qjm.agentList[rand.Int()%len(qjm.agentList)]
+			klog.V(1).Infof("ClusterId %s is chosen randomly from a list provided by mcad\n", agentId)
 		} else {
 		    // choose target clusterId at random
-		    clusterId = clusterList[rand.Int()%len(clusterList)].Name
-		    klog.V(1).Infof("ClusterId %s is chosen randomly from a list provided in Spec.SchedSpec.ClusterScheduling.Clusters: %s\n", clusterId, clusterList)
-		    //qj.Status.TargetClusterName = 
-			//qj.Status.TargetClusterName = clusterList[rand.Int()%len(clusterList)].Name 
+		    agentId = agentIdList[rand.Int()%len(agentIdList)]
+		    klog.V(1).Infof("ClusterId %s is chosen randomly from a list provided in Spec.SchedSpec.ClusterScheduling.Clusters: %s\n", agentId, agentIdList)
 		}
-		return clusterId;
+		return agentId;
 	} 
 
 	qjAggrResources := qjm.GetAggregatedResources(qj)
