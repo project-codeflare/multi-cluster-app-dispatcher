@@ -150,6 +150,7 @@ The following table lists the configurable parameters of the helm chart and thei
 | ----------------------- | ------------------------------------ | ------------- | ------------------------------------------------ |
 | `configMap.agentConfigs`    | *For Every Agent Cluster separated by commas(,):* Name of *agent* config file _:_  Set the dispatching mode for the _*Agent Cluster*_.  Note:For the dispatching mode `uncordon`, indicating _MCAD_ controller is allowed to dispatched jobs to the _*Agent Cluster*_, is only supported.  | &lt;_No default for agent config file_&gt;:`uncordon` | `agent101config:uncordon,agent110config:uncordon`      |
 | `configMap.dispatcherMode`    | Whether the _MCAD_ Controller should be launched in Dispatcher mode or not  | `false`  | `true`      |
+| `configMap.externalDispatch`    | Whether the _MCAD_ Controller should use external plugin to dispatch workloads or not | `false` | `true`      |
 | `configMap.name`    | Name of the Kubernetes *ConfigMap* resource to configure the _MCAD_ Controller   |   | `mcad-deployer`      |
 | `deploymentName`      | Name of _MCAD_ Controller Deployment Object | `mcad-controller` | `my-mcad-controller` |
 | `image.pullPolicy`     | Policy that dictates when the specified image is pulled    | `Always`  | `Never`      |

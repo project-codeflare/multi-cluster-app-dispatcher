@@ -56,6 +56,7 @@ type ServerOption struct {
 	QuotaRestURL          string
 	HealthProbeListenAddr string
 	DispatchResourceReservationTimeout int64
+	ExternalDispatch      bool  // if true, will use external plugin to dispatch workloads
 }
 
 // NewServerOption creates a new CMServer with a default config.
@@ -83,6 +84,8 @@ func (s *ServerOption) AddFlags(fs *flag.FlagSet) {
 	fs.IntVar(&s.SecurePort, "secure-port", 6443, "The port on which to serve secured, authenticated access for metrics.")
 	fs.StringVar(&s.HealthProbeListenAddr, "healthProbeListenAddr", ":8081", "Listen address for health probes. Defaults to ':8081'")
 	fs.Int64Var(&s.DispatchResourceReservationTimeout, "dispatchResourceReservationTimeout", s.DispatchResourceReservationTimeout, "Resource reservation timeout for pods to be created once AppWrapper is dispatched, in millisecond.  Defaults to '300000', 5 minutes")
+	fs.BoolVar(&s.ExternalDispatch,"externalDispatch", s.ExternalDispatch,"Use external workload dispatch plugin.  Default is false.")
+	
 	flag.Parse()
 	klog.V(4).Infof("[AddFlags] Controller configuration: %#v", s)
 }
@@ -147,6 +150,12 @@ func (s *ServerOption) loadDefaultsFromEnvVars() {
 			s.DispatchResourceReservationTimeout = to
 		}
 	}
+	externalDispatch, envVarExists := os.LookupEnv("EXTERNAL_DISPATCH")
+	s.ExternalDispatch = false
+	if envVarExists && strings.EqualFold(externalDispatch, "true") {
+		s.ExternalDispatch = true
+	}
+
 }
 
 func (s *ServerOption) CheckOptionOrDie() {

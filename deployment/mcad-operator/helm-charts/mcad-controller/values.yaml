@@ -32,6 +32,7 @@ configMap:
   name:
   multiCluster: false
   dispatcherMode: "false"
+  externalDispatch: "false"
   agentConfigs:
 
 volumes:

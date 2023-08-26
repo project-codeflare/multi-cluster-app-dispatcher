@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"path"
 	"reflect"
 	"runtime/debug"
 	"sort"
@@ -1011,6 +1012,31 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 }
 
 func (qjm *XController) chooseAgent(qj *arbv1.AppWrapper) string {
+	
+	if qjm.serverOption.ExternalDispatch {
+		clusters := qj.Spec.SchedSpec.ClusterScheduling.Clusters
+		var agentId = ""
+        apath := path.Dir(qjm.agentList[0]) 
+		var agentIdList = make([]string, len(clusters))
+		clustersProvided := false  // assume clusters not provided
+		for _, clusterRef := range clusters {
+			if clusterRef.Name != "" {
+				clustersProvided = true
+				agentIdList = append(agentIdList, apath+"/"+clusterRef.Name )
+			}
+		}
+		// target clusters no defined by the submitter of workload. Just pick a target
+		// from a known list of clusters provided in serverOption.AgentConfigs
+		if !clustersProvided {
+			agentId = qjm.agentList[rand.Int()%len(qjm.agentList)]
+			klog.V(1).Infof("ClusterId %s is chosen randomly from a list provided by mcad\n", agentId)
+		} else {
+		    // choose target clusterId at random
+		    agentId = agentIdList[rand.Int()%len(agentIdList)]
+		    klog.V(1).Infof("ClusterId %s is chosen randomly from a list provided in Spec.SchedSpec.ClusterScheduling.Clusters: %s\n", agentId, agentIdList)
+		}
+		return agentId;
+	} 
 
 	qjAggrResources := qjm.GetAggregatedResources(qj)
 	klog.V(2).Infof("[chooseAgent] Aggregated Resources of XQJ %s: %v\n", qj.Name, qjAggrResources)
@@ -1922,7 +1948,6 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 	defer func() {
 		klog.V(10).Infof("[worker-manageQJ] Ending %s manageQJ time=%s &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(startTime), qj, qj.ResourceVersion, qj.Status)
 	}()
-
 	if !cc.isDispatcher { // Agent Mode
 
 		if qj.DeletionTimestamp != nil {
@@ -2215,18 +2240,21 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 				current_time := time.Now()
 				klog.V(10).Infof("[worker-manageQJ] XQJ %s has Overhead Before Dispatching: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
 				klog.V(10).Infof("[TTime] %s, %s: WorkerBeforeDispatch", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
-			}
-
+			}			
 			queuejobKey, _ := GetQueueJobKey(qj)
-			// agentId:=cc.dispatchMap[queuejobKey]
-			// if agentId!=nil {
 			if agentId, ok := cc.dispatchMap[queuejobKey]; ok {
 				klog.V(10).Infof("[Dispatcher Controller] Dispatched AppWrapper %s to Agent ID: %s.", qj.Name, agentId)
-				cc.agentMap[agentId].CreateJob(qj)
+				if cc.serverOption.ExternalDispatch {
+					values := strings.Split(agentId,"/")
+					klog.V(10).Infof("[Dispatcher Controller] Dispatching AppWrapper %s to Agent ID: %s Through External Dispatcher.", qj.Name, values[len(values)-1])
+					qj.Status.TargetClusterName = values[len(values)-1]  //agentId
+				} else {
+					cc.agentMap[agentId].CreateJob(qj)
+				}
 				qj.Status.IsDispatched = true
 			} else {
 				klog.Errorf("[Dispatcher Controller] AppWrapper %s not found in dispatcher mapping.", qj.Name)
-			}
+			}			
 			if klog.V(10).Enabled() {
 				current_time := time.Now()
 				klog.V(10).Infof("[Dispatcher Controller] XQJ %s has Overhead After Dispatching: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
@@ -2277,7 +2305,10 @@ func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 		if appwrapper.Status.IsDispatched {
 			queuejobKey, _ := GetQueueJobKey(appwrapper)
 			if obj, ok := cc.dispatchMap[queuejobKey]; ok {
-				cc.agentMap[obj].DeleteJob(appwrapper)
+				if !cc.serverOption.ExternalDispatch {
+					cc.agentMap[obj].DeleteJob(appwrapper)
+				}
+				delete(cc.dispatchMap,queuejobKey)
 			}
 			appwrapper.Status.IsDispatched = false
 		}
