@@ -261,7 +261,9 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 	proposedPreemptions []*arbv1.AppWrapper) (bool, []*arbv1.AppWrapper, string) {
 
 	// Handle uninitialized quota manager
-	if len(qm.url) <= 0 {
+	// If a url does not exists then assume fits quota
+	if len(qm.url) == 0 {
+		klog.V(4).Infof("[Fits] No quota manager exists, %#v meets quota by default.", awResDemands)
 		return true, proposedPreemptions, ""
 	}
 	awId := createId(aw.Namespace, aw.Name)
@@ -287,11 +289,6 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 	}
 
 	doesFit := false
-	// If a url does not exists then assume fits quota
-	if len(qm.url) < 1 {
-		klog.V(4).Infof("[Fits] No quota manager exists, %#v meets quota by default.", awResDemands)
-		return doesFit, nil, ""
-	}
 
 	uri := qm.url + "/quota/alloc"
 	buf := new(bytes.Buffer)
