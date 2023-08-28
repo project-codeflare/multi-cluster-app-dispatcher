@@ -32,6 +32,7 @@ import (
 	qmbackend "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota"
 	qmbackendutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/utils"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/genericresource"
 	"k8s.io/client-go/rest"
 
 	"math"
@@ -205,7 +206,7 @@ func (qm *QuotaManager) loadDispatchedAWs(dispatchedAWDemands map[string]*cluste
 			}
 			aw.SetLabels(newLabels)
 
-			doesFit, preemptionIds, errorMessage := qm.Fits(aw, v, nil)
+			doesFit, preemptionIds, errorMessage := qm.Fits(aw, v, nil, nil)
 			if !doesFit {
 				klog.Errorf("[loadDispatchedAWs] Loading of AppWrapper %s/%s failed.",
 					aw.Namespace, aw.Name)
@@ -509,7 +510,7 @@ func (qm *QuotaManager) buildRequest(aw *arbv1.AppWrapper,
 
 	return consumerInfo, err
 }
-func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource,
+func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource, clusterResources *clusterstateapi.Resource,
 	proposedPreemptions []*arbv1.AppWrapper) (bool, []*arbv1.AppWrapper, string) {
 
 	// If a Quota Manager Backend instance does not exists then assume quota failed
@@ -555,7 +556,7 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 
 	consumerID := consumerInfo.GetID()
 	klog.V(4).Infof("[Fits] Sending quota allocation request: %#v ", consumerInfo)
-	allocResponse, err := qm.quotaManagerBackend.AllocateForest(QuotaManagerForestName, consumerID)
+	allocResponse, err := qm.quotaManagerBackend.TryAllocateForest(QuotaManagerForestName, consumerID)
 	if err != nil {
 		qm.removeConsumer(consumerID)
 		klog.Errorf("[Fits] Error allocating consumer: %s/%s, err=%#v.", aw.Namespace, aw.Name, err)
@@ -569,7 +570,39 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 		return doesFit, preemptIds, strings.TrimSpace(allocResponse.GetMessage())
 	}
 	preemptIds = qm.getAppWrappers(allocResponse.GetPreemptedIds())
+
+	// Update cluster resources in the even that preemption happens
+	if clusterResources != nil {
+		updatedResources := clusterResources
+
+		for _, appWrapper := range preemptIds {
+			updatedResources.Add(qm.getAggregatedResources(appWrapper))
+		}
+
+		// Check if job fits with the update resources after preempted AppWrappers are removed
+		if clusterResources != nil && !awResDemands.LessEqual(updatedResources) {
+			qm.quotaManagerBackend.UndoAllocateForest(QuotaManagerForestName, consumerID)
+			qm.removeConsumer(consumerID)
+			return false, preemptIds, fmt.Sprintf("[Fits] AppWrapper '%s/%s' does not fit in the cluster, even after borrowed quota is freed", aw.Namespace, aw.Name)
+		}
+	}
+
 	return doesFit, preemptIds, strings.TrimSpace(allocResponse.GetMessage())
+}
+
+func (qm *QuotaManager) getAggregatedResources(appWrapper *arbv1.AppWrapper) *clusterstateapi.Resource {
+	allocated := clusterstateapi.EmptyResource()
+
+	for _, genericItem := range appWrapper.Spec.AggrResources.GenericItems {
+		resources, err := genericresource.GetResources(&genericItem)
+		if err != nil {
+			klog.V(8).Infof("[GetAggregatedResources] Failure aggregating resources for %s/%s, err=%#v, genericItem=%#v",
+				appWrapper.Namespace, appWrapper.Name, err, genericItem)
+		}
+		allocated = allocated.Add(resources)
+	}
+
+	return allocated
 }
 
 func (qm *QuotaManager) getAppWrappers(preemptIds []string) []*arbv1.AppWrapper {

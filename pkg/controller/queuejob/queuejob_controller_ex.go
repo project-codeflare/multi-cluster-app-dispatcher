@@ -151,8 +151,8 @@ func GetQueueJobKey(obj interface{}) (string, error) {
 	return fmt.Sprintf("%s/%s", qj.Namespace, qj.Name), nil
 }
 
-//UpdateQueueJobStatus was part of pod informer, this is now a method of queuejob_controller file.
-//This change is done in an effort to simplify the controller and enable to move to controller runtime.
+// UpdateQueueJobStatus was part of pod informer, this is now a method of queuejob_controller file.
+// This change is done in an effort to simplify the controller and enable to move to controller runtime.
 func (qjm *XController) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) error {
 
 	labelSelector := fmt.Sprintf("%s=%s", "appwrapper.mcad.ibm.com", queuejob.Name)
@@ -192,14 +192,14 @@ func (qjm *XController) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) error {
 	return nil
 }
 
-//allocatableCapacity calculates the capacity available on each node by substracting resources
-//consumed by existing pods.
-//For a large cluster with thousands of nodes and hundreds of thousands of pods this
-//method could be a performance bottleneck
-//We can then move this method to a seperate thread that basically runs every X interval and
-//provides resources available to the next AW that needs to be dispatched.
-//Obviously the thread would need locking and timer to expire cache.
-//May be move to controller runtime can help.
+// allocatableCapacity calculates the capacity available on each node by substracting resources
+// consumed by existing pods.
+// For a large cluster with thousands of nodes and hundreds of thousands of pods this
+// method could be a performance bottleneck
+// We can then move this method to a seperate thread that basically runs every X interval and
+// provides resources available to the next AW that needs to be dispatched.
+// Obviously the thread would need locking and timer to expire cache.
+// May be moved to controller runtime can help.
 func (qjm *XController) allocatableCapacity() *clusterstateapi.Resource {
 	capacity := clusterstateapi.EmptyResource()
 	nodes, _ := qjm.clients.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
@@ -346,8 +346,8 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	return cc
 }
 
-//TODO: We can use informer to filter AWs that do not meet the minScheduling spec.
-//we still need a thread for dispatch duration but minScheduling spec can definetly be moved to an informer
+// TODO: We can use informer to filter AWs that do not meet the minScheduling spec.
+// we still need a thread for dispatch duration but minScheduling spec can definetly be moved to an informer
 func (qjm *XController) PreemptQueueJobs() {
 	ctx := context.Background()
 
@@ -935,7 +935,7 @@ func (qjm *XController) chooseAgent(ctx context.Context, qj *arbv1.AppWrapper) s
 		// Now evaluate quota
 		if qjm.serverOption.QuotaEnabled {
 			if qjm.quotaManager != nil {
-				if fits, preemptAWs, _ := qjm.quotaManager.Fits(qj, qjAggrResources, proposedPreemptions); fits {
+				if fits, preemptAWs, _ := qjm.quotaManager.Fits(qj, qjAggrResources, nil, proposedPreemptions); fits {
 					klog.V(2).Infof("[chooseAgent] AppWrapper %s has enough quota.\n", qj.Name)
 					qjm.preemptAWJobs(ctx, preemptAWs)
 					return agentId
@@ -1191,138 +1191,135 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 					unallocatedResources, priorityindex, qj, "")
 				klog.Infof("[ScheduleNext] [Agent Mode] Appwrapper '%s/%s' with resources %v to be scheduled on aggregated idle resources %v", qj.Namespace, qj.Name, aggqj, resources)
 
-				// Assume preemption will remove low priroity AWs in the system, optimistically dispatch such AWs
-
-				if aggqj.LessEqual(resources) {
-					//cache is turned-off, refer issue: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/588
-					// unallocatedHistogramMap := qjm.cache.GetUnallocatedHistograms()
-					// if !qjm.nodeChecks(unallocatedHistogramMap, qj) {
-					// 	klog.Infof("[ScheduleNext] [Agent Mode] Optimistic dispatch for AW '%s/%s' requesting aggregated resources %v histogram for point in-time fragmented resources are available in the cluster %s",
-					// 		qj.Name, qj.Namespace, qjm.GetAggregatedResources(qj), proto.MarshalTextString(unallocatedHistogramMap["gpu"]))
-					// }
-					// Now evaluate quota
-					fits := true
-					klog.Infof("[ScheduleNext] [Agent Mode] available resourse successful check for '%s/%s' at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v.",
-						qj.Name, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
-					if qjm.serverOption.QuotaEnabled {
-						if qjm.quotaManager != nil {
-							// Quota tree design:
-							// - All AppWrappers without quota submission will consume quota from the 'default' node.
-							// - All quota trees in the system should have a 'default' node so AppWrappers without
-							//   quota specification can be dispatched
-							// - If the AppWrapper doesn't have a quota label, then one is added for every tree with the 'default' value
-							// - Depending on how the 'default' node is configured, AppWrappers that don't specify quota could be
-							//   preemptable by default (e.g., 'default' node with 'cpu: 0m' and 'memory: 0Mi' quota and 'hardLimit: false'
-							//   such node borrows quota from other nodes already in the system)
-							allTrees := qjm.quotaManager.GetValidQuotaLabels()
-							newLabels := make(map[string]string)
-							for key, value := range qj.Labels {
-								newLabels[key] = value
-							}
-							updateLabels := false
-							for _, treeName := range allTrees {
-								if _, quotaSetForAW := newLabels[treeName]; !quotaSetForAW {
-									newLabels[treeName] = "default"
-									updateLabels = true
-								}
-							}
-							if updateLabels {
-								tempAW, retryErr := qjm.getAppWrapper(qj.Namespace, qj.Name, "[ScheduleNext] [Agent Mode] update labels")
-								if retryErr != nil {
-									if apierrors.IsNotFound(retryErr) {
-										klog.Warningf("[ScheduleNext] [Agent Mode] app wrapper '%s/%s' not found while trying to update labels, skiping dispatch.", qj.Namespace, qj.Name)
-										return nil
-									}
-									return retryErr
-								}
-								tempAW.SetLabels(newLabels)
-								updatedAW, retryErr := qjm.updateEtcd(ctx, tempAW, "ScheduleNext [Agent Mode] - setDefaultQuota")
-								if retryErr != nil {
-									if apierrors.IsConflict(err) {
-										klog.Warningf("[ScheduleNext] [Agent mode] Conflict error detected when updating labels in etcd for app wrapper '%s/%s, status = %+v. Retrying update.", qj.Namespace, qj.Name, qj.Status)
-									} else {
-										klog.Errorf("[ScheduleNext] [Agent mode] Failed to update labels in etcd for app wrapper '%s/%s', status = %+v, err=%v", qj.Namespace, qj.Name, qj.Status, err)
-									}
-									return retryErr
-								}
-								klog.Infof("[ScheduleNext] [Agent Mode] Default quota added to AW '%s/%s'", qj.Namespace, qj.Name)
-								updatedAW.DeepCopyInto(qj)
-							}
-							var msg string
-							var preemptAWs []*arbv1.AppWrapper
-							quotaFits, preemptAWs, msg = qjm.quotaManager.Fits(qj, aggqj, proposedPreemptions)
-							if quotaFits {
-								klog.Infof("[ScheduleNext] [Agent mode] quota evaluation successful for app wrapper '%s/%s' activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
-									qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
-								// Set any jobs that are marked for preemption
-								qjm.preemptAWJobs(ctx, preemptAWs)
-							} else { // Not enough free quota to dispatch appwrapper
-								dispatchFailedMessage = "Insufficient quota to dispatch AppWrapper."
-								dispatchFailedReason = "quota limit exceeded"
-								klog.Infof("[ScheduleNext] [Agent Mode] Blocking dispatch for app wrapper '%s/%s' due to quota limits, activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v msg=%s",
-									qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, msg)
-								//call update etcd here to retrigger AW execution for failed quota
-								//TODO: quota management tests fail if this is converted into go-routine, need to inspect why?
-								qjm.backoff(context.Background(), qj, dispatchFailedReason, dispatchFailedMessage)
-
-							}
-							fits = quotaFits
-						} else {
-							fits = false
-							// Quota manager not initialized
-							dispatchFailedMessage = "Quota evaluation is enabled but not initialized. Insufficient quota to dispatch AppWrapper."
-							klog.Errorf("[ScheduleNext] [Agent Mode] Quota evaluation is enabled but not initialized.  AppWrapper '%s/%s' does not have enough quota", qj.Namespace, qj.Name)
+				// Jobs dispatched with quota management may be borrowing quota from other tree nodes making those jobs preemptable, regardless of their priority.
+				// Cluster resources need to be considered to determine if both quota and resources (after deleting borrowing AppWrappers) are availabe for the new AppWrapper
+				// We perform a "quota check" first followed by a "resource check"
+				fits := true
+				if qjm.serverOption.QuotaEnabled {
+					if qjm.quotaManager != nil {
+						// Quota tree design:
+						// - All AppWrappers without quota submission will consume quota from the 'default' node.
+						// - All quota trees in the system should have a 'default' node so AppWrappers without
+						//   quota specification can be dispatched
+						// - If the AppWrapper doesn't have a quota label, then one is added for every tree with the 'default' value
+						// - Depending on how the 'default' node is configured, AppWrappers that don't specify quota could be
+						//   preemptable by default (e.g., 'default' node with 'cpu: 0m' and 'memory: 0Mi' quota and 'hardLimit: false'
+						//   such node borrows quota from other nodes already in the system)
+						allTrees := qjm.quotaManager.GetValidQuotaLabels()
+						newLabels := make(map[string]string)
+						for key, value := range qj.Labels {
+							newLabels[key] = value
 						}
+						updateLabels := false
+						for _, treeName := range allTrees {
+							if _, quotaSetForAW := newLabels[treeName]; !quotaSetForAW {
+								newLabels[treeName] = "default"
+								updateLabels = true
+							}
+						}
+						if updateLabels {
+							tempAW, retryErr := qjm.getAppWrapper(qj.Namespace, qj.Name, "[ScheduleNext] [Agent Mode] update labels")
+							if retryErr != nil {
+								if apierrors.IsNotFound(retryErr) {
+									klog.Warningf("[ScheduleNext] [Agent Mode] app wrapper '%s/%s' not found while trying to update labels, skiping dispatch.", qj.Namespace, qj.Name)
+									return nil
+								}
+								return retryErr
+							}
+							tempAW.SetLabels(newLabels)
+							updatedAW, retryErr := qjm.updateEtcd(ctx, tempAW, "ScheduleNext [Agent Mode] - setDefaultQuota")
+							if retryErr != nil {
+								if apierrors.IsConflict(err) {
+									klog.Warningf("[ScheduleNext] [Agent mode] Conflict error detected when updating labels in etcd for app wrapper '%s/%s, status = %+v. Retrying update.", qj.Namespace, qj.Name, qj.Status)
+								} else {
+									klog.Errorf("[ScheduleNext] [Agent mode] Failed to update labels in etcd for app wrapper '%s/%s', status = %+v, err=%v", qj.Namespace, qj.Name, qj.Status, err)
+								}
+								return retryErr
+							}
+							klog.Infof("[ScheduleNext] [Agent Mode] Default quota added to AW '%s/%s'", qj.Namespace, qj.Name)
+							updatedAW.DeepCopyInto(qj)
+						}
+
+						// Allocate consumer into quota tree and check if there are enough resources to dispatch it
+						var msg string
+						var preemptAWs []*arbv1.AppWrapper
+						quotaFits, preemptAWs, msg = qjm.quotaManager.Fits(qj, aggqj, resources, proposedPreemptions)
+						klog.Info("%s %s %s", quotaFits, preemptAWs, msg)
+
+						if quotaFits {
+							klog.Infof("[ScheduleNext] [Agent mode] quota evaluation successful for app wrapper '%s/%s' activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
+								qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+							// Set any jobs that are marked for preemption
+							qjm.preemptAWJobs(ctx, preemptAWs)
+						} else { // Not enough free quota to dispatch appwrapper
+							dispatchFailedMessage = "Insufficient quota and/or resources to dispatch AppWrapper."
+							dispatchFailedReason = "quota limit exceeded"
+							klog.Infof("[ScheduleNext] [Agent Mode] Blocking dispatch for app wrapper '%s/%s' due to quota limits, activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v msg=%s",
+								qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, msg)
+							// Call update etcd here to retrigger AW execution for failed quota
+							// TODO: quota management tests fail if this is converted into go-routine, need to inspect why?
+							qjm.backoff(context.Background(), qj, dispatchFailedReason, dispatchFailedMessage)
+						}
+						fits = quotaFits
 					} else {
-						klog.V(4).Infof("[ScheduleNext] [Agent Mode]  quota evaluation not enabled for '%s/%s' at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Namespace,
-							qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+						// Quota manager not initialized
+						dispatchFailedMessage = "Quota evaluation is enabled but not initialized. Insufficient quota to dispatch AppWrapper."
+						klog.Errorf("[ScheduleNext] [Agent Mode] Quota evaluation is enabled but not initialized.  AppWrapper '%s/%s' does not have enough quota", qj.Namespace, qj.Name)
+						fits = false
 					}
-					//TODO: Remove forwarded loop
-					forwarded = true
-					// If quota evalauation sucedeed or quota evaluation not enabled set the appwrapper to be dispatched
-					if fits {
+				} else {
+					klog.V(4).Infof("[ScheduleNext] [Agent Mode] Quota evaluation not enabled for '%s/%s' at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", qj.Namespace,
+						qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 
-						// aw is ready to go!
-						tempAW, retryErr := qjm.getAppWrapper(qj.Namespace, qj.Name, "[ScheduleNext] [Agent Mode]  -- ready to dispatch")
-						if retryErr != nil {
-							if apierrors.IsNotFound(retryErr) {
-								return nil
-							}
-							klog.Errorf("[ScheduleNext] [Agent Mode] Failed to get fresh copy of the app wrapper '%s/%s' to update status, err = %v", qj.Namespace, qj.Name, err)
-							return retryErr
-						}
-						tempAW.Status.CanRun = true
-						tempAW.Status.FilterIgnore = true // update CanRun & Spec.  no need to trigger event
-						retryErr = qjm.updateStatusInEtcd(ctx, tempAW, "ScheduleNext - setCanRun")
-						if retryErr != nil {
-							if qjm.quotaManager != nil && quotaFits {
-								// Quota was allocated for this appwrapper, release it.
-								qjm.quotaManager.Release(qj)
-							}
-							if apierrors.IsNotFound(retryErr) {
-								klog.Warningf("[ScheduleNext] [Agent Mode] app wrapper '%s/%s' not found after status update, skiping dispatch.", qj.Namespace, qj.Name)
-								return nil
-							} else if apierrors.IsConflict(retryErr) {
-								klog.Warningf("[ScheduleNext] [Agent mode] Conflict error detected when updating status in etcd for app wrapper '%s/%s, status = %+v. Retrying update.", qj.Namespace, qj.Name, qj.Status)
-							} else if retryErr != nil {
-								klog.Errorf("[ScheduleNext] [Agent mode] Failed to update status in etcd for app wrapper '%s/%s', status = %+v, err=%v", qj.Namespace, qj.Name, qj.Status, err)
-							}
-							return retryErr
-						}
-						tempAW.DeepCopyInto(qj)
+					if aggqj.LessEqual(resources) { // Check if enough resources to dispatch
+						fits = true
+						klog.Infof("[ScheduleNext] [Agent Mode] available resourse successful check for '%s/%s' at %s activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v.",
+							qj.Name, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+					} else { // Not enough free resources to dispatch HOL
+						fits = false
+						dispatchFailedMessage = "Insufficient resources to dispatch AppWrapper."
+						klog.Infof("[ScheduleNext] [Agent Mode] Failed to dispatch app wrapper '%s/%s' due to insuficient resources, activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
+							qj.Namespace, qj.Name, qjm.qjqueue.IfExistActiveQ(qj),
+							qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
+						// TODO: Remove forwarded logic as a big AW will never be forwarded
 						forwarded = true
-					} // fits
-				} else { // Not enough free resources to dispatch HOL
-					dispatchFailedMessage = "Insufficient resources to dispatch AppWrapper."
-					klog.Infof("[ScheduleNext] [Agent Mode] Failed to dispatch app wrapper '%s/%s' due to insuficient resources, activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
-						qj.Namespace, qj.Name, qjm.qjqueue.IfExistActiveQ(qj),
-						qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
-					//TODO: Remove forwarded logic as a big AW will never be forwarded
-					forwarded = true
-					// should we call backoff or update etcd?
-					go qjm.backoff(ctx, qj, dispatchFailedReason, dispatchFailedMessage)
+						// should we call backoff or update etcd?
+						go qjm.backoff(ctx, qj, dispatchFailedReason, dispatchFailedMessage)
+					}
 				}
-				// if the HeadOfLineHoldingTime option is not set it will break the loop
+				forwarded = true
+				if fits {
+					// aw is ready to go!
+					tempAW, retryErr := qjm.getAppWrapper(qj.Namespace, qj.Name, "[ScheduleNext] [Agent Mode]  -- ready to dispatch")
+					if retryErr != nil {
+						if apierrors.IsNotFound(retryErr) {
+							return nil
+						}
+						klog.Errorf("[ScheduleNext] [Agent Mode] Failed to get fresh copy of the app wrapper '%s/%s' to update status, err = %v", qj.Namespace, qj.Name, err)
+						return retryErr
+					}
+					tempAW.Status.CanRun = true
+					tempAW.Status.FilterIgnore = true // update CanRun & Spec.  no need to trigger event
+					retryErr = qjm.updateStatusInEtcd(ctx, tempAW, "ScheduleNext - setCanRun")
+					if retryErr != nil {
+						if qjm.quotaManager != nil && quotaFits {
+							// Quota was allocated for this appwrapper, release it.
+							qjm.quotaManager.Release(qj)
+						}
+						if apierrors.IsNotFound(retryErr) {
+							klog.Warningf("[ScheduleNext] [Agent Mode] app wrapper '%s/%s' not found after status update, skiping dispatch.", qj.Namespace, qj.Name)
+							return nil
+						} else if apierrors.IsConflict(retryErr) {
+							klog.Warningf("[ScheduleNext] [Agent mode] Conflict error detected when updating status in etcd for app wrapper '%s/%s, status = %+v. Retrying update.", qj.Namespace, qj.Name, qj.Status)
+						} else if retryErr != nil {
+							klog.Errorf("[ScheduleNext] [Agent mode] Failed to update status in etcd for app wrapper '%s/%s', status = %+v, err=%v", qj.Namespace, qj.Name, qj.Status, err)
+						}
+						return retryErr
+					}
+					tempAW.DeepCopyInto(qj)
+					forwarded = true
+				}
+
 				//TODO: Remove schedulingTimeExpired flag: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/586
 				schedulingTimeExpired := false
 				if forwarded {
@@ -1690,12 +1687,12 @@ func larger(a, b string) bool {
 	return a > b // Equal length, lexicographic order
 }
 
-//When an AW is deleted, do not add such AWs to the event queue.
-//AW can never be brought back when it is deleted by an external client, so do not bother adding it to event queue.
-//There will be a scenario, where an AW is in middle of dispatch cycle and it may be deleted. At that point when such an
-//AW is added to etcd a conflict error will be raised. This will cause the current AW to be skipped.
-//If there are large number of delete's may be informer misses few delete events for this simplification.
-//For 1K AW all of them are deleted from the system, and the next batch of re-submitted AW begins processing in less than 2 mins
+// When an AW is deleted, do not add such AWs to the event queue.
+// AW can never be brought back when it is deleted by an external client, so do not bother adding it to event queue.
+// There will be a scenario, where an AW is in middle of dispatch cycle and it may be deleted. At that point when such an
+// AW is added to etcd a conflict error will be raised. This will cause the current AW to be skipped.
+// If there are large number of delete's may be informer misses few delete events for this simplification.
+// For 1K AW all of them are deleted from the system, and the next batch of re-submitted AW begins processing in less than 2 mins
 func (cc *XController) deleteQueueJob(obj interface{}) {
 	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
