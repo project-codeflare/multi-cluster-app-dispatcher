@@ -1,0 +1,9 @@
+# Verify job is running
+---
+apiVersion: mcad.ibm.com/v1beta1
+kind: AppWrapper
+metadata:
+    name: my-job-2
+    namespace: test
+status:
+    state: Running
