@@ -521,9 +521,9 @@ func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper 
 				awDispatchDurationLimit := value.Spec.SchedSpec.DispatchDuration.Limit
 				dispatchDuration := value.Status.ControllerFirstDispatchTimestamp.Add(time.Duration(awDispatchDurationLimit) * time.Second)
 				currentTime := time.Now()
-				hasDispatchTimeNotExceeded := currentTime.Before(dispatchDuration)
+				dispatchTimeExceeded := !currentTime.Before(dispatchDuration)
 
-				if !hasDispatchTimeNotExceeded {
+				if dispatchTimeExceeded {
 					klog.V(8).Infof("Appwrapper Dispatch limit exceeded, currentTime %v, dispatchTimeInSeconds %v", currentTime, dispatchDuration)
 					value.Spec.SchedSpec.DispatchDuration.Overrun = true
 					qjobs = append(qjobs, value)
