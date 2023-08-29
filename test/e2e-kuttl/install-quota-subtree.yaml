@@ -13,6 +13,7 @@ spec:
         requests:
           cpu: 1075m
           memory: 1045Mi
+          nvidia.com/gpu: 16
 ---
 apiVersion: ibm.com/v1
 kind: QuotaSubtree
@@ -28,6 +29,7 @@ spec:
         requests:
           cpu: 1075m
           memory: 1045Mi
+          nvidia.com/gpu: 16
 ---
 apiVersion: ibm.com/v1
 kind: QuotaSubtree
@@ -41,27 +43,32 @@ spec:
   children:
     - name: gold
       quotas:
+        hardLimit: false
         requests:
           cpu: 1075m
           memory: 450Mi
+          nvidia.com/gpu: 8
     - name: silver
       quotas:
         hardLimit: false
         requests:
           cpu: 1075m
           memory: 400Mi
+          nvidia.com/gpu: 8
     - name: bronze
       quotas:
         hardLimit: true
         requests:
           cpu: 900m
           memory: 300Mi
+          nvidia.com/gpu: 8
     - name: default
       quotas:
         hardLimit: false
         requests:
           cpu: 0m
           memory: 0Mi
+          nvidia.com/gpu: 0
 ---
 apiVersion: ibm.com/v1
 kind: QuotaSubtree
@@ -78,9 +85,11 @@ spec:
         requests:
           cpu: 1075m
           memory: 1045Mi
+          nvidia.com/gpu: 16
     - name: default
       quotas:
         hardLimit: false
         requests:
           cpu: 0m
           memory: 0Mi
+          nvidia.com/gpu: 0
