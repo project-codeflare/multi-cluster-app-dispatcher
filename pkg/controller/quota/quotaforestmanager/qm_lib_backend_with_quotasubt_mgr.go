@@ -572,6 +572,8 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 	preemptIds = qm.getAppWrappers(allocResponse.GetPreemptedIds())
 
 	// Update cluster resources in the even that preemption happens
+	// TODO: Potentially move this resource updated out to the calling function (would need to comeback again to undo the allocation
+	// if the resources are not enough after preemption)
 	if clusterResources != nil {
 		updatedResources := clusterResources
 
@@ -591,6 +593,10 @@ func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi
 }
 
 func (qm *QuotaManager) getAggregatedResources(appWrapper *arbv1.AppWrapper) *clusterstateapi.Resource {
+	// After quota evaluation, a set of AppWrappers is returned for preemption. Before deciding to delete them,
+	// we need to make sure enough resources are free for the new AppWrapper after the preemptable list is deleted.
+	// For this we need to add back the requests consumed by the preemptable AppWrappers to the available resources
+	// in order to perform a correct resource check with updated values.
 	allocated := clusterstateapi.EmptyResource()
 
 	for _, genericItem := range appWrapper.Spec.AggrResources.GenericItems {
