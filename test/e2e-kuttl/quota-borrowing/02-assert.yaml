@@ -1,5 +1,0 @@
-# Verify test namespace existence
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: test
