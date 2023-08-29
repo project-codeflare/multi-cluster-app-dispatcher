@@ -1,7 +1,7 @@
-apiVersion: workload.codeflare.dev/v1beta1
+apiVersion: mcad.ibm.com/v1beta1
 kind: AppWrapper
 metadata:
-  name: raycluster-complete
+  name: raycluster-complete-1
   namespace: default
 spec:
   resources:
@@ -30,7 +30,7 @@ spec:
           labels:
             controller-tools.k8s.io: "1.0"
             # A unique identifier for the head node and workers of this cluster.
-          name: raycluster-complete
+          name: raycluster-complete-1
         spec:
           rayVersion: '2.5.0'
           # Ray head pod configuration
