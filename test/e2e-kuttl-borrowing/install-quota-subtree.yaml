@@ -1,0 +1,95 @@
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: context-root
+  namespace: kube-system
+  labels:
+    tree: quota_context
+spec:
+  children:
+    - name: context-root
+      quotas:
+        requests:
+          cpu: 1075m
+          memory: 1045Mi
+          nvidia.com/gpu: 16
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: service-root
+  namespace: kube-system
+  labels:
+    tree: quota_service
+spec:
+  children:
+    - name: service-root
+      quotas:
+        requests:
+          cpu: 1075m
+          memory: 1045Mi
+          nvidia.com/gpu: 16
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: context-root-children
+  namespace: kube-system
+  labels:
+    tree: quota_context
+spec:
+  parent: context-root
+  children:
+    - name: gold
+      quotas:
+        hardLimit: false
+        requests:
+          cpu: 1075m
+          memory: 450Mi
+          nvidia.com/gpu: 8
+    - name: silver
+      quotas:
+        hardLimit: false
+        requests:
+          cpu: 1075m
+          memory: 400Mi
+          nvidia.com/gpu: 8
+    - name: bronze
+      quotas:
+        hardLimit: true
+        requests:
+          cpu: 900m
+          memory: 300Mi
+          nvidia.com/gpu: 8
+    - name: default
+      quotas:
+        hardLimit: false
+        requests:
+          cpu: 0m
+          memory: 0Mi
+          nvidia.com/gpu: 0
+---
+apiVersion: ibm.com/v1
+kind: QuotaSubtree
+metadata:
+  name: service-root-children
+  namespace: kube-system
+  labels:
+    tree: quota_service
+spec:
+  parent: service-root
+  children:
+    - name: gold
+      quotas:
+        requests:
+          cpu: 1075m
+          memory: 1045Mi
+          nvidia.com/gpu: 16
+    - name: default
+      quotas:
+        hardLimit: false
+        requests:
+          cpu: 0m
+          memory: 0Mi
+          nvidia.com/gpu: 0
