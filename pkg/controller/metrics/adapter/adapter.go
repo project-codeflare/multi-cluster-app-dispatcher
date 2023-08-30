@@ -25,12 +25,11 @@ import (
 	openapinamer "k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 
-	"github.com/emicklei/go-restful"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
-	generatedcustommetrics "sigs.k8s.io/custom-metrics-apiserver/pkg/generated/openapi/custommetrics"
+	generatedexternalmetrics "sigs.k8s.io/custom-metrics-apiserver/pkg/generated/openapi/externalmetrics"
 
 	adapterprov "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter/provider"
 	"sigs.k8s.io/custom-metrics-apiserver/pkg/apiserver"
@@ -52,7 +51,7 @@ type MetricsAdapter struct {
 	Message string
 }
 
-func (a *MetricsAdapter) makeProviderOrDie(clusterStateCache clusterstatecache.Cache) (provider.MetricsProvider, *restful.WebService) {
+func (a *MetricsAdapter) makeProviderOrDie(clusterStateCache clusterstatecache.Cache) (provider.ExternalMetricsProvider) {
 	klog.Infof("[makeProviderOrDie] Entered makeProviderOrDie()")
 	client, err := a.DynamicClient()
 	if err != nil {
@@ -85,7 +84,7 @@ func newMetricsAdapter(serverOptions *options.ServerOption, config *rest.Config,
 
 	cmd := &MetricsAdapter{}
 
-	cmd.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(generatedcustommetrics.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(apiserver.Scheme))
+	cmd.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(generatedexternalmetrics.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(apiserver.Scheme))
 	cmd.OpenAPIConfig.Info.Title = "MetricsAdpater"
 	cmd.OpenAPIConfig.Info.Version = "1.0.0"
 
@@ -100,13 +99,10 @@ func newMetricsAdapter(serverOptions *options.ServerOption, config *rest.Config,
 	portedArgs := covertServerOptionsToMetricsServerOptions(serverOptions)
 	cmd.Flags().Parse(portedArgs)
 
-	testProvider, webService := cmd.makeProviderOrDie(clusterStateCache)
-	cmd.WithCustomMetrics(testProvider)
+	testProvider := cmd.makeProviderOrDie(clusterStateCache)
 	cmd.WithExternalMetrics(testProvider)
 
 	klog.Infof(cmd.Message)
-	// Set up POST endpoint for writing fake metric values
-	restful.DefaultContainer.Add(webService)
 	go func() {
 		// Open port for POSTing fake metrics
 		klog.Fatal(http.ListenAndServe(":8080", nil))
