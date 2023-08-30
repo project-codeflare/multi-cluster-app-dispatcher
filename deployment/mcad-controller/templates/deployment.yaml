@@ -46,59 +46,7 @@ spec:
   insecureSkipTLSVerify: true
   groupPriorityMinimum: 100 
   versionPriority: 100 
----
-apiVersion: apiregistration.k8s.io/v1beta1
-kind: APIService
-metadata:
-  name: v1beta1.custom.metrics.k8s.io
-spec:
-  service:
-    name: custom-metrics-apiserver
-    namespace: kube-system
-  group: custom.metrics.k8s.io
-  version: v1beta1
-  insecureSkipTLSVerify: true
-  groupPriorityMinimum: 100
-  versionPriority: 100
 #{{ end }}
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: custom-metrics-server-resources
-rules:
-- apiGroups:
-  - custom.metrics.k8s.io
-  resources: ["*"]
-  verbs: ["*"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: custom-metrics-resource-reader
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - namespaces
-  - pods
-  - services
-  verbs:
-  - get
-  - list
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: hpa-controller-custom-metrics
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: custom-metrics-server-resources
-subjects:
-- kind: ServiceAccount
-  name: horizontal-pod-autoscaler
-  namespace: kube-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -191,46 +139,6 @@ metadata:
 #{{ end }}
 ---
 #{{ if .Values.serviceAccount }}
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: custom-metrics:system:auth-delegator
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:auth-delegator
-subjects:
-- kind: ServiceAccount
-  name: {{ .Values.serviceAccount }}
-  namespace: kube-system
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: custom-metrics-auth-reader
-  namespace: kube-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: extension-apiserver-authentication-reader
-subjects:
-- kind: ServiceAccount
-  name: {{ .Values.serviceAccount }}
-  namespace: kube-system
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: custom-metrics-resource-reader
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: custom-metrics-resource-reader
-subjects:
-- kind: ServiceAccount
-  name: {{ .Values.serviceAccount }}
-  namespace: kube-system
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -378,4 +286,3 @@ spec:
 #{{ end }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}
-
