@@ -43,8 +43,10 @@ type NodeInfo struct {
 
 	// The releasing resource on that node
 	Releasing *Resource
+
 	// The idle resource on that node
 	Idle *Resource
+
 	// The used resource on that node, including running and terminating
 	// pods
 	Used *Resource
@@ -104,7 +106,6 @@ func (ni *NodeInfo) Clone() *NodeInfo {
 func (ni *NodeInfo) SetNode(node *v1.Node) {
 	if ni.Node == nil {
 		ni.Idle = NewResource(node.Status.Allocatable)
-
 	}
 
 	ni.Name = node.Name
@@ -121,5 +122,4 @@ func (ni NodeInfo) String() string {
 
 	return fmt.Sprintf("Node (%s): idle <%v>, used <%v>, releasing <%v>%s",
 		ni.Name, ni.Idle, ni.Used, ni.Releasing, res)
-
 }

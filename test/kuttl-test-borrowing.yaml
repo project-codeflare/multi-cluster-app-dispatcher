@@ -1,0 +1,9 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestSuite
+testDirs:
+  - test/e2e-kuttl-borrowing/
+timeout: 60
+artifactsDir: _output/logs
+commands:
+  - script: helm upgrade  --install mcad-controller deployment/mcad-controller --namespace kube-system --wait --set loglevel=${LOG_LEVEL} --set resources.requests.cpu=1000m --set resources.requests.memory=1024Mi --set resources.limits.cpu=4000m --set resources.limits.memory=4096Mi --set image.repository=$IMAGE_REPOSITORY_MCAD --set image.tag=$IMAGE_TAG_MCAD --set image.pullPolicy=$MCAD_IMAGE_PULL_POLICY --set configMap.quotaEnabled='"true"' --set quotaManagement.rbac.apiGroup=ibm.com --set quotaManagement.rbac.resource=quotasubtrees  --set configMap.name=mcad-controller-configmap --set configMap.preemptionEnabled='"true"'
+  - script: kubectl apply -f ${ROOT_DIR}/test/e2e-kuttl-borrowing/install-quota-subtree.yaml

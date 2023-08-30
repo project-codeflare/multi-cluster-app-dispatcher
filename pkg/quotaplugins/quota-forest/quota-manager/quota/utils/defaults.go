@@ -21,7 +21,7 @@ var (
 	DefaultTreeName string = "default"
 
 	// DefaultResourceNames : the default resource names
-	DefaultResourceNames []string = []string{"cpu", "memory"}
+	DefaultResourceNames []string = []string{"cpu", "memory", "nvidia.com/gpu"}
 
 	// DefaultTreeKind : the default kind attribute of the tree
 	DefaultTreeKind string = "QuotaTree"

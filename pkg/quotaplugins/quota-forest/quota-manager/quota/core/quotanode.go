@@ -138,7 +138,7 @@ func (qn *QuotaNode) SlideDown() {
 func (qn *QuotaNode) SlideUp(c *Consumer, applyPriority bool, allocationRecovery *AllocationRecovery,
 	preemptedConsumers *[]string) bool {
 
-	if qn.isHard {
+	if qn.isHard && !qn.IsRoot() {
 		return false
 	}
 

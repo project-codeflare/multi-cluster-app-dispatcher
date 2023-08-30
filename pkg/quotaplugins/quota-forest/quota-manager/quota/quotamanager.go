@@ -494,12 +494,14 @@ func (m *Manager) AllocateForest(forestName string, consumerID string) (response
 
 // TryAllocateForest : allocate a consumer on a forest
 func (m *Manager) TryAllocateForest(forestName string, consumerID string) (response *core.AllocationResponse, err error) {
+	if m.mode != Normal {
+		response, err = m.AllocateForest(forestName, consumerID)
+		return response, err
+	}
+
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	if m.mode != Normal {
-		return nil, fmt.Errorf("manager is not in normal mode")
-	}
 	forestController, forestConsumer, err := m.preAllocateForest(forestName, consumerID)
 	if err == nil && forestController.IsConsumerAllocated(consumerID) {
 		err = fmt.Errorf("consumer %s already allocated on forest %s", consumerID, forestName)

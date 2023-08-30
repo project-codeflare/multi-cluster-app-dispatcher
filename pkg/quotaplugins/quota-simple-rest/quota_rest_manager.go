@@ -257,7 +257,7 @@ func (qm *QuotaManager) getQuotaDesignation(aw *arbv1.AppWrapper) []QuotaGroup {
 	return groups
 }
 
-func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource,
+func (qm *QuotaManager) Fits(aw *arbv1.AppWrapper, awResDemands *clusterstateapi.Resource, clusterResources *clusterstateapi.Resource,
 	proposedPreemptions []*arbv1.AppWrapper) (bool, []*arbv1.AppWrapper, string) {
 
 	// Handle uninitialized quota manager
