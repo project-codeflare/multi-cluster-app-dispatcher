@@ -4,7 +4,7 @@ This integration will help in queuing on [kuberay](https://github.com/ray-projec
 
 #### Prerequisites
 
-- Kubernetes(see [KinD](https://helm.sh/docs/intro/install/)) or Openshift cluster(see [OpenShift Local](https://developers.redhat.com/products/openshift-local/overview))
+- Kubernetes(see [KinD](https://kind.sigs.k8s.io/)) or Openshift cluster(see [OpenShift Local](https://developers.redhat.com/products/openshift-local/overview))
 - Kubernetes client tools such as [kubectl](https://kubernetes.io/docs/tasks/tools/) or [OpenShift CLI](https://docs.openshift.com/container-platform/4.13/cli_reference/openshift_cli/getting-started-cli.html)
 - [Helm](https://helm.sh/docs/intro/install/)
 - Install MCAD and KubeRay operators:
