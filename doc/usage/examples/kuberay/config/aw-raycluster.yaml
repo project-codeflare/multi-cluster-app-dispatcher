@@ -7,18 +7,31 @@ spec:
   resources:
     GenericItems:
     - replicas: 1
-      custompodresources: # Optional section that specifies resource requirements
-                          # for non-standard k8s resources, follows same format as
-                          # that of standard k8s resources.
-      - replicas: 2 # because AppWrappers are generic they must define the resultant pods that will be needed
-                    # to fulfill a request as the request values cannot be reliably extracted from the
-                    # generictemplate below
+      custompodresources:
+      # Optional section that specifies resource requirements
+      # for non-standard k8s resources, follows same format as
+      # that of standard k8s resources.
+      # Each item in the custompodresources stanza should include resources consumed by target Item.
+      # In this example, the 2 items correspond to 1 Ray head pod and 1 Ray worker pod
+      - replicas: 1
+        limits:
+          cpu: 2
+          memory: 8G
+          nvidia.com/gpu: 0
+        requests:
+          cpu: 2
+          memory: 8G
+          nvidia.com/gpu: 0
+      # The replica should match the number of worker pods
+      - replicas: 1
+        limits:
+          cpu: 8
+          memory: 8G
+          nvidia.com/gpu: 0
         requests:
           cpu: 8
-          memory: 512Mi
-        limits:
-          cpu: 10
-          memory: 1G
+          memory: 8G
+          nvidia.com/gpu: 0
       generictemplate:
         # The resource requests and limits in this config are too small for production!
         # For examples with more realistic resource configuration, see
@@ -75,15 +88,13 @@ spec:
                   # entire Kubernetes node on which it is scheduled.
                   resources:
                     limits:
-                      cpu: "1"
-                      memory: "2G"
+                      cpu: "2"
+                      memory: "8G"
                     requests:
                       # For production use-cases, we recommend specifying integer CPU reqests and limits.
                       # We also recommend setting requests equal to limits for both CPU and memory.
-                      # For this example, we use a 500m CPU request to accomodate resource-constrained local
-                      # Kubernetes testing environments such as KinD and minikube.
-                      cpu: "500m"
-                      memory: "2G"
+                      cpu: "2"
+                      memory: "8G"
                 volumes:
                   - name: ray-logs
                     emptyDir: {}
@@ -131,20 +142,16 @@ spec:
                   # entire Kubernetes node on which it is scheduled.
                   resources:
                     limits:
-                      cpu: "1"
-                      memory: "1G"
+                      cpu: "8"
+                      memory: "8G"
                     # For production use-cases, we recommend specifying integer CPU reqests and limits.
                     # We also recommend setting requests equal to limits for both CPU and memory.
-                    # For this example, we use a 500m CPU request to accomodate resource-constrained local
-                    # Kubernetes testing environments such as KinD and minikube.
                     requests:
                       # For production use-cases, we recommend specifying integer CPU reqests and limits.
                       # We also recommend setting requests equal to limits for both CPU and memory.
-                      # For this example, we use a 500m CPU request to accomodate resource-constrained local
-                      # Kubernetes testing environments such as KinD and minikube.
-                      cpu: "500m"
+                      cpu: "8"
                       # For production use-cases, we recommend allocating at least 8Gb memory for each Ray container.
-                      memory: "1G"
+                      memory: "8G"
                 # use volumes
                 # Refer to https://kubernetes.io/docs/concepts/storage/volumes/
                 volumes:
