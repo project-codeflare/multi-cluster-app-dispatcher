@@ -598,24 +598,25 @@ func getContainerResources(container v1.Container, replicas float64) *clustersta
 }
 
 //returns status of an item present in etcd
-func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResource, namespace string, appwrapperName string, genericItemName string) (completed bool) {
+func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResource, namespace string, appwrapperName string, genericItemName string) (completed bool, condition string) {
 	dd := gr.clients.Discovery()
+	klog.V(8).Infof("[IsItemCompleted] - checking status !!!!!!!")
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
 		klog.Errorf("[IsItemCompleted] Error getting API resources, err=%#v", err)
-		return false
+		return false, ""
 	}
 	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
 	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(awgr.GenericTemplate.Raw, nil, nil)
 	if err != nil {
 		klog.Errorf("[IsItemCompleted] Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
-		return false
+		return false, ""
 	}
 
 	mapping, err := restmapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err != nil {
 		klog.Errorf("[IsItemCompleted] mapping error from raw object: `%v`", err)
-		return false
+		return false, ""
 	}
 	restconfig := gr.kubeClientConfig
 	restconfig.GroupVersion = &schema.GroupVersion{
@@ -626,14 +627,14 @@ func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResourc
 	dclient, err := dynamic.NewForConfig(restconfig)
 	if err != nil {
 		klog.Errorf("[IsItemCompleted] Error creating new dynamic client, err %v", err)
-		return false
+		return false, ""
 	}
 
 	labelSelector := fmt.Sprintf("%s=%s", appwrapperJobName, appwrapperName)
 	inEtcd, err := dclient.Resource(rsrc).Namespace(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		klog.Errorf("[IsItemCompleted] Error listing object: %v", err)
-		return false
+		return false, ""
 	}
 
 	for _, job := range inEtcd.Items {
@@ -660,7 +661,7 @@ func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResourc
 		if jobMap == nil {
 			continue
 		}
-
+		
 		if job.Object["status"] != nil {
 			status := job.Object["status"].(map[string]interface{})
 			if status["conditions"] != nil {
@@ -676,7 +677,9 @@ func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResourc
 					userSpecfiedCompletionConditions := strings.Split(awgr.CompletionStatus, ",")
 					for _, condition := range userSpecfiedCompletionConditions {
 						if strings.Contains(strings.ToLower(completionType), strings.ToLower(condition)) {
-							return true
+							klog.V(8).Infof("[IsItemCompleted] condition `%v`.\n", condition)
+
+							return true, condition
 						}
 					}
 				}
@@ -685,5 +688,5 @@ func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResourc
 			klog.Errorf("[IsItemCompleted] Found item with name %v that has status nil in namespace %v with labels %v", job.GetName(), job.GetNamespace(), job.GetLabels())
 		}
 	}
-	return false
+	return false, ""
 }

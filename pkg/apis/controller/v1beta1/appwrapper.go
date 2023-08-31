@@ -101,7 +101,7 @@ type AppWrapperService struct {
 }
 
 // AppWrapperResource is App Wrapper aggregation resource
-//todo: To be depricated
+// todo: To be depricated
 type AppWrapperResource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -266,11 +266,23 @@ type AppWrapperStatus struct {
 
 	// Represents multi-cluster observatioins
 	TargetClusterName string `json:"targetClusterName"`
+
+	ItemCompletionStatus GenericItemCompletionStatus `json:"itemCompletionStatus,omitempty"`
+}
+
+type GenericItemCompletionStatus struct {
+	GenericItems [] GenericItem `json:"GenericItems,omitempty"`
+}
+
+type GenericItem struct {
+	Name string `json:"name"`
+	Namespace string `json:"namespace"`
+	Condition string `json:"condition"`
 }
 
 type AppWrapperState string
 
-//enqueued, active, deleting, succeeded, failed
+// enqueued, active, deleting, succeeded, failed
 const (
 	AppWrapperStateEnqueued              AppWrapperState = "Pending"
 	AppWrapperStateActive                AppWrapperState = "Running"
