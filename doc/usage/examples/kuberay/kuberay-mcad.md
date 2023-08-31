@@ -32,8 +32,7 @@ This integration will help in queuing on [kuberay](https://github.com/ray-projec
 
     - OpenShift cluster:
 
-        MCAD and KubeRay Operators are part of the CodeFlare stack which provides a simple, user-friendly abstraction for scaling,
-queuing and resource management of distributed AI/ML and Python workloads. Please follow the `Distributed Workloads` [Quick-Start](https://github.com/opendatahub-io/distributed-workloads/blob/main/Quick-Start.md) for installation.
+        On OpenShift,  MCAD and KubeRay are already part of the Open Data Hub Distributed Workload Stack. The stack provides a simple, user-friendly abstraction for scaling, queuing and resource management of distributed AI/ML and Python workloads. Please follow the Quick Start in the [Distributed Workloads](https://github.com/opendatahub-io/distributed-workloads) for installation.
 
 
 #### Steps
