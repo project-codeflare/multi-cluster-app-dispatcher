@@ -896,6 +896,20 @@ spec:
                       properties:
                         condition:
                           type: string
+                        itemGVK:
+                          description: Group Version Kind 
+                          properties:
+                            group:
+                              type: string
+                            kind:
+                              type: string
+                            version:
+                              type: string
+                          required:
+                          - group
+                          - kind
+                          - version
+                          type: object  
                         name:
                           type: string
                         namespace:

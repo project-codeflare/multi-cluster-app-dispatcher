@@ -275,11 +275,16 @@ type GenericItemCompletionStatus struct {
 }
 
 type GenericItem struct {
+	ItemGVK ItemGVK `json:"itemGVK"`
 	Name string `json:"name"`
 	Namespace string `json:"namespace"`
 	Condition string `json:"condition"`
 }
-
+type ItemGVK struct {
+    Group string `json:"group"`
+	Version string `json:"version"`
+	Kind string `json:"kind"`
+}
 type AppWrapperState string
 
 // enqueued, active, deleting, succeeded, failed
