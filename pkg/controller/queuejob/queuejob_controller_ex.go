@@ -1704,6 +1704,10 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 					for {
 						time.Sleep(requeueInterval)
 						latestAw, exists, err := cc.appwrapperInformer.Informer().GetStore().GetByKey(key)
+						if latestAw.(*arbv1.AppWrapper).Status.State == arbv1.AppWrapperStateCompleted || latestAw.(arbv1.AppWrapper).Status.State == arbv1.AppWrapperStateFailed || latestAw.(arbv1.AppWrapper).Status.State == arbv1.AppWrapperStateDeleted {
+							klog.V(2).Infof("[Informer-updateQJ] Stopping requeue for AW %s with status %s", latestAw.(*arbv1.AppWrapper).Name, latestAw.(*arbv1.AppWrapper).Status.State)
+							break
+						}
 						if err == nil && exists {
 							// Enqueue the latest copy of the AW.
 							if (newQJ.Status.State != arbv1.AppWrapperStateCompleted && newQJ.Status.State != arbv1.AppWrapperStateFailed) && hasCompletionStatus {
