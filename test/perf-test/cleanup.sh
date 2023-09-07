@@ -1,3 +1,3 @@
 #!/bin/bash
 
-for i in `kubectl get appwrapper -n default |grep defaultaw | awk '{print $1}'`; do kubectl delete appwrapper $i -n default ; done
+for i in `kubectl get appwrappers.workload.codeflare.dev -n default |grep defaultaw | awk '{print $1}'`; do kubectl delete appwrappers.workload.codeflare.dev $i -n default ; done
