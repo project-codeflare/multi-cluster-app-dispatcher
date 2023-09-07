@@ -25,6 +25,7 @@ import (
 
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/core"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/utils"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/utils/strings/slices"
@@ -660,6 +661,158 @@ func TestAddRemoveConsumers(t *testing.T) {
 	consumerRemovedAgain, err := qmTest.RemoveConsumer(consumerID)
 	assert.False(t, consumerRemovedAgain, "Expecting non-existing consumer not to be removed")
 	assert.Error(t, err, "Expecting error when removing a non-existing consumer")
+}
+
+// TestPreemptSamePriorityAtRoot : test preemption of same priority borrowing consumer at root
+func TestPreemptSamePriorityAtRoot(t *testing.T) {
+
+	var treeString string = `{
+		"kind": "QuotaTree",
+		"metadata": {
+		  "name": "tree"
+		},
+		"spec": {
+		  "resourceNames": [
+			"gpu"
+		  ],
+		  "nodes": {
+			"T": {
+			  "parent": "nil",
+			  "hard": "true",
+			  "quota": {
+				"gpu": "32"
+			  }
+			},
+			"M": {
+			  "parent": "T",
+			  "quota": {
+				"gpu": "16"
+			  }
+			},
+			"N": {
+			  "parent": "T",
+			  "quota": {
+				"gpu": "16"
+			  }
+			},
+			"A": {
+			  "parent": "M",
+			  "quota": {
+				"gpu": "8"
+			  }
+			},
+			"B": {
+			  "parent": "M",
+			  "quota": {
+				"gpu": "8"
+			  }
+			},
+			"C": {
+			  "parent": "N",
+			  "quota": {
+			    "gpu": "8"
+			  }
+			},
+			"D": {
+			  "parent": "N",
+			  "quota": {
+				"gpu": "8"
+			  }
+			}
+		  }
+		}
+	}`
+
+	var job1String string = `{
+		"kind": "Consumer",
+		"metadata": {
+		  "name": "job-1"
+		},
+		"spec": {
+		  "id": "job-1",
+		  "trees": [
+			{
+			  "treeName": "tree",
+			  "groupID": "A",
+			  "request": {
+				"gpu": 24
+			  }
+			}
+		  ]
+		}
+	}`
+
+	var job2String string = `{
+		"kind": "Consumer",
+		"metadata": {
+		  "name": "job-2"
+		},
+		"spec": {
+		  "id": "job-2",
+		  "trees": [
+			{
+			  "treeName": "tree",
+			  "groupID": "C",
+			  "request": {
+				"gpu": 8
+			  }
+			}
+		  ]
+		}
+	}`
+
+	var job3String string = `{
+		"kind": "Consumer",
+		"metadata": {
+		  "name": "job-3"
+		},
+		"spec": {
+		  "id": "job-3",
+		  "trees": [
+			{
+			  "treeName": "tree",
+			  "groupID": "B",
+			  "request": {
+				"gpu": 1
+			  }
+			}
+		  ]
+		}
+	}`
+
+	// create a test quota manager
+	qmTest := quota.NewManager()
+	assert.NotNil(t, qmTest, "Expecting no error creating a quota manager")
+	modeSet := qmTest.SetMode(quota.Normal)
+	assert.True(t, modeSet, "Expecting no error setting mode to normal")
+
+	// add quota tree
+	treeName, err := qmTest.AddTreeFromString(treeString)
+	assert.NoError(t, err, "No error expected when adding a tree")
+
+	// create and add consumers
+	consumerStrings := []string{job1String, job2String, job3String}
+	numConsumers := len(consumerStrings)
+	consumerID := make([]string, numConsumers)
+	var response *core.AllocationResponse
+	for i, consumerString := range consumerStrings {
+		consumerInfo, err := quota.NewConsumerInfoFromString(consumerString)
+		assert.NoError(t, err, "No error expected when creating a consumer info")
+		consumerID[i] = consumerInfo.GetID()
+		added, err := qmTest.AddConsumer(consumerInfo)
+		assert.True(t, added && err == nil, "Expecting consumer to be added to quota manager")
+		response, err = qmTest.Allocate(treeName, consumerID[i])
+		assert.NoError(t, err, "No Error expected when allocating consumer %s to tree, err %v, got %v",
+			consumerID[i], err, qmTest.GetTreeController(treeName))
+	}
+
+	// check expected results after last allocation
+	assert.NotNil(t, response, "A non nill response is expected")
+	assert.True(t, response.IsAllocated(), "Allocating consumer %s should succeed", consumerID[numConsumers-1])
+	assert.Contains(t, response.GetPreemptedIds(), consumerID[0],
+		"Expecting consumer %s to be preempted", consumerID[0])
+	assert.Contains(t, qmTest.GetTreeController(treeName).GetConsumerIDs(), consumerID[1],
+		"Expecting consumer %s to remain allocated", consumerID[1])
 }
 
 type AllocationClassifier struct {
