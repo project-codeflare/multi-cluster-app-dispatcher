@@ -725,11 +725,12 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) (ar
 				_ = condition
 
 				genItemCompletionStatus := arbv1.GenericItem{
-					ItemGVK: arbv1.ItemGVK{
-						Group:   gvk.Group,
+					GroupVersionKind: schema.GroupVersionKind {
+                        Group:   gvk.Group,
 						Version: gvk.Version,
 						Kind:    gvk.Kind,
 					},
+
 					Name:      name,
 					Namespace: namespace,
 					Condition: condition,

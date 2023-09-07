@@ -34,6 +34,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const AppWrapperPlural string = "appwrappers"
@@ -271,20 +272,16 @@ type AppWrapperStatus struct {
 }
 
 type GenericItemCompletionStatus struct {
-	GenericItems [] GenericItem `json:"GenericItems,omitempty"`
+	GenericItems [] GenericItem `json:"genericItems,omitempty"`
 }
 
 type GenericItem struct {
-	ItemGVK ItemGVK `json:"itemGVK"`
+	schema.GroupVersionKind `json:"gvk"`
 	Name string `json:"name"`
 	Namespace string `json:"namespace"`
 	Condition string `json:"condition"`
 }
-type ItemGVK struct {
-    Group string `json:"group"`
-	Version string `json:"version"`
-	Kind string `json:"kind"`
-}
+
 type AppWrapperState string
 
 // enqueued, active, deleting, succeeded, failed

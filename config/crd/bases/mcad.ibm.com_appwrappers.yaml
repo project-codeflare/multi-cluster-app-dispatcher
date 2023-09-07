@@ -891,24 +891,24 @@ spec:
                 type: integer
               itemCompletionStatus:
                 properties:
-                  GenericItems:
+                  genericItems:
                     items:
                       properties:
                         condition:
                           type: string
-                        itemGVK:
+                        gvk:
                           description: Group Version Kind 
                           properties:
-                            group:
+                            Group:
                               type: string
-                            kind:
+                            Kind:
                               type: string
-                            version:
+                            Version:
                               type: string
                           required:
-                          - group
-                          - kind
-                          - version
+                          - Group
+                          - Kind
+                          - Version
                           type: object  
                         name:
                           type: string
