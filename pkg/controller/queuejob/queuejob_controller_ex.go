@@ -364,6 +364,11 @@ func (qjm *XController) PreemptQueueJobs() {
 			klog.Warningf("[PreemptQueueJobs] failed in retrieving a fresh copy of the app wrapper '%s/%s', err=%v. Will try to preempt on the next run.", aw.Namespace, aw.Name, err)
 			continue
 		}
+		//we need to update AW before analyzing it as a candidate for preemption
+		updateErr := qjm.UpdateQueueJobStatus(newjob)
+		if updateErr != nil {
+			klog.Warningf("[PreemptQueueJobs] update of pod count to AW %v failed hence skipping preemption", newjob.Name)
+		}
 		newjob.Status.CanRun = false
 		newjob.Status.FilterIgnore = true // update QueueJobState only
 		cleanAppWrapper := false
