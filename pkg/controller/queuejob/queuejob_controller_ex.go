@@ -1706,7 +1706,7 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 						latestAw, exists, err := cc.appwrapperInformer.Informer().GetStore().GetByKey(key)
 						if err == nil && exists {
 							// Enqueue the latest copy of the AW.
-							if (newQJ.Status.State != arbv1.AppWrapperStateCompleted || newQJ.Status.State != arbv1.AppWrapperStateFailed) && hasCompletionStatus {
+							if (newQJ.Status.State != arbv1.AppWrapperStateCompleted && newQJ.Status.State != arbv1.AppWrapperStateFailed) && hasCompletionStatus {
 								cc.UpdateQueueJobs(latestAw.(*arbv1.AppWrapper))
 								klog.V(2).Infof("[Informer-updateQJ] Finished requeing AW to determine completion status")
 							}
