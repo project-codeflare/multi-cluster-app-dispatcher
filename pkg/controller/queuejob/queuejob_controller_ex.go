@@ -1695,7 +1695,7 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 			}
 		}
 		//updatequeuejobs now runs as a part of informer machinery. optimization here is to not use etcd to pullout submitted AWs and operate
-		//on slate Aws
+		//on stale AWs. This has potential to improve performance at scale.
 		if newQJ.Status.State != arbv1.AppWrapperStateCompleted && newQJ.Status.State != arbv1.AppWrapperStateFailed && newQJ.Status.State != "" {
 			requeueInterval := 30 * time.Second
 			key, err := cache.MetaNamespaceKeyFunc(newQJ)
