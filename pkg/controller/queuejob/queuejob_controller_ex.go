@@ -348,13 +348,14 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 
 // TODO: We can use informer to filter AWs that do not meet the minScheduling spec.
 // we still need a thread for dispatch duration but minScheduling spec can definetly be moved to an informer
-func (qjm *XController) PreemptQueueJobs() {
+func (qjm *XController) PreemptQueueJobs(inspectAw *arbv1.AppWrapper) {
 	ctx := context.Background()
+	aw := qjm.GetQueueJobEligibleForPreemption(inspectAw)
+	if aw != nil {
 
-	qjobs := qjm.GetQueueJobsEligibleForPreemption()
-	for _, aw := range qjobs {
+		//for _, aw := range qjobs {
 		if aw.Status.State == arbv1.AppWrapperStateCompleted || aw.Status.State == arbv1.AppWrapperStateDeleted || aw.Status.State == arbv1.AppWrapperStateFailed {
-			continue
+			return
 		}
 
 		var updateNewJob *arbv1.AppWrapper
@@ -362,7 +363,7 @@ func (qjm *XController) PreemptQueueJobs() {
 		newjob, err := qjm.getAppWrapper(aw.Namespace, aw.Name, "[PreemptQueueJobs] get fresh app wrapper")
 		if err != nil {
 			klog.Warningf("[PreemptQueueJobs] failed in retrieving a fresh copy of the app wrapper '%s/%s', err=%v. Will try to preempt on the next run.", aw.Namespace, aw.Name, err)
-			continue
+			return
 		}
 		//we need to update AW before analyzing it as a candidate for preemption
 		updateErr := qjm.UpdateQueueJobStatus(newjob)
@@ -394,13 +395,11 @@ func (qjm *XController) PreemptQueueJobs() {
 				err := qjm.updateStatusInEtcdWithRetry(ctx, updateNewJob, "PreemptQueueJobs - CanRun: false -- DispatchDeadlineExceeded")
 				if err != nil {
 					klog.Warningf("[PreemptQueueJobs] status update  CanRun: false -- DispatchDeadlineExceeded for '%s/%s' failed", newjob.Namespace, newjob.Name)
-					continue
+					return
 				}
 				// cannot use cleanup AW, since it puts AW back in running state
 				qjm.qjqueue.AddUnschedulableIfNotPresent(updateNewJob)
 
-				// Move to next AW
-				continue
 			}
 		}
 
@@ -462,7 +461,7 @@ func (qjm *XController) PreemptQueueJobs() {
 		err = qjm.updateStatusInEtcdWithRetry(ctx, updateNewJob, "PreemptQueueJobs - CanRun: false -- MinPodsNotRunning")
 		if err != nil {
 			klog.Warningf("[PreemptQueueJobs] status update for '%s/%s' failed, skipping app wrapper err =%v", newjob.Namespace, newjob.Name, err)
-			continue
+			return
 		}
 
 		if cleanAppWrapper {
@@ -506,98 +505,83 @@ func (qjm *XController) preemptAWJobs(ctx context.Context, preemptAWs []*arbv1.A
 	}
 }
 
-func (qjm *XController) GetQueueJobsEligibleForPreemption() []*arbv1.AppWrapper {
-	qjobs := make([]*arbv1.AppWrapper, 0)
-
-	queueJobs, err := qjm.appWrapperLister.AppWrappers("").List(labels.Everything())
-	if err != nil {
-		klog.Errorf("List of queueJobs %+v", qjobs)
-		return qjobs
-	}
+func (qjm *XController) GetQueueJobEligibleForPreemption(value *arbv1.AppWrapper) *arbv1.AppWrapper {
 
 	if !qjm.isDispatcher { // Agent Mode
-		for _, value := range queueJobs {
 
-			// Skip if AW Pending or just entering the system and does not have a state yet.
-			if (value.Status.State == arbv1.AppWrapperStateEnqueued) || (value.Status.State == "") {
-				continue
+		if value.Status.State == arbv1.AppWrapperStateActive && value.Spec.SchedSpec.DispatchDuration.Limit > 0 {
+			awDispatchDurationLimit := value.Spec.SchedSpec.DispatchDuration.Limit
+			dispatchDuration := value.Status.ControllerFirstDispatchTimestamp.Add(time.Duration(awDispatchDurationLimit) * time.Second)
+			currentTime := time.Now()
+			dispatchTimeExceeded := !currentTime.Before(dispatchDuration)
+
+			if dispatchTimeExceeded {
+				klog.V(8).Infof("Appwrapper Dispatch limit exceeded, currentTime %v, dispatchTimeInSeconds %v", currentTime, dispatchDuration)
+				value.Spec.SchedSpec.DispatchDuration.Overrun = true
+				// Got AW which exceeded dispatch runtime limit, move to next AW
+				return value
 			}
+		}
+		replicas := value.Spec.SchedSpec.MinAvailable
 
-			if value.Status.State == arbv1.AppWrapperStateActive && value.Spec.SchedSpec.DispatchDuration.Limit > 0 {
-				awDispatchDurationLimit := value.Spec.SchedSpec.DispatchDuration.Limit
-				dispatchDuration := value.Status.ControllerFirstDispatchTimestamp.Add(time.Duration(awDispatchDurationLimit) * time.Second)
-				currentTime := time.Now()
-				dispatchTimeExceeded := !currentTime.Before(dispatchDuration)
+		if (int(value.Status.Running) + int(value.Status.Succeeded)) < replicas {
 
-				if dispatchTimeExceeded {
-					klog.V(8).Infof("Appwrapper Dispatch limit exceeded, currentTime %v, dispatchTimeInSeconds %v", currentTime, dispatchDuration)
-					value.Spec.SchedSpec.DispatchDuration.Overrun = true
-					qjobs = append(qjobs, value)
-					// Got AW which exceeded dispatch runtime limit, move to next AW
+			// Find the dispatched condition if there is any
+			numConditions := len(value.Status.Conditions)
+			var dispatchedCondition arbv1.AppWrapperCondition
+			dispatchedConditionExists := false
+
+			for i := numConditions - 1; i > 0; i-- {
+				dispatchedCondition = value.Status.Conditions[i]
+				if dispatchedCondition.Type != arbv1.AppWrapperCondDispatched {
 					continue
 				}
+				dispatchedConditionExists = true
+				break
 			}
-			replicas := value.Spec.SchedSpec.MinAvailable
 
-			if (int(value.Status.Running) + int(value.Status.Succeeded)) < replicas {
+			// Check for the minimum age and then skip preempt if current time is not beyond minimum age
+			// The minimum age is controlled by the requeuing.TimeInSeconds stanza
+			// For preemption, the time is compared to the last condition or the dispatched condition in the AppWrapper, whichever happened later
+			lastCondition := value.Status.Conditions[numConditions-1]
+			var condition arbv1.AppWrapperCondition
 
-				// Find the dispatched condition if there is any
-				numConditions := len(value.Status.Conditions)
-				var dispatchedCondition arbv1.AppWrapperCondition
-				dispatchedConditionExists := false
-
-				for i := numConditions - 1; i > 0; i-- {
-					dispatchedCondition = value.Status.Conditions[i]
-					if dispatchedCondition.Type != arbv1.AppWrapperCondDispatched {
-						continue
-					}
-					dispatchedConditionExists = true
-					break
-				}
-
-				// Check for the minimum age and then skip preempt if current time is not beyond minimum age
-				// The minimum age is controlled by the requeuing.TimeInSeconds stanza
-				// For preemption, the time is compared to the last condition or the dispatched condition in the AppWrapper, whichever happened later
-				lastCondition := value.Status.Conditions[numConditions-1]
-				var condition arbv1.AppWrapperCondition
-
-				if dispatchedConditionExists && dispatchedCondition.LastTransitionMicroTime.After(lastCondition.LastTransitionMicroTime.Time) {
-					condition = dispatchedCondition
-				} else {
-					condition = lastCondition
-				}
-				var requeuingTimeInSeconds int
-				if value.Status.RequeueingTimeInSeconds > 0 {
-					requeuingTimeInSeconds = value.Status.RequeueingTimeInSeconds
-				} else if value.Spec.SchedSpec.Requeuing.InitialTimeInSeconds == 0 {
-					requeuingTimeInSeconds = value.Spec.SchedSpec.Requeuing.TimeInSeconds
-				} else {
-					requeuingTimeInSeconds = value.Spec.SchedSpec.Requeuing.InitialTimeInSeconds
-				}
-
-				minAge := condition.LastTransitionMicroTime.Add(time.Duration(requeuingTimeInSeconds) * time.Second)
-				currentTime := time.Now()
-
-				if currentTime.Before(minAge) {
-					continue
-				}
-
-				if replicas > 0 {
-					klog.V(3).Infof("AppWrapper '%s/%s' is eligible for preemption Running: %d - minAvailable: %d , Succeeded: %d !!!", value.Namespace, value.Name, value.Status.Running, replicas, value.Status.Succeeded)
-					qjobs = append(qjobs, value)
-				}
+			if dispatchedConditionExists && dispatchedCondition.LastTransitionMicroTime.After(lastCondition.LastTransitionMicroTime.Time) {
+				condition = dispatchedCondition
 			} else {
-				// Preempt when schedulingSpec stanza is not set but pods fails scheduling.
-				// ignore co-scheduler pods
-				if len(value.Status.PendingPodConditions) > 0 {
-					klog.V(3).Infof("AppWrapper '%s/%s' is eligible for preemption Running: %d , Succeeded: %d due to failed scheduling !!!", value.Namespace, value.Status.Running, value.Status.Succeeded)
-					qjobs = append(qjobs, value)
-				}
+				condition = lastCondition
+			}
+			var requeuingTimeInSeconds int
+			if value.Status.RequeueingTimeInSeconds > 0 {
+				requeuingTimeInSeconds = value.Status.RequeueingTimeInSeconds
+			} else if value.Spec.SchedSpec.Requeuing.InitialTimeInSeconds == 0 {
+				requeuingTimeInSeconds = value.Spec.SchedSpec.Requeuing.TimeInSeconds
+			} else {
+				requeuingTimeInSeconds = value.Spec.SchedSpec.Requeuing.InitialTimeInSeconds
+			}
+
+			minAge := condition.LastTransitionMicroTime.Add(time.Duration(requeuingTimeInSeconds) * time.Second)
+			currentTime := time.Now()
+
+			if currentTime.Before(minAge) {
+				return nil
+			}
+
+			if replicas > 0 {
+				klog.V(3).Infof("AppWrapper '%s/%s' is eligible for preemption Running: %d - minAvailable: %d , Succeeded: %d !!!", value.Namespace, value.Name, value.Status.Running, replicas, value.Status.Succeeded)
+				return value
+			}
+		} else {
+			// Preempt when schedulingSpec stanza is not set but pods fails scheduling.
+			// ignore co-scheduler pods
+			if len(value.Status.PendingPodConditions) > 0 {
+				klog.V(3).Infof("AppWrapper '%s/%s' is eligible for preemption Running: %d , Succeeded: %d due to failed scheduling !!!", value.Namespace, value.Status.Running, value.Status.Succeeded)
+				return value
 			}
 		}
 	}
 
-	return qjobs
+	return nil
 }
 
 func (qjm *XController) GetAggregatedResourcesPerGenericItem(cqj *arbv1.AppWrapper) []*clusterstateapi.Resource {
@@ -1500,19 +1484,7 @@ func (qjm *XController) backoff(ctx context.Context, q *arbv1.AppWrapper, reason
 func (cc *XController) Run(stopCh <-chan struct{}) {
 	go cc.appwrapperInformer.Informer().Run(stopCh)
 
-	// go cc.qjobResControls[arbv1.ResourceTypePod].Run(stopCh)
-
 	cache.WaitForCacheSync(stopCh, cc.appWrapperSynced)
-
-	// cache is turned off, issue: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/588
-	// update snapshot of ClientStateCache every second
-	// cc.cache.Run(stopCh)
-
-	// start preempt thread is used to preempt AWs that have partial pods or have reached dispatch duration
-	go wait.Until(cc.PreemptQueueJobs, 60*time.Second, stopCh)
-
-	// This thread is used to update AW that has completionstatus set to Complete or RunningHoldCompletion
-	//go wait.Until(cc.UpdateQueueJobs, 5*time.Second, stopCh)
 
 	if cc.isDispatcher {
 		go wait.Until(cc.UpdateAgent, 2*time.Second, stopCh) // In the Agent?
@@ -1653,29 +1625,63 @@ func (cc *XController) addQueueJob(obj interface{}) {
 	//When an AW entrs a system with completionstatus keep checking the AW until completed
 	//updatequeuejobs now runs as a part of informer machinery. optimization here is to not use etcd to pullout submitted AWs and operate
 	//on stale AWs. This has potential to improve performance at scale.
-	//if qj.Status.State != arbv1.AppWrapperStateCompleted && qj.Status.State != arbv1.AppWrapperStateFailed && qj.Status.State != "" {
-	requeueInterval := 30 * time.Second
-	key, err := cache.MetaNamespaceKeyFunc(qj)
-	if err == nil {
+	if hasCompletionStatus {
+		requeueInterval := 5 * time.Second
+		key, err := cache.MetaNamespaceKeyFunc(qj)
+		if err != nil {
+			klog.Warningf("[Informer-addQJ] Error getting AW %s from cache cannot determine completion status", qj.Name)
+			//TODO: should we return from this loop?
+		}
 		go func() {
 			for {
 				time.Sleep(requeueInterval)
 				latestAw, exists, err := cc.appwrapperInformer.Informer().GetStore().GetByKey(key)
-				if latestAw.(*arbv1.AppWrapper).Status.State != arbv1.AppWrapperStateActive && latestAw.(*arbv1.AppWrapper).Status.State != arbv1.AppWrapperStateEnqueued && latestAw.(*arbv1.AppWrapper).Status.State != arbv1.AppWrapperStateRunningHoldCompletion {
-					klog.V(2).Infof("[Informer-addQJ] Stopping requeue for AW %s with status %s", latestAw.(*arbv1.AppWrapper).Name, latestAw.(*arbv1.AppWrapper).Status.State)
-					break //Exit the loop
-				}
-				if err == nil && exists {
+				if err != nil && !exists {
+					klog.Warningf("[Informer-addQJ] Recent copy of AW %s not found in cache", qj.Name)
+				} else {
+					if latestAw.(*arbv1.AppWrapper).Status.State != arbv1.AppWrapperStateActive && latestAw.(*arbv1.AppWrapper).Status.State != arbv1.AppWrapperStateEnqueued && latestAw.(*arbv1.AppWrapper).Status.State != arbv1.AppWrapperStateRunningHoldCompletion {
+						klog.V(2).Infof("[Informer-addQJ] Stopping requeue for AW %s with status %s", latestAw.(*arbv1.AppWrapper).Name, latestAw.(*arbv1.AppWrapper).Status.State)
+						break //Exit the loop
+					}
 					// Enqueue the latest copy of the AW.
 					if (qj.Status.State != arbv1.AppWrapperStateCompleted && qj.Status.State != arbv1.AppWrapperStateFailed) && hasCompletionStatus {
 						cc.UpdateQueueJobs(latestAw.(*arbv1.AppWrapper))
-						klog.V(2).Infof("[Informer-addQJ] Finished requeing AW to determine completion status")
+						klog.V(2).Infof("[Informer-addQJ] requeing AW to determine completion status for AW", qj.Name)
+					}
+
+				}
+
+			}
+		}()
+	}
+
+	if qj.Spec.SchedSpec.MinAvailable > 0 {
+		requeueInterval := 60 * time.Second
+		key, err := cache.MetaNamespaceKeyFunc(qj)
+		if err != nil {
+			klog.Errorf("[Informer-addQJ] Error getting AW %s from cache cannot preempt AW", qj.Name)
+			//TODO: should we return from this loop?
+		}
+		go func() {
+			for {
+				time.Sleep(requeueInterval)
+				latestAw, exists, err := cc.appwrapperInformer.Informer().GetStore().GetByKey(key)
+				if err != nil && !exists {
+					klog.Warningf("[Informer-addQJ] Recent copy of AW %s not found in cache", qj.Name)
+				} else {
+					if latestAw.(*arbv1.AppWrapper).Status.State != arbv1.AppWrapperStateActive && latestAw.(*arbv1.AppWrapper).Status.State != arbv1.AppWrapperStateEnqueued && latestAw.(*arbv1.AppWrapper).Status.State != arbv1.AppWrapperStateRunningHoldCompletion {
+						klog.V(2).Infof("[Informer-addQJ] Stopping requeue for AW %s with status %s", latestAw.(*arbv1.AppWrapper).Name, latestAw.(*arbv1.AppWrapper).Status.State)
+						break //Exit the loop
+					}
+					// Enqueue the latest copy of the AW.
+					if (qj.Status.State != arbv1.AppWrapperStateCompleted && qj.Status.State != arbv1.AppWrapperStateFailed) && (qj.Spec.SchedSpec.MinAvailable > 0) {
+						cc.PreemptQueueJobs(latestAw.(*arbv1.AppWrapper))
+						klog.V(2).Infof("[Informer-addQJ] requeing AW to check minScheduling spec for AW", qj.Name)
 					}
 				}
 			}
 		}()
 	}
-	//}
 }
 
 func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
