@@ -1613,7 +1613,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 		qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qj.CreationTimestamp, qj.Status.ControllerFirstTimestamp)
 
 	klog.V(6).Infof("[Informer-addQJ] enqueue %s &qj=%p Version=%s Status=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status)
-	cc.enqueue(qj)
+
 	// Requeue the item to be processed again in 30 seconds.
 	//TODO: tune the frequency of reprocessing an AW
 	hasCompletionStatus := false
@@ -1635,17 +1635,23 @@ func (cc *XController) addQueueJob(obj interface{}) {
 		go func() {
 			for {
 				time.Sleep(requeueInterval)
-				latestAw, exists, err := cc.appwrapperInformer.Informer().GetStore().GetByKey(key)
+				latestObj, exists, err := cc.appwrapperInformer.Informer().GetStore().GetByKey(key)
 				if err != nil && !exists {
 					klog.Warningf("[Informer-addQJ] Recent copy of AW %s not found in cache", qj.Name)
 				} else {
-					if latestAw.(*arbv1.AppWrapper).Status.State != arbv1.AppWrapperStateActive && latestAw.(*arbv1.AppWrapper).Status.State != arbv1.AppWrapperStateEnqueued && latestAw.(*arbv1.AppWrapper).Status.State != arbv1.AppWrapperStateRunningHoldCompletion {
-						klog.V(2).Infof("[Informer-addQJ] Stopping requeue for AW %s with status %s", latestAw.(*arbv1.AppWrapper).Name, latestAw.(*arbv1.AppWrapper).Status.State)
+					var latestAw *arbv1.AppWrapper
+					if latestObj != nil {
+						latestAw = latestObj.(*arbv1.AppWrapper)
+					} else {
+						latestAw = qj
+					}
+					if latestAw.Status.State != arbv1.AppWrapperStateActive && latestAw.Status.State != arbv1.AppWrapperStateEnqueued && latestAw.Status.State != arbv1.AppWrapperStateRunningHoldCompletion {
+						klog.V(2).Infof("[Informer-addQJ] Stopping requeue for AW %s with status %s", latestAw.Name, latestAw.Status.State)
 						break //Exit the loop
 					}
 					// Enqueue the latest copy of the AW.
 					if (qj.Status.State != arbv1.AppWrapperStateCompleted && qj.Status.State != arbv1.AppWrapperStateFailed) && hasCompletionStatus {
-						cc.UpdateQueueJobs(latestAw.(*arbv1.AppWrapper))
+						cc.UpdateQueueJobs(latestAw)
 						klog.V(2).Infof("[Informer-addQJ] requeing AW to determine completion status for AW", qj.Name)
 					}
 
@@ -1665,23 +1671,30 @@ func (cc *XController) addQueueJob(obj interface{}) {
 		go func() {
 			for {
 				time.Sleep(requeueInterval)
-				latestAw, exists, err := cc.appwrapperInformer.Informer().GetStore().GetByKey(key)
+				latestObj, exists, err := cc.appwrapperInformer.Informer().GetStore().GetByKey(key)
 				if err != nil && !exists {
 					klog.Warningf("[Informer-addQJ] Recent copy of AW %s not found in cache", qj.Name)
 				} else {
-					if latestAw.(*arbv1.AppWrapper).Status.State != arbv1.AppWrapperStateActive && latestAw.(*arbv1.AppWrapper).Status.State != arbv1.AppWrapperStateEnqueued && latestAw.(*arbv1.AppWrapper).Status.State != arbv1.AppWrapperStateRunningHoldCompletion {
-						klog.V(2).Infof("[Informer-addQJ] Stopping requeue for AW %s with status %s", latestAw.(*arbv1.AppWrapper).Name, latestAw.(*arbv1.AppWrapper).Status.State)
+					var latestAw *arbv1.AppWrapper
+					if latestObj != nil {
+						latestAw = latestObj.(*arbv1.AppWrapper)
+					} else {
+						latestAw = qj
+					}
+					if latestAw.Status.State != arbv1.AppWrapperStateActive && latestAw.Status.State != arbv1.AppWrapperStateEnqueued && latestAw.Status.State != arbv1.AppWrapperStateRunningHoldCompletion {
+						klog.V(2).Infof("[Informer-addQJ] Stopping requeue for AW %s with status %s", latestAw.Name, latestAw.Status.State)
 						break //Exit the loop
 					}
 					// Enqueue the latest copy of the AW.
 					if (qj.Status.State != arbv1.AppWrapperStateCompleted && qj.Status.State != arbv1.AppWrapperStateFailed) && (qj.Spec.SchedSpec.MinAvailable > 0) {
-						cc.PreemptQueueJobs(latestAw.(*arbv1.AppWrapper))
+						cc.PreemptQueueJobs(latestAw)
 						klog.V(2).Infof("[Informer-addQJ] requeing AW to check minScheduling spec for AW", qj.Name)
 					}
 				}
 			}
 		}()
 	}
+	cc.enqueue(qj)
 }
 
 func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
