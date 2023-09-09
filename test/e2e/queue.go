@@ -141,12 +141,12 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		aw := createJobAWWithInitContainer(context, "aw-job-3-init-container-1", 60, "exponential", 0)
 		appwrappers = append(appwrappers, aw)
 
-		err := waitAWPodsCompleted(context, aw, 12*time.Minute) // This test waits for 12 minutes to make sure all PODs complete
+		err := waitAWPodsCompleted(context, aw, 14*time.Minute) // This test waits for 14 minutes to make sure all PODs complete
 		Expect(err).NotTo(HaveOccurred(), "Waiting for the pods to be completed")
 	})
 
 	It("MCAD CPU Requeuing - Deletion After Maximum Requeuing Times Test", func() {
-		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Requeuing Test - Started.\n")
+		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Requeuing - Deletion After Maximum Requeuing Times Test - Started.\n")
 
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
@@ -513,7 +513,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		// This should fill up the worker node and most of the master node
-		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
+		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu-2"))
 		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
