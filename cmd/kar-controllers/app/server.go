@@ -31,13 +31,18 @@ limitations under the License.
 package app
 
 import (
+	"context"
+	"fmt"
+	"net/http"
+
+	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"net/http"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejob"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/health"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/metrics"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
@@ -49,41 +54,60 @@ func buildConfig(master, kubeconfig string) (*rest.Config, error) {
 	return rest.InClusterConfig()
 }
 
-func Run(opt *options.ServerOption) error {
+func Run(ctx context.Context, opt *options.ServerOption) error {
 	config, err := buildConfig(opt.Master, opt.Kubeconfig)
 	if err != nil {
 		return err
 	}
-
-	neverStop := make(chan struct{})
 
 	config.QPS = 100.0
 	config.Burst = 200.0
 
 	jobctrl := queuejob.NewJobController(config, opt)
 	if jobctrl == nil {
-		return nil
+		return fmt.Errorf("failed to create a job controller")
 	}
-	jobctrl.Run(neverStop)
 
-	// This call is blocking (unless an error occurs) which equates to <-neverStop
-	err = listenHealthProbe(opt)
+	go jobctrl.Run(ctx.Done())
+
+	err = startHealthAndMetricsServers(ctx, opt)
 	if err != nil {
 		return err
 	}
 
+	<-ctx.Done()
 	return nil
+}
+
+func healthHandler() http.Handler {
+	healthHandler := http.NewServeMux()
+	healthHandler.Handle("/healthz", &health.Handler{})
+	return healthHandler
 }
 
 // Starts the health probe listener
-func listenHealthProbe(opt *options.ServerOption) error {
-	handler := http.NewServeMux()
-	handler.Handle("/healthz", &health.Handler{})
-	err := http.ListenAndServe(opt.HealthProbeListenAddr, handler)
+func startHealthAndMetricsServers(ctx context.Context, opt *options.ServerOption) error {
+	g, ctx := errgroup.WithContext(ctx)
+
+	// metrics server
+	metricsServer, err := NewServer(opt.MetricsListenPort, "/metrics", metrics.Handler())
 	if err != nil {
 		return err
 	}
 
+	healthServer, err := NewServer(opt.HealthProbeListenPort, "/healthz", healthHandler())
+	if err != nil {
+		return err
+	}
+
+	g.Go(metricsServer.Start)
+	g.Go(healthServer.Start)
+
+	go func() {
+		<-ctx.Done()
+		metricsServer.Shutdown()
+		healthServer.Shutdown()
+	}()
+
 	return nil
 }
-
