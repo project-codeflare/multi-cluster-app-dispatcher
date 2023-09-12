@@ -3,6 +3,7 @@ approvers:
   - asm582
   - astefanutti
   - metalcycling 
+  - sutaakar
   - z103cb
 reviewers:
   - anishasthana
@@ -12,5 +13,6 @@ reviewers:
   - dmatch01
   - KPostOffice
   - metalcycling 
+  - sutaakar
   - tardieu
   - z103cb
