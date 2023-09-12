@@ -32,48 +32,43 @@ import (
 
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/hashicorp/go-multierror"
-	qmutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
-
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotaforestmanager"
 	dto "github.com/prometheus/client_model/go"
 
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
+	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
+	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned"
+	informerFactory "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions"
+	arbinformers "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions/controller/v1beta1"
+	arblisters "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1beta1"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/config"
+	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/metrics/adapter"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobdispatch"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/genericresource"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotaforestmanager"
+	qmutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
+
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
-
-	v1 "k8s.io/api/core/v1"
-
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/genericresource"
-	"k8s.io/apimachinery/pkg/labels"
-
-	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
-	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned"
-
-	informerFactory "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions"
-	arbinformers "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions/controller/v1beta1"
-
-	arblisters "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1beta1"
-
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobdispatch"
-
-	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 )
+
+// defaultBackoffTime is the default backoff time in seconds
+const defaultBackoffTime = 20
 
 // XController the AppWrapper Controller type
 type XController struct {
-	config       *rest.Config
-	serverOption *options.ServerOption
+	// MCAD configuration
+	config config.MCADConfiguration
 
 	appwrapperInformer arbinformers.AppWrapperInformer
 	// resources registered for the AppWrapper
@@ -137,11 +132,6 @@ type JobAndClusterAgent struct {
 	queueJobAgentKey string
 }
 
-// RegisterAllQueueJobResourceTypes - registers all resources
-// func RegisterAllQueueJobResourceTypes(regs *queuejobresources.RegisteredResources) {
-// 	respod.Register(regs)
-// }
-
 func GetQueueJobKey(obj interface{}) (string, error) {
 	qj, ok := obj.(*arbv1.AppWrapper)
 	if !ok {
@@ -154,7 +144,6 @@ func GetQueueJobKey(obj interface{}) (string, error) {
 // UpdateQueueJobStatus was part of pod informer, this is now a method of queuejob_controller file.
 // This change is done in an effort to simplify the controller and enable to move to controller runtime.
 func (qjm *XController) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) error {
-
 	labelSelector := fmt.Sprintf("%s=%s", "appwrapper.mcad.ibm.com", queuejob.Name)
 	pods, errt := qjm.clients.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector})
 	if errt != nil {
@@ -196,7 +185,7 @@ func (qjm *XController) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) error {
 // consumed by existing pods.
 // For a large cluster with thousands of nodes and hundreds of thousands of pods this
 // method could be a performance bottleneck
-// We can then move this method to a seperate thread that basically runs every X interval and
+// We can then move this method to a separate thread that basically runs every X interval and
 // provides resources available to the next AW that needs to be dispatched.
 // Obviously the thread would need locking and timer to expire cache.
 // May be moved to controller runtime can help.
@@ -233,12 +222,11 @@ func (qjm *XController) allocatableCapacity() *clusterstateapi.Resource {
 }
 
 // NewJobController create new AppWrapper Controller
-func NewJobController(config *rest.Config, serverOption *options.ServerOption) *XController {
+func NewJobController(restConfig *rest.Config, mcadConfig *config.MCADConfiguration, extConfig *config.MCADConfigurationExtended) *XController {
 	cc := &XController{
-		config:          config,
-		serverOption:    serverOption,
-		clients:         kubernetes.NewForConfigOrDie(config),
-		arbclients:      clientset.NewForConfigOrDie(config),
+		config:          *mcadConfig,
+		clients:         kubernetes.NewForConfigOrDie(restConfig),
+		arbclients:      clientset.NewForConfigOrDie(restConfig),
 		eventQueue:      cache.NewFIFO(GetQueueJobKey),
 		agentEventQueue: cache.NewFIFO(GetQueueJobKey),
 		// initQueue:       cache.NewFIFO(GetQueueJobKey),
@@ -254,24 +242,9 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	// multi-cluster mode, so for now it is turned-off: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/585
 	// cc.metricsAdapter = adapter.New(serverOption, config, cc.cache)
 
-	cc.genericresources = genericresource.NewAppWrapperGenericResource(config)
+	cc.genericresources = genericresource.NewAppWrapperGenericResource(restConfig)
 
-	// cc.qjobResControls = map[arbv1.ResourceType]queuejobresources.Interface{}
-	// RegisterAllQueueJobResourceTypes(&cc.qjobRegisteredResources)
-
-	// initialize pod sub-resource control
-	// resControlPod, found, err := cc.qjobRegisteredResources.InitQueueJobResource(arbv1.ResourceTypePod, config)
-	// if err != nil {
-	// 	klog.Errorf("fail to create queuejob resource control")
-	// 	return nil
-	// }
-	// if !found {
-	// 	klog.Errorf("queuejob resource type Pod not found")
-	// 	return nil
-	// }
-	// cc.qjobResControls[arbv1.ResourceTypePod] = resControlPod
-
-	appWrapperClient, err := clientset.NewForConfig(cc.config)
+	appWrapperClient, err := clientset.NewForConfig(restConfig)
 	if err != nil {
 		klog.Fatalf("Could not instantiate k8s client, err=%v", err)
 	}
@@ -303,10 +276,10 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	cc.appWrapperSynced = cc.appwrapperInformer.Informer().HasSynced
 
 	// Setup Quota
-	if serverOption.QuotaEnabled {
-		dispatchedAWDemands, dispatchedAWs := cc.getDispatchedAppWrappers()
+	if mcadConfig.IsQuotaEnabled() {
+		dispatchedAWDemands, dispatchedAWs := cc.getDispatchedAppWrappers(restConfig)
 		cc.quotaManager, err = quotaforestmanager.NewQuotaManager(dispatchedAWDemands, dispatchedAWs, cc.appWrapperLister,
-			config, serverOption)
+			restConfig, mcadConfig)
 		if err != nil {
 			klog.Error("Failed to instantiate quota manager: %#v", err)
 			return nil
@@ -316,7 +289,7 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	}
 
 	// Set dispatcher mode or agent mode
-	cc.isDispatcher = serverOption.Dispatcher
+	cc.isDispatcher = extConfig.IsDispatcher()
 	if cc.isDispatcher {
 		klog.Infof("[Controller] Dispatcher mode")
 	} else {
@@ -326,9 +299,9 @@ func NewJobController(config *rest.Config, serverOption *options.ServerOption) *
 	// create agents and agentMap
 	cc.agentMap = map[string]*queuejobdispatch.JobClusterAgent{}
 	cc.agentList = []string{}
-	for _, agentconfig := range strings.Split(serverOption.AgentConfigs, ",") {
-		agentData := strings.Split(agentconfig, ":")
-		jobClusterAgent := queuejobdispatch.NewJobClusterAgent(agentconfig, cc.agentEventQueue)
+	for _, agentConfig := range extConfig.AgentConfigs {
+		agentData := strings.Split(agentConfig, ":")
+		jobClusterAgent := queuejobdispatch.NewJobClusterAgent(agentConfig, cc.agentEventQueue)
 		if jobClusterAgent != nil {
 			cc.agentMap["/root/kubernetes/"+agentData[0]] = jobClusterAgent
 			cc.agentList = append(cc.agentList, "/root/kubernetes/"+agentData[0])
@@ -352,8 +325,6 @@ func (qjm *XController) PreemptQueueJobs(inspectAw *arbv1.AppWrapper) {
 	ctx := context.Background()
 	aw := qjm.GetQueueJobEligibleForPreemption(inspectAw)
 	if aw != nil {
-
-		//for _, aw := range qjobs {
 		if aw.Status.State == arbv1.AppWrapperStateCompleted || aw.Status.State == arbv1.AppWrapperStateDeleted || aw.Status.State == arbv1.AppWrapperStateFailed {
 			return
 		}
@@ -365,7 +336,7 @@ func (qjm *XController) PreemptQueueJobs(inspectAw *arbv1.AppWrapper) {
 			klog.Warningf("[PreemptQueueJobs] failed in retrieving a fresh copy of the app wrapper '%s/%s', err=%v. Will try to preempt on the next run.", aw.Namespace, aw.Name, err)
 			return
 		}
-		//we need to update AW before analyzing it as a candidate for preemption
+		// we need to update AW before analyzing it as a candidate for preemption
 		updateErr := qjm.UpdateQueueJobStatus(newjob)
 		if updateErr != nil {
 			klog.Warningf("[PreemptQueueJobs] update of pod count to AW %v failed hence skipping preemption", newjob.Name)
@@ -726,11 +697,11 @@ func (qjm *XController) getProposedPreemptions(requestingJob *arbv1.AppWrapper, 
 	return proposedPreemptions
 }
 
-func (qjm *XController) getDispatchedAppWrappers() (map[string]*clusterstateapi.Resource, map[string]*arbv1.AppWrapper) {
+func (qjm *XController) getDispatchedAppWrappers(restConfig *rest.Config) (map[string]*clusterstateapi.Resource, map[string]*arbv1.AppWrapper) {
 	awrRetVal := make(map[string]*clusterstateapi.Resource)
 	awsRetVal := make(map[string]*arbv1.AppWrapper)
 	// Setup and break down an informer to get a list of appwrappers bofore controllerinitialization completes
-	appWrapperClient, err := clientset.NewForConfig(qjm.config)
+	appWrapperClient, err := clientset.NewForConfig(restConfig)
 	if err != nil {
 		klog.Errorf("[getDispatchedAppWrappers] Failure creating client for initialization informer err=%#v", err)
 		return awrRetVal, awsRetVal
@@ -923,7 +894,7 @@ func (qjm *XController) chooseAgent(ctx context.Context, qj *arbv1.AppWrapper) s
 		klog.V(2).Infof("[chooseAgent] Agent %s has enough resources\n", agentId)
 
 		// Now evaluate quota
-		if qjm.serverOption.QuotaEnabled {
+		if qjm.config.IsQuotaEnabled() {
 			if qjm.quotaManager != nil {
 				if fits, preemptAWs, _ := qjm.quotaManager.Fits(qj, qjAggrResources, nil, proposedPreemptions); fits {
 					klog.V(2).Infof("[chooseAgent] AppWrapper %s has enough quota.\n", qj.Name)
@@ -1031,7 +1002,7 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 		}
 
 		// Re-compute SystemPriority for DynamicPriority policy
-		if qjm.serverOption.DynamicPriority {
+		if qjm.config.HasDynamicPriority() {
 			klog.V(4).Info("[ScheduleNext]  dynamic priority enabled")
 			//  Create newHeap to temporarily store qjqueue jobs for updating SystemPriority
 			tempQ := newHeap(cache.MetaNamespaceKeyFunc, HigherSystemPriorityQJ)
@@ -1160,11 +1131,11 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 				klog.V(4).Infof("[ScheduleNext] [Agent Mode] Forwarding loop iteration: %d", fowardingLoopCount)
 				priorityindex := qj.Status.SystemPriority
 				// Support for Non-Preemption
-				if !qjm.serverOption.Preemption {
+				if !qjm.config.HasPreemption() {
 					priorityindex = -math.MaxFloat64
 				}
 				// Disable Preemption under DynamicPriority.  Comment out if allow DynamicPriority and Preemption at the same time.
-				if qjm.serverOption.DynamicPriority {
+				if qjm.config.HasDynamicPriority() {
 					priorityindex = -math.MaxFloat64
 				}
 				// cache now is a method inside the controller.
@@ -1185,7 +1156,7 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 				// Cluster resources need to be considered to determine if both quota and resources (after deleting borrowing AppWrappers) are availabe for the new AppWrapper
 				// We perform a "quota check" first followed by a "resource check"
 				fits := true
-				if qjm.serverOption.QuotaEnabled {
+				if qjm.config.IsQuotaEnabled() {
 					if qjm.quotaManager != nil {
 						// Quota tree design:
 						// - All AppWrappers without quota submission will consume quota from the 'default' node.
@@ -1472,12 +1443,12 @@ func (qjm *XController) backoff(ctx context.Context, q *arbv1.AppWrapper, reason
 	}
 	qjm.qjqueue.AddUnschedulableIfNotPresent(q)
 	klog.V(3).Infof("[backoff] %s move to unschedulableQ before sleep for %d seconds. activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v", q.Name,
-		qjm.serverOption.BackoffTime, qjm.qjqueue.IfExistActiveQ(q), qjm.qjqueue.IfExistUnschedulableQ(q), q, q.ResourceVersion, q.Status)
-	time.Sleep(time.Duration(qjm.serverOption.BackoffTime) * time.Second)
+		qjm.config.BackoffTimeOrDefault(defaultBackoffTime), qjm.qjqueue.IfExistActiveQ(q), qjm.qjqueue.IfExistUnschedulableQ(q), q, q.ResourceVersion, q.Status)
+	time.Sleep(time.Duration(qjm.config.BackoffTimeOrDefault(defaultBackoffTime)) * time.Second)
 	qjm.qjqueue.MoveToActiveQueueIfExists(q)
 
 	klog.V(3).Infof("[backoff] '%s/%s' activeQ Add after sleep for %d seconds. activeQ=%t Unsched=%t &aw=%p Version=%s Status=%+v", q.Namespace, q.Name,
-		qjm.serverOption.BackoffTime, qjm.qjqueue.IfExistActiveQ(q), qjm.qjqueue.IfExistUnschedulableQ(q), q, q.ResourceVersion, q.Status)
+		qjm.config.BackoffTimeOrDefault(defaultBackoffTime), qjm.qjqueue.IfExistActiveQ(q), qjm.qjqueue.IfExistUnschedulableQ(q), q, q.ResourceVersion, q.Status)
 }
 
 // Run starts AppWrapper Controller
@@ -1514,7 +1485,7 @@ func (qjm *XController) UpdateQueueJobs(newjob *arbv1.AppWrapper) {
 		err := qjm.UpdateQueueJobStatus(newjob)
 		if err != nil {
 			klog.Errorf("[UpdateQueueJobs]  Error updating pod status counts for AppWrapper job: %s, err=%+v", newjob.Name, err)
-			//TODO: should we really return?
+			// TODO: should we really return?
 			return
 		}
 		klog.V(6).Infof("[UpdateQueueJobs] %s: qjqueue=%t &qj=%p Version=%s Status=%+v", newjob.Name, qjm.qjqueue.IfExist(newjob), newjob, newjob.ResourceVersion, newjob.Status)
@@ -1615,22 +1586,22 @@ func (cc *XController) addQueueJob(obj interface{}) {
 	klog.V(6).Infof("[Informer-addQJ] enqueue %s &qj=%p Version=%s Status=%+v", qj.Name, qj, qj.ResourceVersion, qj.Status)
 
 	// Requeue the item to be processed again in 30 seconds.
-	//TODO: tune the frequency of reprocessing an AW
+	// TODO: tune the frequency of reprocessing an AW
 	hasCompletionStatus := false
 	for _, genericItem := range qj.Spec.AggrResources.GenericItems {
 		if len(genericItem.CompletionStatus) > 0 {
 			hasCompletionStatus = true
 		}
 	}
-	//When an AW entrs a system with completionstatus keep checking the AW until completed
-	//updatequeuejobs now runs as a part of informer machinery. optimization here is to not use etcd to pullout submitted AWs and operate
-	//on stale AWs. This has potential to improve performance at scale.
+	// When an AW entrs a system with completionstatus keep checking the AW until completed
+	// updatequeuejobs now runs as a part of informer machinery. optimization here is to not use etcd to pullout submitted AWs and operate
+	// on stale AWs. This has potential to improve performance at scale.
 	if hasCompletionStatus {
 		requeueInterval := 5 * time.Second
 		key, err := cache.MetaNamespaceKeyFunc(qj)
 		if err != nil {
 			klog.Warningf("[Informer-addQJ] Error getting AW %s from cache cannot determine completion status", qj.Name)
-			//TODO: should we return from this loop?
+			// TODO: should we return from this loop?
 		}
 		go func() {
 			for {
@@ -1647,7 +1618,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 					}
 					if latestAw.Status.State != arbv1.AppWrapperStateActive && latestAw.Status.State != arbv1.AppWrapperStateEnqueued && latestAw.Status.State != arbv1.AppWrapperStateRunningHoldCompletion {
 						klog.V(2).Infof("[Informer-addQJ] Stopping requeue for AW %s with status %s", latestAw.Name, latestAw.Status.State)
-						break //Exit the loop
+						break // Exit the loop
 					}
 					// Enqueue the latest copy of the AW.
 					if (qj.Status.State != arbv1.AppWrapperStateCompleted && qj.Status.State != arbv1.AppWrapperStateFailed) && hasCompletionStatus {
@@ -1666,7 +1637,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 		key, err := cache.MetaNamespaceKeyFunc(qj)
 		if err != nil {
 			klog.Errorf("[Informer-addQJ] Error getting AW %s from cache cannot preempt AW", qj.Name)
-			//TODO: should we return from this loop?
+			// TODO: should we return from this loop?
 		}
 		go func() {
 			for {
@@ -1683,7 +1654,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 					}
 					if latestAw.Status.State != arbv1.AppWrapperStateActive && latestAw.Status.State != arbv1.AppWrapperStateEnqueued && latestAw.Status.State != arbv1.AppWrapperStateRunningHoldCompletion {
 						klog.V(2).Infof("[Informer-addQJ] Stopping requeue for AW %s with status %s", latestAw.Name, latestAw.Status.State)
-						break //Exit the loop
+						break // Exit the loop
 					}
 					// Enqueue the latest copy of the AW.
 					if (qj.Status.State != arbv1.AppWrapperStateCompleted && qj.Status.State != arbv1.AppWrapperStateFailed) && (qj.Spec.SchedSpec.MinAvailable > 0) {
@@ -1723,10 +1694,10 @@ func (cc *XController) updateQueueJob(oldObj, newObj interface{}) {
 	notBackedoff := true
 	for _, cond := range newQJ.Status.Conditions {
 		if cond.Type == arbv1.AppWrapperCondBackoff {
-			//AWs that have backoff conditions have a delay of 10 seconds before getting added to enqueue.
-			//TODO: we could plug an interface here with back-off strategies for different MCAD use cases.
-			time.AfterFunc(time.Duration(cc.serverOption.BackoffTime)*time.Second, func() {
-				if cc.serverOption.QuotaEnabled && cc.quotaManager != nil {
+			// AWs that have backoff conditions have a delay of 10 seconds before getting added to enqueue.
+			// TODO: we could plug an interface here with back-off strategies for different MCAD use cases.
+			time.AfterFunc(time.Duration(cc.config.BackoffTimeOrDefault(defaultBackoffTime))*time.Second, func() {
+				if cc.config.IsQuotaEnabled() && cc.quotaManager != nil {
 					cc.quotaManager.Release(newQJ)
 				}
 				cc.enqueue(newQJ)
@@ -1766,7 +1737,7 @@ func (cc *XController) deleteQueueJob(obj interface{}) {
 		return
 	}
 	// we delete the job from the queue if it is there, ignoring errors
-	if cc.serverOption.QuotaEnabled && cc.quotaManager != nil {
+	if cc.config.IsQuotaEnabled() && cc.quotaManager != nil {
 		cc.quotaManager.Release(qj)
 	}
 	cc.qjqueue.Delete(qj)
@@ -2245,7 +2216,7 @@ func (cc *XController) Cleanup(ctx context.Context, appwrapper *arbv1.AppWrapper
 	}
 
 	// Release quota if quota is enabled and quota manager instance exists
-	if cc.serverOption.QuotaEnabled && cc.quotaManager != nil {
+	if cc.config.IsQuotaEnabled() && cc.quotaManager != nil {
 		cc.quotaManager.Release(appwrapper)
 	}
 	appwrapper.Status.Pending = 0

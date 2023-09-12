@@ -1,19 +1,4 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
 Copyright 2019, 2021 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package options
 
 import (
@@ -41,7 +27,6 @@ import (
 type ServerOption struct {
 	Master          string
 	Kubeconfig      string
-	SchedulerName   string
 	Dispatcher      bool
 	AgentConfigs    string
 	SecurePort      int
@@ -68,11 +53,10 @@ func (s *ServerOption) AddFlags(fs *flag.FlagSet) {
 	// Set defaults via environment variables
 	s.loadDefaultsFromEnvVars()
 
-	fs.StringVar(&s.Master, "scheduler", s.SchedulerName, "scheduler name for placing pods")
 	fs.StringVar(&s.Master, "master", s.Master, "The address of the Kubernetes API server (overrides any value in kubeconfig)")
 	fs.StringVar(&s.Kubeconfig, "kubeconfig", s.Kubeconfig, "Path to kubeconfig file with authorization and master location information.")
-	fs.BoolVar(&s.Dispatcher, "dispatcher", s.Dispatcher, "set dispather mode(true) or agent mode(false)")
-	fs.StringVar(&s.AgentConfigs, "agentconfigs", s.AgentConfigs, "Paths to agent config file:deploymentName separted by commas(,)")
+	fs.BoolVar(&s.Dispatcher, "dispatcher", s.Dispatcher, "set dispatcher mode(true) or agent mode(false)")
+	fs.StringVar(&s.AgentConfigs, "agentconfigs", s.AgentConfigs, "Comma-separated paths to agent config file:deploymentName")
 	fs.BoolVar(&s.DynamicPriority, "dynamicpriority", s.DynamicPriority, "If true, set controller to use dynamic priority. If false, set controller to use static priority.  Default is false.")
 	fs.BoolVar(&s.Preemption, "preemption", s.Preemption, "Set controller to allow preemption if set to true. Note: when set to true, the Kubernetes Scheduler must be configured to enable preemption.  Default is false.")
 	fs.IntVar(&s.BackoffTime, "backofftime", s.BackoffTime, "Number of seconds a job will go away for, if it can not be scheduled.  Default is 20.")

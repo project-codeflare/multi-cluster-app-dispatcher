@@ -20,24 +20,23 @@ package quotaforestmanager
 import (
 	"bytes"
 	"fmt"
+	"math"
+	"reflect"
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	listersv1beta1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1beta1"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/config"
 	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/genericresource"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota"
 	qstmanager "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotaforestmanager/qm_lib_backend_with_quotasubt_mgr/quotasubtmgr"
 	qmbackend "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota"
 	qmbackendutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/utils"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/util"
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejobresources/genericresource"
+
 	"k8s.io/client-go/rest"
-
-	"math"
-	"reflect"
-
 	"k8s.io/klog/v2"
 )
 
@@ -109,20 +108,19 @@ func getDispatchedAppWrapper(dispatchedAWs map[string]*arbv1.AppWrapper, awId st
 }
 
 func NewQuotaManager(dispatchedAWDemands map[string]*clusterstateapi.Resource, dispatchedAWs map[string]*arbv1.AppWrapper,
-	awJobLister listersv1beta1.AppWrapperLister, config *rest.Config, serverOptions *options.ServerOption) (*QuotaManager, error) {
+	awJobLister listersv1beta1.AppWrapperLister, restConfig *rest.Config, mcadConfig *config.MCADConfiguration) (*QuotaManager, error) {
 
 	var err error
 
-	if !serverOptions.QuotaEnabled {
+	if !mcadConfig.IsQuotaEnabled() {
 		klog.
 			Infof("[NewQuotaManager] Quota management is not enabled.")
 		return nil, nil
 	}
 
 	qm := &QuotaManager{
-		url:                 serverOptions.QuotaRestURL,
 		appwrapperLister:    awJobLister,
-		preemptionEnabled:   serverOptions.Preemption,
+		preemptionEnabled:   mcadConfig.HasPreemption(),
 		quotaManagerBackend: qmbackend.NewManager(),
 		initializationDone:  false,
 	}
@@ -132,7 +130,7 @@ func NewQuotaManager(dispatchedAWDemands map[string]*clusterstateapi.Resource, d
 	klog.V(4).Infof("[NewQuotaManager] Before initialization QuotaSubtree informer - %s", qm.quotaManagerBackend.String())
 
 	// Create a resource plan manager
-	qm.quotaSubtreeManager, err = qstmanager.NewQuotaSubtreeManager(config, qm.quotaManagerBackend)
+	qm.quotaSubtreeManager, err = qstmanager.NewQuotaSubtreeManager(restConfig, qm.quotaManagerBackend)
 	if err != nil {
 		klog.Errorf("[NewQuotaManager] failed to instantiate new quota subtree manager, err=%#v", err)
 		return nil, err

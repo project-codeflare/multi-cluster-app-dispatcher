@@ -1,19 +1,4 @@
 /*
-Copyright 2017 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
 Copyright 2019, 2021 The Multi-Cluster App Dispatcher Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,18 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package app
 
 import (
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"net/http"
-
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejob"
-	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/health"
+	"strings"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/utils/pointer"
+
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/options"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/config"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/queuejob"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/health"
 )
 
 func buildConfig(master, kubeconfig string) (*rest.Config, error) {
@@ -50,17 +40,29 @@ func buildConfig(master, kubeconfig string) (*rest.Config, error) {
 }
 
 func Run(opt *options.ServerOption) error {
-	config, err := buildConfig(opt.Master, opt.Kubeconfig)
+	restConfig, err := buildConfig(opt.Master, opt.Kubeconfig)
 	if err != nil {
 		return err
 	}
 
 	neverStop := make(chan struct{})
 
-	config.QPS = 100.0
-	config.Burst = 200.0
+	restConfig.QPS = 100.0
+	restConfig.Burst = 200.0
 
-	jobctrl := queuejob.NewJobController(config, opt)
+	mcadConfig := &config.MCADConfiguration{
+		DynamicPriority:       pointer.Bool(opt.DynamicPriority),
+		Preemption:            pointer.Bool(opt.Preemption),
+		BackoffTime:           pointer.Int32(int32(opt.BackoffTime)),
+		HeadOfLineHoldingTime: pointer.Int32(int32(opt.HeadOfLineHoldingTime)),
+		QuotaEnabled:          &opt.QuotaEnabled,
+	}
+	extConfig := &config.MCADConfigurationExtended{
+		Dispatcher:   pointer.Bool(opt.Dispatcher),
+		AgentConfigs: strings.Split(opt.AgentConfigs, ","),
+	}
+
+	jobctrl := queuejob.NewJobController(restConfig, mcadConfig, extConfig)
 	if jobctrl == nil {
 		return nil
 	}
@@ -86,4 +88,3 @@ func listenHealthProbe(opt *options.ServerOption) error {
 
 	return nil
 }
-
