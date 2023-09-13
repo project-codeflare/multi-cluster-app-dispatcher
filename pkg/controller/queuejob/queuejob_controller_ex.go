@@ -345,6 +345,7 @@ func (qjm *XController) PreemptQueueJobs(inspectAw *arbv1.AppWrapper) {
 		newjob.Status.CanRun = false
 		newjob.Status.FilterIgnore = true // update QueueJobState only
 		cleanAppWrapper := false
+		generatedCondition := false
 		// If dispatch deadline is exceeded no matter what the state of AW, kill the job and set status as Failed.
 		if (newjob.Status.State == arbv1.AppWrapperStateActive) && (newjob.Spec.SchedSpec.DispatchDuration.Limit > 0) {
 			if newjob.Spec.SchedSpec.DispatchDuration.Overrun {
@@ -372,6 +373,7 @@ func (qjm *XController) PreemptQueueJobs(inspectAw *arbv1.AppWrapper) {
 				qjm.qjqueue.AddUnschedulableIfNotPresent(updateNewJob)
 
 			}
+			generatedCondition = true
 		}
 
 		if ((newjob.Status.Running + newjob.Status.Succeeded) < int32(newjob.Spec.SchedSpec.MinAvailable)) && newjob.Status.State == arbv1.AppWrapperStateActive {
@@ -412,7 +414,8 @@ func (qjm *XController) PreemptQueueJobs(inspectAw *arbv1.AppWrapper) {
 			}
 
 			updateNewJob = newjob.DeepCopy()
-		} else {
+			generatedCondition = true
+		} else if newjob.Status.Running == 0 && newjob.Status.Succeeded == 0 && newjob.Status.State == arbv1.AppWrapperStateActive {
 			// If pods failed scheduling generate new preempt condition
 			message = fmt.Sprintf("Pods failed scheduling failed=%v, running=%v.", len(newjob.Status.PendingPodConditions), newjob.Status.Running)
 			index := getIndexOfMatchedCondition(newjob, arbv1.AppWrapperCondPreemptCandidate, "PodsFailedScheduling")
@@ -427,13 +430,15 @@ func (qjm *XController) PreemptQueueJobs(inspectAw *arbv1.AppWrapper) {
 			}
 
 			updateNewJob = newjob.DeepCopy()
+			generatedCondition = true
 		}
 
-		err = qjm.updateStatusInEtcdWithRetry(ctx, updateNewJob, "PreemptQueueJobs - CanRun: false -- MinPodsNotRunning")
-		if err != nil {
-			klog.Warningf("[PreemptQueueJobs] status update for '%s/%s' failed, skipping app wrapper err =%v", newjob.Namespace, newjob.Name, err)
-			return
-		}
+		if generatedCondition {
+			err = qjm.updateStatusInEtcdWithRetry(ctx, updateNewJob, "PreemptQueueJobs - CanRun: false -- MinPodsNotRunning")
+			if err != nil {
+				klog.Warningf("[PreemptQueueJobs] status update for '%s/%s' failed, skipping app wrapper err =%v", newjob.Namespace, newjob.Name, err)
+				return
+			}
 
 		if cleanAppWrapper {
 			klog.V(4).Infof("[PreemptQueueJobs] Deleting AppWrapper %s/%s due to maximum number of re-queueing(s) exceeded.", newjob.Namespace, newjob.Name)
