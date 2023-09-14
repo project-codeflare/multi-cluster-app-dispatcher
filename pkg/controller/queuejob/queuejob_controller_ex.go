@@ -371,9 +371,9 @@ func (qjm *XController) PreemptQueueJobs(inspectAw *arbv1.AppWrapper) {
 				}
 				// cannot use cleanup AW, since it puts AW back in running state
 				qjm.qjqueue.AddUnschedulableIfNotPresent(updateNewJob)
+				generatedCondition = true
 
 			}
-			generatedCondition = true
 		}
 
 		if ((newjob.Status.Running + newjob.Status.Succeeded) < int32(newjob.Spec.SchedSpec.MinAvailable)) && newjob.Status.State == arbv1.AppWrapperStateActive {
