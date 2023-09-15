@@ -68,10 +68,6 @@ func Run(ctx context.Context, opt *options.ServerOption) error {
 		AgentConfigs: strings.Split(opt.AgentConfigs, ","),
 	}
 
-	jobctrl := queuejob.NewJobController(restConfig, mcadConfig, extConfig)
-	if jobctrl == nil {
-		return fmt.Errorf("failed to create a job controller")
-	}
 
 	g, gCtx := errgroup.WithContext(ctx)
 
@@ -86,8 +82,7 @@ func Run(ctx context.Context, opt *options.ServerOption) error {
 		return err
 	}
 
-	// Create the job controller
-	jobctrl := queuejob.NewJobController(config, opt)
+	jobctrl := queuejob.NewJobController(restConfig, mcadConfig, extConfig)
 	if jobctrl == nil {
 		return fmt.Errorf("failed to create a job controller")
 	}
