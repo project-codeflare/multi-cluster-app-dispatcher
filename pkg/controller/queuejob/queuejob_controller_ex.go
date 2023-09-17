@@ -2165,7 +2165,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 			//are completed
 			if derivedAwStatus == arbv1.AppWrapperStateRunningHoldCompletion {
 				qj.Status.State = derivedAwStatus
-				klog.V(1).Infof("[>>>>>>>>>>] Setting ItemCompletionStatus 1")
+				klog.V(1).Infof("[manageQueueJob] Setting ItemCompletionStatus 1")
 				qj.Status.ItemCompletionStatus = genericItemsCompletionStatus
 				var updateQj *arbv1.AppWrapper
 				index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondRunningHoldCompletion, "SomeItemsCompleted")
@@ -2185,7 +2185,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 			
 			//Set appwrapper status to complete
 			if derivedAwStatus == arbv1.AppWrapperStateCompleted {
-				klog.V(1).Infof("[>>>>>>>>>>] Setting ItemCompletionStatus 2")
+				klog.V(1).Infof("[manageQueueJob] Setting ItemCompletionStatus 2")
 				qj.Status.ItemCompletionStatus = genericItemsCompletionStatus
 				qj.Status.State = derivedAwStatus
 				qj.Status.CanRun = false
@@ -2218,7 +2218,7 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 				klog.Errorf("[manageQueueJob] Error updating etc for AW job=%s Status=%+v err=%+v", qj.Name, qj.Status, err)
 			}
 			// Finish adding qj to Etcd for dispatch
-		//	return nil
+			return nil
 		}
 
 		
