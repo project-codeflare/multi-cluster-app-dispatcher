@@ -138,6 +138,33 @@ spec:
                           are ANDed.
                         type: object
                     type: object
+                  policyResult:
+                    properties:
+                      policySource:
+                        items:
+                          properties:
+                            lastUpdateMicroTime:
+                              description: The latest time this condition was updated.
+                              format: date-time
+                              type: string
+                            message:
+                              description: A human readable message indicating details
+                                about the cluster decision.
+                              type: string
+                            name:
+                              description: ID/Name of the policy decision maker.  Most
+                                often this will be MCAD but design can support alternatives
+                              type: string
+                          type: object
+                        type: array
+                      targetCluster:
+                        properties:
+                          name:
+                            type: string
+                        required:
+                        - name
+                        type: object
+                    type: object  
                 type: object
               dispatchDuration:
                 description: Wall clock duration time of appwrapper in seconds

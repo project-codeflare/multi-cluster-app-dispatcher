@@ -860,8 +860,6 @@ spec:
                 type: boolean
               message:
                 type: string
-              targetClusterName:
-                type: string
               pending:
                 description: The number of pending pods.
                 format: int32

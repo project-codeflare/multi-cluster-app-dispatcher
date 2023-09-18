@@ -80,6 +80,21 @@ type ClusterReference struct {
 type ClusterSchedulingSpec struct {
 	Clusters        []ClusterReference    `json:"clusters,omitempty"`
 	ClusterSelector *metav1.LabelSelector `json:"clusterSelector,omitempty"`
+	PolicyResult    ClusterDecision       `json:"policyResult,omitempty"`
+}
+
+type ClusterDecision struct {
+	TargetCluster ClusterReference        `json:"targetCluster,omitempty"`
+	PolicySource  []PolicySourceReference `json:"policySource,omitempty"`
+}
+
+type PolicySourceReference struct {
+	// ID/Name of the policy decision maker.  Most often this will be MCAD but design can support alternatives
+	Name                string           `json:"name,omitempty"`
+	// The latest time this condition was updated.
+	LastUpdateMicroTime metav1.MicroTime `json:"lastUpdateMicroTime,omitempty"`
+	// A human readable message indicating details about the cluster decision.
+	Message             string           `json:"message,omitempty"`
 }
 
 type ScheduleTimeSpec struct {
