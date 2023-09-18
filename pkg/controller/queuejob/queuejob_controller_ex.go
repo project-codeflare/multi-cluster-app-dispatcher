@@ -217,7 +217,7 @@ func (qjm *XController) allocatableCapacity() *clusterstateapi.Resource {
 			}
 		}
 	}
-	klog.Info("[allocatableCapacity] The avaible capacity to dispatch appwrapper is %v and time took to calculate is %v", capacity, time.Now().Sub(startTime))
+	klog.Infof("[allocatableCapacity] The available capacity to dispatch appwrapper is %v and time took to calculate is %v", capacity, time.Since(startTime))
 	return capacity
 }
 
@@ -1239,7 +1239,7 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 					} else { // Not enough free resources to dispatch HOL
 						fits = false
 						dispatchFailedMessage = "Insufficient resources to dispatch AppWrapper."
-						klog.Infof("[ScheduleNext] [Agent Mode] Failed to dispatch app wrapper '%s/%s' due to insuficient resources, activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
+						klog.Infof("[ScheduleNext] [Agent Mode] Failed to dispatch app wrapper '%s/%s' due to insufficient resources, activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
 							qj.Namespace, qj.Name, qjm.qjqueue.IfExistActiveQ(qj),
 							qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 						// TODO: Remove forwarded logic as a big AW will never be forwarded
