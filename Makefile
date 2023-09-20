@@ -195,6 +195,13 @@ ifneq ($(TAG:release-v%=%),$(TAG))
 endif
 endif
 
+# easy-deploy can be used for building and pushing a custom image of MCAD and deploying it on your K8s cluster for development.
+# Example: "make easy-deploy TAG=<image tag> USERNAME=<quay.io username>"
+easy-deploy: images-podman
+	podman tag localhost/mcad-controller:${TAG} quay.io/${USERNAME}/mcad-controller:${TAG}
+	podman push quay.io/${USERNAME}/mcad-controller:${TAG}
+	cd deployment && helm install mcad-controller mcad-controller --namespace kube-system --wait --set image.repository=quay.io/${USERNAME}/mcad-controller --set image.tag=${TAG}
+
 run-test:
 	$(info Running unit tests...)
 	go test -v -coverprofile cover.out -race -parallel 8  ./pkg/...
