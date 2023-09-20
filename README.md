@@ -14,6 +14,11 @@ Follow the [build instructions here](./doc/build/build.md) to build the Multi-Cl
 
 Refer to [deployment instructions here](./doc/deploy/deployment.md) on how to deploy the `multi-cluster-app-dispatcher` as a controller in Kubernetes.
 
+Alternatively, for a quick deployment, you can use the `easy-deploy` make target to build, push, and deploy your custom image of MCAD on your Kubernetes cluster:
+```
+make easy-deploy TAG=<image tag> USERNAME=<quay.io username>
+```
+Note: Ensure you are logged into your quay.io account on your local machine, and your kubeconfig is pointing to the cluster you want to deploy MCAD on.
 
 ## Release Process
 

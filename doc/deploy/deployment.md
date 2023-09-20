@@ -142,6 +142,15 @@ For example:
 ```
 helm install <release-name> mcad-controller --namespace kube-system --wait --set image.repository=tonghoon --set image.tag=both --set configMap.name=mcad-deployer --set configMap.dispatcherMode='"true"' --set configMap.agentConfigs=agent101config:uncordon --set volumes.hostPath=/etc/kubernetes
 ```
+
+##### Example 4 
+Use the `easy-deploy` make target to build, push, and deploy your custom image of MCAD on your Kubernetes cluster:
+
+```
+make easy-deploy TAG=<image tag> USERNAME=<quay.io username>
+```
+Note: This assumes you are logged into your quay.io account on your local machine, and your kubeconfig is pointing to the cluster you want to deploy MCAD on.
+
 ### Chart configuration
 
 The following table lists the configurable parameters of the helm chart and their default values.
