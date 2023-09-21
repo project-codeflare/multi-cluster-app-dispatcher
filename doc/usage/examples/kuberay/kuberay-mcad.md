@@ -17,7 +17,7 @@ This integration will help in queuing on [kuberay](https://github.com/ray-projec
         helm install mcad --set image.repository=quay.io/project-codeflare/mcad-controller --set image.tag=stable deployment/mcad-controller
         ```
 
-        Make sure MCAD has clusterrole to create ray resources, please patch using [xqueuejob-controller.yaml](doc/usage/examples/kuberay/config/xqueuejob-controller.yaml). For example:
+        Make sure MCAD has clusterrole to create ray resources, please patch using [xqueuejob-controller.yaml](config/xqueuejob-controller.yaml). For example:
         ```
         kubectl apply -f doc/usage/examples/kuberay/config/xqueuejob-controller.yaml
         ```
