@@ -161,7 +161,7 @@ func (p *PriorityQueue) MoveToActiveQueueIfExists(aw *qjobv1.AppWrapper) error {
 		p.unschedulableQ.Delete(aw)
 		err := p.activeQ.AddIfNotPresent(aw)
 		if err != nil {
-			klog.Errorf("[MoveToActiveQueueIfExists] Error adding AW %v to the scheduling queue: %v\n", aw.Name, err)
+			klog.Errorf("[MoveToActiveQueueIfExists] Error adding AW %s/%s to the scheduling queue: %v\n", aw.Namespace, aw.Name, err)
 		}
 		p.cond.Broadcast()
 		return err
@@ -176,10 +176,10 @@ func (p *PriorityQueue) Add(qj *qjobv1.AppWrapper) error {
 	defer p.lock.Unlock()
 	err := p.activeQ.Add(qj)
 	if err != nil {
-		klog.Errorf("Error adding QJ %v to the scheduling queue: %v", qj.Name, err)
+		klog.Errorf("Error adding QJ %s/%s to the scheduling queue: %v", qj.Namespace, qj.Name, err)
 	} else {
 		if p.unschedulableQ.Get(qj) != nil {
-			klog.Errorf("Error: QJ %v is already in the unschedulable queue.", qj.Name)
+			klog.Errorf("Error: QJ %s/%s is already in the unschedulable queue.", qj.Namespace, qj.Name)
 			p.unschedulableQ.Delete(qj)
 		}
 		p.cond.Broadcast()
@@ -201,7 +201,7 @@ func (p *PriorityQueue) AddIfNotPresent(qj *qjobv1.AppWrapper) error {
 	}
 	err := p.activeQ.Add(qj)
 	if err != nil {
-		klog.Errorf("Error adding pod %v to the scheduling queue: %v", qj.Name, err)
+		klog.Errorf("Error adding pod %s/%s to the scheduling queue: %v", qj.Namespace, qj.Name, err)
 	} else {
 		p.cond.Broadcast()
 	}

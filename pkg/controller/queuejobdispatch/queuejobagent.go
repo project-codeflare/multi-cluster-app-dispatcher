@@ -129,7 +129,7 @@ func (cc *JobClusterAgent) addQueueJob(obj interface{}) {
 		klog.Errorf("obj is not AppWrapper")
 		return
 	}
-	klog.V(10).Infof("[TTime]: %s Adding New Job: %s to EventQ\n", time.Now().String(), qj.Name)
+	klog.V(10).Infof("[TTime]: %s Adding New Job: %s/%s to EventQ\n", time.Now().String(), qj.Namespace, qj.Name)
 	cc.agentEventQueue.Add(qj)
 }
 
@@ -139,7 +139,7 @@ func (cc *JobClusterAgent) updateQueueJob(oldObj, newObj interface{}) {
 		klog.Errorf("newObj is not AppWrapper")
 		return
 	}
-	klog.V(10).Infof("[TTime]: %s Adding Update Job: %s to EventQ\n", time.Now().String(), newQJ.Name)
+	klog.V(10).Infof("[TTime]: %s Adding Update Job: %s/%s to EventQ\n", time.Now().String(), newQJ.Namespace, newQJ.Name)
 	cc.agentEventQueue.Add(newQJ)
 }
 
@@ -149,7 +149,7 @@ func (cc *JobClusterAgent) deleteQueueJob(obj interface{}) {
 		klog.Errorf("obj is not AppWrapper")
 		return
 	}
-	klog.V(10).Infof("[TTime]: %s Adding Delete Job: %s to EventQ\n", time.Now().String(), qj.Name)
+	klog.V(10).Infof("[TTime]: %s Adding Delete Job: %s/%s to EventQ\n", time.Now().String(), qj.Namespace, qj.Name)
 	cc.agentEventQueue.Add(qj)
 }
 
@@ -160,7 +160,7 @@ func (qa *JobClusterAgent) Run(stopCh <-chan struct{}) {
 
 func (qa *JobClusterAgent) DeleteJob(ctx context.Context, cqj *arbv1.AppWrapper) {
 	qj_temp := cqj.DeepCopy()
-	klog.V(2).Infof("[Dispatcher: Agent] Request deletion of XQJ %s to Agent %s\n", qj_temp.Name, qa.AgentId)
+	klog.V(2).Infof("[Dispatcher: Agent] Request deletion of XQJ %s/%s to Agent %s\n", qj_temp.Namespace, qj_temp.Name, qa.AgentId)
 	qa.queuejobclients.WorkloadV1beta1().AppWrappers(qj_temp.Namespace).Delete(ctx, qj_temp.Name, metav1.DeleteOptions{})
 }
 
@@ -182,7 +182,7 @@ func (qa *JobClusterAgent) CreateJob(ctx context.Context, cqj *arbv1.AppWrapper)
 	}
 	agent_qj.Labels["IsDispatched"] = "true"
 
-	klog.V(2).Infof("[Dispatcher: Agent] Create XQJ: %s (Status: %+v) in Agent %s\n", agent_qj.Name, agent_qj.Status, qa.AgentId)
+	klog.V(2).Infof("[Dispatcher: Agent] Create XQJ: %s/%s (Status: %+v) in Agent %s\n", agent_qj.Namespace, agent_qj.Name, agent_qj.Status, qa.AgentId)
 	qa.queuejobclients.WorkloadV1beta1().AppWrappers(agent_qj.Namespace).Create(ctx, agent_qj, metav1.CreateOptions{})
 }
 
