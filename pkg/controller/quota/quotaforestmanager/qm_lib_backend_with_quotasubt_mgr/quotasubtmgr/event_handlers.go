@@ -33,7 +33,7 @@ func (qstm *QuotaSubtreeManager) addQST(obj interface{}) {
 	qstm.qstMap[qst.Namespace+"/"+qst.Name] = qst
 	qstm.setQuotasubtreeChanged()
 	qstm.qstMutex.Unlock()
-	klog.V(4).Infof("[addQST] Add complete for: %s/%s", qst.Name, qst.Namespace)
+	klog.V(4).Infof("[addQST] Add complete for: %s/%s", qst.Namespace, qst.Name)
 }
 
 func (qstm *QuotaSubtreeManager) updateQST(oldObj, newObj interface{}) {
@@ -65,7 +65,7 @@ func (qstm *QuotaSubtreeManager) updateQST(oldObj, newObj interface{}) {
 		qstm.setQuotasubtreeChanged()
 		qstm.qstMutex.Unlock()
 	}
-	klog.V(4).Infof("[updateQST] Update complete for: %s/%s", newQST.Name, newQST.Namespace)
+	klog.V(4).Infof("[updateQST] Update complete for: %s/%s", newQST.Namespace, newQST.Name)
 }
 
 func (qstm *QuotaSubtreeManager) deleteQST(obj interface{}) {
@@ -79,5 +79,5 @@ func (qstm *QuotaSubtreeManager) deleteQST(obj interface{}) {
 
 	delete(qstm.qstMap, string(qst.UID))
 	delete(qstm.qstMap, qst.Namespace+"/"+qst.Name)
-	klog.V(4).Infof("[deleteQST] Delete complete for: %s/%s", qst.Name, qst.Namespace)
+	klog.V(4).Infof("[deleteQST] Delete complete for: %s/%s", qst.Namespace, qst.Name)
 }

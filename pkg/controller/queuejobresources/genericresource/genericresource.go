@@ -199,7 +199,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 		if pErr := recover(); pErr != nil {
 			klog.Errorf("[SyncQueueJob] Panic occurred: %v, stacktrace: %s", pErr, string(debug.Stack()))
 		}
-		klog.V(4).Infof("Finished syncing AppWrapper job resource %s (%v)", aw.Name, time.Now().Sub(startTime))
+		klog.V(4).Infof("Finished syncing AppWrapper job resource %s/%s (%v)", aw.Namespace, aw.Name, time.Now().Sub(startTime))
 	}()
 
 	namespaced := true

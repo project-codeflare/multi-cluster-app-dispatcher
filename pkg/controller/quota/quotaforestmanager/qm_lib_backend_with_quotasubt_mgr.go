@@ -641,7 +641,7 @@ func (qm *QuotaManager) Release(aw *arbv1.AppWrapper) bool {
 	// Handle uninitialized quota manager
 	if qm.quotaManagerBackend == nil {
 		klog.Errorf("[Release] No quota manager backend exists, Quota release %s/%s fails quota by default.",
-			aw.Name, aw.Namespace)
+			aw.Namespace, aw.Name)
 		return false
 	}
 
