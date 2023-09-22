@@ -9,11 +9,6 @@ on:
         required: true
         default: 'v0.0.0-dev'
         type: string
-      quay-organization:
-        description: 'Quay organization used to push the built images to'
-        required: true
-        default: 'project-codeflare'
-        type: string
 
 jobs:
   release:
@@ -47,17 +42,6 @@ jobs:
         fi
       env:
         GITHUB_TOKEN: ${{ github.token }}
-
-    - name: Build
-      run: make mcad-controller
-
-    - name: Image Build and Push
-      env:
-        GIT_BRANCH: ${{ github.event.inputs.tag }}
-        TAG: release-${{ github.event.inputs.tag }}
-      run: |
-        make images -e GIT_BRANCH=$GIT_BRANCH TAG=$TAG
-        make push-images -e GIT_BRANCH=$GIT_BRANCH TAG=$TAG quay_repository=quay.io/${{ github.event.inputs.quay-organization }} quay_id=${{ secrets.QUAY_ID }} quay_token=${{ secrets.QUAY_TOKEN }}
 
     - name: Publish MCAD package
       run: |
