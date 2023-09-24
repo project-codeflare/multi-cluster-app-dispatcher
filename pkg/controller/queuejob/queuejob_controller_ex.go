@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"path"
 	"reflect"
 	"runtime/debug"
 	"sort"
@@ -679,8 +680,9 @@ func (qjm *XController) GetAggregatedResourcesPerGenericItem(cqj *arbv1.AppWrapp
 }
 
 // Gets all objects owned by AW from API server, check user supplied status and set whole AW status
-func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arbv1.AppWrapperState {
+func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) (arbv1.AppWrapperState, arbv1.GenericItemCompletionStatus) {
 
+	completionStatus := arbv1.GenericItemCompletionStatus{}
 	// Get all pods and related resources
 	countCompletionRequired := 0
 	for _, genericItem := range caw.Spec.AggrResources.GenericItems {
@@ -694,21 +696,55 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arb
 			}
 			unstruct.Object = blob.(map[string]interface{}) //set object to the content of the blob after Unmarshalling
 			name := ""
+			namespace := ""
 			if md, ok := unstruct.Object["metadata"]; ok {
 				metadata := md.(map[string]interface{})
 				if objectName, ok := metadata["name"]; ok {
 					name = objectName.(string)
 				}
+				if objectNamespace, ok := metadata["namespace"]; ok {
+					if objectNamespace != nil {
+						namespace = objectNamespace.(string)
+					}
+				} 
 			}
+			var gvk = schema.GroupVersionKind{}
+			_, groupversionkind, err := unstructured.UnstructuredJSONScheme.Decode(objectName.Raw, nil, nil)
+			if err != nil || groupversionkind == nil {
+				klog.Errorf("[getAppWrapperCompletionStatus] Error unmarshalling gvk, err=%#v", err)
+				unknown := "Unknown"
+				gvk = schema.GroupVersionKind {
+					Group:   unknown,
+					Version:  unknown,
+					Kind:     unknown,
+				}
+			}
+            if groupversionkind != nil {
+				gvk = *groupversionkind
+			}
+
 			if len(name) == 0 {
 				klog.Warningf("[getAppWrapperCompletionStatus] object name not present for appwrapper: %v in namespace: %v", caw.Name, caw.Namespace)
 			}
 			klog.Infof("[getAppWrapperCompletionStatus] Checking items completed for appwrapper: %v in namespace: %v", caw.Name, caw.Namespace)
 
-			status := qjm.genericresources.IsItemCompleted(&genericItem, caw.Namespace, caw.Name, name)
+			status, condition := qjm.genericresources.IsItemCompleted(&genericItem, caw.Namespace, caw.Name, name)
 			if !status {
 				//early termination because a required item is not completed
-				return caw.Status.State
+				return caw.Status.State, completionStatus
+			} else {
+				genItemCompletionStatus := arbv1.GenericItem{
+					GroupVersionKind: schema.GroupVersionKind {
+                        Group:   gvk.Group,
+						Version: gvk.Version,
+						Kind:    gvk.Kind,
+					},
+
+					Name:      name,
+					Namespace: namespace,
+					Condition: condition,
+				}
+				completionStatus.GenericItems = append(completionStatus.GenericItems, genItemCompletionStatus)
 			}
 
 			//only consider count completion required for valid items
@@ -721,15 +757,15 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arb
 	//Set new status only when completion required flag is present in genericitems array
 	if countCompletionRequired > 0 {
 		if caw.Status.Running == 0 && caw.Status.Pending == 0 {
-			return arbv1.AppWrapperStateCompleted
+			return arbv1.AppWrapperStateCompleted, completionStatus
 		}
 
 		if caw.Status.Pending > 0 || caw.Status.Running > 0 {
-			return arbv1.AppWrapperStateRunningHoldCompletion
+			return arbv1.AppWrapperStateRunningHoldCompletion, completionStatus
 		}
 	}
 	//return previous condition
-	return caw.Status.State
+	return caw.Status.State, completionStatus
 }
 
 func (qjm *XController) GetAggregatedResources(cqj *arbv1.AppWrapper) *clusterstateapi.Resource {
@@ -1011,6 +1047,31 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 }
 
 func (qjm *XController) chooseAgent(qj *arbv1.AppWrapper) string {
+
+	if qjm.serverOption.ExternalDispatch {
+		clusters := qj.Spec.SchedSpec.ClusterScheduling.Clusters
+		var agentId = ""
+		apath := path.Dir(qjm.agentList[0])
+		var agentIdList = make([]string, len(clusters))
+		clustersProvided := false // assume clusters not provided
+		for _, clusterRef := range clusters {
+			if clusterRef.Name != "" {
+				clustersProvided = true
+				agentIdList = append(agentIdList, apath+"/"+clusterRef.Name)
+			}
+		}
+		// target clusters no defined by the submitter of workload. Just pick a target
+		// from a known list of clusters provided in serverOption.AgentConfigs
+		if !clustersProvided {
+			agentId = qjm.agentList[rand.Int()%len(qjm.agentList)]
+			klog.V(1).Infof("ClusterId %s is chosen randomly from a list provided by mcad\n", agentId)
+		} else {
+			// choose target clusterId at random
+			agentId = agentIdList[rand.Int()%len(agentIdList)]
+			klog.V(1).Infof("ClusterId %s is chosen randomly from a list provided in Spec.SchedSpec.ClusterScheduling.Clusters: %s\n", agentId, agentIdList)
+		}
+		return agentId
+	}
 
 	qjAggrResources := qjm.GetAggregatedResources(qj)
 	klog.V(2).Infof("[chooseAgent] Aggregated Resources of XQJ %s: %v\n", qj.Name, qjAggrResources)
@@ -1923,40 +1984,40 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 		klog.V(10).Infof("[worker-manageQJ] Ending %s manageQJ time=%s &qj=%p Version=%s Status=%+v", qj.Name, time.Now().Sub(startTime), qj, qj.ResourceVersion, qj.Status)
 	}()
 
+	if qj.DeletionTimestamp != nil {
+
+		klog.V(4).Infof("[manageQueueJob] AW job=%s/%s set for deletion.", qj.Name, qj.Namespace)
+
+		// cleanup resources for running job
+		err = cc.Cleanup(qj)
+		if err != nil {
+			return err
+		}
+		//empty finalizers and delete the queuejob again
+		accessor, err := meta.Accessor(qj)
+		if err != nil {
+			return err
+		}
+		accessor.SetFinalizers(nil)
+
+		// we delete the job from the queue if it is there
+		cc.qjqueue.Delete(qj)
+
+		return nil
+	}
+	//Job is Complete only update pods if needed.
+	if qj.Status.State == arbv1.AppWrapperStateCompleted || qj.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
+		if podPhaseChanges {
+			// Only update etcd if AW status has changed.  This can happen for periodic
+			// updates of pod phase counts done in caller of this function.
+			if err := cc.updateEtcd(qj, "manageQueueJob - podPhaseChanges"); err != nil {
+				klog.Errorf("[manageQueueJob] Error updating etc for AW job=%s Status=%+v err=%+v", qj.Name, qj.Status, err)
+			}
+		}
+		return nil
+	}
+
 	if !cc.isDispatcher { // Agent Mode
-
-		if qj.DeletionTimestamp != nil {
-
-			klog.V(4).Infof("[manageQueueJob] AW job=%s/%s set for deletion.", qj.Name, qj.Namespace)
-
-			// cleanup resources for running job
-			err = cc.Cleanup(qj)
-			if err != nil {
-				return err
-			}
-			//empty finalizers and delete the queuejob again
-			accessor, err := meta.Accessor(qj)
-			if err != nil {
-				return err
-			}
-			accessor.SetFinalizers(nil)
-
-			// we delete the job from the queue if it is there
-			cc.qjqueue.Delete(qj)
-
-			return nil
-		}
-		//Job is Complete only update pods if needed.
-		if qj.Status.State == arbv1.AppWrapperStateCompleted || qj.Status.State == arbv1.AppWrapperStateRunningHoldCompletion {
-			if podPhaseChanges {
-				// Only update etcd if AW status has changed.  This can happen for periodic
-				// updates of pod phase counts done in caller of this function.
-				if err := cc.updateEtcd(qj, "manageQueueJob - podPhaseChanges"); err != nil {
-					klog.Errorf("[manageQueueJob] Error updating etc for AW job=%s Status=%+v err=%+v", qj.Name, qj.Status, err)
-				}
-			}
-			return nil
-		}
 
 		// First execution of qj to set Status.State = Enqueued
 		if !qj.Status.CanRun && (qj.Status.State != arbv1.AppWrapperStateEnqueued && qj.Status.State != arbv1.AppWrapperStateDeleted) {
@@ -2098,12 +2159,14 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 
 		} else if qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateActive {
 			//set appwrapper status to Complete or RunningHoldCompletion
-			derivedAwStatus := cc.getAppWrapperCompletionStatus(qj)
+			derivedAwStatus, genericItemsCompletionStatus := cc.getAppWrapperCompletionStatus(qj)
 
 			//Set Appwrapper state to complete if all items in Appwrapper
 			//are completed
 			if derivedAwStatus == arbv1.AppWrapperStateRunningHoldCompletion {
 				qj.Status.State = derivedAwStatus
+				klog.V(1).Infof("[manageQueueJob] Setting ItemCompletionStatus 1")
+				qj.Status.ItemCompletionStatus = genericItemsCompletionStatus
 				var updateQj *arbv1.AppWrapper
 				index := getIndexOfMatchedCondition(qj, arbv1.AppWrapperCondRunningHoldCompletion, "SomeItemsCompleted")
 				if index < 0 {
@@ -2119,8 +2182,11 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 				}
 				cc.updateEtcd(updateQj, "[syncQueueJob] setRunningHoldCompletion")
 			}
+			
 			//Set appwrapper status to complete
 			if derivedAwStatus == arbv1.AppWrapperStateCompleted {
+				klog.V(1).Infof("[manageQueueJob] Setting ItemCompletionStatus 2")
+				qj.Status.ItemCompletionStatus = genericItemsCompletionStatus
 				qj.Status.State = derivedAwStatus
 				qj.Status.CanRun = false
 				var updateQj *arbv1.AppWrapper
@@ -2140,6 +2206,10 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 				cc.quotaManager.Release(updateQj)
 			}
 
+            if derivedAwStatus == arbv1.AppWrapperStateCompleted {
+	           qj.Status.ItemCompletionStatus = genericItemsCompletionStatus
+			   qj.Status.State = derivedAwStatus
+            }
 			// Bugfix to eliminate performance problem of overloading the event queue.
 		} else if podPhaseChanges { // Continued bug fix
 			// Only update etcd if AW status has changed.  This can happen for periodic
@@ -2147,28 +2217,12 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 			if err := cc.updateEtcd(qj, "manageQueueJob - podPhaseChanges"); err != nil {
 				klog.Errorf("[manageQueueJob] Error updating etc for AW job=%s Status=%+v err=%+v", qj.Name, qj.Status, err)
 			}
-		}
-		// Finish adding qj to Etcd for dispatch
-
-	} else { // Dispatcher Mode
-
-		if qj.DeletionTimestamp != nil {
-			// cleanup resources for running job
-			err = cc.Cleanup(qj)
-			if err != nil {
-				return err
-			}
-			//empty finalizers and delete the queuejob again
-			accessor, err := meta.Accessor(qj)
-			if err != nil {
-				return err
-			}
-			accessor.SetFinalizers(nil)
-
-			cc.qjqueue.Delete(qj)
-
+			// Finish adding qj to Etcd for dispatch
 			return nil
 		}
+
+		
+	} else  { // Dispatcher Mode
 
 		if !qj.Status.CanRun && (qj.Status.State != arbv1.AppWrapperStateEnqueued && qj.Status.State != arbv1.AppWrapperStateDeleted) {
 			// if there are running resources for this job then delete them because the job was put in
@@ -2196,33 +2250,43 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 						qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), cc.qjqueue.IfExistActiveQ(qj), cc.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 				}
 			}
-
-			//_, err = cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj)
-			//if err != nil {
-			//	return err
-			//}
 			return nil
 		}
 
-		// if !qj.Status.CanRun && qj.Status.State == arbv1.QueueJobStateEnqueued {
 		if !qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateEnqueued {
 			cc.qjqueue.AddIfNotPresent(qj)
 			return nil
 		}
 
-		if qj.Status.CanRun && !qj.Status.IsDispatched {
+		if qj.Status.CanRun && !qj.Status.IsDispatched { 
+
 			if klog.V(10).Enabled() {
 				current_time := time.Now()
 				klog.V(10).Infof("[worker-manageQJ] XQJ %s has Overhead Before Dispatching: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
 				klog.V(10).Infof("[TTime] %s, %s: WorkerBeforeDispatch", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 			}
-
 			queuejobKey, _ := GetQueueJobKey(qj)
-			// agentId:=cc.dispatchMap[queuejobKey]
-			// if agentId!=nil {
 			if agentId, ok := cc.dispatchMap[queuejobKey]; ok {
 				klog.V(10).Infof("[Dispatcher Controller] Dispatched AppWrapper %s to Agent ID: %s.", qj.Name, agentId)
-				cc.agentMap[agentId].CreateJob(qj)
+				if cc.serverOption.ExternalDispatch {
+					values := strings.Split(agentId, "/")
+					klog.V(10).Infof("[Dispatcher Controller] Dispatching AppWrapper %s to Agent ID: %s Through External Dispatcher.", qj.Name, values[len(values)-1])					
+					qj.Spec.SchedSpec.ClusterScheduling.PolicyResult = arbv1.ClusterDecision {
+						TargetCluster: arbv1.ClusterReference{
+							// TODO check if values len > 0.
+							Name: values[len(values)-1],
+						}, 
+						PolicySource : []arbv1.PolicySourceReference {
+							{
+								Name: "MCAD",
+								LastUpdateMicroTime: metav1.MicroTime{Time: time.Now()},
+								Message: "Assigned by MCAD",
+							},
+						},
+					}
+				} else {
+					cc.agentMap[agentId].CreateJob(qj)
+				}
 				qj.Status.IsDispatched = true
 			} else {
 				klog.Errorf("[Dispatcher Controller] AppWrapper %s not found in dispatcher mapping.", qj.Name)
@@ -2232,14 +2296,14 @@ func (cc *XController) manageQueueJob(qj *arbv1.AppWrapper, podPhaseChanges bool
 				klog.V(10).Infof("[Dispatcher Controller] XQJ %s has Overhead After Dispatching: %s", qj.Name, current_time.Sub(qj.CreationTimestamp.Time))
 				klog.V(10).Infof("[TTime] %s, %s: WorkerAfterDispatch", qj.Name, time.Now().Sub(qj.CreationTimestamp.Time))
 			}
-
+	
 			if _, err := cc.arbclients.ArbV1().AppWrappers(qj.Namespace).Update(qj); err != nil {
 				klog.Errorf("Failed to update status of AppWrapper %v/%v: %v",
 					qj.Namespace, qj.Name, err)
 				return err
 			}
+			klog.V(10).Infof("[Dispatcher Controller] Update Successfull -  AppWrapper %s .", qj.Name)		
 		}
-
 	}
 	return err
 }
@@ -2277,7 +2341,10 @@ func (cc *XController) Cleanup(appwrapper *arbv1.AppWrapper) error {
 		if appwrapper.Status.IsDispatched {
 			queuejobKey, _ := GetQueueJobKey(appwrapper)
 			if obj, ok := cc.dispatchMap[queuejobKey]; ok {
-				cc.agentMap[obj].DeleteJob(appwrapper)
+				if !cc.serverOption.ExternalDispatch {
+					cc.agentMap[obj].DeleteJob(appwrapper)
+				}
+				delete(cc.dispatchMap,queuejobKey)
 			}
 			appwrapper.Status.IsDispatched = false
 		}

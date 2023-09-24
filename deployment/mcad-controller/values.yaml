@@ -47,6 +47,7 @@ configMap:
   quotaEnabled: '"false"'
   multiCluster: false
   dispatcherMode: '"false"'
+  externalDispatch: '"false"'
   preemptionEnabled: '"false"'
   agentConfigs: ""
   quotaRestUrl: ""
