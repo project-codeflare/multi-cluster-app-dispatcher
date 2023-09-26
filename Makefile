@@ -69,13 +69,12 @@ verify-tag-name: print-global-variables
 	t=${TAG} && [ $${#t} -le 128 ] || { echo "Target name $$t has 128 or more chars"; false; }
 .PHONY: generate-client ## Generate client packages
 generate-client: code-generator
-	rm -rf pkg/client/clientset/versioned pkg/client/informers/externalversions pkg/client/listers/controller/v1beta1 pkg/client/listers/quotasubtree/v1
-# TODO: add this back when the version of the tool has been updated and supports this executable
-#	$(APPLYCONFIGURATION_GEN) \
-#		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1" \
-#		--go-header-file="hack/boilerplate/boilerplate.go.txt" \
-#		--output-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/applyconfiguration" \
-#		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
+	rm -rf pkg/client/applyconfiguration pkg/client/clientset/versioned pkg/client/informers/externalversions pkg/client/listers/controller/v1beta1 pkg/client/listers/quotasubtree/v1
+	$(APPLYCONFIGURATION_GEN) \
+		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1" \
+		--go-header-file="hack/boilerplate/boilerplate.go.txt" \
+		--output-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/applyconfiguration" \
+		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
 	$(CLIENT_GEN) \
  		--input="pkg/apis/controller/v1beta1" \
  		--input="pkg/apis/quotaplugins/quotasubtree/v1" \
@@ -108,14 +107,12 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 	test -s $(LOCALBIN)/controller-gen || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
 .PHONY: code-generator
-#TODO: add $(APPLYCONFIGURATION_GEN) as a dependency when the tool is supported
-code-generator: $(CLIENT_GEN) $(LISTER_GEN) $(INFORMER_GEN) $(CONTROLLER_GEN)
+code-generator: $(APPLYCONFIGURATION_GEN) $(CLIENT_GEN) $(LISTER_GEN) $(INFORMER_GEN) $(CONTROLLER_GEN)
 
-# TODO: enable this target once the tools is supported
-#.PHONY: applyconfiguration-gen
-#applyconfiguration-gen: $(APPLYCONFIGURATION_GEN) 
-#$(APPLYCONFIGURATION_GEN): $(LOCALBIN)
-#	test -s $(LOCALBIN)/applyconfiguration-gen || GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/applyconfiguration-gen@$(CODEGEN_VERSION)
+.PHONY: applyconfiguration-gen
+applyconfiguration-gen: $(APPLYCONFIGURATION_GEN)
+$(APPLYCONFIGURATION_GEN): $(LOCALBIN)
+	test -s $(LOCALBIN)/applyconfiguration-gen || GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/applyconfiguration-gen@$(CODEGEN_VERSION)
 
 .PHONY: client-gen
 client-gen: $(CLIENT_GEN)
