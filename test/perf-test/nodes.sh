@@ -65,51 +65,50 @@ echo "Checking whether we have a valid cluster login or not..."
 check_kubectl_login_status
 
 # Track whether you have the KWOK controller installed
-echo "Checking MCAD Controller installation status"
+echo "Checking KWOK Controller installation status"
 echo
 check_kwok_installed_status
 
 echo
-read -p "How many simulated KWOK nodes do you want?" nodes
+read -p "How many simulated KWOK nodes do you want?" NODES
 
-echo "Nodes number is $nodes"
+echo "Nodes number is $NODES"
 echo " "
 
-# This fixes the number of jobs to be one less so the for loop gets the right amount
-((realnodes=$nodes-1))
-echo "The real number of nodes is $realnodes"
-
-for num in $(eval echo "{0.."$realnodes"}")
+COUNTER=1
+while [ $COUNTER -le $NODES ]
 do
-    next_num=$(($num + 1))
-    echo "Submitting node $next_num"
+    ORIG_COUNTER=$(($COUNTER - 1))
+    echo "Submitting node $COUNTER"
 # Had to do this OSTYPE because sed acts differently on Linux versus Mac
     case "$OSTYPE" in
       linux-gnu*)
-        sed -i "s/kwok-node-$num/kwok-node-$next_num/g" ${SCRIPT_DIR}/node.yaml ;;
-      darwin*) 
-        sed -i '' "s/kwok-node-$num/kwok-node-$next_num/g" ${SCRIPT_DIR}/node.yaml ${SCRIPT_DIR}/node.yaml ;;
-      *) 
-        sed -i "/kwok-node-$num/kwok-node-$next_num/g" ${SCRIPT_DIR}/node.yaml ;;
+        sed -i "s/kwok-node-$ORIG_COUNTER/kwok-node-$COUNTER/g" ${SCRIPT_DIR}/node.yaml ;;
+      darwin*)
+        sed -i '' "s/kwok-node-$ORIG_COUNTER/kwok-node-$COUNTER/g" ${SCRIPT_DIR}/node.yaml ${SCRIPT_DIR}/node.yaml ;;
+      *)
+        sed -i "/kwok-node-$ORIG_COUNTER/kwok-node-$COUNTER/g" ${SCRIPT_DIR}/node.yaml ;;
     esac
     kubectl apply -f ${SCRIPT_DIR}/node.yaml
+COUNTER=$[$COUNTER +1]
 done
+
 
     # Let's reset the original node.yaml file back to original value 
     case "$OSTYPE" in
       linux-gnu*)
-        sed -i "s/kwok-node-$next_num/kwok-node-0/g" ${SCRIPT_DIR}/node.yaml ;;
+        sed -i "s/kwok-node-$NODES/kwok-node-0/g" ${SCRIPT_DIR}/node.yaml ;;
       darwin*) 
-        sed -i '' "s/kwok-node-$next_num/kwok-node-0/g" ${SCRIPT_DIR}/node.yaml ;;
+        sed -i '' "s/kwok-node-$NODES/kwok-node-0/g" ${SCRIPT_DIR}/node.yaml ;;
       *) 
-        sed -i "s/kwok-node-$next_num/kwok-node-0/g" ${SCRIPT_DIR}/node.yaml ;;
+        sed -i "s/kwok-node-$NODES/kwok-node-0/g" ${SCRIPT_DIR}/node.yaml ;;
     esac
 
 # Check for all nodes to report complete
 echo "Waiting until all the simualted pods become ready:"
 kubectl wait --for=condition=Ready nodes --selector type=kwok --timeout=600s
 echo " "
-echo "Total amount of simulated nodes requested is: $nodes"
+echo "Total amount of simulated nodes requested is: $NODES"
 echo "Total number of created nodes is: "`kubectl get nodes --selector type=kwok -o name |wc -l`
 kubectl get nodes --selector type=kwok
 

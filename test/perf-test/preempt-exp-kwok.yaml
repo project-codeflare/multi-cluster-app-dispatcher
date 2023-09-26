@@ -1,7 +1,7 @@
 apiVersion: workload.codeflare.dev/v1beta1
 kind: AppWrapper
 metadata:
-  name: fake-defaultaw-schd-spec-with-timeout-1
+  name: fake-defaultaw-schd-spec-with-timeout-0
   namespace: default
 spec:
   schedulingSpec:
@@ -29,7 +29,7 @@ spec:
         kind: Job
         metadata:
           namespace: default
-          name: fake-defaultaw-schd-spec-with-timeout-1
+          name: fake-defaultaw-schd-spec-with-timeout-0
         spec:
           parallelism: 1
           completions: 1
@@ -37,7 +37,7 @@ spec:
             metadata:
               namespace: default
               labels:
-                appwrappers.workload.codeflare.dev: "fake-defaultaw-schd-spec-with-timeout-1"
+                appwrapper.mcad.ibm.com: "fake-defaultaw-schd-spec-with-timeout-0"
             spec:
               affinity:
                 nodeAffinity:
@@ -55,6 +55,6 @@ spec:
                   operator: "Exists"
                   effect: "NoSchedule"
               containers:
-              - name: fake-defaultaw-schd-spec-with-timeout-1
+              - name: fake-defaultaw-schd-spec-with-timeout-0
                 image: fake-image
               restartPolicy: Never
