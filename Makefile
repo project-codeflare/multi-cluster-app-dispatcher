@@ -14,7 +14,7 @@ $(LOCALBIN):
 
 ## Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.9.2
-CODEGEN_VERSION ?= v0.20.15
+CODEGEN_VERSION ?= v0.27.2
 
 ## Tool Binaries
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
@@ -83,17 +83,15 @@ generate-client: code-generator
  		--go-header-file="hack/boilerplate/boilerplate.go.txt" \
  		--clientset-name "versioned"  \
  		--output-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset" \
- 		--output-base="." 
-# TODO: add the following line back once the tool has been upgraded		
-# 		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
+ 		--output-base="." \
+		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
 	$(LISTER_GEN) \
  		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1" \
  		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1" \
  		--go-header-file="hack/boilerplate/boilerplate.go.txt" \
  		--output-base="." \
- 		--output-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers" 
-# TODO: add the following line back once the tool has been upgraded		
-# 		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
+		--output-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers" \
+ 		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
 	$(INFORMER_GEN) \
  		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1" \
  		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1" \
@@ -101,16 +99,8 @@ generate-client: code-generator
  		--listers-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers" \
  		--go-header-file="hack/boilerplate/boilerplate.go.txt" \
  		--output-base="." \
- 		--output-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers" 
-# TODO: add the following line back once the tool has been upgraded		
-# 		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
-# TODO: remove the following lines once the tool has been upgraded and they are no longer needed.
-# The `mv` and `rm` are necessary as the generators write to the gihub.com/... path.	
-	mv -f github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned pkg/client/clientset/versioned
-	mv -f github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions pkg/client/informers/externalversions
-	mv -f github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/controller/v1beta1 pkg/client/listers/controller/v1beta1
-	mv -f github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers/quotasubtree/v1 pkg/client/listers/quotasubtree/v1 
-	rm -rf github.com
+ 		--output-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers" \
+		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.

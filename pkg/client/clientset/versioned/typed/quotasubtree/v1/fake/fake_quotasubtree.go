@@ -21,10 +21,9 @@ package fake
 import (
 	"context"
 
-	quotasubtreev1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,25 +35,25 @@ type FakeQuotaSubtrees struct {
 	ns   string
 }
 
-var quotasubtreesResource = schema.GroupVersionResource{Group: "quota.codeflare.dev", Version: "v1", Resource: "quotasubtrees"}
+var quotasubtreesResource = v1.SchemeGroupVersion.WithResource("quotasubtrees")
 
-var quotasubtreesKind = schema.GroupVersionKind{Group: "quota.codeflare.dev", Version: "v1", Kind: "QuotaSubtree"}
+var quotasubtreesKind = v1.SchemeGroupVersion.WithKind("QuotaSubtree")
 
 // Get takes name of the quotaSubtree, and returns the corresponding quotaSubtree object, and an error if there is any.
-func (c *FakeQuotaSubtrees) Get(ctx context.Context, name string, options v1.GetOptions) (result *quotasubtreev1.QuotaSubtree, err error) {
+func (c *FakeQuotaSubtrees) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.QuotaSubtree, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(quotasubtreesResource, c.ns, name), &quotasubtreev1.QuotaSubtree{})
+		Invokes(testing.NewGetAction(quotasubtreesResource, c.ns, name), &v1.QuotaSubtree{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*quotasubtreev1.QuotaSubtree), err
+	return obj.(*v1.QuotaSubtree), err
 }
 
 // List takes label and field selectors, and returns the list of QuotaSubtrees that match those selectors.
-func (c *FakeQuotaSubtrees) List(ctx context.Context, opts v1.ListOptions) (result *quotasubtreev1.QuotaSubtreeList, err error) {
+func (c *FakeQuotaSubtrees) List(ctx context.Context, opts metav1.ListOptions) (result *v1.QuotaSubtreeList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(quotasubtreesResource, quotasubtreesKind, c.ns, opts), &quotasubtreev1.QuotaSubtreeList{})
+		Invokes(testing.NewListAction(quotasubtreesResource, quotasubtreesKind, c.ns, opts), &v1.QuotaSubtreeList{})
 
 	if obj == nil {
 		return nil, err
@@ -64,8 +63,8 @@ func (c *FakeQuotaSubtrees) List(ctx context.Context, opts v1.ListOptions) (resu
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &quotasubtreev1.QuotaSubtreeList{ListMeta: obj.(*quotasubtreev1.QuotaSubtreeList).ListMeta}
-	for _, item := range obj.(*quotasubtreev1.QuotaSubtreeList).Items {
+	list := &v1.QuotaSubtreeList{ListMeta: obj.(*v1.QuotaSubtreeList).ListMeta}
+	for _, item := range obj.(*v1.QuotaSubtreeList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -74,69 +73,69 @@ func (c *FakeQuotaSubtrees) List(ctx context.Context, opts v1.ListOptions) (resu
 }
 
 // Watch returns a watch.Interface that watches the requested quotaSubtrees.
-func (c *FakeQuotaSubtrees) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeQuotaSubtrees) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(quotasubtreesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a quotaSubtree and creates it.  Returns the server's representation of the quotaSubtree, and an error, if there is any.
-func (c *FakeQuotaSubtrees) Create(ctx context.Context, quotaSubtree *quotasubtreev1.QuotaSubtree, opts v1.CreateOptions) (result *quotasubtreev1.QuotaSubtree, err error) {
+func (c *FakeQuotaSubtrees) Create(ctx context.Context, quotaSubtree *v1.QuotaSubtree, opts metav1.CreateOptions) (result *v1.QuotaSubtree, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(quotasubtreesResource, c.ns, quotaSubtree), &quotasubtreev1.QuotaSubtree{})
+		Invokes(testing.NewCreateAction(quotasubtreesResource, c.ns, quotaSubtree), &v1.QuotaSubtree{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*quotasubtreev1.QuotaSubtree), err
+	return obj.(*v1.QuotaSubtree), err
 }
 
 // Update takes the representation of a quotaSubtree and updates it. Returns the server's representation of the quotaSubtree, and an error, if there is any.
-func (c *FakeQuotaSubtrees) Update(ctx context.Context, quotaSubtree *quotasubtreev1.QuotaSubtree, opts v1.UpdateOptions) (result *quotasubtreev1.QuotaSubtree, err error) {
+func (c *FakeQuotaSubtrees) Update(ctx context.Context, quotaSubtree *v1.QuotaSubtree, opts metav1.UpdateOptions) (result *v1.QuotaSubtree, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(quotasubtreesResource, c.ns, quotaSubtree), &quotasubtreev1.QuotaSubtree{})
+		Invokes(testing.NewUpdateAction(quotasubtreesResource, c.ns, quotaSubtree), &v1.QuotaSubtree{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*quotasubtreev1.QuotaSubtree), err
+	return obj.(*v1.QuotaSubtree), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeQuotaSubtrees) UpdateStatus(ctx context.Context, quotaSubtree *quotasubtreev1.QuotaSubtree, opts v1.UpdateOptions) (*quotasubtreev1.QuotaSubtree, error) {
+func (c *FakeQuotaSubtrees) UpdateStatus(ctx context.Context, quotaSubtree *v1.QuotaSubtree, opts metav1.UpdateOptions) (*v1.QuotaSubtree, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(quotasubtreesResource, "status", c.ns, quotaSubtree), &quotasubtreev1.QuotaSubtree{})
+		Invokes(testing.NewUpdateSubresourceAction(quotasubtreesResource, "status", c.ns, quotaSubtree), &v1.QuotaSubtree{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*quotasubtreev1.QuotaSubtree), err
+	return obj.(*v1.QuotaSubtree), err
 }
 
 // Delete takes name of the quotaSubtree and deletes it. Returns an error if one occurs.
-func (c *FakeQuotaSubtrees) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
+func (c *FakeQuotaSubtrees) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(quotasubtreesResource, c.ns, name), &quotasubtreev1.QuotaSubtree{})
+		Invokes(testing.NewDeleteActionWithOptions(quotasubtreesResource, c.ns, name, opts), &v1.QuotaSubtree{})
 
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeQuotaSubtrees) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+func (c *FakeQuotaSubtrees) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	action := testing.NewDeleteCollectionAction(quotasubtreesResource, c.ns, listOpts)
 
-	_, err := c.Fake.Invokes(action, &quotasubtreev1.QuotaSubtreeList{})
+	_, err := c.Fake.Invokes(action, &v1.QuotaSubtreeList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched quotaSubtree.
-func (c *FakeQuotaSubtrees) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *quotasubtreev1.QuotaSubtree, err error) {
+func (c *FakeQuotaSubtrees) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.QuotaSubtree, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(quotasubtreesResource, c.ns, name, pt, data, subresources...), &quotasubtreev1.QuotaSubtree{})
+		Invokes(testing.NewPatchSubresourceAction(quotasubtreesResource, c.ns, name, pt, data, subresources...), &v1.QuotaSubtree{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*quotasubtreev1.QuotaSubtree), err
+	return obj.(*v1.QuotaSubtree), err
 }
