@@ -15,7 +15,7 @@ spec:
     singular: quotasubtree
   scope: Namespaced
   versions:
-  - name: v1
+  - name: v1alpha1
     schema:
       openAPIV3Schema:
         description: QuotaSubtree is a specification for a quota subtree resource

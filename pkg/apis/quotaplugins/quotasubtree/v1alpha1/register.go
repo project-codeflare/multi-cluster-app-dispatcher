@@ -1,4 +1,4 @@
-package v1
+package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +16,7 @@ const (
 	GroupName = "quota.codeflare.dev"
 
 	// GroupVersion is the version of scheduling group
-	GroupVersion = "v1"
+	GroupVersion = "v1alpha1"
 )
 
 // SchemeGroupVersion is the group version used to register these objects.

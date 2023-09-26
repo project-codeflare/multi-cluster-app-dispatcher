@@ -11,7 +11,7 @@ One of the key features of quota trees is the hardLimit attribute, which determi
 from its siblings or not. A sibling is another child node that shares the same parent node. If a quota has hardLimit set
 to true, then it can only use the resources defined in its specification. If a quota has hardLimit set to false, then it
 can use any unused resources from its siblings, as long as it does not violate the parent node’s limits. However, if an
-object is defined which neccesitates borrowing from a sibling node, then if another kubernetes object is created which
+object is defined which necessitates borrowing from a sibling node, then if another kubernetes object is created which
 uses the borrowees quota (and is within the borrowees limit) then the borrower will be preempted to free these
 resources.
 
@@ -21,7 +21,7 @@ optimize resource utilization, avoid resource starvation, and ensure quality of 
 ## Example QuotaSubtree
 
 ```yaml
-apiVersion: quota.codeflare.dev/v1
+apiVersion: quota.codeflare.dev/v1alpha1
 kind: QuotaSubtree
 metadata:
   name: context-root
@@ -37,7 +37,7 @@ spec:
           cpu: 2000m
           memory: 8000Mi
 ---
-apiVersion: quota.codeflare.dev/v1
+apiVersion: quota.codeflare.dev/v1alpha1
 kind: QuotaSubtree
 metadata:
   name: context-root-children

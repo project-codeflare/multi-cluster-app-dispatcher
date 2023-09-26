@@ -26,7 +26,7 @@ import (
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/core"
 	"k8s.io/klog/v2"
 
-	qstv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1"
+	qstv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1alpha1"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/quota/quotaforestmanager/qm_lib_backend_with_quotasubt_mgr/quotasubtmgr/util"
 	qmlib "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota"
 	qmlibutils "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/utils"
@@ -37,7 +37,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	qstinformers "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions"
-	qstinformer "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions/quotasubtree/v1"
+	qstinformer "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/informers/externalversions/quotasubtree/v1alpha1"
 )
 
 // New returns a new implementation.
@@ -73,7 +73,7 @@ func newQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Mana
 		qstinformers.WithTweakListOptions(func(opt *metav1.ListOptions) {
 			opt.LabelSelector = util.URMTreeLabel
 		}))
-	qstm.quotaSubtreeInformer = qstInformerFactory.Quota().V1().QuotaSubtrees()
+	qstm.quotaSubtreeInformer = qstInformerFactory.Quota().V1alpha1().QuotaSubtrees()
 
 	// Add event handle for resource plans
 	qstm.quotaSubtreeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

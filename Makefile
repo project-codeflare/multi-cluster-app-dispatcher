@@ -69,7 +69,7 @@ verify-tag-name: print-global-variables
 	t=${TAG} && [ $${#t} -le 128 ] || { echo "Target name $$t has 128 or more chars"; false; }
 .PHONY: generate-client ## Generate client packages
 generate-client: code-generator
-	rm -rf pkg/client/applyconfiguration pkg/client/clientset/versioned pkg/client/informers/externalversions pkg/client/listers/controller/v1beta1 pkg/client/listers/quotasubtree/v1
+	rm -rf pkg/client/applyconfiguration pkg/client/clientset/versioned pkg/client/informers/externalversions pkg/client/listers/controller/v1beta1 pkg/client/listers/quotasubtree/v1alpha1
 	$(APPLYCONFIGURATION_GEN) \
 		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1" \
 		--go-header-file="hack/boilerplate/boilerplate.go.txt" \
@@ -77,7 +77,7 @@ generate-client: code-generator
 		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
 	$(CLIENT_GEN) \
  		--input="pkg/apis/controller/v1beta1" \
- 		--input="pkg/apis/quotaplugins/quotasubtree/v1" \
+		--input="pkg/apis/quotaplugins/quotasubtree/v1alpha1" \
  		--input-base="github.com/project-codeflare/multi-cluster-app-dispatcher" \
  		--go-header-file="hack/boilerplate/boilerplate.go.txt" \
  		--clientset-name "versioned"  \
@@ -86,14 +86,14 @@ generate-client: code-generator
 		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
 	$(LISTER_GEN) \
  		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1" \
- 		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1" \
+		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1alpha1" \
  		--go-header-file="hack/boilerplate/boilerplate.go.txt" \
  		--output-base="." \
 		--output-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers" \
  		--trim-path-prefix "github.com/project-codeflare/multi-cluster-app-dispatcher"
 	$(INFORMER_GEN) \
  		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1" \
- 		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1" \
+		--input-dirs="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1alpha1" \
  		--versioned-clientset-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned" \
  		--listers-package="github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/listers" \
  		--go-header-file="hack/boilerplate/boilerplate.go.txt" \

@@ -22,4 +22,4 @@ status:
     singular: quotasubtree
     plural: quotasubtrees
   storedVersions:
-    - v1
+    - v1alpha1
