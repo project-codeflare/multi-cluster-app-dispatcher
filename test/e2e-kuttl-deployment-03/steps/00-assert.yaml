@@ -19,7 +19,7 @@ metadata:
   name: start-up-03
 ---
 # Verify subtree creations
-apiVersion: quota.codeflare.dev/v1
+apiVersion: quota.codeflare.dev/v1alpha1
 kind: QuotaSubtree
 metadata:
   name: context-root
@@ -27,7 +27,7 @@ metadata:
   labels:
     tree: quota_context
 ---
-apiVersion: quota.codeflare.dev/v1
+apiVersion: quota.codeflare.dev/v1alpha1
 kind: QuotaSubtree
 metadata:
   name: service-root
@@ -35,7 +35,7 @@ metadata:
   labels:
     tree: quota_service
 ---
-apiVersion: quota.codeflare.dev/v1
+apiVersion: quota.codeflare.dev/v1alpha1
 kind: QuotaSubtree
 metadata:
   name: context-root-children

@@ -19,22 +19,22 @@ limitations under the License.
 package fake
 
 import (
-	v1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/quotasubtree/v1"
+	v1alpha1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/quotasubtree/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
 
-type FakeQuotaV1 struct {
+type FakeQuotaV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeQuotaV1) QuotaSubtrees(namespace string) v1.QuotaSubtreeInterface {
+func (c *FakeQuotaV1alpha1) QuotaSubtrees(namespace string) v1alpha1.QuotaSubtreeInterface {
 	return &FakeQuotaSubtrees{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeQuotaV1) RESTClient() rest.Interface {
+func (c *FakeQuotaV1alpha1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }

@@ -1,4 +1,5 @@
-package v1
+package v1alpha1
+
 /*
 Copyright 2022 The Multi-Cluster App Dispatcher Authors.
 
@@ -54,10 +55,10 @@ type QuotaSubtreeSpec struct {
 
 // Child is the spec for a QuotaSubtree resource
 type Child struct {
-	Name         string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
-	Namespace    string `json:"namespace,omitempty" protobuf:"bytes,2,opt,name=namespace"`
-	Quotas       Quota  `json:"quotas,omitempty" protobuf:"bytes,4,opt,name=quotas"`
-	Path         string `json:"path,omitempty" protobuf:"bytes,5,opt,name=path"`
+	Name      string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+	Namespace string `json:"namespace,omitempty" protobuf:"bytes,2,opt,name=namespace"`
+	Quotas    Quota  `json:"quotas,omitempty" protobuf:"bytes,4,opt,name=quotas"`
+	Path      string `json:"path,omitempty" protobuf:"bytes,5,opt,name=path"`
 }
 
 // Quota is the spec for a QuotaSubtree resource

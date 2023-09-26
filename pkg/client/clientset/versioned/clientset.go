@@ -23,7 +23,7 @@ import (
 	"net/http"
 
 	workloadv1beta1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/controller/v1beta1"
-	quotav1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/quotasubtree/v1"
+	quotav1alpha1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/quotasubtree/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -32,14 +32,14 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	WorkloadV1beta1() workloadv1beta1.WorkloadV1beta1Interface
-	QuotaV1() quotav1.QuotaV1Interface
+	QuotaV1alpha1() quotav1alpha1.QuotaV1alpha1Interface
 }
 
 // Clientset contains the clients for groups.
 type Clientset struct {
 	*discovery.DiscoveryClient
 	workloadV1beta1 *workloadv1beta1.WorkloadV1beta1Client
-	quotaV1         *quotav1.QuotaV1Client
+	quotaV1alpha1   *quotav1alpha1.QuotaV1alpha1Client
 }
 
 // WorkloadV1beta1 retrieves the WorkloadV1beta1Client
@@ -47,9 +47,9 @@ func (c *Clientset) WorkloadV1beta1() workloadv1beta1.WorkloadV1beta1Interface {
 	return c.workloadV1beta1
 }
 
-// QuotaV1 retrieves the QuotaV1Client
-func (c *Clientset) QuotaV1() quotav1.QuotaV1Interface {
-	return c.quotaV1
+// QuotaV1alpha1 retrieves the QuotaV1alpha1Client
+func (c *Clientset) QuotaV1alpha1() quotav1alpha1.QuotaV1alpha1Interface {
+	return c.quotaV1alpha1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -100,7 +100,7 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 	if err != nil {
 		return nil, err
 	}
-	cs.quotaV1, err = quotav1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	cs.quotaV1alpha1, err = quotav1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.workloadV1beta1 = workloadv1beta1.New(c)
-	cs.quotaV1 = quotav1.New(c)
+	cs.quotaV1alpha1 = quotav1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

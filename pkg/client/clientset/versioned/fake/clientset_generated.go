@@ -22,8 +22,8 @@ import (
 	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned"
 	workloadv1beta1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/controller/v1beta1"
 	fakeworkloadv1beta1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/controller/v1beta1/fake"
-	quotav1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/quotasubtree/v1"
-	fakequotav1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/quotasubtree/v1/fake"
+	quotav1alpha1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/quotasubtree/v1alpha1"
+	fakequotav1alpha1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned/typed/quotasubtree/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -86,7 +86,7 @@ func (c *Clientset) WorkloadV1beta1() workloadv1beta1.WorkloadV1beta1Interface {
 	return &fakeworkloadv1beta1.FakeWorkloadV1beta1{Fake: &c.Fake}
 }
 
-// QuotaV1 retrieves the QuotaV1Client
-func (c *Clientset) QuotaV1() quotav1.QuotaV1Interface {
-	return &fakequotav1.FakeQuotaV1{Fake: &c.Fake}
+// QuotaV1alpha1 retrieves the QuotaV1alpha1Client
+func (c *Clientset) QuotaV1alpha1() quotav1alpha1.QuotaV1alpha1Interface {
+	return &fakequotav1alpha1.FakeQuotaV1alpha1{Fake: &c.Fake}
 }

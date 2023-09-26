@@ -18,7 +18,7 @@
 package quotasubtmgr
 
 import (
-	qstv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1"
+	qstv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/quotaplugins/quotasubtree/v1alpha1"
 	"k8s.io/klog/v2"
 )
 

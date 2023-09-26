@@ -1,5 +1,5 @@
 ---
-apiVersion: quota.codeflare.dev/v1
+apiVersion: quota.codeflare.dev/v1alpha1
 kind: QuotaSubtree
 metadata:
   name: context-root
@@ -15,7 +15,7 @@ spec:
           memory: 1045Mi
           nvidia.com/gpu: 16
 ---
-apiVersion: quota.codeflare.dev/v1
+apiVersion: quota.codeflare.dev/v1alpha1
 kind: QuotaSubtree
 metadata:
   name: service-root
@@ -31,7 +31,7 @@ spec:
           memory: 1045Mi
           nvidia.com/gpu: 16
 ---
-apiVersion: quota.codeflare.dev/v1
+apiVersion: quota.codeflare.dev/v1alpha1
 kind: QuotaSubtree
 metadata:
   name: context-root-children
@@ -70,7 +70,7 @@ spec:
           memory: 0Mi
           nvidia.com/gpu: 0
 ---
-apiVersion: quota.codeflare.dev/v1
+apiVersion: quota.codeflare.dev/v1alpha1
 kind: QuotaSubtree
 metadata:
   name: service-root-children
