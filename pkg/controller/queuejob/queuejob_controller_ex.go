@@ -221,6 +221,10 @@ func (qjm *XController) allocatableCapacity() *clusterstateapi.Resource {
 	return capacity
 }
 
+func (qjm *XController) GetAllocatableCapacity() *clusterstateapi.Resource {
+	return qjm.allocatableCapacity()
+}
+
 // NewJobController create new AppWrapper Controller
 func NewJobController(restConfig *rest.Config, mcadConfig *config.MCADConfiguration, extConfig *config.MCADConfigurationExtended) *XController {
 	cc := &XController{
@@ -241,6 +245,8 @@ func NewJobController(restConfig *rest.Config, mcadConfig *config.MCADConfigurat
 	// resources installed in the cluster to construct cache. May be this is need in
 	// multi-cluster mode, so for now it is turned-off: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/585
 	// cc.metricsAdapter = adapter.New(serverOption, config, cc.cache)
+
+	registerMetrics(cc)
 
 	cc.genericresources = genericresource.NewAppWrapperGenericResource(restConfig)
 
