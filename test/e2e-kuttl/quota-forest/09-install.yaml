@@ -36,7 +36,7 @@ spec:
                       name: my-job-1
                       namespace: test
                       labels:
-                          appwrapper.mcad.ibm.com: my-job-1
+                          workload.codeflare.dev/appwrapper: my-job-1
                   spec:
                       parallelism: 1
                       completions: 1
@@ -45,7 +45,7 @@ spec:
                               name: my-job-1
                               namespace: test
                               labels:
-                                  appwrapper.mcad.ibm.com: my-job-1
+                                  workload.codeflare.dev/appwrapper: my-job-1
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never
@@ -100,7 +100,7 @@ spec:
                       name: my-job-2
                       namespace: test
                       labels:
-                          appwrapper.mcad.ibm.com: my-job-2
+                          workload.codeflare.dev/appwrapper: my-job-2
                   spec:
                       parallelism: 1
                       completions: 1
@@ -109,7 +109,7 @@ spec:
                               name: my-job-2
                               namespace: test
                               labels:
-                                  appwrapper.mcad.ibm.com: my-job-2
+                                  workload.codeflare.dev/appwrapper: my-job-2
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never

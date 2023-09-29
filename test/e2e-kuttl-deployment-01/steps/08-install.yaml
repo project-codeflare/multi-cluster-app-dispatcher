@@ -29,7 +29,7 @@ spec:
                       name: bronze-quota-job-08
                       namespace: start-up
                       labels:
-                          appwrapper.mcad.ibm.com: bronze-quota-job-08
+                          workload.codeflare.dev/appwrapper: bronze-quota-job-08
                   spec:
                       parallelism: 1
                       completions: 1
@@ -38,7 +38,7 @@ spec:
                               name: bronze-quota-job-08
                               namespace: start-up
                               labels:
-                                  appwrapper.mcad.ibm.com: bronze-quota-job-08
+                                  workload.codeflare.dev/appwrapper: bronze-quota-job-08
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never

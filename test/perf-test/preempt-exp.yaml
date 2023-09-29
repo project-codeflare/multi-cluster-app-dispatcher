@@ -31,7 +31,7 @@ spec:
           namespace: default
           name: defaultaw-schd-spec-with-timeout-1
           labels:
-            appwrapper.mcad.ibm.com: defaultaw-schd-spec-with-timeout-1
+            workload.codeflare.dev/appwrapper: defaultaw-schd-spec-with-timeout-1
         spec:
           parallelism: 1
           completions: 1
@@ -39,7 +39,7 @@ spec:
             metadata:
               namespace: default
               labels:
-                appwrapper.mcad.ibm.com: "defaultaw-schd-spec-with-timeout-1"
+                workload.codeflare.dev/appwrapper: "defaultaw-schd-spec-with-timeout-1"
             spec:
               containers:
               - name: defaultaw-schd-spec-with-timeout-1

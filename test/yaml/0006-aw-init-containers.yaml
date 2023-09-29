@@ -34,7 +34,7 @@ spec:
             name: bronnze-init-job-0006
             namespace: test
             labels:
-              appwrapper.mcad.ibm.com: bronnze-init-job-0006
+              workload.codeflare.dev/appwrapper: bronnze-init-job-0006
           spec:
             parallelism: 3
             terminationGracePeriodSeconds: 1
@@ -44,7 +44,7 @@ spec:
                 name: bronnze-init-job-0006
                 namespace: test
                 labels:
-                  appwrapper.mcad.ibm.com: bronnze-init-job-0006
+                  workload.codeflare.dev/appwrapper: bronnze-init-job-0006
               spec:
                 terminationGracePeriodSeconds: 1
                 restartPolicy: Never

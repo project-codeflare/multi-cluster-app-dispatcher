@@ -38,7 +38,7 @@ spec:
             metadata:
               namespace: default
               labels:
-                appwrapper.mcad.ibm.com: "fake-defaultaw-schd-spec-with-timeout-1"
+                workload.codeflare.dev/appwrapper: "fake-defaultaw-schd-spec-with-timeout-1"
             spec:
               affinity:
                 nodeAffinity:

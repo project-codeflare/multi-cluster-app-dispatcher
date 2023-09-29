@@ -31,7 +31,7 @@ spec:
                       name: plutonium-quota-job-05
                       namespace: start-up-03
                       labels:
-                          appwrapper.mcad.ibm.com: plutonium-quota-job-05
+                          workload.codeflare.dev/appwrapper: plutonium-quota-job-05
                   spec:
                       parallelism: 1
                       completions: 1
@@ -40,7 +40,7 @@ spec:
                               name: plutonium-quota-job-05
                               namespace: start-up-03
                               labels:
-                                  appwrapper.mcad.ibm.com: plutonium-quota-job-05
+                                  workload.codeflare.dev/appwrapper: plutonium-quota-job-05
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never

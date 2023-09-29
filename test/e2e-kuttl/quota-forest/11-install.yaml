@@ -30,7 +30,7 @@ spec:
                       name: job-with-labels-no-quota
                       namespace: test
                       labels:
-                          appwrapper.mcad.ibm.com: job-with-labels-no-quota
+                          workload.codeflare.dev/appwrapper: job-with-labels-no-quota
                   spec:
                       parallelism: 1
                       completions: 1
@@ -39,7 +39,7 @@ spec:
                               name: job-with-labels-no-quota
                               namespace: test
                               labels:
-                                  appwrapper.mcad.ibm.com: job-with-labels-no-quota
+                                  workload.codeflare.dev/appwrapper: job-with-labels-no-quota
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never

@@ -27,7 +27,7 @@ spec:
                       name: no-quota-job-02
                       namespace: start-up
                       labels:
-                          appwrapper.mcad.ibm.com: no-quota-job-02
+                          workload.codeflare.dev/appwrapper: no-quota-job-02
                   spec:
                       parallelism: 1
                       completions: 1
@@ -36,7 +36,7 @@ spec:
                               name: no-quota-job-1
                               namespace: start-up
                               labels:
-                                  appwrapper.mcad.ibm.com: no-quota-job-02
+                                  workload.codeflare.dev/appwrapper: no-quota-job-02
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never

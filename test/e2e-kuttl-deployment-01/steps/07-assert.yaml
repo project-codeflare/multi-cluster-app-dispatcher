@@ -7,12 +7,12 @@ metadata:
 status:
     state: Running
 ---
-apiVersion: v1                                                                                                                                                                            
-kind: Pod                                                                                                                                                                                 
-metadata:                                                                                                                                                                              
+apiVersion: v1
+kind: Pod
+metadata:
   namespace: start-up
-  labels:                                                                                                                                                                                
-     appwrapper.mcad.ibm.com: no-quota-job-06                                                                                                                                    
-     job-name: no-quota-job-06                                                                                                                                                   
-     resourceName: no-quota-job-06
-
+  labels:
+     workload.codeflare.dev/appwrapper: no-quota-job-06
+     workload.codeflare.dev/appwrapper-namespace: start-up
+     job-name: no-quota-job-06
+     workload.codeflare.dev/resourceName: no-quota-job-06

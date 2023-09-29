@@ -17,8 +17,9 @@ metadata:
   namespace: quota-errors
   labels:
       app: deployment-silver-lo-pri-1replica
-      appwrapper.mcad.ibm.com: deployment-silver-lo-pri-1replica
-      resourceName: deployment-silver-lo-pri-1replica  
+      workload.codeflare.dev/appwrapper: deployment-silver-lo-pri-1replica
+      workload.codeflare.dev/appwrapper-namespace: quota-errors
+      workload.codeflare.dev/resourceName: deployment-silver-lo-pri-1replica
 status:
     availableReplicas: 1
     observedGeneration: 1

@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/rand"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -43,8 +44,9 @@ import (
 	"k8s.io/client-go/restmapper"
 )
 
-var appwrapperJobName = "appwrapper.mcad.ibm.com"
-var resourceName = "resourceName"
+var appwrapperJobLabelName = "workload.codeflare.dev/appwrapper"
+var appwrapperJobLabelNamespace = "workload.codeflare.dev/appwrapper-namespace"
+var resourceName = "workload.codeflare.dev/resourceName"
 var appWrapperKind = arbv1.SchemeGroupVersion.WithKind("AppWrapper")
 
 type GenericResources struct {
@@ -70,6 +72,18 @@ func join(strs ...string) string {
 		result += str
 	}
 	return result
+}
+
+
+func GetRandomString(n int) string {
+	var letters = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+
+	rand.Seed(time.Now().UnixNano())
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }
 
 func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperGenericResource) (genericResourceName string, groupversionkind *schema.GroupVersionKind, erro error) {
@@ -166,7 +180,7 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 	}
 
 	// Get the resource to see if it exists in the AppWrapper namespace
-	labelSelector := fmt.Sprintf("%s=%s, %s=%s", appwrapperJobName, aw.Name, resourceName, unstruct.GetName())
+	labelSelector := fmt.Sprintf("%s=%s, %s=%s, %s=%s", appwrapperJobLabelName, aw.Name, appwrapperJobLabelNamespace, aw.Namespace, resourceName, unstruct.GetName())
 	inEtcd, err := dclient.Resource(rsrc).Namespace(aw.Namespace).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		return name, gvk, err
@@ -175,8 +189,9 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 	// Check to see if object already exists in etcd, if not, create the object.
 	if inEtcd != nil || len(inEtcd.Items) > 0 {
 		newName := name
-		if len(newName) > 63 {
-			newName = newName[:63]
+		if len(newName) > 60 {
+			newName = newName[:60]
+			newName += GetRandomString(3)
 		}
 
 		err = deleteObject(namespaced, namespace, newName, rsrc, dclient)
@@ -187,7 +202,7 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 			return name, gvk, err
 		}
 	} else {
-		klog.Warningf("[Cleanup] %s/%s not found using label selector: %s.\n", name, namespace, labelSelector)
+		klog.Warningf("[Cleanup] %s/%s not found using label selector: %s.\n", namespace, name, labelSelector)
 	}
 
 	return name, gvk, err
@@ -297,18 +312,19 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	} else {
 		labels = unstruct.GetLabels()
 	}
-	labels[appwrapperJobName] = aw.Name
+	labels[appwrapperJobLabelName] = aw.Name
+	labels[appwrapperJobLabelNamespace] = aw.Namespace
 	labels[resourceName] = unstruct.GetName()
 	unstruct.SetLabels(labels)
 
 	// Add labels to pod template if one exists.
 	podTemplateFound := addLabelsToPodTemplateField(&unstruct, labels)
 	if !podTemplateFound {
-		klog.V(4).Infof("[SyncQueueJob] No pod template spec exists for resource: %s to add labels.", name)
+		klog.V(4).Infof("[SyncQueueJob] No pod template spec exists for resource: %s/%s to add labels.", namespace, name)
 	}
 
-	// Get the resource  to see if it exists
-	labelSelector := fmt.Sprintf("%s=%s, %s=%s", appwrapperJobName, aw.Name, resourceName, unstruct.GetName())
+	// Get the resource to see if it exists
+	labelSelector := fmt.Sprintf("%s=%s, %s=%s, %s=%s", appwrapperJobLabelName, aw.Name, appwrapperJobLabelNamespace, aw.Namespace, resourceName, unstruct.GetName())
 	inEtcd, err := dclient.Resource(rsrc).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		return []*v1.Pod{}, err
@@ -317,8 +333,9 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	// Check to see if object already exists in etcd, if not, create the object.
 	if inEtcd == nil || len(inEtcd.Items) < 1 {
 		newName := name
-		if len(newName) > 63 {
-			newName = newName[:63]
+		if len(newName) > 60 {
+			newName = newName[:60]
+			newName += GetRandomString(3)
 		}
 		unstruct.SetName(newName)
 		//Asumption object is always namespaced
@@ -329,7 +346,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 			if errors.IsAlreadyExists(err) {
 				klog.V(4).Infof("%v\n", err.Error())
 			} else {
-				klog.Errorf("Error creating the object `%v`, the error is `%v`", newName, errors.ReasonForError(err))
+				klog.Errorf("Error creating the object `%s/%s`, the error is `%v`", namespace, newName, errors.ReasonForError(err))
 				return []*v1.Pod{}, err
 			}
 		}
@@ -499,7 +516,7 @@ func deleteObject(namespaced bool, namespace string, name string, rsrc schema.Gr
 	}
 
 	if err != nil && !errors.IsNotFound(err) {
-		klog.Errorf("[deleteObject] Error deleting the object `%v`, the error is `%v`.", name, errors.ReasonForError(err))
+		klog.Errorf("[deleteObject] Error deleting the object `%v`, in namespace %v, the error is `%v`.", name, namespace, errors.ReasonForError(err))
 		return err
 	} else {
 		klog.V(4).Infof("[deleteObject] Resource `%v` deleted.\n", name)
@@ -531,7 +548,7 @@ func GetListOfPodResourcesFromOneGenericItem(awr *arbv1.AppWrapperGenericResourc
 			klog.V(8).Infof("[GetListOfPodResourcesFromOneGenericItem] Requested total allocation resource from 1 pod `%v`.\n", podTotalresource)
 		}
 
-		// Addd individual pods to results
+		// Add individual pods to results
 		var replicaCount int = int(replicas)
 		for i := 0; i < replicaCount; i++ {
 			podResourcesList = append(podResourcesList, podTotalresource)
@@ -623,7 +640,7 @@ func getContainerResources(container v1.Container, replicas float64) *clustersta
 }
 
 // returns status of an item present in etcd
-func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResource, namespace string, appwrapperName string, genericItemName string) (completed bool) {
+func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResource, appwrapperNamespace string, appwrapperName string, genericItemName string) (completed bool) {
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
@@ -654,8 +671,8 @@ func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResourc
 		return false
 	}
 
-	labelSelector := fmt.Sprintf("%s=%s", appwrapperJobName, appwrapperName)
-	inEtcd, err := dclient.Resource(rsrc).Namespace(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
+	labelSelector := fmt.Sprintf("%s=%s, %s=%s", appwrapperJobLabelName, appwrapperName, appwrapperJobLabelNamespace, appwrapperNamespace)
+	inEtcd, err := dclient.Resource(rsrc).Namespace(appwrapperNamespace).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		klog.Errorf("[IsItemCompleted] Error listing object: %v", err)
 		return false
@@ -675,7 +692,7 @@ func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResourc
 			}
 		}
 		if !validAwOwnerRef {
-			klog.Warningf("[IsItemCompleted] Item owner name %v does match appwrappper name %v in namespace %v", unstructuredObjectName, appwrapperName, namespace)
+			klog.Warningf("[IsItemCompleted] Item owner name %v does match appwrappper name %v in namespace %v", unstructuredObjectName, appwrapperName, appwrapperNamespace)
 			continue
 		}
 

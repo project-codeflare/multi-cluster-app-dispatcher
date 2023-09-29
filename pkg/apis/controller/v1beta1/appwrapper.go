@@ -26,7 +26,7 @@ const AppWrapperPlural string = "appwrappers"
 
 // AppWrapperAnnotationKey is the annotation key of Pod to identify
 // which AppWrapper it belongs to.
-const AppWrapperAnnotationKey = "appwrapper.mcad.ibm.com/appwrapper-name"
+const AppWrapperAnnotationKey = "workload.codeflare.dev/appwrapper-name"
 
 // +genclient
 // +kubebuilder:object:root=true

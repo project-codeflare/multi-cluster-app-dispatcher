@@ -29,7 +29,7 @@ spec:
                       name: gold-quota-job-04
                       namespace: start-up-03
                       labels:
-                          appwrapper.mcad.ibm.com: gold-quota-job-04
+                          workload.codeflare.dev/appwrapper: gold-quota-job-04
                   spec:
                       parallelism: 1
                       completions: 1
@@ -38,7 +38,7 @@ spec:
                               name: gold-quota-job-04
                               namespace: start-up-03
                               labels:
-                                  appwrapper.mcad.ibm.com: gold-quota-job-04
+                                  workload.codeflare.dev/appwrapper: gold-quota-job-04
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never
