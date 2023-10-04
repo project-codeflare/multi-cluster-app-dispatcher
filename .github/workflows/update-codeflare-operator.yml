@@ -57,3 +57,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.CODEFLARE_MACHINE_ACCOUNT_TOKEN }}
         working-directory: operator
+
+      - name: Post notification about failure to a Slack channel
+        if: failure()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: "codeflare-nightlies"
+          slack-message: "MCAD to CodeFlare operator upgrade action failed, <https://github.com/project-codeflare/multi-cluster-app-dispatcher/actions/workflows/update-codeflare-operator.yml|View workflow runs>"
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
