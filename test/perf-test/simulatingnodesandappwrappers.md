@@ -143,9 +143,13 @@ kubectl version --short=true
 kubectl get pods -n kube-system
 ```
 
-### 0.3 Requires that the MCAD controller is already installed
+### 0.3 Requires that the MCAD controller is already installed, either as a standalone controller or as part of the integrated CodeFlare operator starting with Codeflare Operator v1.0.0-rc.1
 ```
 kubectl get pods -A |grep mcad-controller
+```
+or
+```
+kubectl get pod -A |grep codeflare-operator-manager
 ```
 
 ### 0.4 Install podman, jq, etc...
