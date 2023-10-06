@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: custom-metrics-apiserver
-  namespace: kube-system
+  namespace: {{ .Values.namespace }}
 spec:
   ports:
   - name: https
@@ -40,7 +40,7 @@ metadata:
 spec:
   service:
     name: custom-metrics-apiserver
-    namespace: kube-system
+    namespace: {{ .Values.namespace }}
   group: external.metrics.k8s.io
   version: v1beta1
   insecureSkipTLSVerify: true
@@ -135,7 +135,7 @@ metadata:
   labels:
     wdc.ibm.com/ownership: admin
   name: {{ .Values.serviceAccount }}
-  namespace: kube-system
+  namespace: {{ .Values.namespace }}
 #{{ end }}
 ---
 #{{ if .Values.serviceAccount }}
@@ -154,7 +154,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: {{ .Values.serviceAccount }}
-  namespace: kube-system
+  namespace: {{ .Values.namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -171,7 +171,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: {{ .Values.serviceAccount }}
-  namespace: kube-system
+  namespace: {{ .Values.namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -188,14 +188,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: {{ .Values.serviceAccount }}
-  namespace: kube-system
+  namespace: {{ .Values.namespace }}
 #{{ end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Values.deploymentName }}
-  namespace: kube-system
+  namespace: {{ .Values.namespace }}
   labels:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
     app: custom-metrics-apiserver
