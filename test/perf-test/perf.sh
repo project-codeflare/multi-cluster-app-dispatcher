@@ -70,7 +70,7 @@ check_kubectl_login_status
 # Track whether you have the MCAD controller installed
 echo "Checking MCAD Controller installation status"
 echo
-check_mcad_installed_status
+#check_mcad_installed_status
 
 echo
 read -p "How many appwrapper jobs do you want?" jobs
@@ -114,7 +114,7 @@ done
     esac
 
 # Check for all jobs to report complete
-jobstatus=`kubectl get jobs -n default --no-headers --field-selector status.successful=1 |wc -l`
+jobstatus=`kubectl get appwrappers -n default --no-headers --field-selector status.successful=1 |wc -l`
 
 while [ $jobstatus -lt $jobs ]
 do
