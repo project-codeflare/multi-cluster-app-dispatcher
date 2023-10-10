@@ -11,15 +11,14 @@ spec:
         growthType: "exponential" 
   priority: 9
   resources:
-    Items: []
     GenericItems:
     - replicas: 1
       completionstatus: Complete
       custompodresources:
       - replicas: 1
         requests:
-          cpu: 10m
-          memory: 10M
+          cpu: 500m
+          memory: 128M
           nvidia.com/gpu: 0
         limits:
           cpu: 500m
@@ -31,8 +30,8 @@ spec:
         metadata:
           namespace: default
           name: defaultaw-schd-spec-with-timeout-1
-          # labels:
-          #   appwrapper.mcad.ibm.com: defaultaw-schd-spec-with-timeout-1
+          labels:
+            appwrapper.mcad.ibm.com: defaultaw-schd-spec-with-timeout-1
         spec:
           parallelism: 1
           completions: 1
@@ -49,8 +48,8 @@ spec:
                 args: [ "sleep 10" ]
                 resources:
                   requests:
-                    memory: "10Mi"
-                    cpu: "10m"
+                    memory: "128Mi"
+                    cpu: "500m"
                   limits:
                     memory: "128Mi"
                     cpu: "500m"
