@@ -1625,7 +1625,10 @@ func (cc *XController) addQueueJob(obj interface{}) {
 					}
 					if latestAw.Status.State != arbv1.AppWrapperStateActive && latestAw.Status.State != arbv1.AppWrapperStateEnqueued && latestAw.Status.State != arbv1.AppWrapperStateRunningHoldCompletion {
 						klog.V(2).Infof("[Informer-addQJ] Stopping requeue for AW %s/%s with status %s", latestAw.Namespace, latestAw.Name, latestAw.Status.State)
-						break // Exit the loop
+						AwinEtcd, err := cc.arbclients.WorkloadV1beta1().AppWrappers(latestAw.Namespace).Get(context.Background(), latestAw.Name, metav1.GetOptions{})
+						if AwinEtcd.Status.State == latestAw.Status.State && err != nil {
+							break // Exit the loop
+						}
 					}
 					// Enqueue the latest copy of the AW.
 					if (qj.Status.State != arbv1.AppWrapperStateCompleted && qj.Status.State != arbv1.AppWrapperStateFailed) && hasCompletionStatus {
