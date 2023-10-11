@@ -6,7 +6,6 @@ metadata:
 spec:
   priority: 9
   resources:
-    Items: []
     GenericItems:
     - replicas: 1
       custompodresources:
