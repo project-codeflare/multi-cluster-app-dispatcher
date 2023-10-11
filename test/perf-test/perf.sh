@@ -81,7 +81,7 @@ read -p "How many appwrapper jobs do you want?" JOBS
 # Start the timer now
 SECONDS=0
 
-echo "Appwrapper number is $jobs"
+echo "Appwrapper number is $JOBS"
 export STARTTIME=`date +"%T"`
 echo " "
 echo "Appwrappers started at: $STARTTIME" |tee job-$STARTTIME.log
@@ -121,7 +121,7 @@ JOBSTATUS=`kubectl get appwrappers -o=custom-columns=SUCCESS:.status.Succeeded -
 
 while [ $JOBSTATUS -lt $JOBS ]
 do
-   echo "Number of completed appwrappers is: " $JOBSTATUS " and the goal is: " $jobs
+   echo "Number of completed appwrappers is: " $JOBSTATUS " and the goal is: " $JOBS
    sleep 10
    JOBSTATUS=`kubectl get appwrappers -o=custom-columns=SUCCESS:.status.Succeeded -n default |grep 1 |wc -l`
 done
@@ -129,7 +129,7 @@ done
 echo " "
 export FINISHTIME=`date +"%T"`
 echo "All $JOBSTATUS appwrappers finished: $FINISHTIME" |tee -a job-$STARTTIME.log
-echo "Total amount of time for $jobs appwrappers is: $SECONDS seconds" |tee -a ${SCRIPT_DIR}/job-$STARTTIME.log
+echo "Total amount of time for $JOBS appwrappers is: $SECONDS seconds" |tee -a ${SCRIPT_DIR}/job-$STARTTIME.log
 echo " "
 echo "Test results are stored in this file: ${SCRIPT_DIR}/job-$JOBS-$STARTTIME.log"
 
