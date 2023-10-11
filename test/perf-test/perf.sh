@@ -117,18 +117,18 @@ done
     esac
 
 # Check for all appwrappers to report complete
-jobstatus=`kubectl get appwrappers -o=custom-columns=SUCCESS:.status.Succeeded -n default |grep 1 |wc -l`
+JOBSTATUS=`kubectl get appwrappers -o=custom-columns=SUCCESS:.status.Succeeded -n default |grep 1 |wc -l`
 
 while [ $JOBSTATUS -lt $JOBS ]
 do
-   echo "Number of completed appwrappers is: " $jobstatus " and the goal is: " $jobs
+   echo "Number of completed appwrappers is: " $JOBSTATUS " and the goal is: " $jobs
    sleep 10
-   jobstatus=`kubectl get appwrappers -o=custom-columns=SUCCESS:.status.Succeeded -n default |grep 1 |wc -l`
+   JOBSTATUS=`kubectl get appwrappers -o=custom-columns=SUCCESS:.status.Succeeded -n default |grep 1 |wc -l`
 done
 
 echo " "
 export FINISHTIME=`date +"%T"`
-echo "All $jobstatus appwrappers finished: $FINISHTIME" |tee -a job-$STARTTIME.log
+echo "All $JOBSTATUS appwrappers finished: $FINISHTIME" |tee -a job-$STARTTIME.log
 echo "Total amount of time for $jobs appwrappers is: $SECONDS seconds" |tee -a ${SCRIPT_DIR}/job-$STARTTIME.log
 echo " "
 echo "Test results are stored in this file: ${SCRIPT_DIR}/job-$JOBS-$STARTTIME.log"
