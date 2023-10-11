@@ -73,7 +73,7 @@ check_kubectl_login_status
 # Track whether you have the MCAD controller installed
 echo "Checking MCAD Controller installation status"
 echo
-#check_mcad_installed_status
+check_mcad_installed_status
 
 echo
 read -p "How many appwrapper jobs do you want?" JOBS
