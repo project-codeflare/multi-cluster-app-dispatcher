@@ -78,10 +78,10 @@ read -p "How many appwrapper jobs do you want?" jobs
 # Start the timer now
 SECONDS=0
 
-echo "jobs number is $jobs"
+echo "Appwrapper number is $jobs"
 export STARTTIME=`date +"%T"`
 echo " "
-echo "Jobs started at: $STARTTIME" |tee job-$STARTTIME.log
+echo "Appwrappers started at: $STARTTIME" |tee job-$STARTTIME.log
 echo " "
 
 # This fixes the number of jobs to be one less so the for loop gets the right amount
@@ -113,19 +113,19 @@ done
         sed -i "s/defaultaw-schd-spec-with-timeout-$next_num/defaultaw-schd-spec-with-timeout-1/g" ${SCRIPT_DIR}/preempt-exp.yaml ;;
     esac
 
-# Check for all jobs to report complete
-jobstatus=`kubectl get appwrappers -n default --no-headers --field-selector status.successful=1 |wc -l`
+# Check for all appwrappers to report complete
+jobstatus=`kubectl get appwrappers -o=custom-columns=SUCCESS:.status.Succeeded -n default |grep 1 |wc -l`
 
 while [ $jobstatus -lt $jobs ]
 do
-   echo "Number of completed jobs is: " $jobstatus " and the goal is: " $jobs
+   echo "Number of completed appwrappers is: " $jobstatus " and the goal is: " $jobs
    sleep 10
-   jobstatus=`kubectl get jobs -n default --no-headers --field-selector status.successful=1 |wc -l`
+   jobstatus=`kubectl get appwrappers -o=custom-columns=SUCCESS:.status.Succeeded -n default |grep 1 |wc -l`
 done
 
 echo " "
 export FINISHTIME=`date +"%T"`
-echo "All $jobstatus jobs finished: $FINISHTIME" |tee -a job-$STARTTIME.log
+echo "All $jobstatus appwrappers finished: $FINISHTIME" |tee -a job-$STARTTIME.log
 echo "Total amount of time for $jobs appwrappers is: $SECONDS seconds" |tee -a ${SCRIPT_DIR}/job-$STARTTIME.log
 echo " "
 echo "Test results are stored in this file: ${SCRIPT_DIR}/job-$next_num-$STARTTIME.log"
