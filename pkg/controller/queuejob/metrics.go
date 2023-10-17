@@ -18,28 +18,59 @@ package queuejob
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	"time"
 )
 
-func registerMetrics(controller *XController) {
-	allocatableCapacityCpu := prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+var (
+	allocatableCapacityCpu = prometheus.NewGauge(prometheus.GaugeOpts{
 		Subsystem: "mcad",
 		Name:      "allocatable_capacity_cpu",
 		Help:      "Allocatable CPU Capacity (in milicores)",
-	}, func() float64 { return controller.GetAllocatableCapacity().MilliCPU })
-	metrics.Registry.MustRegister(allocatableCapacityCpu)
-
-	allocatableCapacityMemory := prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+	})
+	allocatableCapacityMemory = prometheus.NewGauge(prometheus.GaugeOpts{
 		Subsystem: "mcad",
 		Name:      "allocatable_capacity_memory",
 		Help:      "Allocatable Memory Capacity",
-	}, func() float64 { return controller.GetAllocatableCapacity().Memory })
-	metrics.Registry.MustRegister(allocatableCapacityMemory)
-
-	allocatableCapacityGpu := prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+	})
+	allocatableCapacityGpu = prometheus.NewGauge(prometheus.GaugeOpts{
 		Subsystem: "mcad",
 		Name:      "allocatable_capacity_gpu",
 		Help:      "Allocatable GPU Capacity",
-	}, func() float64 { return float64(controller.GetAllocatableCapacity().GPU) })
-	metrics.Registry.MustRegister(allocatableCapacityGpu)
+	})
+)
+
+func registerMetrics() {
+	klog.V(10).Infof("Registering metrics")
+	metrics.Registry.MustRegister(
+		allocatableCapacityCpu,
+		allocatableCapacityMemory,
+		allocatableCapacityGpu,
+	)
+}
+
+func updateMetricsLoop(controller *XController, stopCh <-chan struct{}) {
+	ticker := time.NewTicker(time.Minute * 1)
+	go func() {
+		updateMetrics(controller)
+		for {
+			select {
+			case <-ticker.C:
+				klog.V(10).Infof("Update metrics loop tick")
+				updateMetrics(controller)
+			case <-stopCh:
+				klog.V(10).Infof("Exiting update metrics loop")
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+}
+
+func updateMetrics(controller *XController) {
+	res := controller.GetAllocatableCapacity()
+	allocatableCapacityCpu.Set(res.MilliCPU)
+	allocatableCapacityMemory.Set(res.Memory)
+	allocatableCapacityGpu.Set(float64(res.GPU))
 }

@@ -246,7 +246,7 @@ func NewJobController(restConfig *rest.Config, mcadConfig *config.MCADConfigurat
 	// multi-cluster mode, so for now it is turned-off: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/585
 	// cc.metricsAdapter = adapter.New(serverOption, config, cc.cache)
 
-	registerMetrics(cc)
+	registerMetrics()
 
 	cc.genericresources = genericresource.NewAppWrapperGenericResource(restConfig)
 
@@ -1459,6 +1459,7 @@ func (qjm *XController) backoff(ctx context.Context, q *arbv1.AppWrapper, reason
 
 // Run starts AppWrapper Controller
 func (cc *XController) Run(stopCh <-chan struct{}) {
+	updateMetricsLoop(cc, stopCh)
 	go cc.appwrapperInformer.Informer().Run(stopCh)
 
 	cache.WaitForCacheSync(stopCh, cc.appWrapperSynced)
