@@ -273,7 +273,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	ownerRef := metav1.NewControllerRef(aw, appWrapperKind)
 	unstruct.Object = blob.(map[string]interface{}) // set object to the content of the blob after Unmarshalling
 	unstruct.SetOwnerReferences(append(unstruct.GetOwnerReferences(), *ownerRef))
-	namespace := "default"
+	namespace := aw.Namespace // create resource in AppWrapper namespace
 	name := ""
 	if md, ok := unstruct.Object["metadata"]; ok {
 
@@ -282,7 +282,9 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 			name = objectName.(string)
 		}
 		if objectns, ok := metadata["namespace"]; ok {
-			namespace = objectns.(string)
+			if objectns.(string) != namespace {
+				return []*v1.Pod{}, fmt.Errorf("[SyncQueueJob] resource namespace \"%s\" is different from AppWrapper namespace \"%s\"", objectns.(string), namespace)
+			}
 		}
 	}
 	labels := map[string]string{}
