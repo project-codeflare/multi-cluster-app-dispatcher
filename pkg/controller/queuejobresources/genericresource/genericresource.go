@@ -150,7 +150,7 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 	}
 
 	unstruct.Object = blob.(map[string]interface{}) // set object to the content of the blob after Unmarshalling
-	namespace := ""
+	namespace := aw.Namespace                       // only delete resources from AppWrapper namespace
 	if md, ok := unstruct.Object["metadata"]; ok {
 
 		metadata := md.(map[string]interface{})
@@ -158,13 +158,16 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 			name = objectName.(string)
 		}
 		if objectns, ok := metadata["namespace"]; ok {
-			namespace = objectns.(string)
+			if objectns.(string) != namespace {
+				err := fmt.Errorf("[Cleanup] resource namespace \"%s\" is different from AppWrapper namespace \"%s\"", objectns.(string), namespace)
+				return name, gvk, err
+			}
 		}
 	}
 
-	// Get the resource to see if it exists
+	// Get the resource to see if it exists in the AppWrapper namespace
 	labelSelector := fmt.Sprintf("%s=%s, %s=%s", appwrapperJobName, aw.Name, resourceName, unstruct.GetName())
-	inEtcd, err := dclient.Resource(rsrc).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
+	inEtcd, err := dclient.Resource(rsrc).Namespace(aw.Namespace).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
 		return name, gvk, err
 	}
@@ -273,7 +276,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	ownerRef := metav1.NewControllerRef(aw, appWrapperKind)
 	unstruct.Object = blob.(map[string]interface{}) // set object to the content of the blob after Unmarshalling
 	unstruct.SetOwnerReferences(append(unstruct.GetOwnerReferences(), *ownerRef))
-	namespace := "default"
+	namespace := aw.Namespace // only create resources in AppWrapper namespace
 	name := ""
 	if md, ok := unstruct.Object["metadata"]; ok {
 
@@ -282,7 +285,10 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 			name = objectName.(string)
 		}
 		if objectns, ok := metadata["namespace"]; ok {
-			namespace = objectns.(string)
+			if objectns.(string) != namespace {
+				err := fmt.Errorf("[SyncQueueJob] resource namespace \"%s\" is different from AppWrapper namespace \"%s\"", objectns.(string), namespace)
+				return []*v1.Pod{}, err
+			}
 		}
 	}
 	labels := map[string]string{}
