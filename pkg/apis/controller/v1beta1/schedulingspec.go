@@ -72,6 +72,10 @@ type RequeuingTemplate struct {
 	// items are stopped and removed from the cluster (AppWrapper remains deployed).
 	// +kubebuilder:default=0
 	MaxNumRequeuings int `json:"maxNumRequeuings,omitempty" protobuf:"bytes,6,rep,name=maxNumRequeuings"`
+    // Enable forceful deletion of generic items and pods with the AppWrapper label after specified seconds.
+    // This may be necesary to prevent redeployment of generic items that create pods that were not correctly deleted.
+    // +kubebuilder:default=0
+    ForcefulDeletionAfterSeconds int `json:"forcefulDeletionAfterSeconds,omitempty" protobuf:"bytes,7,rep,name=forcefulDeletionAfterSeconds"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
