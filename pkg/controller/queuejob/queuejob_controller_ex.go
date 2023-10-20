@@ -1631,7 +1631,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 						klog.V(2).Infof("[Informer-addQJ] Stopping requeue for AW %s/%s with status %s", latestAw.Namespace, latestAw.Name, latestAw.Status.State)
 						AwinEtcd, err := cc.arbclients.WorkloadV1beta1().AppWrappers(latestAw.Namespace).Get(context.Background(), latestAw.Name, metav1.GetOptions{})
 						if apierrors.IsNotFound(err) {
-							klog.V(2).Infof("[Informer-addQJ] Stopped requeueing of AW due to error %v\n", err)
+							klog.V(2).Infof("[Informer-addQJ] Stopped requeueing of AW %s due to error %v\n", latestAw.Name, err)
 							break
 						} else if AwinEtcd.Status.State == latestAw.Status.State && err != nil {
 							break // Exit the loop
