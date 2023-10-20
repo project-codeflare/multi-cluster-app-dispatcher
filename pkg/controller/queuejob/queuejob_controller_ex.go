@@ -1569,6 +1569,10 @@ func (cc *XController) addQueueJob(obj interface{}) {
 		return
 	}
 	klog.V(6).Infof("[Informer-addQJ] %s/%s", qj.Namespace, qj.Name)
+	if qj.Status.State == arbv1.AppWrapperStateCompleted || qj.Status.State == arbv1.AppWrapperStateFailed {
+		klog.V(2).Infof("[Informer-addQJ] Skipping processing of AW %s with state %s", qj.Name, qj.Status.State)
+		return
+	}
 	if qj.Status.QueueJobState == "" {
 		qj.Status.ControllerFirstTimestamp = firstTime
 		qj.Status.SystemPriority = float64(qj.Spec.Priority)
@@ -1627,7 +1631,7 @@ func (cc *XController) addQueueJob(obj interface{}) {
 						klog.V(2).Infof("[Informer-addQJ] Stopping requeue for AW %s/%s with status %s", latestAw.Namespace, latestAw.Name, latestAw.Status.State)
 						AwinEtcd, err := cc.arbclients.WorkloadV1beta1().AppWrappers(latestAw.Namespace).Get(context.Background(), latestAw.Name, metav1.GetOptions{})
 						if apierrors.IsNotFound(err) {
-							//AW is already completed when MCAD is restarted.
+							klog.V(2).Infof("[Informer-addQJ] Stopped requeueing of AW due to error %v\n", err)
 							break
 						} else if AwinEtcd.Status.State == latestAw.Status.State && err != nil {
 							break // Exit the loop
