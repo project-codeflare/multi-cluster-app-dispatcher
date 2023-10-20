@@ -1898,26 +1898,27 @@ func (cc *XController) worker() {
 				}
 				klog.V(2).Infof("[worker] Delete resources for AppWrapper Job '%s/%s' due to preemption was sucessfull, status.CanRun=%t, status.State=%s", queuejob.Namespace, queuejob.Name, queuejob.Status.CanRun, queuejob.Status.State)
 
-				// Waiting for deletion of the AppWrapper to be complete before forcing the deletion of pods
-				var err error
-				newjob, err := cc.getAppWrapper(queuejob.Namespace, queuejob.Name, "[worker] get fresh AppWrapper")
-				if err != nil {
-					klog.Errorf("[worker] Failed getting a new AppWrapper: '%s/%s',Status=%+v, err=%+v.", queuejob.Namespace, queuejob.Name, queuejob.Status, err)
-					return err
+				if queuejob.Spec.SchedSpec.Requeuing.ForcefulDeletionAfterSeconds > 0 {
+					// Waiting for deletion of the AppWrapper to be complete before forcing the deletion of pods
+					var err error
+					newjob, err := cc.getAppWrapper(queuejob.Namespace, queuejob.Name, "[worker] get fresh AppWrapper")
+					if err != nil {
+						klog.Errorf("[worker] Failed getting a new AppWrapper: '%s/%s',Status=%+v, err=%+v.", queuejob.Namespace, queuejob.Name, queuejob.Status, err)
+						return err
+					}
+					newjob.Status.QueueJobState = arbv1.AppWrapperCondDeleted
+					cc.addOrUpdateCondition(newjob, arbv1.AppWrapperCondDeleted, v1.ConditionTrue, "AwaitingDeletion", "")
+					index := getIndexOfMatchedCondition(newjob, arbv1.AppWrapperCondDeleted, "AwaitingDeletion") // TODO: addOrUpdateCondition is NOT changing the transition time properly so need to do it here
+					newjob.Status.Conditions[index].LastTransitionMicroTime = metav1.NowMicro()
+					newjob.Status.Conditions[index].LastUpdateMicroTime = metav1.NowMicro()
+					newjob.Status.FilterIgnore = true
+					err = cc.updateStatusInEtcdWithRetry(ctx, newjob, "AwaitingDeletion")
+					if err != nil {
+						klog.Errorf("[worker] Error updating status 'Deleted' for AppWrapper: '%s/%s', status=%+v, err=%+v.", newjob.Namespace, newjob.Name, newjob.Status, err)
+						return err
+					}
+					return nil
 				}
-				newjob.Status.QueueJobState = arbv1.AppWrapperCondDeleted
-				cc.addOrUpdateCondition(newjob, arbv1.AppWrapperCondDeleted, v1.ConditionTrue, "AwaitingDeletion", "")
-				index := getIndexOfMatchedCondition(newjob, arbv1.AppWrapperCondDeleted, "AwaitingDeletion") // TODO: addOrUpdateCondition is NOT changing the transition time properly so need to do it here
-				newjob.Status.Conditions[index].LastTransitionMicroTime = metav1.NowMicro()
-				newjob.Status.Conditions[index].LastUpdateMicroTime = metav1.NowMicro()
-				newjob.Status.FilterIgnore = true
-				err = cc.updateStatusInEtcdWithRetry(ctx, newjob, "AwaitingDeletion")
-				if err != nil {
-					klog.Errorf("[worker] Error updating status 'Deleted' for AppWrapper: '%s/%s', status=%+v, err=%+v.", newjob.Namespace, newjob.Name, newjob.Status, err)
-					return err
-				}
-				return nil
-
 			} else if queuejob.Status.QueueJobState == arbv1.AppWrapperCondDeleted {
 				// The AppWrapper was preempted and its objects were deleted. In case the deletion was not successful for all the items
 				// MCAD will force delete any pods that remain in the system
