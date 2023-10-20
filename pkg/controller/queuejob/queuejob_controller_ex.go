@@ -1898,7 +1898,7 @@ func (cc *XController) worker() {
 				}
 				klog.V(2).Infof("[worker] Delete resources for AppWrapper Job '%s/%s' due to preemption was sucessfull, status.CanRun=%t, status.State=%s", queuejob.Namespace, queuejob.Name, queuejob.Status.CanRun, queuejob.Status.State)
 
-				if queuejob.Spec.SchedSpec.Requeuing.ForcefulDeletionAfterSeconds > 0 {
+				if queuejob.Spec.SchedSpec.Requeuing.ForceDeletionTimeInSeconds > 0 {
 					// Waiting for deletion of the AppWrapper to be complete before forcing the deletion of pods
 					var err error
 					newjob, err := cc.getAppWrapper(queuejob.Namespace, queuejob.Name, "[worker] get fresh AppWrapper")
@@ -1922,12 +1922,12 @@ func (cc *XController) worker() {
 			} else if queuejob.Status.QueueJobState == arbv1.AppWrapperCondDeleted {
 				// The AppWrapper was preempted and its objects were deleted. In case the deletion was not successful for all the items
 				// MCAD will force delete any pods that remain in the system
-				if queuejob.Spec.SchedSpec.Requeuing.ForcefulDeletionAfterSeconds > 0 {
+				if queuejob.Spec.SchedSpec.Requeuing.ForceDeletionTimeInSeconds > 0 {
 					index := getIndexOfMatchedCondition(queuejob, arbv1.AppWrapperCondDeleted, "AwaitingDeletion")
 					if index < 0 {
 						klog.V(4).Infof("WARNING: [worker] Forced deletion condition was not added after 'Cleanup'. Silently ignoring forced cleanup.")
 					} else {
-						deletionTime := queuejob.Status.Conditions[index].LastTransitionMicroTime.Add(time.Duration(queuejob.Spec.SchedSpec.Requeuing.ForcefulDeletionAfterSeconds) * time.Second)
+						deletionTime := queuejob.Status.Conditions[index].LastTransitionMicroTime.Add(time.Duration(queuejob.Spec.SchedSpec.Requeuing.ForceDeletionTimeInSeconds) * time.Second)
 						currentTime := time.Now()
 
 						if currentTime.After(deletionTime) {
@@ -1936,7 +1936,7 @@ func (cc *XController) worker() {
 								return nil
 							}
 						} else {
-							klog.V(8).Infof("[worker] Waiting for 'forcefulDeletionAfterSeconds' seconds before requeueing job '%s/%s'.", queuejob.Namespace, queuejob.Name)
+							klog.V(8).Infof("[worker] Waiting for 'ForceDeletionTimeInSeconds' seconds before requeueing job '%s/%s'.", queuejob.Namespace, queuejob.Name)
 							return nil
 						}
 					}

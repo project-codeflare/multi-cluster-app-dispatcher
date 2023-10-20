@@ -75,7 +75,7 @@ type RequeuingTemplate struct {
     // Enable forceful deletion of generic items and pods with the AppWrapper label after specified seconds.
     // This may be necesary to prevent redeployment of generic items that create pods that were not correctly deleted.
     // +kubebuilder:default=0
-    ForcefulDeletionAfterSeconds int `json:"forcefulDeletionAfterSeconds,omitempty" protobuf:"bytes,7,rep,name=forcefulDeletionAfterSeconds"`
+    ForceDeletionTimeInSeconds int `json:"forceDeletionTimeInSeconds,omitempty" protobuf:"bytes,7,rep,name=forceDeletionTimeInSeconds"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
