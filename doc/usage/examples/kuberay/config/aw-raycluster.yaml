@@ -8,29 +8,26 @@ spec:
     GenericItems:
     - replicas: 1
       custompodresources:
-      # Optional section that specifies resource requirements
-      # for non-standard k8s resources, follows same format as
-      # that of standard k8s resources.
       # Each item in the custompodresources stanza should include resources consumed by target Item.
       # In this example, the 2 items correspond to 1 Ray head pod and 1 Ray worker pod
       - replicas: 1
         limits:
-          cpu: 2
-          memory: 8G
+          cpu: 1
+          memory: 2G
           nvidia.com/gpu: 0
         requests:
-          cpu: 2
-          memory: 8G
+          cpu: 1
+          memory: 2G
           nvidia.com/gpu: 0
       # The replica should match the number of worker pods
       - replicas: 1
         limits:
-          cpu: 8
-          memory: 8G
+          cpu: 2
+          memory: 2G
           nvidia.com/gpu: 0
         requests:
-          cpu: 8
-          memory: 8G
+          cpu: 2
+          memory: 2G
           nvidia.com/gpu: 0
       generictemplate:
         # The resource requests and limits in this config are too small for production!
@@ -65,7 +62,7 @@ spec:
               spec:
                 containers:
                 - name: ray-head
-                  image: rayproject/ray:2.5.0
+                  image: quay.io/project-codeflare/ray:2.5.0-py38-cu116
                   ports:
                   - containerPort: 6379
                     name: gcs
@@ -88,13 +85,13 @@ spec:
                   # entire Kubernetes node on which it is scheduled.
                   resources:
                     limits:
-                      cpu: "2"
-                      memory: "8G"
+                      cpu: "1"
+                      memory: "2G"
                     requests:
                       # For production use-cases, we recommend specifying integer CPU reqests and limits.
                       # We also recommend setting requests equal to limits for both CPU and memory.
-                      cpu: "2"
-                      memory: "8G"
+                      cpu: "1"
+                      memory: "2G"
                 volumes:
                   - name: ray-logs
                     emptyDir: {}
@@ -102,7 +99,7 @@ spec:
           # the pod replicas in this group typed worker
           - replicas: 1
             minReplicas: 1
-            maxReplicas: 10
+            maxReplicas: 1
             # logical group name, for this called small-group, also can be functional
             groupName: small-group
             # If worker pods need to be added, we can increment the replicas.
@@ -124,7 +121,7 @@ spec:
               spec:
                 containers:
                 - name: ray-worker
-                  image: rayproject/ray:2.5.0
+                  image: quay.io/project-codeflare/ray:2.5.0-py38-cu116
                   lifecycle:
                     preStop:
                       exec:
@@ -142,19 +139,18 @@ spec:
                   # entire Kubernetes node on which it is scheduled.
                   resources:
                     limits:
-                      cpu: "8"
-                      memory: "8G"
-                    # For production use-cases, we recommend specifying integer CPU reqests and limits.
+                      cpu: "2"
+                      memory: "2G"
+                    # For production use-cases, we recommend specifying integer CPU requests and limits.
                     # We also recommend setting requests equal to limits for both CPU and memory.
                     requests:
-                      # For production use-cases, we recommend specifying integer CPU reqests and limits.
+                      # For production use-cases, we recommend specifying integer CPU requests and limits.
                       # We also recommend setting requests equal to limits for both CPU and memory.
-                      cpu: "8"
+                      cpu: "2"
                       # For production use-cases, we recommend allocating at least 8Gb memory for each Ray container.
-                      memory: "8G"
+                      memory: "2G"
                 # use volumes
                 # Refer to https://kubernetes.io/docs/concepts/storage/volumes/
                 volumes:
                   - name: ray-logs
                     emptyDir: {}
-

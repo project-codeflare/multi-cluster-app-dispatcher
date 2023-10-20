@@ -646,7 +646,7 @@ func (qjm *XController) GetAggregatedResources(cqj *arbv1.AppWrapper) *clusterst
 		}
 		allocated = allocated.Add(qjv)
 	}
-
+	klog.V(2).Infof("[GetAggregatedResources] Total resources needed to dispatch AW as reported in custompodresources is %v", allocated)
 	return allocated
 }
 
@@ -1575,6 +1575,10 @@ func (cc *XController) addQueueJob(obj interface{}) {
 		return
 	}
 	klog.V(6).Infof("[Informer-addQJ] %s/%s", qj.Namespace, qj.Name)
+	if qj.Status.State == arbv1.AppWrapperStateCompleted || qj.Status.State == arbv1.AppWrapperStateFailed {
+		klog.V(2).Infof("[Informer-addQJ] Skipping processing of AW %s with state %s", qj.Name, qj.Status.State)
+		return
+	}
 	if qj.Status.QueueJobState == "" {
 		qj.Status.ControllerFirstTimestamp = firstTime
 		qj.Status.SystemPriority = float64(qj.Spec.Priority)
@@ -1632,7 +1636,10 @@ func (cc *XController) addQueueJob(obj interface{}) {
 					if latestAw.Status.State != arbv1.AppWrapperStateActive && latestAw.Status.State != arbv1.AppWrapperStateEnqueued && latestAw.Status.State != arbv1.AppWrapperStateRunningHoldCompletion {
 						klog.V(2).Infof("[Informer-addQJ] Stopping requeue for AW %s/%s with status %s", latestAw.Namespace, latestAw.Name, latestAw.Status.State)
 						AwinEtcd, err := cc.arbclients.WorkloadV1beta1().AppWrappers(latestAw.Namespace).Get(context.Background(), latestAw.Name, metav1.GetOptions{})
-						if AwinEtcd.Status.State == latestAw.Status.State && err != nil {
+						if apierrors.IsNotFound(err) {
+							klog.V(2).Infof("[Informer-addQJ] Stopped requeueing of AW %s due to error %v\n", latestAw.Name, err)
+							break
+						} else if AwinEtcd.Status.State == latestAw.Status.State && err != nil {
 							break // Exit the loop
 						}
 					}
