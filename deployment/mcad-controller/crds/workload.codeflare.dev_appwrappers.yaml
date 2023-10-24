@@ -199,6 +199,12 @@ spec:
                         description: Field to keep track of how many times a requeuing
                           event has been triggered.
                         type: integer
+                      pauseTimeInSeconds:
+                        default: 0
+                        description: When a job is ready to be redispatched after
+                          it has been requeued due to preemption, MCAD will wait 'pauseTimeInSeconds'
+                          before redispatching
+                        type: integer
                       timeInSeconds:
                         default: 300
                         description: Initial waiting time before requeuing conditions

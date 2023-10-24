@@ -76,6 +76,10 @@ type RequeuingTemplate struct {
     // This may be necesary to prevent redeployment of generic items that create pods that were not correctly deleted.
     // +kubebuilder:default=0
     ForceDeletionTimeInSeconds int `json:"forceDeletionTimeInSeconds,omitempty" protobuf:"bytes,7,rep,name=forceDeletionTimeInSeconds"`
+    // When a job is ready to be redispatched after it has been requeued due to preemption, MCAD will
+    // wait 'pauseTimeInSeconds' before redispatching
+    // +kubebuilder:default=0
+    PauseTimeInSeconds int `json:"pauseTimeInSeconds,omitempty" protobuf:"bytes,8,rep,name=pauseTimeInSeconds"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
