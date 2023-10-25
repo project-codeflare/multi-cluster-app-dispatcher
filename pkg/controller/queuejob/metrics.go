@@ -27,7 +27,7 @@ var (
 	allocatableCapacityCpu = prometheus.NewGauge(prometheus.GaugeOpts{
 		Subsystem: "mcad",
 		Name:      "allocatable_capacity_cpu",
-		Help:      "Allocatable CPU Capacity (in milicores)",
+		Help:      "Allocatable CPU Capacity (in millicores)",
 	})
 	allocatableCapacityMemory = prometheus.NewGauge(prometheus.GaugeOpts{
 		Subsystem: "mcad",
