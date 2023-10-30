@@ -1,5 +1,5 @@
 <p align="center">
-<img src="./doc/images/mcad_logo.png" width="300" height="250">
+<img src="./doc/images/mcad_logo.png" width="400" height="350">
 </p>
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
