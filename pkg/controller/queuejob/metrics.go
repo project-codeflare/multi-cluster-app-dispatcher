@@ -17,8 +17,12 @@ limitations under the License.
 package queuejob
 
 import (
+	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	"github.com/prometheus/client_golang/prometheus"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog/v2"
+	"reflect"
+	"runtime"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	"time"
 )
@@ -39,28 +43,47 @@ var (
 		Name:      "allocatable_capacity_gpu",
 		Help:      "Allocatable GPU Capacity",
 	})
+	appWrappersCount = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Subsystem: "mcad",
+		Name:      "appwrappers_count",
+		Help:      "AppWrappers count per state",
+	}, []string{"state"})
 )
 
-func registerMetrics() {
+func init() {
 	klog.V(10).Infof("Registering metrics")
 	metrics.Registry.MustRegister(
 		allocatableCapacityCpu,
 		allocatableCapacityMemory,
 		allocatableCapacityGpu,
+		appWrappersCount,
 	)
 }
 
 func updateMetricsLoop(controller *XController, stopCh <-chan struct{}) {
-	ticker := time.NewTicker(time.Minute * 1)
+	updateMetricsLoopGeneric(controller, stopCh, time.Minute*1, updateAllocatableCapacity)
+	updateMetricsLoopGeneric(controller, stopCh, time.Second*5, updateQueue)
+}
+
+func getFuncName(f interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
+}
+
+func updateMetricsLoopGeneric(controller *XController, stopCh <-chan struct{}, d time.Duration, updateFunc func(xController *XController)) {
+	ticker := time.NewTicker(d)
 	go func() {
-		updateMetrics(controller)
+		updateFunc(controller)
 		for {
 			select {
 			case <-ticker.C:
-				klog.V(10).Infof("Update metrics loop tick")
-				updateMetrics(controller)
+				if klog.V(10).Enabled() {
+					klog.Infof("[updateMetricsLoopGeneric] Update metrics loop tick: %v", getFuncName(updateFunc))
+				}
+				updateFunc(controller)
 			case <-stopCh:
-				klog.V(10).Infof("Exiting update metrics loop")
+				if klog.V(10).Enabled() {
+					klog.Infof("[updateMetricsLoopGeneric] Exiting update metrics loop: %v", getFuncName(updateFunc))
+				}
 				ticker.Stop()
 				return
 			}
@@ -68,9 +91,33 @@ func updateMetricsLoop(controller *XController, stopCh <-chan struct{}) {
 	}()
 }
 
-func updateMetrics(controller *XController) {
+func updateAllocatableCapacity(controller *XController) {
 	res := controller.GetAllocatableCapacity()
 	allocatableCapacityCpu.Set(res.MilliCPU)
 	allocatableCapacityMemory.Set(res.Memory)
 	allocatableCapacityGpu.Set(float64(res.GPU))
+}
+
+func updateQueue(controller *XController) {
+	awList, err := controller.appWrapperLister.List(labels.Everything())
+
+	if err != nil {
+		klog.Errorf("[updateQueue] Unable to obtain the list of AppWrappers: %+v", err)
+		return
+	}
+	stateToAppWrapperCount := map[arbv1.AppWrapperState]int{
+		arbv1.AppWrapperStateEnqueued:              0,
+		arbv1.AppWrapperStateActive:                0,
+		arbv1.AppWrapperStateDeleted:               0,
+		arbv1.AppWrapperStateFailed:                0,
+		arbv1.AppWrapperStateCompleted:             0,
+		arbv1.AppWrapperStateRunningHoldCompletion: 0,
+	}
+	for _, aw := range awList {
+		state := aw.Status.State
+		stateToAppWrapperCount[state]++
+	}
+	for state, count := range stateToAppWrapperCount {
+		appWrappersCount.WithLabelValues(string(state)).Set(float64(count))
+	}
 }
