@@ -193,9 +193,9 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 	return name, gvk, err
 }
 
-//SyncQueueJob uses dynamic clients to unwrap (spawn) items inside genericItems block, it is used to create resources inside etcd and return errors when
-//unwrapping fails.
-//More context here: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/598
+// SyncQueueJob uses dynamic clients to unwrap (spawn) items inside genericItems block, it is used to create resources inside etcd and return errors when
+// unwrapping fails.
+// More context here: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/598
 func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperGenericResource) (podList []*v1.Pod, err error) {
 	startTime := time.Now()
 	defer func() {
@@ -329,7 +329,6 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 			if errors.IsAlreadyExists(err) {
 				klog.V(4).Infof("%v\n", err.Error())
 			} else {
-				klog.Errorf("Error creating the object `%v`, the error is `%v`", newName, errors.ReasonForError(err))
 				return []*v1.Pod{}, err
 			}
 		}
@@ -437,7 +436,7 @@ func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, conta
 
 	containerList, isFound, _ := unstructured.NestedSlice(subspec, "containers")
 	if !isFound {
-		klog.Warningf("[hasFields] No containers field found in raw object: %#v", subspec)
+		klog.V(6).Infof("[hasFields] No containers field found in raw object: %#v", subspec)
 		return false, 0, nil
 	}
 	objContainers := make([]v1.Container, len(containerList))
