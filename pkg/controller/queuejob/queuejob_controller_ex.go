@@ -1058,7 +1058,6 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 				klog.V(3).Infof("[ScheduleNext] Cannot pop QueueJob from qjqueue! err=%#v", retryErr)
 				return err
 			}
-			klog.V(3).Infof("[ScheduleNext] activeQ.Pop_afterPriorityUpdate %s/%s *Delay=%.6f seconds RemainingLength=%d", qj.Namespace, qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qjm.qjqueue.Length())
 			klog.V(4).Infof("[ScheduleNext] activeQ.Pop_afterPriorityUpdate %s/%s *Delay=%.6f seconds RemainingLength=%d Version=%s Status=%+v", qj.Namespace, qj.Name, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds(), qjm.qjqueue.Length(), qj.ResourceVersion, qj.Status)
 			apiCacheAWJob, retryErr := qjm.getAppWrapper(qj.Namespace, qj.Name, "[ScheduleNext] -- after dynamic priority pop")
 			if retryErr != nil {
@@ -1069,7 +1068,6 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 				return err
 			}
 			if apiCacheAWJob.Status.CanRun {
-				klog.V(3).Infof("[ScheduleNext] AppWrapper job: %s/%s from API is already scheduled. Ignoring request", qj.Namespace, qj.Name)
 				klog.V(4).Infof("[ScheduleNext] AppWrapper job: %s/%s from API is already scheduled. Ignoring request: Status=%+v", qj.Namespace, qj.Name, qj.Status)
 				return nil
 			}
@@ -1095,10 +1093,8 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 
 		klog.V(4).Infof("[ScheduleNext] after Pop qjqLength=%d qj %s/%s Version=%s activeQ=%t Unsched=%t Status=%v", qjm.qjqueue.Length(), qj.Namespace, qj.Name, qj.ResourceVersion, qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj.Status)
 		if qjm.isDispatcher {
-			klog.V(3).Infof("[ScheduleNext] [Dispatcher Mode] Attempting to dispatch next appwrapper: '%s/%s", qj.Namespace, qj.Name)
 			klog.V(4).Infof("[ScheduleNext] [Dispatcher Mode] Attempting to dispatch next appwrapper: '%s/%s Status=%v", qj.Namespace, qj.Name, qj.Status)
 		} else {
-			klog.V(3).Infof("[ScheduleNext] [Agent Mode] Attempting to dispatch next appwrapper: '%s/%s'", qj.Namespace, qj.Name)
 			klog.V(4).Infof("[ScheduleNext] [Agent Mode] Attempting to dispatch next appwrapper: '%s/%s' Status=%v", qj.Namespace, qj.Name, qj.Status)
 		}
 
@@ -1236,7 +1232,6 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 						klog.Info("%s %s %s", quotaFits, preemptAWs, msg)
 
 						if quotaFits {
-							klog.V(3).Infof("[ScheduleNext] [Agent mode] quota evaluation successful for app wrapper '%s/%s'", qj.Namespace, qj.Name)
 							klog.V(4).Infof("[ScheduleNext] [Agent mode] quota evaluation successful for app wrapper '%s/%s' activeQ=%t Unsched=%t Version=%s Status=%+v",
 								qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj.ResourceVersion, qj.Status)
 							// Set any jobs that are marked for preemption
@@ -1244,8 +1239,7 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 						} else { // Not enough free quota to dispatch appwrapper
 							dispatchFailedMessage = "Insufficient quota and/or resources to dispatch AppWrapper."
 							dispatchFailedReason = "quota limit exceeded"
-							klog.V(3).Infof("[ScheduleNext] [Agent Mode] Blocking dispatch for app wrapper '%s/%s' due to quota limits, msg=%s", qj.Namespace, qj.Name, msg)
-							klog.V(4).Infof("[ScheduleNext] [Agent Mode] Blocking dispatch for app wrapper '%s/%s' due to quota limits, activeQ=%t Unsched=%t Version=%s Status=%+v msg=%s",
+							klog.Infof("[ScheduleNext] [Agent Mode] Blocking dispatch for app wrapper '%s/%s' due to quota limits, activeQ=%t Unsched=%t Version=%s Status=%+v msg=%s",
 								qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj.ResourceVersion, qj.Status, msg)
 							// Call update etcd here to retrigger AW execution for failed quota
 							// TODO: quota management tests fail if this is converted into go-routine, need to inspect why?
@@ -1264,15 +1258,12 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 
 					if aggqj.LessEqual(resources) { // Check if enough resources to dispatch
 						fits = true
-						klog.V(3).Infof("[ScheduleNext] [Agent Mode] available resource successful check for '%s/%s'", qj.Namespace, qj.Name)
 						klog.V(4).Infof("[ScheduleNext] [Agent Mode] available resource successful check for '%s/%s' at %s activeQ=%t Unsched=%t Version=%s Status=%+v.",
 							qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj.ResourceVersion, qj.Status)
 					} else { // Not enough free resources to dispatch HOL
 						fits = false
 						dispatchFailedMessage = "Insufficient resources to dispatch AppWrapper."
-						klog.V(3).Infof("[ScheduleNext] [Agent Mode] Failed to dispatch app wrapper '%s/%s' due to insufficient resources",
-							qj.Namespace, qj.Name)
-						klog.V(4).Infof("[ScheduleNext] [Agent Mode] Failed to dispatch app wrapper '%s/%s' due to insufficient resources, activeQ=%t Unsched=%t Version=%s Status=%+v",
+						klog.Infof("[ScheduleNext] [Agent Mode] Failed to dispatch app wrapper '%s/%s' due to insufficient resources, activeQ=%t Unsched=%t Version=%s Status=%+v",
 							qj.Namespace, qj.Name, qjm.qjqueue.IfExistActiveQ(qj),
 							qjm.qjqueue.IfExistUnschedulableQ(qj), qj.ResourceVersion, qj.Status)
 						// TODO: Remove forwarded logic as a big AW will never be forwarded
@@ -1336,9 +1327,7 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 				fowardingLoopCount += 1
 			}
 			if !forwarded { // start thread to backoff
-				klog.V(3).Infof("[ScheduleNext] [Agent Mode] backing off app wrapper '%s/%s' after waiting for %s",
-					qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime))
-				klog.V(4).Infof("[ScheduleNext] [Agent Mode] backing off app wrapper '%s/%s' after waiting for %s activeQ=%t Unsched=%t Version=%s Status=%+v",
+				klog.Infof("[ScheduleNext] [Agent Mode] backing off app wrapper '%s/%s' after waiting for %s activeQ=%t Unsched=%t Version=%s Status=%+v",
 					qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj.ResourceVersion, qj.Status)
 				if qjm.quotaManager != nil && quotaFits {
 					qjm.quotaManager.Release(qj)
@@ -1477,8 +1466,6 @@ func (qjm *XController) backoff(ctx context.Context, q *arbv1.AppWrapper, reason
 		klog.Errorf("[backoff] Failed to update status for %s/%s.  Continuing with possible stale object without updating conditions. err=%s", q.Namespace, q.Name, err)
 	}
 	qjm.qjqueue.AddUnschedulableIfNotPresent(q)
-	klog.V(3).Infof("[backoff] %s/%s move to unschedulableQ before sleep for %d seconds. Unsched=%t", q.Namespace, q.Name,
-		qjm.config.BackoffTimeOrDefault(defaultBackoffTime), qjm.qjqueue.IfExistUnschedulableQ(q))
 	klog.V(4).Infof("[backoff] %s/%s move to unschedulableQ before sleep for %d seconds. activeQ=%t Unsched=%t  Version=%s Status=%+v", q.Namespace, q.Name,
 		qjm.config.BackoffTimeOrDefault(defaultBackoffTime), qjm.qjqueue.IfExistActiveQ(q), qjm.qjqueue.IfExistUnschedulableQ(q), q.ResourceVersion, q.Status)
 	time.Sleep(time.Duration(qjm.config.BackoffTimeOrDefault(defaultBackoffTime)) * time.Second)
@@ -1587,8 +1574,6 @@ func (qjm *XController) UpdateQueueJobs(newjob *arbv1.AppWrapper) {
 			qjm.eventQueue.Delete(updateQj)
 			qjm.qjqueue.Delete(updateQj)
 		}
-		klog.V(3).Infof("[UpdateQueueJobs]  Done getting completion status for app wrapper '%s/%s' Status.CanRun=%t Status.State=%s", newjob.Namespace, newjob.Name,
-			newjob.Status.CanRun, newjob.Status.State)
 		klog.V(4).Infof("[UpdateQueueJobs]  Done getting completion status for app wrapper '%s/%s' Version=%s Status.CanRun=%t Status.State=%s, pod counts [Pending: %d, Running: %d, Succeded: %d, Failed %d]", newjob.Namespace, newjob.Name, newjob.ResourceVersion,
 			newjob.Status.CanRun, newjob.Status.State, newjob.Status.Pending, newjob.Status.Running, newjob.Status.Succeeded, newjob.Status.Failed)
 	}
@@ -1839,7 +1824,7 @@ func (cc *XController) agentEventQueueWorker() {
 
 			return nil
 		}
-		klog.V(3).Infof("[Controller: Dispatcher Mode] XQJ Status Update from AGENT: Name:%s, Namespace:%s, Status: %+v\n", queuejob.Name, queuejob.Namespace, queuejob.Status)
+		klog.V(4).Infof("[Controller: Dispatcher Mode] XQJ Status Update from AGENT: Name:%s, Namespace:%s, Status: %+v\n", queuejob.Name, queuejob.Namespace, queuejob.Status)
 
 		// sync AppWrapper
 		if err := cc.updateQueueJobStatus(ctx, queuejob); err != nil {
@@ -2160,7 +2145,6 @@ func (cc *XController) manageQueueJob(ctx context.Context, qj *arbv1.AppWrapper,
 			}
 			return nil
 		} else if qj.Status.CanRun && qj.Status.State == arbv1.AppWrapperStateActive {
-			klog.V(3).Infof("[manageQueueJob] Getting completion status for app wrapper '%s/%s' Status.CanRun=%t Status.State=%s", qj.Namespace, qj.Name, qj.Status.CanRun, qj.Status.State)
 			klog.V(4).Infof("[manageQueueJob] Getting completion status for app wrapper '%s/%s' Version=%s Status.CanRun=%t Status.State=%s, pod counts [Pending: %d, Running: %d, Succeded: %d, Failed %d]", qj.Namespace, qj.Name, qj.ResourceVersion,
 				qj.Status.CanRun, qj.Status.State, qj.Status.Pending, qj.Status.Running, qj.Status.Succeeded, qj.Status.Failed)
 
