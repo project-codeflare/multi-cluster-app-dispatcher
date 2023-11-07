@@ -929,17 +929,17 @@ func calculateRequiredResources(namespace string, appwrapperName string, request
 	memoryRegex := regexp.MustCompile(`memory (\d+(\.\d+)?)`)
 	gpuRegex := regexp.MustCompile(`GPU (\d+)`)
 
-	// requested resources values //
+	// Requested resources values //
 	requestedCPU := cpuRegex.FindStringSubmatch(requestedResources)
 	requestedMemory := memoryRegex.FindStringSubmatch(requestedResources)
 	requestedGPU := gpuRegex.FindStringSubmatch(requestedResources)
 
-	// available resources values //
+	// Available resources values //
 	availableCPU := cpuRegex.FindStringSubmatch(totalAvailable)
 	availableMemory := memoryRegex.FindStringSubmatch(totalAvailable)
 	availableGPU := gpuRegex.FindStringSubmatch(totalAvailable)
 
-	// convert values to float //
+	// Convert values to float //
 	requestedCPUValue, err := strconv.ParseFloat(requestedCPU[1], 64)
 	if err != nil {
 		klog.Warningf("Error parsing CPU value: ", err)
