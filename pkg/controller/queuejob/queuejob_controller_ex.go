@@ -32,7 +32,6 @@ import (
 
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/hashicorp/go-multierror"
-	dto "github.com/prometheus/client_model/go"
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	clientset "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned"
@@ -706,7 +705,7 @@ func (qjm *XController) getProposedPreemptions(requestingJob *arbv1.AppWrapper, 
 func (qjm *XController) getDispatchedAppWrappers(restConfig *rest.Config) (map[string]*clusterstateapi.Resource, map[string]*arbv1.AppWrapper) {
 	awrRetVal := make(map[string]*clusterstateapi.Resource)
 	awsRetVal := make(map[string]*arbv1.AppWrapper)
-	// Setup and break down an informer to get a list of appwrappers bofore controllerinitialization completes
+	// Setup and break down an informer to get a list of appwrappers before controllerinitialization completes
 	appWrapperClient, err := clientset.NewForConfig(restConfig)
 	if err != nil {
 		klog.Errorf("[getDispatchedAppWrappers] Failure creating client for initialization informer err=%#v", err)
@@ -920,52 +919,6 @@ func (qjm *XController) chooseAgent(ctx context.Context, qj *arbv1.AppWrapper) s
 		klog.V(2).Infof("[chooseAgent] Agent %s does not have enough resources\n", agentId)
 	}
 	return ""
-}
-
-func (qjm *XController) nodeChecks(histograms map[string]*dto.Metric, aw *arbv1.AppWrapper) bool {
-	ok := true
-	allPods := qjm.GetAggregatedResourcesPerGenericItem(aw)
-
-	// Check only GPUs at this time
-	var podsToCheck []*clusterstateapi.Resource
-
-	for _, pod := range allPods {
-		if pod.GPU > 0 {
-			podsToCheck = append(podsToCheck, pod)
-		}
-	}
-
-	gpuHistogram := histograms["gpu"]
-
-	if gpuHistogram != nil {
-		buckets := gpuHistogram.Histogram.Bucket
-		// Go through pods needing checking
-		for _, gpuPod := range podsToCheck {
-
-			// Go through each bucket of the histogram to find a valid bucket
-			bucketFound := false
-			for _, bucket := range buckets {
-				ub := bucket.UpperBound
-				if ub == nil {
-					klog.Errorf("Unable to get upperbound of histogram bucket.")
-					continue
-				}
-				c := bucket.GetCumulativeCount()
-				var fGPU float64 = float64(gpuPod.GPU)
-				if fGPU < *ub && c > 1 {
-					// Found a valid node
-					bucketFound = true
-					break
-				}
-			}
-			if !bucketFound {
-				ok = false
-				break
-			}
-		}
-	}
-
-	return ok
 }
 
 // Thread to find queue-job(QJ) for next schedule
