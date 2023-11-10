@@ -337,7 +337,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 
 	// Get the related resources of created object
 	// var thisObj *unstructured.Unstructured
-	//var err1 error
+	// var err1 error
 	// if namespaced {
 	// 	thisObj, err1 = dclient.Resource(rsrc).Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	// } else {
