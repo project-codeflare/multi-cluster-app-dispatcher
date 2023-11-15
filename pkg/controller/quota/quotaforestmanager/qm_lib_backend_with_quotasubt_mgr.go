@@ -214,7 +214,7 @@ func (qm *QuotaManager) loadDispatchedAWs(dispatchedAWDemands map[string]*cluste
 			}
 
 			if len(preemptionIds) > 0 {
-				klog.Errorf("[loadDispatchedAWs] Loading of AppWrapper %s/%s caused invalid preemptions: %v.  Quota Manager is in inconsistent state, reason:",
+				klog.Errorf("[loadDispatchedAWs] Loading of AppWrapper %s/%s caused invalid preemptions: %v.  Quota Manager is in inconsistent state, reason: %v",
 					aw.Namespace, aw.Name, preemptionIds, errorMessage)
 				result = multierror.Append(result, fmt.Errorf("loading of AppWrapper %s/%s caused invalid preemptions: %v.  Quota Manager is in inconsistent state",
 					aw.Namespace, aw.Name, preemptionIds))

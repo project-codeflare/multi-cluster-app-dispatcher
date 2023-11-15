@@ -124,7 +124,7 @@ type clusterMetricsProvider struct {
 var _ provider.ExternalMetricsProvider = (*clusterMetricsProvider)(nil)
 
 // NewFakeProvider returns an instance of clusterMetricsProvider
-func NewFakeProvider(client dynamic.Interface, mapper apimeta.RESTMapper, clusterStateCache clusterstatecache.Cache) (provider.ExternalMetricsProvider) {
+func NewFakeProvider(client dynamic.Interface, mapper apimeta.RESTMapper, clusterStateCache clusterstatecache.Cache) provider.ExternalMetricsProvider {
 	klog.V(10).Infof("[NewFakeProvider] Entered NewFakeProvider()")
 	provider := &clusterMetricsProvider{
 		client:          client,
@@ -162,14 +162,14 @@ func (p *clusterMetricsProvider) GetExternalMetric(_ context.Context, namespace 
 			} else if strings.Compare(labelVal, "cpu") == 0 {
 				// Set cpu Value
 				resources := p.cache2.GetUnallocatedResources()
-				klog.V(9).Infof("[GetExternalMetric] Cache resources: %f", resources)
+				klog.V(9).Infof("[GetExternalMetric] Cache resources: %v", resources)
 
 				klog.V(10).Infof("[GetExternalMetric] Setting cpu metric Value: %v.", resources.MilliCPU)
 				metricValue.Value = *resource.NewQuantity(int64(resources.MilliCPU), resource.DecimalSI)
 			} else if strings.Compare(labelVal, "gpu") == 0 {
 				// Set gpu Value
 				resources := p.cache2.GetUnallocatedResources()
-				klog.V(9).Infof("[GetExternalMetric] Cache resources: %f", resources)
+				klog.V(9).Infof("[GetExternalMetric] Cache resources: %v", resources)
 
 				klog.V(10).Infof("[GetExternalMetric] Setting gpu metric Value: %v.", resources.GPU)
 				metricValue.Value = *resource.NewQuantity(resources.GPU, resource.DecimalSI)
