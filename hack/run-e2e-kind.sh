@@ -34,7 +34,7 @@ export CLUSTER_CONTEXT="--name test"
 export IMAGE_ECHOSERVER="quay.io/project-codeflare/echo-server:1.0"
 export IMAGE_UBUNTU_LATEST="ubuntu:latest"
 export IMAGE_UBI_LATEST="registry.access.redhat.com/ubi8/ubi:latest"
-export IMAGE_BUSY_BOX_LATEST="k8s.gcr.io/busybox:latest"
+export IMAGE_BUSY_BOX_LATEST="quay.io/project-codeflare/busybox:latest"
 export KIND_OPT=${KIND_OPT:=" --config ${ROOT_DIR}/hack/e2e-kind-config.yaml"}
 export KA_BIN=_output/bin
 export WAIT_TIME="20s"

@@ -50,7 +50,7 @@ spec:
                 restartPolicy: Never
                 initContainers:
                   - name: job-init-container
-                    image: 'k8s.gcr.io/busybox:latest'
+                    image: 'quay.io/project-codeflare/busybox:latest'
                     imagePullPolicy: IfNotPresent
                     command:
                       - sh
@@ -68,7 +68,7 @@ spec:
                         memory: 300Mi
                 containers:
                   - name: job-container
-                    image: 'k8s.gcr.io/busybox:latest'
+                    image: 'quay.io/project-codeflare/busybox:latest'
                     imagePullPolicy: IfNotPresent
                     command:
                       - sh

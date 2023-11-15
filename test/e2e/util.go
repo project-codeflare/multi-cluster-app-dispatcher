@@ -585,7 +585,7 @@ func createJobAWWithInitContainer(context *context, name string, requeuingTimeIn
 				"initContainers": [
 					{
 						"name": "job-init-container",
-						"image": "k8s.gcr.io/busybox:latest",
+						"image": "quay.io/project-codeflare/busybox:latest",
 						"command": ["sleep", "200"],
 						"resources": {
 							"requests": {
@@ -597,7 +597,7 @@ func createJobAWWithInitContainer(context *context, name string, requeuingTimeIn
 				"containers": [
 					{
 						"name": "job-container",
-						"image": "k8s.gcr.io/busybox:latest",
+						"image": "quay.io/project-codeflare/busybox:latest",
 						"command": ["sleep", "10"],
 						"resources": {
 							"requests": {
@@ -1606,7 +1606,7 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 					"initContainers": [
 						{
 							"name": "job-init-container",
-							"image": "k8s.gcr.io/busybox:latest",
+							"image": "quay.io/project-codeflare/busybox:latest",
 							"command": ["sleep", "200"],
 							"resources": {
 								"requests": {
