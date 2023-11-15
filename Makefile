@@ -33,10 +33,9 @@ ifneq ($(strip $(GIT_BRANCH)),)
 	TAG:=${TAG}-${RELEASE_VER}
 endif
 
-.PHONY: print-global-variables
 
 # Build the controller executable for use in docker image build
-mcad-controller: init generate-code
+mcad-controller: init generate-code vet
 ifeq ($(strip $(GO_BUILD_ARGS)),)
 	$(info Compiling controller)
 	CGO_ENABLED=0 go build -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
@@ -45,6 +44,7 @@ else
 	go build $(GO_BUILD_ARGS) -o ${BIN_DIR}/mcad-controller ./cmd/kar-controllers/
 endif	
 
+.PHONY: print-global-variables
 print-global-variables:
 	$(info "---")
 	$(info "MAKE GLOBAL VARIABLES:")
@@ -62,6 +62,12 @@ verify: generate-code
 
 init:
 	mkdir -p ${BIN_DIR}
+
+.PHONY: vet
+vet: ## Run go vet against code
+# Use the -printfuncs flag to specify klog functions (Errorf, Exitf, Fatalf, Infof, Warningf)
+# This ensures they are considered during the vetting process.
+	go vet -printfuncs=Errorf,Exitf,Fatalf,Infof,Warningf ./...
 
 verify-tag-name: print-global-variables
 	# Check for invalid tag name
