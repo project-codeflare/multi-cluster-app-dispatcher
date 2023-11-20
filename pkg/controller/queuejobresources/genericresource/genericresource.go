@@ -69,11 +69,9 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 	}
 	// Default generic resource name
 	name := ""
-
 	namespaced := true
-	// todo:DELETEME	dd := common.KubeClient.Discovery()
-	dd := gr.clients.Discovery()
 
+	dd := gr.clients.Discovery()
 	ext := awr.GenericTemplate
 	gvk, mapping, err := getResourceMapping(dd, ext.Raw, default_gvk)
 	if err != nil {
@@ -157,7 +155,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 
 	namespaced := true
 	name := ""
-	// todo:DELETEME	dd := common.KubeClient.Discovery()
+
 	dd := gr.clients.Discovery()
 	ext := awr.GenericTemplate
 	_, mapping, err := getResourceMapping(dd, ext.Raw, nil)

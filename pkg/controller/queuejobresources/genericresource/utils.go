@@ -2,7 +2,6 @@ package genericresource
 
 import (
 	"encoding/json"
-	"k8s.io/klog/v2"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -12,7 +11,6 @@ func UnmarshalToUnstructured(raw []byte) (unstruct unstructured.Unstructured, er
     var blob interface{}
     err = json.Unmarshal(raw, &blob)
     if err != nil {
-        klog.Errorf("Error unmarshalling, err=%#v", err)
         return unstruct, err
     }
     unstruct.Object = blob.(map[string]interface{})

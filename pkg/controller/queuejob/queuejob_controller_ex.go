@@ -583,7 +583,7 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arb
 			objectName := genericItem.GenericTemplate
 			unstruct, err := genericresource.UnmarshalToUnstructured(objectName.Raw)
 			if err != nil {
-			    klog.Errorf("[getAppWrapperCompletionStatus] Error: %v", err)
+				klog.Errorf("[getAppWrapperCompletionStatus] Error unmarshalling appwrapper: %v", caw.Name)
 			}
 			name := ""
 			if md, ok := unstruct.Object["metadata"]; ok {

@@ -123,7 +123,7 @@ func getResourceMapping(dd discovery.DiscoveryInterface, raw []byte, defaultGVK 
 }
 
 
-// checks if object has replicas and containers field
+// hasFields checks if obj has replicas and containers field
 func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, containers []v1.Container) {
 	unstruct, err := UnmarshalToUnstructured(obj.Raw)
 	if err != nil {
@@ -166,7 +166,7 @@ func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, conta
 	return isFound, replicas, objContainers
 }
 
-// checks if object has pod template spec and add new labels
+// addLabelsToPodTemplateField checks if unstruct has pod template spec and add new labels
 func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map[string]string) (hasFields bool) {
 	spec, isFound, _ := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
 	if !isFound {
