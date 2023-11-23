@@ -68,9 +68,9 @@ const defaultBackoffTime = 20
 
 var (
 	// Regex variables for extracting resource values
-	cpuRegex = regexp.MustCompile(`cpu (\d+(\.\d+)?)`)
+	cpuRegex    = regexp.MustCompile(`cpu (\d+(\.\d+)?)`)
 	memoryRegex = regexp.MustCompile(`memory (\d+(\.\d+)?)`)
-	gpuRegex = regexp.MustCompile(`GPU (\d+)`)
+	gpuRegex    = regexp.MustCompile(`GPU (\d+)`)
 )
 
 // XController the AppWrapper Controller type
@@ -930,7 +930,7 @@ func (qjm *XController) chooseAgent(ctx context.Context, qj *arbv1.AppWrapper) s
 	return ""
 }
 
-// Function for calculating required resources to run AppWrapper and printing a log if there is a required increase for resources.
+// Function for calculating required resources to run AppWrapper and logging if there is a required increase for resources.
 func calculateRequiredResources(namespace string, appwrapperName string, requestedResources string, totalAvailable string) {
 	// Requested resources values //
 	requestedCPU := cpuRegex.FindStringSubmatch(requestedResources)
