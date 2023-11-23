@@ -43,7 +43,7 @@ func buildConfig(master, kubeconfig string) (*rest.Config, error) {
 func Run(opt *options.ServerOption) error {
 	restConfig, err := buildConfig(opt.Master, opt.Kubeconfig)
 	if err != nil {
-		return fmt.Errorf("[Run] unable to build server config, - error: %#v", err)
+		return fmt.Errorf("[Run] unable to build server config, - error: %w", err)
 	}
 
 	neverStop := make(chan struct{})
@@ -72,7 +72,7 @@ func Run(opt *options.ServerOption) error {
 	// This call is blocking (unless an error occurs) which equates to <-neverStop
 	err = listenHealthProbe(opt)
 	if err != nil {
-		return fmt.Errorf("[Run] unable to start health probe listener, - error: %#v", err)
+		return fmt.Errorf("[Run] unable to start health probe listener, - error: %w", err)
 
 	}
 
@@ -85,7 +85,7 @@ func listenHealthProbe(opt *options.ServerOption) error {
 	handler.Handle("/healthz", &health.Handler{})
 	err := http.ListenAndServe(opt.HealthProbeListenAddr, handler)
 	if err != nil {
-		return fmt.Errorf("[listenHealthProbe] unable to listen and serve, - error: %#v", err)
+		return fmt.Errorf("[listenHealthProbe] unable to listen and serve, - error: %w", err)
 	}
 
 	return nil

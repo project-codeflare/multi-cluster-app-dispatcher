@@ -147,7 +147,7 @@ func (qjm *XController) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) error {
 	labelSelector := fmt.Sprintf("%s=%s", "appwrapper.mcad.ibm.com", queuejob.Name)
 	pods, errt := qjm.clients.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector})
 	if errt != nil {
-		return fmt.Errorf("Unable to list pods, error: %#v", errt)
+		return fmt.Errorf("Unable to list pods, error: %w", errt)
 	}
 
 	running := int32(FilterPods(pods.Items, v1.PodRunning))
@@ -1222,7 +1222,7 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 									klog.Warningf("[ScheduleNext] [Agent Mode] app wrapper '%s/%s' not found while trying to update labels, skipping dispatch.", qj.Namespace, qj.Name)
 									return nil
 								}
-								return fmt.Errorf("[ScheduleNext] [Agent Mode] error getting app wrapper while trying to update labels - error: %#v", retryErr)
+								return fmt.Errorf("[ScheduleNext] [Agent Mode] error getting app wrapper while trying to update labels - error: %w", retryErr)
 							}
 							tempAW.SetLabels(newLabels)
 							updatedAW, retryErr := qjm.updateEtcd(ctx, tempAW, "ScheduleNext [Agent Mode] - setDefaultQuota")
@@ -1369,7 +1369,7 @@ func (cc *XController) updateEtcd(ctx context.Context, currentAppwrapper *arbv1.
 	currentAppwrapper.Status.Local = false               // for Informer FilterFunc to pickup
 	updatedAppwrapper, err := cc.arbclients.WorkloadV1beta1().AppWrappers(currentAppwrapper.Namespace).Update(ctx, currentAppwrapper, metav1.UpdateOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("[updateEtcd] failure to update app wrapper, - error: %#v", err)
+		return nil, fmt.Errorf("[updateEtcd] failure to update app wrapper, - error: %w", err)
 	}
 	if larger(currentAppwrapper.ResourceVersion, updatedAppwrapper.ResourceVersion) {
 		klog.Warningf("[updateEtcd] current app wrapper '%s/%s' called by '%s' has version %s", currentAppwrapper.Namespace, currentAppwrapper.Name, caller, currentAppwrapper.ResourceVersion)
@@ -1385,7 +1385,7 @@ func (cc *XController) updateStatusInEtcd(ctx context.Context, currentAppwrapper
 	currentAppwrapper.Status.Sender = "before " + caller // set Sender string to indicate code location
 	updatedAppwrapper, err := cc.arbclients.WorkloadV1beta1().AppWrappers(currentAppwrapper.Namespace).UpdateStatus(ctx, currentAppwrapper, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("[updateStatusInEtcd] failure to update app wrapper status, - error: %#v", err)
+		return fmt.Errorf("[updateStatusInEtcd] failure to update app wrapper status, - error: %w", err)
 	}
 	if larger(currentAppwrapper.ResourceVersion, updatedAppwrapper.ResourceVersion) {
 		klog.Warningf("[updateStatusInEtcd] current app wrapper '%s/%s' called by '%s' has version %s", currentAppwrapper.Namespace, currentAppwrapper.Name, caller, currentAppwrapper.ResourceVersion)
@@ -1460,7 +1460,7 @@ func (qjm *XController) backoff(ctx context.Context, q *arbv1.AppWrapper, reason
 	err := etcUpdateRetrier.Run(func() error {
 		apiCacheAWJob, retryErr := qjm.getAppWrapper(q.Namespace, q.Name, "[backoff] - Rejoining")
 		if retryErr != nil {
-			return fmt.Errorf("[backoff] unable to get app wrapper - error: %#v", retryErr)
+			return fmt.Errorf("[backoff] unable to get app wrapper - error: %w", retryErr)
 
 		}
 		q.Status.DeepCopyInto(&apiCacheAWJob.Status)
@@ -1472,7 +1472,7 @@ func (qjm *XController) backoff(ctx context.Context, q *arbv1.AppWrapper, reason
 			if apierrors.IsConflict(retryErr) {
 				klog.Warningf("[backoff] Conflict when upating AW status in etcd '%s/%s'. Retrying.", apiCacheAWJob.Namespace, apiCacheAWJob.Name)
 			}
-			return fmt.Errorf("[backoff] unable to update status in etcd - error: %#v", retryErr)
+			return fmt.Errorf("[backoff] unable to update status in etcd - error: %w", retryErr)
 
 		}
 		return nil
@@ -1818,7 +1818,7 @@ func (cc *XController) enqueueIfNotPresent(obj interface{}) error {
 	}
 
 	err := cc.eventQueue.AddIfNotPresent(aw) // add to FIFO queue if not in, update object & keep position if already in FIFO queue
-	return fmt.Errorf("[enqueueIfNotPresent] error adding item to queue - error: %#v", err)
+	return fmt.Errorf("[enqueueIfNotPresent] error adding item to queue - error: %w", err)
 }
 
 func (cc *XController) agentEventQueueWorker() {
@@ -1866,7 +1866,7 @@ func (cc *XController) updateQueueJobStatus(ctx context.Context, queueJobFromAge
 			}
 			return nil
 		}
-		return fmt.Errorf("[updateQueueJobStatus] unable to get app wrapper %#v", err)
+		return fmt.Errorf("[updateQueueJobStatus] unable to get app wrapper %w", err)
 
 	}
 	if len(queueJobFromAgent.Status.State) == 0 || queueJobInEtcd.Status.State == queueJobFromAgent.Status.State {
@@ -1876,7 +1876,7 @@ func (cc *XController) updateQueueJobStatus(ctx context.Context, queueJobFromAge
 	queueJobInEtcd.Status.State = new_flag
 	_, err = cc.arbclients.WorkloadV1beta1().AppWrappers(queueJobInEtcd.Namespace).Update(ctx, queueJobInEtcd, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("[updateQueueJobStatus] unable to update app wrapper - error: %#v", err)
+		return fmt.Errorf("[updateQueueJobStatus] unable to update app wrapper - error: %w", err)
 	}
 	return nil
 }
