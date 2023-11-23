@@ -135,6 +135,7 @@ func (m *Manager) AddTreeByName(treeName string) (string, error) {
 	}
 	agent, err := newAgentByName(treeName)
 	if err != nil {
+		klog.Errorf("[AddTreeByName] unable to create new treeAgent, - error: %#v", err)
 		return treeName, err
 	}
 	m.agents[treeName] = agent
@@ -147,6 +148,7 @@ func (m *Manager) AddTreeFromString(treeSring string) (string, error) {
 	defer m.mutex.Unlock()
 	treeCache := core.NewTreeCache()
 	if err := treeCache.FromString(treeSring); err != nil {
+		klog.Errorf("[AddTreeFromString] unable to fill cache from string, - error: %#v", err)
 		return "", err
 	}
 	return m.addTree(treeCache)
@@ -158,6 +160,7 @@ func (m *Manager) AddTreeFromStruct(jQuotaTree utils.JQuotaTree) (string, error)
 	defer m.mutex.Unlock()
 	treeCache := core.NewTreeCache()
 	if err := treeCache.FromStruct(jQuotaTree); err != nil {
+		klog.Errorf("[AddTreeFromStruct] unable to fill cache from struct, - error: %#v", err)
 		return "", err
 	}
 	return m.addTree(treeCache)
@@ -171,6 +174,7 @@ func (m *Manager) addTree(treeCache *core.TreeCache) (string, error) {
 	}
 	agent, err := newAgentFromCache(treeCache)
 	if err != nil {
+		klog.Errorf("[addTree] unable to create agent from cache, - error: %#v", err)
 		return treeName, err
 	}
 	m.agents[treeName] = agent
@@ -274,6 +278,7 @@ func (m *Manager) Allocate(treeName string, consumerID string) (response *core.A
 		err = fmt.Errorf("consumer %s already allocated on tree %s", consumerID, treeName)
 	}
 	if err != nil {
+		klog.Errorf("[Allocate] unable to prepare to allocate a consumer on a tree, - error: %#v", err)
 		return nil, err
 	}
 	if m.mode == Normal {
@@ -300,6 +305,7 @@ func (m *Manager) TryAllocate(treeName string, consumerID string) (response *cor
 		err = fmt.Errorf("consumer %s already allocated on tree %s", consumerID, treeName)
 	}
 	if err != nil {
+		klog.Errorf("[TryAllocate] unable to prepare to allocate a consumer on a tree, - error: %#v", err)
 		return nil, err
 	}
 	if response = agent.controller.TryAllocate(consumer); !response.IsAllocated() {
@@ -315,6 +321,7 @@ func (m *Manager) UndoAllocate(treeName string, consumerID string) (err error) {
 
 	agent, consumer, err := m.preAllocate(treeName, consumerID)
 	if err != nil {
+		klog.Errorf("[UndoAllocate] unable to prepare to allocate a consumer on a tree, - error: %#v", err)
 		return err
 	}
 	if !agent.controller.UndoAllocate(consumer) {
@@ -474,6 +481,7 @@ func (m *Manager) AllocateForest(forestName string, consumerID string) (response
 		err = fmt.Errorf("consumer %s already allocated on forest %s", consumerID, forestName)
 	}
 	if err != nil {
+		klog.Errorf("[AllocateForest] unable to prepare to allocate forest, - error: %#v", err)
 		return nil, err
 	}
 
@@ -507,6 +515,7 @@ func (m *Manager) TryAllocateForest(forestName string, consumerID string) (respo
 		err = fmt.Errorf("consumer %s already allocated on forest %s", consumerID, forestName)
 	}
 	if err != nil {
+		klog.Errorf("[TryAllocateForest] unable to prepare to allocate forest, - error: %#v", err)
 		return nil, err
 	}
 
@@ -524,6 +533,7 @@ func (m *Manager) UndoAllocateForest(forestName string, consumerID string) (err 
 
 	forestController, forestConsumer, err := m.preAllocateForest(forestName, consumerID)
 	if err != nil {
+		klog.Errorf("[UndoAllocateForest] unable to prepare to allocate forest, - error: %#v", err)
 		return err
 	}
 	if !forestController.UndoAllocate(forestConsumer) {

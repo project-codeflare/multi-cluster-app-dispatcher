@@ -23,6 +23,7 @@ import (
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/core"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/utils"
+	"k8s.io/klog/v2"
 )
 
 // ConsumerInfo : A consumer model including specifications
@@ -51,10 +52,12 @@ func NewConsumerInfo(consumerStruct utils.JConsumer) (*ConsumerInfo, error) {
 func NewConsumerInfoFromFile(consumerFileName string) (*ConsumerInfo, error) {
 	byteValue, err := os.ReadFile(consumerFileName)
 	if err != nil {
+		klog.Errorf("[NewConsumerInfoFromFile] unable to read file, - error: %#v", err)
 		return nil, err
 	}
 	var consumerStruct utils.JConsumer
 	if err := json.Unmarshal(byteValue, &consumerStruct); err != nil {
+		klog.Errorf("[NewConsumerInfoFromFile] unable to unmarshal json, - error: %#v", err)
 		return nil, err
 	}
 	return NewConsumerInfo(consumerStruct)
@@ -65,6 +68,7 @@ func NewConsumerInfoFromString(consumerString string) (*ConsumerInfo, error) {
 	byteValue := []byte(consumerString)
 	var consumerStruct utils.JConsumer
 	if err := json.Unmarshal(byteValue, &consumerStruct); err != nil {
+		klog.Errorf("[NewConsumerInfoFromString] unable to unmarshal json, - error: %#v", err)
 		return nil, err
 	}
 	return NewConsumerInfo(consumerStruct)

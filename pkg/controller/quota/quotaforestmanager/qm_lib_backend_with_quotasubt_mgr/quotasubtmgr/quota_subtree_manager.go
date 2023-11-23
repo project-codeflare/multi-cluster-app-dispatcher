@@ -66,6 +66,7 @@ func newQuotaSubtreeManager(config *rest.Config, quotaManagerBackend *qmlib.Mana
 	// QuotaSubtree informer setup
 	qstClient, err := qst.NewForConfig(config)
 	if err != nil {
+		klog.Errorf("[newQuotaSubtreeManager] error creating clientset for config, - error: %#v", err)
 		return nil, err
 	}
 

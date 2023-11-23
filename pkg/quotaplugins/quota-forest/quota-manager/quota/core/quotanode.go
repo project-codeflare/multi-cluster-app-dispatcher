@@ -45,7 +45,11 @@ func NewQuotaNode(id string, quota *Allocation) (*QuotaNode, error) {
 	if len(id) == 0 || quota == nil {
 		return nil, fmt.Errorf("invalid parameters")
 	}
-	alloc, _ := NewAllocation(quota.GetSize())
+	alloc, err := NewAllocation(quota.GetSize())
+	if err != nil {
+		klog.Errorf("[NewQuotaNode] unable to create allocation, - error: %#v", err)
+		return nil, err
+	}
 	qn := &QuotaNode{
 		Node:      *tree.NewNode(id),
 		quota:     quota,
@@ -60,6 +64,7 @@ func NewQuotaNode(id string, quota *Allocation) (*QuotaNode, error) {
 func NewQuotaNodeHard(id string, quota *Allocation, isHard bool) (*QuotaNode, error) {
 	qn, err := NewQuotaNode(id, quota)
 	if err != nil {
+		klog.Errorf("[NewQuotaNodeHard] unable to create quota node, - error:%#v", err)
 		return nil, err
 	}
 	qn.isHard = isHard

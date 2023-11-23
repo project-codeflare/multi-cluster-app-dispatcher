@@ -169,6 +169,7 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 	labelSelector := fmt.Sprintf("%s=%s, %s=%s", appwrapperJobName, aw.Name, resourceName, unstruct.GetName())
 	inEtcd, err := dclient.Resource(rsrc).Namespace(aw.Namespace).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
+		klog.Errorf("[Cleanup] unable to list resources, - error: %#v", err)
 		return name, gvk, err
 	}
 
@@ -182,8 +183,9 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 		err = deleteObject(namespaced, namespace, newName, rsrc, dclient)
 		if err != nil {
 			if !errors.IsNotFound(err) {
-				klog.Errorf("[Cleanup] Error deleting the object `%v`, the error is `%v`.", newName, errors.ReasonForError(err))
+				klog.Errorf("[Cleanup] Error deleting the object `%v`, - error: `%v`.", newName, errors.ReasonForError(err))
 			}
+			klog.Errorf("[Cleanup] Error deleting the object `%v`, - error: `%v`.", newName, err)
 			return name, gvk, err
 		}
 	} else {
@@ -311,6 +313,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	labelSelector := fmt.Sprintf("%s=%s, %s=%s", appwrapperJobName, aw.Name, resourceName, unstruct.GetName())
 	inEtcd, err := dclient.Resource(rsrc).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
+		klog.Errorf("[SyncQueueJob] Unable to list resources, - error: %#v", err)
 		return []*v1.Pod{}, err
 	}
 
@@ -364,24 +367,36 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 
 // checks if object has pod template spec and add new labels
 func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map[string]string) (hasFields bool) {
-	spec, isFound, _ := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
+	spec, isFound, err := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
+	if err != nil {
+		klog.Errorf("[addLabelsToPodTemplateField] unable to return spec values, - error: %#v", err)
+	}
 	if !isFound {
 		klog.V(10).Infof("[addLabelsToPodTemplateField] 'spec' field not found.")
 		return false
 	}
-	template, isFound, _ := unstructured.NestedMap(spec, "template")
+	template, isFound, err := unstructured.NestedMap(spec, "template")
+	if err != nil {
+		klog.Errorf("[addLabelsToPodTemplateField] unable to return template values, - error: %#v", err)
+	}
 	if !isFound {
 		klog.V(10).Infof("[addLabelsToPodTemplateField] 'spec.template' field not found.")
 		return false
 	}
 
-	marshal, _ := json.Marshal(template)
+	marshal, err := json.Marshal(template)
+	if err != nil {
+		klog.Errorf("[addLabelsToPodTemplateField] unable to marshall json, - error: %#v", err)
+	}
 	unmarshal := v1.PodTemplateSpec{}
 	if err := json.Unmarshal(marshal, &unmarshal); err != nil {
 		klog.Warning(err)
 		return false
 	}
-	existingLabels, isFound, _ := unstructured.NestedStringMap(template, "metadata", "labels")
+	existingLabels, isFound, err := unstructured.NestedStringMap(template, "metadata", "labels")
+	if err != nil {
+		klog.Errorf("[addLabelsToPodTemplateField] unable to return existing label values, - error: %#v", err)
+	}
 	if !isFound {
 		klog.V(10).Infof("[addLabelsToPodTemplateField] 'spec.template.metadata.labels' field not found.")
 		return false
@@ -397,7 +412,7 @@ func addLabelsToPodTemplateField(unstruct *unstructured.Unstructured, labels map
 	}
 
 	if err := unstructured.SetNestedStringMap(unstruct.Object, m, "spec", "template", "metadata", "labels"); err != nil {
-		klog.Warning(err)
+		klog.Errorf("[addLabelsToPodTemplateField] unable to set nested string map, - error: %#v", err)
 		return false
 	}
 
@@ -414,37 +429,58 @@ func hasFields(obj runtime.RawExtension) (hasFields bool, replica float64, conta
 		return false, 0, nil
 	}
 	unstruct.Object = blob.(map[string]interface{})
-	spec, isFound, _ := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
+	spec, isFound, err := unstructured.NestedMap(unstruct.UnstructuredContent(), "spec")
+	if err != nil {
+		klog.Errorf("[hasFields] unable to return spec values, - error: %#v", err)
+	}
 	if !isFound {
 		klog.Warningf("[hasFields] No spec field found in raw object: %#v", unstruct.UnstructuredContent())
 	}
 
-	replicas, isFound, _ := unstructured.NestedFloat64(spec, "replicas")
+	replicas, isFound, err := unstructured.NestedFloat64(spec, "replicas")
+	if err != nil {
+		klog.Errorf("[hasFields] unable to return replica values, - error: %#v", err)
+	}
 	// Set default to 1 if no replicas field is found (handles the case of a single pod creation without replicaset.
 	if !isFound {
 		replicas = 1
 	}
 
-	template, isFound, _ := unstructured.NestedMap(spec, "template")
+	template, isFound, err := unstructured.NestedMap(spec, "template")
+	if err != nil {
+		klog.Errorf("[hasFields] unable to return template values, - error: %#v", err)
+	}
 	// If spec does not contain a podtemplate, check for pod singletons
 	var subspec map[string]interface{}
 	if !isFound {
 		subspec = spec
 		klog.V(6).Infof("[hasFields] No template field found in raw object: %#v", spec)
 	} else {
-		subspec, isFound, _ = unstructured.NestedMap(template, "spec")
+		subspec, isFound, err = unstructured.NestedMap(template, "spec")
+		if err != nil {
+			klog.Errorf("[hasFields] unable to return subspec values, - error: %#v", err)
+		}
 	}
 
-	containerList, isFound, _ := unstructured.NestedSlice(subspec, "containers")
+	containerList, isFound, err := unstructured.NestedSlice(subspec, "containers")
+	if err != nil {
+		klog.Errorf("[hasFields] unable to return container list values, - error: %#v", err)
+	}
 	if !isFound {
 		klog.Warningf("[hasFields] No containers field found in raw object: %#v", subspec)
 		return false, 0, nil
 	}
 	objContainers := make([]v1.Container, len(containerList))
 	for _, container := range containerList {
-		marshal, _ := json.Marshal(container)
+		marshal, err := json.Marshal(container)
+		if err != nil {
+			klog.Errorf("[hasFields] unable to marshal json, - error: %#v", err)
+		}
 		unmarshal := v1.Container{}
-		_ = json.Unmarshal(marshal, &unmarshal)
+		err = json.Unmarshal(marshal, &unmarshal)
+		if err != nil {
+			klog.Errorf("[hasFields] unable to unmarshal json, - error: %#v", err)
+		}
 		objContainers = append(objContainers, unmarshal)
 	}
 	return isFound, replicas, objContainers
@@ -627,13 +663,13 @@ func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResourc
 	dd := gr.clients.Discovery()
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
-		klog.Errorf("[IsItemCompleted] Error getting API resources, err=%#v", err)
+		klog.Errorf("[IsItemCompleted] Error getting API resources, - error: %#v", err)
 		return false
 	}
 	restmapper := restmapper.NewDiscoveryRESTMapper(apigroups)
 	_, gvk, err := unstructured.UnstructuredJSONScheme.Decode(awgr.GenericTemplate.Raw, nil, nil)
 	if err != nil {
-		klog.Errorf("[IsItemCompleted] Decoding error, please check your CR! Aborting handling the resource creation, err:  `%v`", err)
+		klog.Errorf("[IsItemCompleted] Decoding error, please check your CR! Aborting handling the resource creation, - error:  `%v`", err)
 		return false
 	}
 

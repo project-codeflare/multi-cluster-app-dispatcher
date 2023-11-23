@@ -118,7 +118,10 @@ func NewJobClusterAgent(config string, agentEventQueue *cache.FIFO) *JobClusterA
 
 	qa.jobSynced = qa.jobInformer.Informer().HasSynced
 
-	qa.UpdateAggrResources(context.Background())
+	err = qa.UpdateAggrResources(context.Background())
+	if err != nil {
+		klog.Errorf("[NewJobClusterAgent] Unable to update aggr resources - error: %#v", err)
+	}
 
 	return qa
 }
@@ -161,7 +164,10 @@ func (qa *JobClusterAgent) Run(stopCh <-chan struct{}) {
 func (qa *JobClusterAgent) DeleteJob(ctx context.Context, cqj *arbv1.AppWrapper) {
 	qj_temp := cqj.DeepCopy()
 	klog.V(2).Infof("[Dispatcher: Agent] Request deletion of XQJ %s/%s to Agent %s\n", qj_temp.Namespace, qj_temp.Name, qa.AgentId)
-	qa.queuejobclients.WorkloadV1beta1().AppWrappers(qj_temp.Namespace).Delete(ctx, qj_temp.Name, metav1.DeleteOptions{})
+	err := qa.queuejobclients.WorkloadV1beta1().AppWrappers(qj_temp.Namespace).Delete(ctx, qj_temp.Name, metav1.DeleteOptions{})
+	if err != nil {
+		klog.Errorf("[DeleteJob] Unable to delete app wrapper, - error: %#v", err)
+	}
 }
 
 func (qa *JobClusterAgent) CreateJob(ctx context.Context, cqj *arbv1.AppWrapper) {
@@ -183,7 +189,10 @@ func (qa *JobClusterAgent) CreateJob(ctx context.Context, cqj *arbv1.AppWrapper)
 	agent_qj.Labels["IsDispatched"] = "true"
 
 	klog.V(2).Infof("[Dispatcher: Agent] Create XQJ: %s/%s (Status: %+v) in Agent %s\n", agent_qj.Namespace, agent_qj.Name, agent_qj.Status, qa.AgentId)
-	qa.queuejobclients.WorkloadV1beta1().AppWrappers(agent_qj.Namespace).Create(ctx, agent_qj, metav1.CreateOptions{})
+	_, err := qa.queuejobclients.WorkloadV1beta1().AppWrappers(agent_qj.Namespace).Create(ctx, agent_qj, metav1.CreateOptions{})
+	if err != nil {
+		klog.Errorf("[CreateJob] Unable to create app wrapper, - error: %#v", err)
+	}
 }
 
 type ClusterMetricsList struct {
@@ -228,7 +237,10 @@ func (qa *JobClusterAgent) UpdateAggrResources(ctx context.Context) error {
 					clusterMetricType := res.Items[i].MetricLabels["cluster"]
 
 					if strings.Compare(clusterMetricType, "cpu") == 0 || strings.Compare(clusterMetricType, "memory") == 0 {
-						val, units, _ := getFloatString(res.Items[i].Value)
+						val, units, err := getFloatString(res.Items[i].Value)
+						if err != nil {
+							klog.Errorf("[Dispatcher: UpdateAggrResources] Possible issue getting float string - error: %#v", err)
+						}
 						num, err := strconv.ParseFloat(val, 64)
 						if err != nil {
 							klog.Warningf("[Dispatcher: UpdateAggrResources] Possible issue converting %s string value of %s due to error: %v\n",

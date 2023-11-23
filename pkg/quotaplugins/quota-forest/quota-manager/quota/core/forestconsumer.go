@@ -44,7 +44,7 @@ func NewForestConsumer(id string, consumers map[string]*Consumer) *ForestConsume
 func NewForestConsumerFromFile(consumerFileName string, resourceNames map[string][]string) (*ForestConsumer, error) {
 	byteValue, err := os.ReadFile(consumerFileName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[NewForestConsumerFromFile] unable to read file, - error: %#v", err)
 	}
 	return NewForestConsumerFromString(string(byteValue), resourceNames)
 }
@@ -54,7 +54,7 @@ func NewForestConsumerFromString(consumerString string, resourceNames map[string
 	byteValue := []byte(consumerString)
 	var jConsumerMulti utils.JConsumer
 	if err := json.Unmarshal(byteValue, &jConsumerMulti); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[NewForestConsumerFromString] unable to unmarshal json, - error: %#v", err)
 	}
 	return NewForestConsumerFromStruct(jConsumerMulti, resourceNames)
 }
