@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: default
+  name: baseline-cpu-job-short-0
+spec:
+  parallelism: 1
+  completions: 1
+  template:
+    metadata:
+      namespace: default
+    spec:
+      containers:
+      - name: baseline-cpu-job-short-0
+        image: nginx:1.24.0
+        command: ["sleep", "10"]
+        resources:
+            limits:
+              cpu: 5m
+              memory: 20M
+              nvidia.com/gpu: 0
+            requests:
+              cpu: 5m
+              memory: 20M
+              nvidia.com/gpu: 0
+      restartPolicy: Never
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: In
+                values:
+                - worker
