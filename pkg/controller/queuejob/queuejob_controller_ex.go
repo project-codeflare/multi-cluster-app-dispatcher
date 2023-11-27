@@ -638,8 +638,8 @@ func (qjm *XController) GetAggregatedResources(cqj *arbv1.AppWrapper) *clusterst
 	for _, genericItem := range cqj.Spec.AggrResources.GenericItems {
 		qjv, err := genericresource.GetResources(&genericItem)
 		if err != nil {
-			klog.Errorf("[GetAggregatedResources] Failure aggregating resources for %s/%s, error: %#v, genericItem: %#v",
-				cqj.Namespace, cqj.Name, err, genericItem)
+			klog.Errorf("[GetAggregatedResources] Failure aggregating resources for %s/%s, error: %#v",
+				cqj.Namespace, cqj.Name, err)
 		}
 		allocated = allocated.Add(qjv)
 	}
@@ -854,8 +854,8 @@ func (qjm *XController) getAggregatedAvailableResourcesPriority(unallocatedClust
 			for _, genericItem := range value.Spec.AggrResources.GenericItems {
 				res, err := genericresource.GetResources(&genericItem)
 				if err != nil {
-					klog.Errorf("[getAggAvaiResPri] Failure getting resources for %s/%s, error: %#v, genericItem: %#v",
-						value.Namespace, value.Name, err, genericItem)
+					klog.Errorf("[getAggAvaiResPri] Failure getting resources for %s/%s, error: %#v",
+						value.Namespace, value.Name, err)
 				}
 				qjv.Add(res)
 				klog.V(10).Infof("[getAggAvaiResPri] Subtract all resources %+v in genericItem=%T for job %s/%s which can-run is set to: %v but state is still pending.", qjv, genericItem, value.Namespace, value.Name, value.Status.CanRun)
