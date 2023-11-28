@@ -225,7 +225,7 @@ func (qjm *XController) allocatableCapacity() *clusterstateapi.Resource {
 			}
 		}
 	}
-	klog.V(4).Infof("[allocatableCapacity] The available capacity to dispatch appwrapper is %v and time took to calculate is %v", capacity, time.Since(startTime))
+	klog.V(2).Infof("[allocatableCapacity] The available capacity to dispatch appwrapper is %v and time took to calculate is %v", capacity, time.Since(startTime))
 	return capacity
 }
 
