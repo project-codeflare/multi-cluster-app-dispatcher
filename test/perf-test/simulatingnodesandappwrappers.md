@@ -80,40 +80,23 @@ kubectl get pods -n kube-system |grep mcad
 brew install jq
 ```
 
-### 2.2 Install the latest version of Kustomize
+### Step 2.2. Install KWOK in your KIND Cluster: 
+### 2.2.1 Variable Prep:
 ```
-brew install kustomize
+# KWOK repository
+KWOK_REPO=kubernetes-sigs/kwok
+# Get latest
+KWOK_LATEST_RELEASE=$(curl "https://api.github.com/repos/${KWOK_REPO}/releases/latest" | jq -r '.tag_name')
 ```
-
-### Step 2.3. Install KWOK in your KIND Cluster: 
-### 2.3.1 Variable Prep:
+### 2.2.2 Deployment kwok and set up CRDs
 ```
-export KWOK_WORK_DIR=$(mktemp -d)
-export KWOK_REPO=kubernetes-sigs/kwok
-export KWOK_LATEST_RELEASE=$(curl "https://api.github.com/repos/${KWOK_REPO}/releases/latest" | jq -r '.tag_name')
+kubectl apply -f "https://github.com/${KWOK_REPO}/releases/download/${KWOK_LATEST_RELEASE}/kwok.yaml"
 ```
-### 2.3.2 Render kustomization yaml
+### 2.3.3 Set up default CRs of Stages (required)
 ```
-cat <<EOF > "${KWOK_WORK_DIR}/kustomization.yaml"
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-images:
-  - name: registry.k8s.io/kwok/kwok
-    newTag: "${KWOK_LATEST_RELEASE}"
-resources:
-  - "https://github.com/${KWOK_REPO}/kustomize/kwok?ref=${KWOK_LATEST_RELEASE}"
-EOF
+kubectl apply -f "https://github.com/${KWOK_REPO}/releases/download/${KWOK_LATEST_RELEASE}/stage-fast.yaml"
 ```
-### 2.3.3 Render it with the prepared variables.
-```
-kubectl kustomize "${KWOK_WORK_DIR}" > "${KWOK_WORK_DIR}/kwok.yaml"
-```
-### Step 2.4 Install the KWOK Controller in kube-system namespace:
-### 2.4.1 Apply your rendered yaml file from step 1.3 above:
-```
-kubectl apply -f "${KWOK_WORK_DIR}/kwok.yaml"
-```
-### 2.4.2 Check to make sure the kwok controller started:
+### 2.4 Check to make sure the kwok controller started:
 ```
 kubectl get pods -n kube-system |grep kwok-controller
 ```
@@ -160,9 +143,13 @@ kubectl version --short=true
 kubectl get pods -n kube-system
 ```
 
-### 0.3 Requires that the MCAD controller is already installed
+### 0.3 Requires that the MCAD controller is already installed, either as a standalone controller or as part of the integrated CodeFlare operator starting with Codeflare Operator v1.0.0-rc.1
 ```
 kubectl get pods -A |grep mcad-controller
+```
+or
+```
+kubectl get pod -A |grep codeflare-operator-manager
 ```
 
 ### 0.4 Install podman, jq, etc...
@@ -170,43 +157,23 @@ kubectl get pods -A |grep mcad-controller
 yum install make podman git tree jq go bc -y
 ```
 
-### 0.5 Install the latest version of Kustomize
-```
-OS=$(uname)
-curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
-mv kustomize /usr/local/bin
-kustomize version
-```
-
 ## Step 1. Install KWOK in Cluster: 
 ### 1.1 Variable Prep:
 ```
-export KWOK_WORK_DIR=$(mktemp -d)
-export KWOK_REPO=kubernetes-sigs/kwok
-export KWOK_LATEST_RELEASE=$(curl "https://api.github.com/repos/${KWOK_REPO}/releases/latest" | jq -r '.tag_name')
+# KWOK repository
+KWOK_REPO=kubernetes-sigs/kwok
+# Get latest
+KWOK_LATEST_RELEASE=$(curl "https://api.github.com/repos/${KWOK_REPO}/releases/latest" | jq -r '.tag_name')
 ```
-### 1.2 Render kustomization yaml
+### 1.2 Deployment kwok and set up CRDs
 ```
-cat <<EOF > "${KWOK_WORK_DIR}/kustomization.yaml"
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-images:
-  - name: registry.k8s.io/kwok/kwok
-    newTag: "${KWOK_LATEST_RELEASE}"
-resources:
-  - "https://github.com/${KWOK_REPO}/kustomize/kwok?ref=${KWOK_LATEST_RELEASE}"
-EOF
+kubectl apply -f "https://github.com/${KWOK_REPO}/releases/download/${KWOK_LATEST_RELEASE}/kwok.yaml"
 ```
-### 1.3 Render it with the prepared variables.
+### 1.3 Set up default CRs of Stages (required)
 ```
-kubectl kustomize "${KWOK_WORK_DIR}" > "${KWOK_WORK_DIR}/kwok.yaml"
+kubectl apply -f "https://github.com/${KWOK_REPO}/releases/download/${KWOK_LATEST_RELEASE}/stage-fast.yaml"
 ```
-## Step 2. Install the KWOK Controller in kube-system namespace:
-### 2.1 Apply your rendered yaml file from step 1.3 above:
-```
-kubectl apply -f "${KWOK_WORK_DIR}/kwok.yaml"
-```
-### 2.2 Check to make sure the kwok controller started:
+### 2. Check to make sure the kwok controller started:
 ```
 kubectl get pods -n kube-system |grep kwok-controller
 ```

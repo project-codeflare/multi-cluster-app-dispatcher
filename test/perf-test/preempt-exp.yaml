@@ -1,7 +1,7 @@
 apiVersion: workload.codeflare.dev/v1beta1
 kind: AppWrapper
 metadata:
-  name: defaultaw-schd-spec-with-timeout-1
+  name: defaultaw-schd-spec-with-timeout-0
   namespace: default
 spec:
   schedulingSpec:
@@ -29,9 +29,9 @@ spec:
         kind: Job
         metadata:
           namespace: default
-          name: defaultaw-schd-spec-with-timeout-1
+          name: defaultaw-schd-spec-with-timeout-0
           labels:
-            appwrapper.mcad.ibm.com: defaultaw-schd-spec-with-timeout-1
+            appwrapper.mcad.ibm.com: defaultaw-schd-spec-with-timeout-0
         spec:
           parallelism: 1
           completions: 1
@@ -39,10 +39,10 @@ spec:
             metadata:
               namespace: default
               labels:
-                appwrapper.mcad.ibm.com: "defaultaw-schd-spec-with-timeout-1"
+                appwrapper.mcad.ibm.com: "defaultaw-schd-spec-with-timeout-0"
             spec:
               containers:
-              - name: defaultaw-schd-spec-with-timeout-1
+              - name: defaultaw-schd-spec-with-timeout-0
                 image: ubi8-minimal:latest
                 command: [ "/bin/bash", "-c", "--" ]
                 args: [ "sleep 10" ]
