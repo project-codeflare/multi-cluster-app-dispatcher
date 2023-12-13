@@ -1742,7 +1742,7 @@ func (cc *XController) enqueueIfNotPresent(obj interface{}) error {
 
 func (cc *XController) agentEventQueueWorker() {
 	ctx := context.Background()
-	if _, err := cc.agentEventQueue.Pop(func(obj interface{}) error {
+	if _, err := cc.agentEventQueue.Pop(func(obj interface{}, isInInitialList bool) error {
 		var queuejob *arbv1.AppWrapper
 		switch v := obj.(type) {
 		case *arbv1.AppWrapper:
@@ -1806,7 +1806,7 @@ func (cc *XController) worker() {
 			klog.Errorf("[worker] Panic occurred error: %v, stacktrace: %s", pErr, string(debug.Stack()))
 		}
 	}()
-	item, err := cc.eventQueue.Pop(func(obj interface{}) error {
+	item, err := cc.eventQueue.Pop(func(obj interface{}, isInInitialList bool) error {
 		var queuejob *arbv1.AppWrapper
 		switch v := obj.(type) {
 		case *arbv1.AppWrapper:
