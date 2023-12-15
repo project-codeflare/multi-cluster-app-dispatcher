@@ -12,6 +12,7 @@ jobs:
     steps:
       - name: run docker resource config
         run: |
+          cat /etc/docker/daemon.json
           cat /etc/systemd/system/docker_limit.slice
           dockerd --help
       - name: checkout code
