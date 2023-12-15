@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: run dockerd 
+        run: |
+          dockerd --version
       - name: checkout code
         uses: actions/checkout@v3
         with:
