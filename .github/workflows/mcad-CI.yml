@@ -16,7 +16,7 @@ jobs:
           cat <<EOF > slice.conf
           [Slice]
           CPUAccounting=true
-          CPUQuota=33.33%
+          CPUQuota=50%
           EOF
           new_content='{ "exec-opts": ["native.cgroupdriver=cgroupfs"], "cgroup-parent": "slice.conf" }'
           sudo sed -i 's/{ "exec-opts": \["native.cgroupdriver=cgroupfs"\], "cgroup-parent": "\/actions_job" }/'"$new_content"'/' /etc/docker/daemon.json
