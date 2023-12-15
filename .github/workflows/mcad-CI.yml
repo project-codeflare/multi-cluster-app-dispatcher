@@ -12,8 +12,8 @@ jobs:
     steps:
       - name: run docker resource config
         run: |
-          touch /etc/systemd/system/slice.conf
-          cat <<EOF > slice.conf
+          sudo touch /etc/systemd/system/slice.conf
+          cat <<EOF > /etc/systemd/system/slice.conf
           [Unit]
           Description=Slice that limits docker resources
           Before=slices.target
