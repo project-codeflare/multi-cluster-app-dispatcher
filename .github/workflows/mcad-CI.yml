@@ -18,7 +18,7 @@ jobs:
           CPUAccounting=true
           CPUQuota=50%
           EOF
-          new_content='{ "exec-opts": ["native.cgroupdriver=cgroupfs"], "cgroup-parent": "slice.conf" }'
+          new_content='{ "exec-opts": ["native.cgroupdriver=cgroupfs"], "cgroup-parent": "/slice.conf" }'
           sudo sed -i 's/{ "exec-opts": \["native.cgroupdriver=cgroupfs"\], "cgroup-parent": "\/actions_job" }/'"$new_content"'/' /etc/docker/daemon.json
           cat /etc/docker/daemon.json
           sudo systemctl restart docker
