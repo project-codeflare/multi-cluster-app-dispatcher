@@ -9,11 +9,10 @@ on:
 jobs:
   MCAD-CI:
     runs-on: ubuntu-latest
-
     steps:
-      - name: run dockerd 
+      - name: run docker resource config
         run: |
-          dockerd --version
+          docker daemon --cpus 2
       - name: checkout code
         uses: actions/checkout@v3
         with:
