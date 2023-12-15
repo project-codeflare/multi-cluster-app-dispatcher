@@ -12,7 +12,8 @@ jobs:
     steps:
       - name: run docker resource config
         run: |
-          docker daemon --cpus 2
+          cat /etc/systemd/system/docker_limit.slice
+          dockerd --help
       - name: checkout code
         uses: actions/checkout@v3
         with:
