@@ -23,10 +23,10 @@ jobs:
           EOF
           new_content='{ "exec-opts": ["native.cgroupdriver=cgroupfs"], "cgroup-parent": "/slice.conf" }'
           sudo sed -i 's|{ "exec-opts": \["native.cgroupdriver=cgroupfs"\], "cgroup-parent": "/actions_job" }|'"$new_content"'|' /etc/docker/daemon.json
+          sudo systemctl start docker_limit.slice
           cat /etc/docker/daemon.json
           sudo systemctl restart docker
           sleep 10
-          cat $HOME/.docker/daemon.json
           docker info | grep CPU
       - name: checkout code
         uses: actions/checkout@v3
