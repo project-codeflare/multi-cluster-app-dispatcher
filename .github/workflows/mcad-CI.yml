@@ -14,6 +14,9 @@ jobs:
         run: |
           touch slice.conf
           cat <<EOF > slice.conf
+          [Unit]
+          Description=Slice that limits docker resources
+          Before=slices.target
           [Slice]
           CPUAccounting=true
           CPUQuota=50%
