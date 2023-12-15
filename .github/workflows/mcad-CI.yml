@@ -12,9 +12,8 @@ jobs:
     steps:
       - name: run docker resource config
         run: |
+          dockerd --cpu-rt-period 2000 --cpu-rt-runtime int 2000 
           cat /etc/docker/daemon.json
-          cat /actions_job
-          dockerd --help
       - name: checkout code
         uses: actions/checkout@v3
         with:
