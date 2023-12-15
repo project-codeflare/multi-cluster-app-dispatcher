@@ -12,8 +12,8 @@ jobs:
     steps:
       - name: run docker resource config
         run: |
-          sudo touch /etc/systemd/system/slice.conf
-          cat <<EOF > /etc/systemd/system/slice.conf
+          sudo touch $PWD/slice.conf
+          cat <<EOF > $PWD/slice.conf
           [Unit]
           Description=Slice that limits docker resources
           Before=slices.target
@@ -21,9 +21,9 @@ jobs:
           CPUAccounting=true
           CPUQuota=50%
           EOF
+          sudo systemctl start $PWD/slice.conf
           new_content='{ "exec-opts": ["native.cgroupdriver=cgroupfs"], "cgroup-parent": "/slice.conf" }'
           sudo sed -i 's|{ "exec-opts": \["native.cgroupdriver=cgroupfs"\], "cgroup-parent": "/actions_job" }|'"$new_content"'|' /etc/docker/daemon.json
-          sudo systemctl start slice.conf
           cat /etc/docker/daemon.json
           sudo systemctl restart docker
           sleep 10
