@@ -12,21 +12,21 @@ jobs:
     steps:
       - name: run docker resource config
         run: |
-          sudo touch /etc/systemd/system/docker_limit.slice
-          cat <<EOF > /etc/systemd/system/docker_limit.slice
-          [Unit]
-          Description=Slice that limits docker resources
-          Before=slices.target
-          [Slice]
-          CPUAccounting=true
-          CPUQuota=50%
-          EOF
-          sudo systemctl start /etc/systemd/system/docker_limit.slice
-          new_content='{ "exec-opts": ["native.cgroupdriver=cgroupfs"], "cgroup-parent": "/docker_limit.slice" }'
-          sudo sed -i 's|{ "exec-opts": \["native.cgroupdriver=cgroupfs"\], "cgroup-parent": "/actions_job" }|'"$new_content"'|' /etc/docker/daemon.json
-          cat /etc/docker/daemon.json
-          sudo systemctl restart docker
-          sleep 10
+          # sudo touch /etc/systemd/system/docker_limit.slice
+          # cat <<EOF > /etc/systemd/system/docker_limit.slice
+          # [Unit]
+          # Description=Slice that limits docker resources
+          # Before=slices.target
+          # [Slice]
+          # CPUAccounting=true
+          # CPUQuota=50%
+          # EOF
+          # sudo systemctl start /etc/systemd/system/docker_limit.slice
+          # new_content='{ "exec-opts": ["native.cgroupdriver=cgroupfs"], "cgroup-parent": "/docker_limit.slice" }'
+          # sudo sed -i 's|{ "exec-opts": \["native.cgroupdriver=cgroupfs"\], "cgroup-parent": "/actions_job" }|'"$new_content"'|' /etc/docker/daemon.json
+          # cat /etc/docker/daemon.json
+          # sudo systemctl restart docker
+          # sleep 10
           docker info | grep CPU
       - name: checkout code
         uses: actions/checkout@v3
