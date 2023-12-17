@@ -129,7 +129,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	})
 
 	It("MCAD CPU Requeuing - Completion After Enough Requeuing Times Test", func() {
-		
+
 		Skip("Skipping MCAD CPU Requeuing - Completion After Enough Requeuing Times Test - [Bug] Failing intermittently on opened PRs")
 
 		fmt.Fprintf(os.Stdout, "[e2e] Completion After Enough Requeuing Times Test - Started.\n")
@@ -152,7 +152,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	})
 
 	It("MCAD CPU Requeuing - Deletion After Maximum Requeuing Times Test", func() {
-		
+
 		Skip("Skipping MCAD CPU Requeuing - Deletion After Maximum Requeuing Times Test - [Bug] Failing intermittently on opened PRs")
 
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD CPU Requeuing - Deletion After Maximum Requeuing Times Test - Started.\n")
@@ -435,7 +435,6 @@ var _ = Describe("AppWrapper E2E Test", func() {
 			context, appendRandomString("aw-ff-deployment-55-percent-cpu"), resource, resource, 2, 60)
 		appwrappers = append(appwrappers, aw)
 		err := waitAWPodsReady(context, aw)
-		fmt.Fprintf(os.Stdout, "The aw status is %v", aw.Status.State)
 		Expect(err).NotTo(HaveOccurred(), "Expecting pods for app wrapper: aw-ff-deployment-1-3500-cpu")
 
 		// This should not fit on any node but should dispatch because there is enough aggregated resources.
@@ -502,15 +501,21 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		// This should fill up the worker node and most of the master node
-		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
+		cap := getClusterCapacitycontext(context)
+		resource := cpuDemand(cap, 0.275).String()
+		aw := createGenericDeploymentCustomPodResourcesWithCPUAW(
+			context, appendRandomString("aw-ff-deployment-55-percent-cpu"), resource, resource, 2, 60)
 		appwrappers = append(appwrappers, aw)
 
 		err := waitAWPodsReady(context, aw)
 		Expect(err).NotTo(HaveOccurred(), "Expecting pods to be ready for app wrapper: aw-deployment-2-550cpu")
 
 		// This should not fit on cluster but customPodResources is incorrect so AW pods are created
+		// aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
+		// 	context, appendRandomString("aw-deployment-2-425-vs-426-cpu"), "425m", "426m", 2, 60)
+		resource2 := cpuDemand(cap, 0.5).String()
 		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
-			context, appendRandomString("aw-deployment-2-425-vs-426-cpu"), "425m", "426m", 2, 60)
+			context, appendRandomString("aw-ff-deployment-40-percent-cpu"), "425m", resource2, 1, 60)
 
 		appwrappers = append(appwrappers, aw2)
 
@@ -522,6 +527,7 @@ var _ = Describe("AppWrapper E2E Test", func() {
 	})
 
 	It("MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Queuing Test 2", func() {
+		Skip("MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Queuing Test 2 - Deployment controller removed and this test case does not apply")
 		fmt.Fprintf(os.Stdout, "[e2e] MCAD Bad Custom Pod Resources vs. Deployment Pod Resource Queuing Test 2 - Started.\n")
 		context := initTestContext()
 		var appwrappers []*arbv1.AppWrapper
@@ -665,18 +671,25 @@ var _ = Describe("AppWrapper E2E Test", func() {
 		defer cleanupTestObjectsPtr(context, appwrappersPtr)
 
 		// This should fill up the worker node and most of the master node
-		aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
+		//aw := createDeploymentAWwith550CPU(context, appendRandomString("aw-deployment-2-550cpu"))
+		cap := getClusterCapacitycontext(context)
+		resource := cpuDemand(cap, 0.275).String()
+		aw := createGenericDeploymentCustomPodResourcesWithCPUAW(
+			context, appendRandomString("aw-ff-deployment-55-percent-cpu"), resource, resource, 2, 60)
 		appwrappers = append(appwrappers, aw)
 		err := waitAWPodsReady(context, aw)
-		Expect(err).NotTo(HaveOccurred(), "Waiting for pods to be ready for app wrapper: aw-deployment-2-550cpu")
+		Expect(err).NotTo(HaveOccurred(), "Waiting for pods to be ready for app wrapper: aw-ff-deployment-55-percent-cpu")
 
 		// This should not fit on cluster
 		// there may be a false positive dispatch which will cause MCAD to requeue AW
-		aw2 := createDeploymentAWwith426CPU(context, appendRandomString("aw-deployment-2-426cpu"))
+		//aw2 := createDeploymentAWwith426CPU(context, appendRandomString("aw-deployment-2-426cpu"))
+		resource2 := cpuDemand(cap, 0.5).String()
+		aw2 := createGenericDeploymentCustomPodResourcesWithCPUAW(
+			context, appendRandomString("aw-ff-deployment-40-percent-cpu"), resource2, resource2, 1, 60)
 		appwrappers = append(appwrappers, aw2)
 
 		err = waitAWPodsReady(context, aw2)
-		Expect(err).To(HaveOccurred(), "No pods for app wrapper `aw-deployment-2-426cpu` are expected.")
+		Expect(err).To(HaveOccurred(), "No pods for app wrapper `aw-ff-deployment-40-percent-cpu` are expected.")
 	})
 
 	It("MCAD Deployment RunningHoldCompletion Test", func() {
