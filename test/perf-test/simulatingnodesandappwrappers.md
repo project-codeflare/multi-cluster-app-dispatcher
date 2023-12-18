@@ -111,6 +111,8 @@ cd ../test/perf-test
 ``` 
 ./nodes.sh
 ```
+Note: If you want to change the resource configuration of your simulated worker nodes, you can edit the node.yaml file prior to running the nodes.sh script.
+
 ### 3.3 Check that the requested number of nodes started:
 ```
 kubectl get nodes --selector type=kwok
