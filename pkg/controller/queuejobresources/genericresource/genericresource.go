@@ -172,8 +172,8 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 		return name, gvk, err
 	}
 
-	// Check to see if object already exists in etcd, if not, create the object.
-	if inEtcd != nil || len(inEtcd.Items) > 0 {
+	// Make sure that item exists in etcd.
+	if inEtcd != nil && len(inEtcd.Items) > 0 {
 		newName := name
 		if len(newName) > 63 {
 			newName = newName[:63]
@@ -193,9 +193,9 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 	return name, gvk, err
 }
 
-//SyncQueueJob uses dynamic clients to unwrap (spawn) items inside genericItems block, it is used to create resources inside etcd and return errors when
-//unwrapping fails.
-//More context here: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/598
+// SyncQueueJob uses dynamic clients to unwrap (spawn) items inside genericItems block, it is used to create resources inside etcd and return errors when
+// unwrapping fails.
+// More context here: https://github.com/project-codeflare/multi-cluster-app-dispatcher/issues/598
 func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperGenericResource) (podList []*v1.Pod, err error) {
 	startTime := time.Now()
 	defer func() {
