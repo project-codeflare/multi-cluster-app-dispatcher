@@ -143,7 +143,7 @@ func GetQueueJobKey(obj interface{}) (string, error) {
 // UpdateQueueJobStatus was part of pod informer, this is now a method of queuejob_controller file.
 // This change is done in an effort to simplify the controller and enable to move to controller runtime.
 func (qjm *XController) UpdateQueueJobStatus(queuejob *arbv1.AppWrapper) error {
-	labelSelector := fmt.Sprintf("%s=%s", "appwrapper.mcad.ibm.com", queuejob.Name)
+	labelSelector := fmt.Sprintf("%s=%s", "workload.codeflare.dev/appwrapper", queuejob.Name)
 	pods, errt := qjm.clients.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector})
 	if errt != nil {
 		return errt
@@ -208,7 +208,7 @@ func (qjm *XController) allocatableCapacity() *clusterstateapi.Resource {
 			klog.Errorf("[allocatableCapacity] Error listing pods %v", err)
 		}
 		for _, pod := range podList.Items {
-			if _, ok := pod.GetLabels()["appwrappers.mcad.ibm.com"]; !ok && pod.Status.Phase != v1.PodFailed && pod.Status.Phase != v1.PodSucceeded {
+			if _, ok := pod.GetLabels()["workload.codeflare.dev/appwrappers"]; !ok && pod.Status.Phase != v1.PodFailed && pod.Status.Phase != v1.PodSucceeded {
 				for _, container := range pod.Spec.Containers {
 					usedResource := clusterstateapi.NewResource(container.Resources.Requests)
 					capacity.Sub(usedResource)

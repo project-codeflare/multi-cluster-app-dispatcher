@@ -91,6 +91,7 @@ func initTestContext() *context {
 			Name: cxt.namespace,
 		},
 	}, metav1.CreateOptions{})
+
 	// Expect(err).NotTo(HaveOccurred())
 
 	/* 	_, err = cxt.kubeclient.SchedulingV1beta1().PriorityClasses().Create(gcontext.Background(), &schedv1.PriorityClass{
@@ -187,7 +188,7 @@ func createGenericAWTimeoutWithStatus(context *context, name string) *arbv1.AppW
 			"template": {
 				"metadata": {
 					"labels": {
-						"appwrapper.mcad.ibm.com": "aw-test-jobtimeout-with-comp-1"
+						"workload.codeflare.dev/appwrapper": "aw-test-jobtimeout-with-comp-1"
 					}
 				},
 				"spec": {
@@ -264,7 +265,7 @@ func anyPodsExist(ctx *context, awNamespace string, awName string) wait.Conditio
 		for _, podFromPodList := range podList.Items {
 
 			// First find a pod from the list that is part of the AW
-			if awn, found := podFromPodList.Labels["appwrapper.mcad.ibm.com"]; !found || awn != awName {
+			if awn, found := podFromPodList.Labels["workload.codeflare.dev/appwrapper"]; !found || awn != awName {
 				// DEBUG fmt.Fprintf(GinkgoWriter, "[anyPodsExist] Pod %s in phase: %s not part of AppWrapper: %s, labels: %#v\n",
 				// DEBUG 	podFromPodList.Name, podFromPodList.Status.Phase, awName, podFromPodList.Labels)
 				continue
@@ -293,7 +294,7 @@ func podPhase(ctx *context, awNamespace string, awName string, pods []*v1.Pod, p
 		for _, podFromPodList := range podList.Items {
 
 			// First find a pod from the list that is part of the AW
-			if awn, found := podFromPodList.Labels["appwrapper.mcad.ibm.com"]; !found || awn != awName {
+			if awn, found := podFromPodList.Labels["workload.codeflare.dev/appwrapper"]; !found || awn != awName {
 				fmt.Fprintf(GinkgoWriter, "[podPhase] Pod %s in phase: %s not part of AppWrapper: %s, labels: %#v\n",
 					podFromPodList.Name, podFromPodList.Status.Phase, awName, podFromPodList.Labels)
 				continue
@@ -404,7 +405,7 @@ func awPodPhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.PodPhase, taskNum
 
 		readyTaskNum := 0
 		for _, pod := range podList.Items {
-			if awn, found := pod.Labels["appwrapper.mcad.ibm.com"]; !found || awn != aw.Name {
+			if awn, found := pod.Labels["workload.codeflare.dev/appwrapper"]; !found || awn != aw.Name {
 				if !quite {
 					fmt.Fprintf(GinkgoWriter, "[awPodPhase] Pod %s not part of AppWrapper: %s, labels: %s\n", pod.Name, aw.Name, pod.Labels)
 				}
@@ -468,7 +469,7 @@ func awNamespacePhase(ctx *context, aw *arbv1.AppWrapper, phase []v1.NamespacePh
 
 		readyTaskNum := 0
 		for _, namespace := range namespaces.Items {
-			if awns, found := namespace.Labels["appwrapper.mcad.ibm.com"]; !found || awns != aw.Name {
+			if awns, found := namespace.Labels["workload.codeflare.dev/appwrapper"]; !found || awns != aw.Name {
 				continue
 			}
 
@@ -576,7 +577,7 @@ func createJobAWWithInitContainer(context *context, name string, requeuingTimeIn
 					"app": "aw-job-3-init-container"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-job-3-init-container"
+					"workload.codeflare.dev/appwrapper-name": "aw-job-3-init-container"
 				}
 			},
 			"spec": {
@@ -669,7 +670,7 @@ func createDeploymentAW(context *context, name string) *arbv1.AppWrapper {
 					"app": "aw-deployment-3"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-3"
+					"workload.codeflare.dev/appwrapper-name": "aw-deployment-3"
 				}
 			},
 			"spec": {
@@ -740,7 +741,7 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 					"app": "` + name + `"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "` + name + `"
+					"workload.codeflare.dev/appwrapper-name": "` + name + `"
 				}
 			},
 			"spec": {
@@ -816,7 +817,7 @@ func createDeploymentAWwith350CPU(context *context, name string) *arbv1.AppWrapp
 					"app": "aw-deployment-2-350cpu"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-350cpu"
+					"workload.codeflare.dev/appwrapper-name": "aw-deployment-2-350cpu"
 				}
 			},
 			"spec": {
@@ -892,7 +893,7 @@ func createDeploymentAWwith426CPU(context *context, name string) *arbv1.AppWrapp
 					"app": "` + name + `"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "` + name + `"
+					"workload.codeflare.dev/appwrapper-name": "` + name + `"
 				}
 			},
 			"spec": {
@@ -968,7 +969,7 @@ func createDeploymentAWwith425CPU(context *context, name string) *arbv1.AppWrapp
 					"app": "aw-deployment-2-425cpu"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-deployment-2-425cpu"
+					"workload.codeflare.dev/appwrapper-name": "aw-deployment-2-425cpu"
 				}
 			},
 			"spec": {
@@ -1044,7 +1045,7 @@ func createGenericDeploymentAW(context *context, name string) *arbv1.AppWrapper 
 					"app": "aw-generic-deployment-3"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-generic-deployment-3"
+					"workload.codeflare.dev/appwrapper-name": "aw-generic-deployment-3"
 				}
 			},
 			"spec": {
@@ -1107,7 +1108,7 @@ func createGenericJobAWWithStatus(context *context, name string) *arbv1.AppWrapp
 			"template": {
 				"metadata": {
 					"labels": {
-						"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-1"
+						"workload.codeflare.dev/appwrapper": "aw-test-job-with-comp-1"
 					}
 				},
 				"spec": {
@@ -1186,7 +1187,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 			"template": {
 				"metadata": {
 					"labels": {
-						"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-ms-21"
+						"workload.codeflare.dev/appwrapper": "aw-test-job-with-comp-ms-21"
 					}
 				},
 				"spec": {
@@ -1234,7 +1235,7 @@ func createGenericJobAWWithMultipleStatus(context *context, name string) *arbv1.
 			"template": {
 				"metadata": {
 					"labels": {
-						"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-ms-21"
+						"workload.codeflare.dev/appwrapper": "aw-test-job-with-comp-ms-21"
 					}
 				},
 				"spec": {
@@ -1310,7 +1311,7 @@ func createAWGenericItemWithoutStatus(context *context, name string) *arbv1.AppW
                             "name": "aw-schd-spec-with-timeout-1",
                             "namespace": "default",
 							"labels":{
-								"appwrapper.mcad.ibm.com": "aw-test-job-with-comp-44"
+								"workload.codeflare.dev/appwrapper": "aw-test-job-with-comp-44"
 							}
                         },
                         "spec": {
@@ -1360,7 +1361,7 @@ func createGenericJobAWWithScheduleSpec(context *context, name string) *arbv1.Ap
 			"template": {
 				"metadata": {
 					"labels": {
-						"appwrapper.mcad.ibm.com": "aw-test-job-with-scheduling-spec"
+						"workload.codeflare.dev/appwrapper": "aw-test-job-with-scheduling-spec"
 					}
 				},
 				"spec": {
@@ -1438,7 +1439,7 @@ func createGenericJobAWtWithLargeCompute(context *context, name string) *arbv1.A
 			"template": {
 				"metadata": {
 					"labels": {
-						"appwrapper.mcad.ibm.com": "aw-test-job-with-large-comp-1"
+						"workload.codeflare.dev/appwrapper": "aw-test-job-with-large-comp-1"
 					}
 				},
 				"spec": {
@@ -1511,8 +1512,9 @@ func createGenericServiceAWWithNoStatus(context *context, name string) *arbv1.Ap
 		"kind": "Service",
 		"metadata": {
 			"labels": {
-				"appwrapper.mcad.ibm.com": "test-dep-job-item",
-				"resourceName": "test-dep-job-item-svc"
+				"workload.codeflare.dev/appwrapper": "test-dep-job-item",
+				"workload.codeflare.dev/appwrapper-namespace": "test",
+				"workload.codeflare.dev/resourceName": "test-dep-job-item-svc"
 			},
 			"name": "test-dep-job-item-svc",
 			"namespace": "test"
@@ -1599,7 +1601,7 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 						"app": "` + name + `-deployment-1"
 					},
 					"annotations": {
-						"appwrapper.mcad.ibm.com/appwrapper-name": "` + name + `"
+						"workload.codeflare.dev/appwrapper-name": "` + name + `"
 					}
 				},
 				"spec": {
@@ -1652,7 +1654,7 @@ func createGenericDeploymentAWWithMultipleItems(context *context, name string) *
 					"app": "` + name + `-deployment-2"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "` + name + `"
+					"workload.codeflare.dev/appwrapper-name": "` + name + `"
 				}
 			},
 			"spec": {
@@ -1732,7 +1734,7 @@ func createGenericDeploymentWithCPUAW(context *context, name string, cpuDemand s
 					"app": "%s"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "%s"
+					"workload.codeflare.dev/appwrapper-name": "%s"
 				}
 			},
 			"spec": {
@@ -1810,7 +1812,7 @@ func createGenericDeploymentCustomPodResourcesWithCPUAW(context *context, name s
 					"app": "%s"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "%s"
+					"workload.codeflare.dev/appwrapper-name": "%s"
 				}
 			},
 			"spec": {
@@ -1968,7 +1970,7 @@ func createStatefulSetAW(context *context, name string) *arbv1.AppWrapper {
 					"app": "aw-statefulset-2"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-statefulset-2"
+					"workload.codeflare.dev/appwrapper-name": "aw-statefulset-2"
 				}
 			},
 			"spec": {
@@ -2040,7 +2042,7 @@ func createGenericStatefulSetAW(context *context, name string) *arbv1.AppWrapper
 					"app": "aw-generic-statefulset-2"
 				},
 				"annotations": {
-					"appwrapper.mcad.ibm.com/appwrapper-name": "aw-generic-statefulset-2"
+					"workload.codeflare.dev/appwrapper-name": "aw-generic-statefulset-2"
 				}
 			},
 			"spec": {
@@ -2101,7 +2103,7 @@ func createBadPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 				"app": "aw-bad-podtemplate-2"
 			},
 			"annotations": {
-				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-bad-podtemplate-2"
+				"workload.codeflare.dev/appwrapper-name": "aw-bad-podtemplate-2"
 			}
 		},
 		"spec": {
@@ -2155,7 +2157,7 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 		"name": "aw-podtemplate-1",
 		"namespace": "test",
 		"labels": {
-			"appwrapper.mcad.ibm.com": "aw-podtemplate-2"
+			"workload.codeflare.dev/appwrapper": "aw-podtemplate-2"
 		}
 	},
 	"spec": {
@@ -2179,7 +2181,7 @@ func createPodTemplateAW(context *context, name string) *arbv1.AppWrapper {
 		"name": "aw-podtemplate-2",
 		"namespace": "test",
 		"labels": {
-			"appwrapper.mcad.ibm.com": "aw-podtemplate-2"
+			"workload.codeflare.dev/appwrapper": "aw-podtemplate-2"
 		}
 	},
 	"spec": {
@@ -2238,7 +2240,7 @@ func createPodCheckFailedStatusAW(context *context, name string) *arbv1.AppWrapp
 		"name": "aw-checkfailedstatus-1",
 		"namespace": "test",
 		"labels": {
-			"appwrapper.mcad.ibm.com": "aw-checkfailedstatus-1"
+			"workload.codeflare.dev/appwrapper": "aw-checkfailedstatus-1"
 		}
 	},
 	"spec": {
@@ -2305,7 +2307,7 @@ func createGenericPodAWCustomDemand(context *context, name string, cpuDemand str
 				"app": "%s"
 			},
 			"annotations": {
-				"appwrapper.mcad.ibm.com/appwrapper-name": "%s"
+				"workload.codeflare.dev/appwrapper-name": "%s"
 			}
 		},
 		"spec": {
@@ -2376,7 +2378,7 @@ func createGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 				"app": "aw-generic-pod-1"
 			},
 			"annotations": {
-				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-generic-pod-1"
+				"workload.codeflare.dev/appwrapper-name": "aw-generic-pod-1"
 			}
 		},
 		"spec": {
@@ -2446,7 +2448,7 @@ func createGenericPodTooBigAW(context *context, name string) *arbv1.AppWrapper {
 				"app": "aw-generic-big-pod-1"
 			},
 			"annotations": {
-				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-generic-big-pod-1"
+				"workload.codeflare.dev/appwrapper-name": "aw-generic-big-pod-1"
 			}
 		},
 		"spec": {
@@ -2516,7 +2518,7 @@ func createBadGenericPodAW(context *context, name string) *arbv1.AppWrapper {
 				"app": "aw-bad-generic-pod-1"
 			},
 			"annotations": {
-				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-bad-generic-pod-1"
+				"workload.codeflare.dev/appwrapper-name": "aw-bad-generic-pod-1"
 			}
 		},
 		"spec": {
@@ -2608,7 +2610,7 @@ func createBadGenericPodTemplateAW(context *context, name string) (*arbv1.AppWra
 				"app": "aw-generic-podtemplate-2"
 			},
 			"annotations": {
-				"appwrapper.mcad.ibm.com/appwrapper-name": "aw-generic-podtemplate-2"
+				"workload.codeflare.dev/appwrapper-name": "aw-generic-podtemplate-2"
 			}
 		},
 		"spec": {

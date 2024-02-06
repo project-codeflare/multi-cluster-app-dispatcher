@@ -30,8 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestIsJsonSyntaxError function validates that the error is related to JSON parsing of
-// generic items
+// TestIsJsonSyntaxError function validates that the error is related to JSON parsing of generic items
 func TestIsJsonSyntaxError(t *testing.T) {
 	// Define the test table
 	var tests = []struct {
@@ -77,7 +76,7 @@ func TestCanIgnoreAPIError(t *testing.T) {
 	}
 	// Execute tests in parallel
 	for _, tc := range tests {
-		tc := tc // capture range variable
+		tc := tc // Capture range variable
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, tc.expectedValue, queuejob.CanIgnoreAPIError(tc.inputErr))

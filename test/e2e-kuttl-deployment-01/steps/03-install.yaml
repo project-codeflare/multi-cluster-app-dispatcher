@@ -31,7 +31,7 @@ spec:
                       name: hold-completion-job-03-01
                       namespace: start-up
                       labels:
-                          appwrapper.mcad.ibm.com: hold-completion-job-03
+                          workload.codeflare.dev/appwrapper: hold-completion-job-03
                   spec:
                       parallelism: 1
                       completions: 1
@@ -40,7 +40,7 @@ spec:
                               name: hold-completion-job-03-01
                               namespace: start-up
                               labels:
-                                  appwrapper.mcad.ibm.com: hold-completion-job-03
+                                  workload.codeflare.dev/appwrapper: hold-completion-job-03
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never
@@ -80,7 +80,7 @@ spec:
                       name: hold-completion-job-03-02
                       namespace: start-up
                       labels:
-                          appwrapper.mcad.ibm.com: hold-completion-job-03
+                          workload.codeflare.dev/appwrapper: hold-completion-job-03
                   spec:
                       parallelism: 1
                       completions: 1
@@ -89,7 +89,7 @@ spec:
                               name: hold-completion-job-03-02
                               namespace: start-up
                               labels:
-                                  appwrapper.mcad.ibm.com: hold-completion-job-03
+                                  workload.codeflare.dev/appwrapper: hold-completion-job-03
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never

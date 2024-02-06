@@ -312,7 +312,7 @@ Delete the first `AppWrapper` job.
 
 ```bash
 $ kubectl delete -f aw-01.yaml
-appwrapper.workload.codeflare.dev "0001-aw-generic-deployment-1" deleted
+workload.codeflare.dev/appwrapper "0001-aw-generic-deployment-1" deleted
 ```
 
 Check the pods status of the `AppWrapper` jobs.  The new pods from the second `AppWrapper` job: `0002-aw-generic-deployment-2` job should now be deployed and running.  

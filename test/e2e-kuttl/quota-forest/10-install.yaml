@@ -28,7 +28,7 @@ spec:
                       name: job-without-labels
                       namespace: test
                       labels:
-                          appwrapper.mcad.ibm.com: job-without-labels
+                          workload.codeflare.dev/appwrapper: job-without-labels
                   spec:
                       parallelism: 1
                       completions: 1
@@ -37,7 +37,7 @@ spec:
                               name: job-without-labels
                               namespace: test
                               labels:
-                                  appwrapper.mcad.ibm.com: job-without-labels
+                                  workload.codeflare.dev/appwrapper: job-without-labels
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never

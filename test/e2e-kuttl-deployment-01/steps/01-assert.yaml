@@ -14,8 +14,9 @@ metadata:
   namespace: start-up
   labels:
       app:  no-quota-deployment-01
-      appwrapper.mcad.ibm.com: no-quota-deployment-01
-      resourceName: no-quota-deployment-01
+      workload.codeflare.dev/appwrapper: no-quota-deployment-01
+      workload.codeflare.dev/appwrapper-namespace: start-up
+      workload.codeflare.dev/resourceName: no-quota-deployment-01
 status:
     availableReplicas: 1
     observedGeneration: 1

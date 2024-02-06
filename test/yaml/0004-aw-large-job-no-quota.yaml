@@ -27,7 +27,7 @@ spec:
                       name: large-job-no-quota
                       namespace: test
                       labels:
-                          appwrapper.mcad.ibm.com: large-job-no-quota
+                          workload.codeflare.dev/appwrapper: large-job-no-quota
                   spec:
                       parallelism: 1
                       completions: 1
@@ -36,7 +36,7 @@ spec:
                               name: large-job-no-quota
                               namespace: test
                               labels:
-                                  appwrapper.mcad.ibm.com: large-job-no-quota
+                                  workload.codeflare.dev/appwrapper: large-job-no-quota
                           spec:
                               terminationGracePeriodSeconds: 1
                               restartPolicy: Never
