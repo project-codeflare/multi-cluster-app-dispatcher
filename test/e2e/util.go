@@ -40,6 +40,8 @@ import (
 
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	versioned "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/client/clientset/versioned"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
+	clusterstateapi "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/controller/clusterstate/api"
 )
 
 var ninetySeconds = 90 * time.Second
@@ -791,6 +793,36 @@ func createDeploymentAWwith550CPU(context *context, name string) *arbv1.AppWrapp
 	Expect(err).NotTo(HaveOccurred())
 
 	return appwrapper
+}
+
+func getClusterCapacitycontext(context *context) *clusterstateapi.Resource {
+	capacity := clusterstateapi.EmptyResource()
+	nodes, _ := context.kubeclient.CoreV1().Nodes().List(context.ctx, metav1.ListOptions{})
+	for _, node := range nodes.Items {
+		// skip unschedulable nodes
+		if node.Spec.Unschedulable {
+			continue
+		}
+		nodeResource := clusterstateapi.NewResource(node.Status.Allocatable)
+		capacity.Add(nodeResource)
+		var specNodeName = "spec.nodeName"
+		labelSelector := fmt.Sprintf("%s=%s", specNodeName, node.Name)
+		podList, err := context.kubeclient.CoreV1().Pods("").List(context.ctx, metav1.ListOptions{FieldSelector: labelSelector})
+		// TODO: when no pods are listed, do we send entire node capacity as available
+		// this will cause false positive dispatch.
+		if err != nil {
+			fmt.Errorf("[allocatableCapacity] Error listing pods %v", err)
+		}
+		for _, pod := range podList.Items {
+			if _, ok := pod.GetLabels()["appwrappers.mcad.ibm.com"]; !ok && pod.Status.Phase != v1.PodFailed && pod.Status.Phase != v1.PodSucceeded {
+				for _, container := range pod.Spec.Containers {
+					usedResource := clusterstateapi.NewResource(container.Resources.Requests)
+					capacity.Sub(usedResource)
+				}
+			}
+		}
+	}
+	return capacity
 }
 
 func createDeploymentAWwith350CPU(context *context, name string) *arbv1.AppWrapper {
@@ -2704,4 +2736,10 @@ func AppWrapper(context *context, namespace string, name string) func(g gomega.G
 
 func AppWrapperState(aw *arbv1.AppWrapper) arbv1.AppWrapperState {
 	return aw.Status.State
+}
+
+func cpuDemand(cap *api.Resource, fractionOfCluster float64) *resource.Quantity {
+	//klog.Infof("[allocatableCapacity] The available capacity to dispatch appwrapper is %v and time took to calculate is %v", capacity, time.Since(startTime))
+	milliDemand := int64(float64(cap.MilliCPU) * fractionOfCluster)
+	return resource.NewMilliQuantity(milliDemand, resource.DecimalSI)
 }
