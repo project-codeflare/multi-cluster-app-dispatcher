@@ -129,7 +129,10 @@ func (p *PriorityQueue) Length() int {
 func (p *PriorityQueue) IfExist(qj *qjobv1.AppWrapper) bool {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	_, exists, _ := p.activeQ.Get(qj)
+	_, exists, err := p.activeQ.Get(qj)
+	if err != nil {
+		klog.Errorf("[IfExist] unable to check if app wrapper exists, - error:%#v", err)
+	}
 	if p.unschedulableQ.Get(qj) != nil || exists {
 		return true
 	}
@@ -140,7 +143,10 @@ func (p *PriorityQueue) IfExist(qj *qjobv1.AppWrapper) bool {
 func (p *PriorityQueue) IfExistActiveQ(qj *qjobv1.AppWrapper) bool {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	_, exists, _ := p.activeQ.Get(qj)
+	_, exists, err := p.activeQ.Get(qj)
+	if err != nil {
+		klog.Errorf("[IfExistActiveQ] unable to check if app wrapper exists, - error:%#v", err)
+	}
 	return exists
 }
 
@@ -196,12 +202,15 @@ func (p *PriorityQueue) AddIfNotPresent(qj *qjobv1.AppWrapper) error {
 	if p.unschedulableQ.Get(qj) != nil {
 		return nil
 	}
-	if _, exists, _ := p.activeQ.Get(qj); exists {
+	if _, exists, err := p.activeQ.Get(qj); exists {
+		if err != nil {
+			klog.Errorf("[AddIfNotPresent] unable to check if pod exists, - error:%#v", err)
+		}
 		return nil
 	}
 	err := p.activeQ.Add(qj)
 	if err != nil {
-		klog.Errorf("Error adding pod %s/%s to the scheduling queue: %v", qj.Namespace, qj.Name, err)
+		klog.Errorf("[AddIfNotPresent] Error adding pod %s/%s to the scheduling queue, - error:%#v", qj.Namespace, qj.Name, err)
 	} else {
 		p.cond.Broadcast()
 	}
@@ -218,7 +227,10 @@ func (p *PriorityQueue) AddUnschedulableIfNotPresent(qj *qjobv1.AppWrapper) erro
 	if p.unschedulableQ.Get(qj) != nil {
 		return fmt.Errorf("pod is already present in unschedulableQ")
 	}
-	if _, exists, _ := p.activeQ.Get(qj); exists {
+	if _, exists, err := p.activeQ.Get(qj); exists {
+		if err != nil {
+			klog.Errorf("[AddUnschedulableIfNotPresent] unable to check if pod exists, - error:%#v", err)
+		}
 		return fmt.Errorf("pod is already present in the activeQ")
 	}
 	// if !p.receivedMoveRequest && isPodUnschedulable(qj) {
@@ -227,7 +239,9 @@ func (p *PriorityQueue) AddUnschedulableIfNotPresent(qj *qjobv1.AppWrapper) erro
 		return nil
 	}
 	err := p.activeQ.Add(qj)
-	if err == nil {
+	if err != nil {
+		klog.Errorf("[AddUnschedulableIfNotPresent] Error adding QJ %s/%s to the scheduling queue: %v", qj.Namespace, qj.Name, err)
+	} else {
 		p.cond.Broadcast()
 	}
 	return err
@@ -271,8 +285,14 @@ func (p *PriorityQueue) Update(oldQJ, newQJ *qjobv1.AppWrapper) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	// If the pod is already in the active queue, just update it there.
-	if _, exists, _ := p.activeQ.Get(newQJ); exists {
+	if _, exists, errp := p.activeQ.Get(newQJ); exists {
+		if errp != nil {
+			klog.Errorf("[Update] unable to check if pod exists, - error:%#v", errp)
+		}
 		err := p.activeQ.Update(newQJ)
+		if err != nil {
+			klog.Errorf("[Update] unable to update pod, - error: %#v", err)
+		}
 		return err
 	}
 	// If the pod is in the unschedulable queue, updating it may make it schedulable.
@@ -280,7 +300,9 @@ func (p *PriorityQueue) Update(oldQJ, newQJ *qjobv1.AppWrapper) error {
 		if p.isQJUpdated(oldQJ, newQJ) {
 			p.unschedulableQ.Delete(usQJ)
 			err := p.activeQ.Add(newQJ)
-			if err == nil {
+			if err != nil {
+				klog.Errorf("Error adding QJ %s/%s to the scheduling queue: %v", newQJ.Namespace, newQJ.Name, err)
+			} else {
 				p.cond.Broadcast()
 			}
 			return err
@@ -290,7 +312,9 @@ func (p *PriorityQueue) Update(oldQJ, newQJ *qjobv1.AppWrapper) error {
 	}
 	// If pod is not in any of the two queue, we put it in the active queue.
 	err := p.activeQ.Add(newQJ)
-	if err == nil {
+	if err != nil {
+		klog.Errorf("Error adding QJ %s/%s to the scheduling queue: %v", newQJ.Namespace, newQJ.Name, err)
+	} else {
 		p.cond.Broadcast()
 	}
 	return err
@@ -303,7 +327,10 @@ func (p *PriorityQueue) Delete(qj *qjobv1.AppWrapper) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.unschedulableQ.Delete(qj)
-	if _, exists, _ := p.activeQ.Get(qj); exists {
+	if _, exists, err := p.activeQ.Get(qj); exists {
+		if err != nil {
+			klog.Errorf("[Delete] unable to check if pod exists - error: %#v", err)
+		}
 		return p.activeQ.Delete(qj)
 	}
 	// p.unschedulableQ.Delete(qj)

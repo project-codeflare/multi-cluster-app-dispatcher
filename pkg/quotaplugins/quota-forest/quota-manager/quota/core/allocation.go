@@ -19,6 +19,7 @@ package core
 import (
 	"bytes"
 	"fmt"
+	"k8s.io/klog/v2"
 )
 
 // Allocation : an allocation of an (ordered) array of resources
@@ -42,6 +43,7 @@ func NewAllocation(size int) (*Allocation, error) {
 func NewAllocationCopy(value []int) (*Allocation, error) {
 	a, err := NewAllocation(len(value))
 	if err != nil {
+		klog.Errorf("[NewAllocationCopy] unable to create allocation, - error: %#v", err)
 		return nil, err
 	}
 	copy(a.x, value)
@@ -66,7 +68,10 @@ func (a *Allocation) SetValue(value []int) {
 
 // Clone : create a copy
 func (a *Allocation) Clone() *Allocation {
-	alloc, _ := NewAllocationCopy(a.x)
+	alloc, err := NewAllocationCopy(a.x)
+	if err != nil {
+		klog.Errorf("[Clone] unable to create allocation, - error: %#v", err)
+	}
 	return alloc
 }
 

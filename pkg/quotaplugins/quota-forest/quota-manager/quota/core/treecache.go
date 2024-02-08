@@ -121,7 +121,7 @@ func (tc *TreeCache) AddTreeInfoFromString(treeInfo string) error {
 	var jTreeInfo utils.JTreeInfo
 	err := json.Unmarshal([]byte(treeInfo), &jTreeInfo)
 	if err != nil {
-		return err
+		return fmt.Errorf("[AddTreeInfoFromString] unable to unmarshal json, - error: %w", err)
 	}
 	tc.SetTreeName(jTreeInfo.Name)
 	tc.AddResourceNames(jTreeInfo.ResourceNames)
@@ -164,7 +164,7 @@ func (tc *TreeCache) AddNodeSpecsFromString(nodesInfo string) error {
 	jNodes := make(map[string]utils.JNodeSpec)
 	err := json.Unmarshal([]byte(nodesInfo), &jNodes)
 	if err != nil {
-		return err
+		return fmt.Errorf("[AddNodeSpecsFromString] unable to unmarshal json, - error: %w", err)
 	}
 	return tc.AddNodeSpecs(jNodes)
 }
@@ -367,6 +367,7 @@ func (tc *TreeCache) CreateTree() (*QuotaTree, *TreeCacheCreateResponse) {
 
 		hard, err := strconv.ParseBool(nodeSpec.Hard)
 		if err != nil {
+			klog.Errorf("[CreateTree] unable to parse bool, - error: %#v", err)
 			hard = false
 		}
 		fmt.Fprintf(&b, "hard="+strconv.FormatBool(hard)+"; ")

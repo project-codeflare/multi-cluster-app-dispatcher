@@ -21,6 +21,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"k8s.io/klog/v2"
 )
 
 // ServerOption is the main context object for the controller manager.
@@ -96,6 +98,8 @@ func (s *ServerOption) loadDefaultsFromEnvVars() {
 		backoffInt, err := strconv.Atoi(backoffString)
 		if err == nil {
 			s.BackoffTime = backoffInt
+		} else {
+			klog.Errorf("[loadDefaultsFromEnvVars] unable to parse int, - error: %#v", err)
 		}
 	}
 
@@ -105,6 +109,8 @@ func (s *ServerOption) loadDefaultsFromEnvVars() {
 		holInt, err := strconv.Atoi(holString)
 		if err == nil {
 			s.HeadOfLineHoldingTime = holInt
+		} else {
+			klog.Errorf("[loadDefaultsFromEnvVars] unable to parse int, - error: %#v", err)
 		}
 	}
 
@@ -126,6 +132,8 @@ func (s *ServerOption) loadDefaultsFromEnvVars() {
 		to, err := strconv.ParseInt(dispatchResourceReservationTimeoutString, 10, 64)
 		if err == nil {
 			s.DispatchResourceReservationTimeout = to
+		} else {
+			klog.Errorf("[loadDefaultsFromEnvVars] unable to parse int, - error: %#v", err)
 		}
 	}
 }
