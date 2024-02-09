@@ -52,7 +52,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -582,13 +581,10 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arb
 	for i, genericItem := range caw.Spec.AggrResources.GenericItems {
 		if len(genericItem.CompletionStatus) > 0 {
 			objectName := genericItem.GenericTemplate
-			var unstruct unstructured.Unstructured
-			unstruct.Object = make(map[string]interface{})
-			var blob interface{}
-			if err := jsons.Unmarshal(objectName.Raw, &blob); err != nil {
-				klog.Errorf("[getAppWrapperCompletionStatus] Error unmarshalling, err=%#v", err)
+			unstruct, err := genericresource.UnmarshalToUnstructured(objectName.Raw)
+			if err != nil {
+				klog.Errorf("[getAppWrapperCompletionStatus] Error unmarshalling appwrapper: %v", caw.Name)
 			}
-			unstruct.Object = blob.(map[string]interface{}) // set object to the content of the blob after Unmarshalling
 			name := ""
 			if md, ok := unstruct.Object["metadata"]; ok {
 				metadata := md.(map[string]interface{})
