@@ -145,7 +145,7 @@ func (sc *ClusterStateCache) saveState(available *api.Resource, capacity *api.Re
 
 // Gets available free resoures.
 func (sc *ClusterStateCache) updateState() error {
-	klog.V(11).Infof("Calculating Cluster State")
+	klog.V(10).Infof("Calculating Cluster State")
 
 	cluster := sc.Snapshot()
 	total := api.EmptyResource()
@@ -162,7 +162,21 @@ func (sc *ClusterStateCache) updateState() error {
 				value.Name, value.Allocatable, value.Used, value.Idle)
 			continue
 		}
+		// Do not use nodes with taints that has effect NoSchedule and label mcad.ibm.com=ignore
+		// in calculations
+		var skipNode bool = false
+		for labelk, labelv := range value.Labels {
+			if labelk == "mcad.ibm.com" && labelv == "ignoreCapacity" {
+				skipNode = true
+				break
+			}
+		}
 
+		if skipNode {
+			klog.V(6).Infof("[updateState] %s is tainted and labelled node to be ignored. Total: %v, Used: %v, and Idle: %v will not be included in cluster state calculation.",
+				value.Name, value.Allocatable, value.Used, value.Idle)
+			continue
+		}
 		total = total.Add(value.Allocatable)
 		used = used.Add(value.Used)
 		idle = idle.Add(value.Idle)
