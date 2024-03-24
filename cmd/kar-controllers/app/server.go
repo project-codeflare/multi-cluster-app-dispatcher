@@ -18,6 +18,8 @@ package app
 
 import (
 	"net/http"
+	"k8s.io/klog/v2"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/discovery"
 	"strings"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -60,6 +62,12 @@ func Run(opt *options.ServerOption) error {
 	extConfig := &config.MCADConfigurationExtended{
 		Dispatcher:   pointer.Bool(opt.Dispatcher),
 		AgentConfigs: strings.Split(opt.AgentConfigs, ","),
+	}
+
+	if err = discovery.InitializeGlobalDiscoveryClient(restConfig); err != nil {
+		klog.Errorf("Error initializing global discovery client: %s", err)
+	} else {
+		klog.Infof("Initializing global discovery client")
 	}
 
 	jobctrl := queuejob.NewJobController(restConfig, mcadConfig, extConfig)

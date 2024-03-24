@@ -24,7 +24,8 @@ import (
 	"runtime/debug"
 	"strings"
 	"time"
-
+ 
+	discoveryCache "github.com/project-codeflare/multi-cluster-app-dispatcher/cmd/kar-controllers/app/discovery"
 	arbv1 "github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/apis/controller/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -86,8 +87,8 @@ func (gr *GenericResources) Cleanup(aw *arbv1.AppWrapper, awr *arbv1.AppWrapperG
 	name := ""
 
 	namespaced := true
-	// todo:DELETEME	dd := common.KubeClient.Discovery()
-	dd := gr.clients.Discovery()
+
+	dd := discoveryCache.GlobalCachedDiscoveryClient
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
 		klog.Errorf("[Cleanup] Error getting API resources, err=%#v", err)
@@ -206,8 +207,7 @@ func (gr *GenericResources) SyncQueueJob(aw *arbv1.AppWrapper, awr *arbv1.AppWra
 	}()
 
 	namespaced := true
-	// todo:DELETEME	dd := common.KubeClient.Discovery()
-	dd := gr.clients.Discovery()
+	dd := discoveryCache.GlobalCachedDiscoveryClient
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
 		klog.Errorf("Error getting API resources, err=%#v", err)
@@ -624,7 +624,7 @@ func getContainerResources(container v1.Container, replicas float64) *clustersta
 
 // returns status of an item present in etcd
 func (gr *GenericResources) IsItemCompleted(awgr *arbv1.AppWrapperGenericResource, namespace string, appwrapperName string, genericItemName string) (completed bool) {
-	dd := gr.clients.Discovery()
+	dd := discoveryCache.GlobalCachedDiscoveryClient
 	apigroups, err := restmapper.GetAPIGroupResources(dd)
 	if err != nil {
 		klog.Errorf("[IsItemCompleted] Error getting API resources, err=%#v", err)
