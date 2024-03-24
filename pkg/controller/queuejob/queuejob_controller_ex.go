@@ -1538,6 +1538,12 @@ func (cc *XController) addQueueJob(obj interface{}) {
 				LastTransitionMicroTime: metav1.NowMicro(),
 			},
 		}
+
+		// Observe only newly seen queue jobs.
+		requestedResources := cc.GetAggregatedResources(qj)
+		requestedMilliCpu.Observe(requestedResources.MilliCPU)
+		requestedMemory.Observe(requestedResources.Memory)
+		requestedGpu.Observe(float64(requestedResources.GPU))
 	} else {
 		klog.Warningf("[Informer-addQJ] Received and add by the informer for AppWrapper job %s/%s which already has been seen and initialized current state %s with timestamp: %s, elapsed time of %.6f",
 			qj.Namespace, qj.Name, qj.Status.State, qj.Status.ControllerFirstTimestamp, time.Now().Sub(qj.Status.ControllerFirstTimestamp.Time).Seconds())
