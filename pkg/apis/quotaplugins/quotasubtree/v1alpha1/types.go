@@ -70,8 +70,8 @@ type Quota struct {
 
 // QuotaSubtreeStatus is the status for a QuotaSubtree resource
 type QuotaSubtreeStatus struct {
-	TotalAllocation ResourceAllocation   `json:"totalAllocation,omitempty protobuf:"bytes,1,opt,name=totalAllocation"`
-	Children        []ResourceAllocation `json:"children,omitempty protobuf:"bytes,2,opt,name=children"`
+	TotalAllocation ResourceAllocation   `json:"totalAllocation,omitempty" protobuf:"bytes,1,opt,name=totalAllocation"`
+	Children        []ResourceAllocation `json:"children,omitempty" protobuf:"bytes,2,opt,name=children"`
 }
 
 // ResourceAllocation is the spec for the child status

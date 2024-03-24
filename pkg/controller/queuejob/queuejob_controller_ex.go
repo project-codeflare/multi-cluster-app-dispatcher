@@ -1167,14 +1167,14 @@ func (qjm *XController) ScheduleNext(qj *arbv1.AppWrapper) {
 						klog.Info("%s %s %s", quotaFits, preemptAWs, msg)
 
 						if quotaFits {
-							klog.Infof("[ScheduleNext] [Agent mode] quota evaluation successful for app wrapper '%s/%s' activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
+							klog.Infof("[ScheduleNext] [Agent mode] quota evaluation successful for app wrapper '%s/%s' duration=%v activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v",
 								qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status)
 							// Set any jobs that are marked for preemption
 							qjm.preemptAWJobs(ctx, preemptAWs)
 						} else { // Not enough free quota to dispatch appwrapper
 							dispatchFailedMessage = "Insufficient quota and/or resources to dispatch AppWrapper."
 							dispatchFailedReason = "quota limit exceeded"
-							klog.Infof("[ScheduleNext] [Agent Mode] Blocking dispatch for app wrapper '%s/%s' due to quota limits, activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v msg=%s",
+							klog.Infof("[ScheduleNext] [Agent Mode] Blocking dispatch for app wrapper '%s/%s' duration=%v due to quota limits, activeQ=%t Unsched=%t &qj=%p Version=%s Status=%+v msg=%s",
 								qj.Namespace, qj.Name, time.Now().Sub(HOLStartTime), qjm.qjqueue.IfExistActiveQ(qj), qjm.qjqueue.IfExistUnschedulableQ(qj), qj, qj.ResourceVersion, qj.Status, msg)
 							// Call update etcd here to retrigger AW execution for failed quota
 							// TODO: quota management tests fail if this is converted into go-routine, need to inspect why?
@@ -2032,7 +2032,7 @@ func (cc *XController) manageQueueJob(ctx context.Context, qj *arbv1.AppWrapper,
 						if apierrors.IsInvalid(err00) {
 							klog.Warningf("[manageQueueJob] Invalid generic item sent for dispatching by app wrapper='%s/%s' err=%v", qj.Namespace, qj.Name, err00)
 						} else {
-							klog.Errorf("[manageQueueJob] Error dispatching generic item for app wrapper='%s/%s' type=%v err=%v", qj.Namespace, qj.Name, err00)
+							klog.Errorf("[manageQueueJob] Error dispatching generic item for app wrapper='%s/%s' err=%v", qj.Namespace, qj.Name, err00)
 						}
 						dispatchFailureMessage = fmt.Sprintf("%s/%s creation failure: %+v", qj.Namespace, qj.Name, err00)
 						dispatched = false
