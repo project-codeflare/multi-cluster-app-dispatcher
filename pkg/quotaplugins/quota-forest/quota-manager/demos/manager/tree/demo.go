@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +18,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota"
@@ -52,7 +51,7 @@ func main() {
 	fmt.Println(quotaManager.GetModeString())
 
 	// add a quota tree from file
-	jsonTree, err := ioutil.ReadFile(treeFileName)
+	jsonTree, err := os.ReadFile(treeFileName)
 	if err != nil {
 		fmt.Printf("error reading quota tree file: %s", treeFileName)
 		return

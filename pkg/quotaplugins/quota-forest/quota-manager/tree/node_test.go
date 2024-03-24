@@ -188,6 +188,44 @@ func TestNode_GetChildren(t *testing.T) {
 		})
 	}
 }
+
+func TestNode_HasLeaf(t *testing.T) {
+	type args struct {
+		leafID string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "leaf-child-B",
+			args: args{leafID: "B"},
+			want: true,
+		},
+		{
+			name: "leaf-D",
+			args: args{leafID: "D"},
+			want: true,
+		},
+		{
+			name: "leaf-X",
+			args: args{leafID: "X"},
+			want: false,
+		},
+	}
+	resetNodes()
+	connectNodes()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := nodeA
+			if got := n.HasLeaf(tt.args.leafID); got != tt.want {
+				t.Errorf("Node.HasLeaf() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestNode_AddChild(t *testing.T) {
 	type fields struct {
 		node *Node

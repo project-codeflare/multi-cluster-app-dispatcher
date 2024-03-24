@@ -17,14 +17,18 @@ limitations under the License.
 package quota_test
 
 import (
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota"
+	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/core"
 	"github.com/project-codeflare/multi-cluster-app-dispatcher/pkg/quotaplugins/quota-forest/quota-manager/quota/utils"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/utils/strings/slices"
 )
 
 // TestNewQuotaManagerConsumerAllocationRelease function emulates multiple threads adding quota consumers and removing them
@@ -379,6 +383,436 @@ func TestQuotaManagerQuotaUsedLongRunningConsumers(t *testing.T) {
 		})
 	}
 
+}
+
+var (
+	tree1String string = `{
+	"kind": "QuotaTree",
+	"metadata": {
+	  "name": "tree-1"
+	},
+	"spec": {
+	  "resourceNames": [
+		"cpu",
+		"memory"
+	  ],
+	  "nodes": {
+		"A": {
+		  "parent": "nil",
+		  "hard": "true",
+		  "quota": {
+			"cpu": "10",
+			"memory": "256"
+		  }
+		},
+		"B": {
+		  "parent": "A",
+		  "hard": "true",
+		  "quota": {
+			"cpu": "2",
+			"memory": "64"
+		  }
+		},
+		"C": {
+		  "parent": "A",
+		  "quota": {
+			"cpu": "6",
+			"memory": "64"
+		  }
+		}
+	  }
+	}
+}`
+
+	tree2String string = `{
+	"kind": "QuotaTree",
+	"metadata": {
+	  "name": "tree-2"
+	},
+	"spec": {
+	  "resourceNames": [
+		"gpu"
+	  ],
+	  "nodes": {
+		"X": {
+		  "parent": "nil",
+		  "hard": "true",
+		  "quota": {
+			"gpu": "32"
+		  }
+		},
+		"Y": {
+		  "parent": "X",
+		  "hard": "true",
+		  "quota": {
+			"gpu": "16"
+		  }
+		},
+		"Z": {
+		  "parent": "X",
+		  "quota": {
+			"gpu": "8"
+		  }
+		}
+	  }
+	}
+}`
+
+	tree3String string = `{
+	"kind": "QuotaTree",
+	"metadata": {
+	  "name": "tree-3"
+	},
+	"spec": {
+	  "resourceNames": [
+		"count"
+	  ],
+	  "nodes": {
+		"zone": {
+		  "parent": "nil",
+		  "hard": "true",
+		  "quota": {
+			"count": "100"
+		  }
+		},
+		"rack": {
+		  "parent": "zone",
+		  "hard": "true",
+		  "quota": {
+			"count": "100"
+		  }
+		},
+		"server": {
+		  "parent": "rack",
+		  "quota": {
+			"count": "100"
+		  }
+		}
+	  }
+	}
+}`
+)
+
+// TestAddDeleteTrees : test adding, retrieving, deleting trees
+func TestAddDeleteTrees(t *testing.T) {
+	// create a test quota manager
+	qmTest := quota.NewManager()
+	assert.NotNil(t, qmTest, "Expecting no error creating a quota manager")
+	modeSet := qmTest.SetMode(quota.Normal)
+	assert.True(t, modeSet, "Expecting no error setting mode to normal")
+	mode := qmTest.GetMode()
+	assert.True(t, mode == quota.Normal, "Expecting mode set to normal")
+	modeString := qmTest.GetModeString()
+	match := strings.Contains(modeString, "Normal")
+	assert.True(t, match, "Expecting mode set to normal")
+
+	// add a few trees by name
+	treeNames := []string{"tree-1", "tree-2", "tree-3"}
+	treeStrings := []string{tree1String, tree2String, tree3String}
+	for i, treeString := range treeStrings {
+		name, err := qmTest.AddTreeFromString(treeString)
+		assert.NoError(t, err, "No error expected when adding a tree")
+		assert.Equal(t, treeNames[i], name, "Returned name should match")
+	}
+
+	// get list of names
+	names := qmTest.GetTreeNames()
+	assert.ElementsMatch(t, treeNames, names, "Expecting retrieved tree names same as added names")
+
+	// delete a name
+	deletedTreeName := treeNames[0]
+	remainingTreeNames := treeNames[1:]
+	err := qmTest.DeleteTree(deletedTreeName)
+	assert.NoError(t, err, "No error expected when deleting an existing tree")
+
+	// get list of names after deletion
+	names = qmTest.GetTreeNames()
+	assert.ElementsMatch(t, remainingTreeNames, names, "Expecting retrieved tree names to reflect additions/deletions")
+
+	// delete a non-existing name
+	err = qmTest.DeleteTree(deletedTreeName)
+	assert.Error(t, err, "Error expected when deleting a non-existing tree")
+}
+
+// TestAddDeleteForests : test adding, retrieving, deleting forests
+func TestAddDeleteForests(t *testing.T) {
+	var err error
+
+	// create a test quota manager
+	qmTest := quota.NewManager()
+	assert.NotNil(t, qmTest, "Expecting no error creating a quota manager")
+	modeSet := qmTest.SetMode(quota.Normal)
+	assert.True(t, modeSet, "Expecting no error setting mode to normal")
+
+	// add a few trees by name
+	treeNames := []string{"tree-1", "tree-2", "tree-3"}
+	treeStrings := []string{tree1String, tree2String, tree3String}
+	for i, treeString := range treeStrings {
+		name, err := qmTest.AddTreeFromString(treeString)
+		assert.NoError(t, err, "No error expected when adding a tree")
+		assert.Equal(t, treeNames[i], name, "Returned name should match")
+	}
+
+	// create two forests
+	forestNames := []string{"forest-1", "forest-2"}
+	for _, forestName := range forestNames {
+		err = qmTest.AddForest(forestName)
+		assert.NoError(t, err, "No error expected when adding a forest")
+	}
+	// assign trees to forests
+	err = qmTest.AddTreeToForest("forest-1", "tree-1")
+	assert.NoError(t, err, "No error expected when adding a tree to a forest")
+	err = qmTest.AddTreeToForest("forest-2", "tree-2")
+	assert.NoError(t, err, "No error expected when adding a tree to a forest")
+	err = qmTest.AddTreeToForest("forest-2", "tree-3")
+	assert.NoError(t, err, "No error expected when adding a tree to a forest")
+
+	// get list of forest names
+	fNames := qmTest.GetForestNames()
+	assert.ElementsMatch(t, forestNames, fNames, "Expecting retrieved forest names same as added names")
+
+	// get forests map
+	forestTreeMap := qmTest.GetForestTreeNames()
+	for _, v := range forestTreeMap {
+		sort.Strings(v)
+	}
+	inputForestTreeMap := map[string][]string{"forest-1": {"tree-1"}, "forest-2": {"tree-2", "tree-3"}}
+	assert.True(t, reflect.DeepEqual(forestTreeMap, inputForestTreeMap),
+		"Expecting retrieved forest tree map same as input, got %v, want %v", forestTreeMap, inputForestTreeMap)
+
+	// delete a forest
+	deletedForestName := forestNames[0]
+	remainingForestNames := forestNames[1:]
+	err = qmTest.DeleteForest(deletedForestName)
+	assert.NoError(t, err, "No error expected when deleting an existing forest")
+
+	// get list of forest names after deletion
+	fNames = qmTest.GetForestNames()
+	assert.ElementsMatch(t, remainingForestNames, fNames, "Expecting retrieved forest names to reflect additions/deletions")
+
+	// delete a non-existing forest name
+	err = qmTest.DeleteForest(deletedForestName)
+	assert.Error(t, err, "Error expected when deleting a non-existing forest")
+
+	// delete a tree from a forest
+	err = qmTest.DeleteTreeFromForest("forest-2", "tree-2")
+	assert.NoError(t, err, "No error expected when deleting an existing tree from an existing forest")
+	err = qmTest.DeleteTreeFromForest("forest-2", "tree-2")
+	assert.Error(t, err, "Error expected when deleting an non-existing tree from an existing forest")
+
+	// check remaining trees after deletions
+	names := qmTest.GetTreeNames()
+	assert.True(t, reflect.DeepEqual(treeNames, names),
+		"Expecting all trees after forest deletions as trees are not deleted, got %v, want %v", names, treeNames)
+}
+
+var (
+	consumerInfoString1 string = `{
+		"kind": "Consumer",
+		"metadata": {
+		  "name": "consumer-info"
+		},
+		"spec": {
+		  "id": "consumer-1",
+		  "trees": [
+			 {
+			   "treeName": "test-tree",
+			  "groupID": "D",
+			  "request": {
+				"cpu": 4,
+				"memory": 16
+			  }
+			}
+		  ]
+		}
+	  }`
+)
+
+// TestAddRemoveConsumers : test adding and removing consumers
+func TestAddRemoveConsumers(t *testing.T) {
+	// create a test quota manager
+	qmTest := quota.NewManager()
+	assert.NotNil(t, qmTest, "Expecting no error creating a quota manager")
+	modeSet := qmTest.SetMode(quota.Normal)
+	assert.True(t, modeSet, "Expecting no error setting mode to normal")
+
+	// create consumer info
+	consumerInfo1, err := quota.NewConsumerInfoFromString(consumerInfoString1)
+	assert.NotNil(t, consumerInfo1, "Expecting a valid consumer info object")
+	assert.NoError(t, err, "No error expected when creating a consumer info")
+	consumerID := consumerInfo1.GetID()
+	assert.Equal(t, "consumer-1", consumerID, "Expecting consumer ID in consumer info to match ID in spec string")
+
+	// add consumer
+	added, err := qmTest.AddConsumer(consumerInfo1)
+	assert.True(t, added && err == nil, "Expecting consumer to be added to quota manager")
+	addedAgain, _ := qmTest.AddConsumer(consumerInfo1)
+	assert.False(t, addedAgain, "Expecting an existing consumer not to be added to quota manager")
+	consumerIDs := qmTest.GetAllConsumerIDs()
+	consumerExists := slices.Contains(consumerIDs, consumerID)
+	assert.True(t, consumerExists, "Expecting added consumer to be in list")
+
+	// remove consumer
+	consumerRemoved, err := qmTest.RemoveConsumer(consumerID)
+	assert.True(t, consumerRemoved && err == nil, "Expecting existing consumer to be removed")
+	consumerIDsAfterRemoval := qmTest.GetAllConsumerIDs()
+	consumerExistsAfterRemoval := slices.Contains(consumerIDsAfterRemoval, consumerID)
+	assert.False(t, consumerExistsAfterRemoval, "Expecting removed consumer not to be in list")
+	consumerRemovedAgain, err := qmTest.RemoveConsumer(consumerID)
+	assert.False(t, consumerRemovedAgain, "Expecting non-existing consumer not to be removed")
+	assert.Error(t, err, "Expecting error when removing a non-existing consumer")
+}
+
+// TestPreemptSamePriorityAtRoot : test preemption of same priority borrowing consumer at root
+func TestPreemptSamePriorityAtRoot(t *testing.T) {
+
+	var treeString string = `{
+		"kind": "QuotaTree",
+		"metadata": {
+		  "name": "tree"
+		},
+		"spec": {
+		  "resourceNames": [
+			"gpu"
+		  ],
+		  "nodes": {
+			"T": {
+			  "parent": "nil",
+			  "hard": "true",
+			  "quota": {
+				"gpu": "32"
+			  }
+			},
+			"M": {
+			  "parent": "T",
+			  "quota": {
+				"gpu": "16"
+			  }
+			},
+			"N": {
+			  "parent": "T",
+			  "quota": {
+				"gpu": "16"
+			  }
+			},
+			"A": {
+			  "parent": "M",
+			  "quota": {
+				"gpu": "8"
+			  }
+			},
+			"B": {
+			  "parent": "M",
+			  "quota": {
+				"gpu": "8"
+			  }
+			},
+			"C": {
+			  "parent": "N",
+			  "quota": {
+			    "gpu": "8"
+			  }
+			},
+			"D": {
+			  "parent": "N",
+			  "quota": {
+				"gpu": "8"
+			  }
+			}
+		  }
+		}
+	}`
+
+	var job1String string = `{
+		"kind": "Consumer",
+		"metadata": {
+		  "name": "job-1"
+		},
+		"spec": {
+		  "id": "job-1",
+		  "trees": [
+			{
+			  "treeName": "tree",
+			  "groupID": "A",
+			  "request": {
+				"gpu": 24
+			  }
+			}
+		  ]
+		}
+	}`
+
+	var job2String string = `{
+		"kind": "Consumer",
+		"metadata": {
+		  "name": "job-2"
+		},
+		"spec": {
+		  "id": "job-2",
+		  "trees": [
+			{
+			  "treeName": "tree",
+			  "groupID": "C",
+			  "request": {
+				"gpu": 8
+			  }
+			}
+		  ]
+		}
+	}`
+
+	var job3String string = `{
+		"kind": "Consumer",
+		"metadata": {
+		  "name": "job-3"
+		},
+		"spec": {
+		  "id": "job-3",
+		  "trees": [
+			{
+			  "treeName": "tree",
+			  "groupID": "B",
+			  "request": {
+				"gpu": 1
+			  }
+			}
+		  ]
+		}
+	}`
+
+	// create a test quota manager
+	qmTest := quota.NewManager()
+	assert.NotNil(t, qmTest, "Expecting no error creating a quota manager")
+	modeSet := qmTest.SetMode(quota.Normal)
+	assert.True(t, modeSet, "Expecting no error setting mode to normal")
+
+	// add quota tree
+	treeName, err := qmTest.AddTreeFromString(treeString)
+	assert.NoError(t, err, "No error expected when adding a tree")
+
+	// create and add consumers
+	consumerStrings := []string{job1String, job2String, job3String}
+	numConsumers := len(consumerStrings)
+	consumerID := make([]string, numConsumers)
+	var response *core.AllocationResponse
+	for i, consumerString := range consumerStrings {
+		consumerInfo, err := quota.NewConsumerInfoFromString(consumerString)
+		assert.NoError(t, err, "No error expected when creating a consumer info")
+		consumerID[i] = consumerInfo.GetID()
+		added, err := qmTest.AddConsumer(consumerInfo)
+		assert.True(t, added && err == nil, "Expecting consumer to be added to quota manager")
+		response, err = qmTest.Allocate(treeName, consumerID[i])
+		assert.NoError(t, err, "No Error expected when allocating consumer %s to tree, err %v, got %v",
+			consumerID[i], err, qmTest.GetTreeController(treeName))
+	}
+
+	// check expected results after last allocation
+	assert.NotNil(t, response, "A non nill response is expected")
+	assert.True(t, response.IsAllocated(), "Allocating consumer %s should succeed", consumerID[numConsumers-1])
+	assert.Contains(t, response.GetPreemptedIds(), consumerID[0],
+		"Expecting consumer %s to be preempted", consumerID[0])
+	assert.Contains(t, qmTest.GetTreeController(treeName).GetConsumerIDs(), consumerID[1],
+		"Expecting consumer %s to remain allocated", consumerID[1])
 }
 
 type AllocationClassifier struct {

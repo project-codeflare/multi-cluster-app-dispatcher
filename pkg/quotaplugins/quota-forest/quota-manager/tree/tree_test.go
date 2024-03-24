@@ -70,6 +70,69 @@ func TestNewTree(t *testing.T) {
 	}
 }
 
+func TestTree_GetHeight(t *testing.T) {
+	type fields struct {
+		tree *Tree
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   int
+	}{
+		{
+			name: "good tree",
+			fields: fields{
+				tree: treeA,
+			},
+			want: 2,
+		},
+		{
+			name: "empty tree",
+			fields: fields{
+				tree: treeNil,
+			},
+			want: 0,
+		},
+	}
+	resetNodes()
+	connectNodes()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tr := tt.fields.tree
+			if got := tr.GetHeight(); got != tt.want {
+				t.Errorf("Tree.GetHeight() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTree_GetRoot(t *testing.T) {
+	type fields struct {
+		tree *Tree
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   *Node
+	}{
+		{
+			name: "success",
+			fields: fields{
+				tree: treeA,
+			},
+			want: nodeA,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tr := tt.fields.tree
+			if got := tr.GetRoot(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Tree.GetRoot() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestTree_GetLeafIDs(t *testing.T) {
 	type fields struct {
 		tree *Tree
@@ -241,42 +304,6 @@ func TestTree_GetNode(t *testing.T) {
 			tr := tt.fields.tree
 			if got := tr.GetNode(tt.args.nodeID); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Tree.GetNode() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestTree_GetHeight(t *testing.T) {
-	type fields struct {
-		tree *Tree
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   int
-	}{
-		{
-			name: "good tree",
-			fields: fields{
-				tree: treeA,
-			},
-			want: 2,
-		},
-		{
-			name: "empty tree",
-			fields: fields{
-				tree: treeNil,
-			},
-			want: 0,
-		},
-	}
-	resetNodes()
-	connectNodes()
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tr := tt.fields.tree
-			if got := tr.GetHeight(); got != tt.want {
-				t.Errorf("Tree.GetHeight() = %v, want %v", got, tt.want)
 			}
 		})
 	}
