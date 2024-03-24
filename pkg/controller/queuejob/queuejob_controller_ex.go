@@ -220,6 +220,10 @@ func (qjm *XController) allocatableCapacity() *clusterstateapi.Resource {
 	return capacity
 }
 
+func (qjm *XController) GetAllocatableCapacity() *clusterstateapi.Resource {
+	return qjm.allocatableCapacity()
+}
+
 // NewJobController create new AppWrapper Controller
 func NewJobController(restConfig *rest.Config, mcadConfig *config.MCADConfiguration, extConfig *config.MCADConfigurationExtended) *XController {
 	cc := &XController{
@@ -1415,6 +1419,7 @@ func (cc *XController) Run(stopCh <-chan struct{}) {
 	go cc.appwrapperInformer.Informer().Run(stopCh)
 
 	cache.WaitForCacheSync(stopCh, cc.appWrapperSynced)
+	updateMetricsLoop(cc, stopCh)
 
 	if cc.isDispatcher {
 		go wait.Until(cc.UpdateAgent, 2*time.Second, stopCh) // In the Agent?
