@@ -577,10 +577,13 @@ func (qjm *XController) GetAggregatedResourcesPerGenericItem(cqj *arbv1.AppWrapp
 // Gets all objects owned by AW from API server, check user supplied status and set whole AW status
 func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arbv1.AppWrapperState {
 
-	// Get all pods and related resources
+	// Count how many generic items specify a 'completionstatus'. For those that do specify it, check to see if the
+	// generic item reached any of the condition states provided in the YAML
+	totalCompletionsRequired := 0
 	countCompletionRequired := 0
 	for i, genericItem := range caw.Spec.AggrResources.GenericItems {
 		if len(genericItem.CompletionStatus) > 0 {
+			totalCompletionsRequired += 1
 			objectName := genericItem.GenericTemplate
 			var unstruct unstructured.Unstructured
 			unstruct.Object = make(map[string]interface{})
@@ -604,7 +607,7 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arb
 			if !status {
 				klog.V(4).Infof("[getAppWrapperCompletionStatus] Item %d named %s not completed for appwrapper: '%s/%s'", i+1, name, caw.Namespace, caw.Name)
 				// early termination because a required item is not completed
-				return caw.Status.State
+				continue
 			}
 
 			// only consider count completion required for valid items
@@ -616,11 +619,11 @@ func (qjm *XController) getAppWrapperCompletionStatus(caw *arbv1.AppWrapper) arb
 
 	// Set new status only when completion required flag is present in genericitems array
 	if countCompletionRequired > 0 {
-		if caw.Status.Running == 0 && caw.Status.Pending == 0 {
+		if caw.Status.Running == 0 && caw.Status.Pending == 0 || countCompletionRequired == totalCompletionsRequired {
 			return arbv1.AppWrapperStateCompleted
 		}
 
-		if caw.Status.Pending > 0 || caw.Status.Running > 0 {
+		if caw.Status.Running > 0 || caw.Status.Pending > 0 {
 			return arbv1.AppWrapperStateRunningHoldCompletion
 		}
 	}

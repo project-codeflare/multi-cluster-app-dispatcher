@@ -63,6 +63,7 @@ spec:
                                             nvidia.com/gpu: 0
                                             memory: 1Gi
             - replicas: 1
+              completionstatus: Complete
               custompodresources:
                   - replicas: 1
                     requests:
